@@ -9,6 +9,7 @@ import Products from './pages/Products'
 import Settings from './pages/Settings'
 import SignIn from './pages/SignIn'
 import { authActions } from './stores/auth/authActions'
+import { languageActions } from './stores/language/languageActions'
 import './App.css'
 import Orders from './pages/Orders'
 
@@ -16,9 +17,10 @@ function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
   const { isAuthenticated, isLoading, signIn } = useAuth()
 
-  // Initialize auth on app start
+  // Initialize auth and language on app start
   useEffect(() => {
     authActions.initializeAuth()
+    languageActions.initializeLanguage()
   }, [])
 
   const handleNavigate = (page: string) => {

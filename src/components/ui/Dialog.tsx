@@ -116,18 +116,28 @@ function Dialog({ isOpen, onClose, title, children, size = 'md' }: DialogProps) 
 
   if (!shouldRender) return null
 
+  const handleOverlayClick = (e: any) => {
+    // Only close if clicking the overlay itself, not child elements
+    if (e.target === e.currentTarget) {
+      onClose()
+    }
+  }
+
   return (
-    <div
-      class={clsx(
-        'fixed inset-0 z-50 overflow-y-auto',
-        // Overlay with visible frame border and added transparency
-        'bg-black/40 backdrop-blur-sm transition-all duration-300 ease-out border-2 border-white/20',
-        isAnimating ? 'opacity-100' : 'opacity-0',
-      )}
-      role="presentation"
-      onClick={onClose}
+    <div 
+      class={clsx('fixed inset-0 z-50 overflow-y-auto', isAnimating ? 'opacity-100' : 'opacity-0')}
+      onClick={handleOverlayClick}
     >
-      <div class="relative flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+      <div 
+        class={clsx(
+          'absolute inset-0',
+          // Overlay with visible frame border and added transparency
+          'bg-black/40 backdrop-blur-sm transition-all duration-300 ease-out border-2 border-white/20',
+        )}
+        aria-label="Close dialog"
+      />
+
+      <div class="relative z-10 flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div
           class={clsx(
             // Dialog card with added transparency and refined border

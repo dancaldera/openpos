@@ -8,6 +8,7 @@
 import type { ComponentChildren } from 'preact'
 import { useState } from 'preact/hooks'
 import { useAuth } from '../hooks/useAuth'
+import { useTranslation } from '../hooks/useTranslation'
 import { Dropdown, type DropdownItem, Heading, Text } from './ui'
 import Sidebar, { SidebarGroup, SidebarItem, SidebarNav } from './ui/Sidebar'
 
@@ -48,19 +49,24 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
   const { user, signOut } = useAuth()
 
   /**
+   * Translation hook providing translation function and language utilities
+   */
+  const { t } = useTranslation()
+
+  /**
    * User dropdown menu items configuration
    * @type {DropdownItem[]}
    */
   const userDropdownItems: DropdownItem[] = [
     {
       id: 'settings',
-      label: 'Settings',
+      label: t('navigation.settings'),
       icon: '⚙️',
       onClick: () => onNavigate('settings'),
     },
     {
       id: 'signout',
-      label: 'Sign Out',
+      label: t('navigation.signOut'),
       icon: '🚪',
       onClick: signOut,
       variant: 'danger',
@@ -76,39 +82,39 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
   const menuItems = [
     {
       id: 'dashboard',
-      label: 'Dashboard',
+      label: t('navigation.dashboard'),
       icon: '📊',
-      description: 'Overview of store performance and analytics',
+      description: t('dashboard.subtitle'),
     },
     {
       id: 'orders',
-      label: 'Orders',
+      label: t('navigation.orders'),
       icon: '📋',
-      description: 'Manage orders and transactions',
+      description: t('orders.subtitle'),
     },
     {
       id: 'products',
-      label: 'Products',
+      label: t('navigation.products'),
       icon: '📦',
-      description: 'Product catalog and inventory management',
+      description: t('products.subtitle'),
     },
     {
       id: 'members',
-      label: 'Members',
+      label: t('navigation.members'),
       icon: '👤',
-      description: 'Staff member management and permissions',
+      description: t('members.subtitle'),
     },
     {
       id: 'analytics',
-      label: 'Analytics',
+      label: t('navigation.analytics'),
       icon: '📈',
-      description: 'Advanced business insights and performance metrics',
+      description: t('analytics.subtitle'),
     },
     {
       id: 'settings',
-      label: 'Settings',
+      label: t('navigation.settings'),
       icon: '⚙️',
-      description: 'Application configuration and preferences',
+      description: t('settings.subtitle'),
     },
   ].filter((item) => {
     // Filter out Members section for non-admin/non-manager users
@@ -126,7 +132,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
     // Main layout container with sidebar and content area
     // Uses flexbox for responsive sidebar + content layout
     <div class="flex h-screen bg-gray-100">
-      {/* 
+      {/*
         Sidebar component with dark theme and collapsible functionality
         @param {string} width - Sidebar width (md: medium)
         @param {string} backgroundColor - Background color theme
@@ -136,7 +142,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
       <Sidebar width="md" backgroundColor="dark" collapsible defaultCollapsed={false}>
         {({ isCollapsed }: { isCollapsed: boolean }) => (
           <SidebarNav>
-            <SidebarGroup title="Navigation" isCollapsed={isCollapsed}>
+            <SidebarGroup title="" isCollapsed={isCollapsed}>
               {menuItems.map((item) => (
                 <SidebarItem
                   key={item.id}
@@ -155,7 +161,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
 
       {/* Main content area with header and scrollable content */}
       <div class="flex-1 flex flex-col overflow-hidden">
-        {/* 
+        {/*
           Application header with page title, notifications, and user profile
           Features white background with subtle shadow and border
         */}
@@ -168,7 +174,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
 
             {/* Header right section with notifications and user profile */}
             <div class="flex items-center space-x-4">
-              {/* 
+              {/*
                 User profile dropdown component
                 Contains user avatar, name, email, and dropdown menu
               */}
@@ -193,7 +199,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
           </div>
         </header>
 
-        {/* 
+        {/*
           Main content area with scrollable container
           Uses container class for proper horizontal centering and padding
         */}

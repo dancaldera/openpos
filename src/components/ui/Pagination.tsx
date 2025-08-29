@@ -52,6 +52,8 @@ export function Pagination({
 
   if (totalPages <= 1) return null
 
+  const visiblePages = getVisiblePages()
+
   return (
     <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
       <div class="text-sm text-gray-700">
@@ -67,16 +69,20 @@ export function Pagination({
           disabled={currentPage <= 1 || isLoading}
           class="flex items-center gap-1"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Previous">
+            <title>Previous page</title>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
           Previous
         </Button>
 
         <div class="flex items-center gap-1">
-          {getVisiblePages().map((page, index) =>
+          {visiblePages.map((page, index) =>
             page === '...' ? (
-              <span key={`ellipsis-${index}`} class="px-2 py-1 text-gray-500">
+              <span
+                key={`ellipsis-${String(visiblePages[index - 1])}-${String(visiblePages[index + 1])}`}
+                class="px-2 py-1 text-gray-500"
+              >
                 ...
               </span>
             ) : (
@@ -106,7 +112,8 @@ export function Pagination({
           class="flex items-center gap-1"
         >
           Next
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Next">
+            <title>Next page</title>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </Button>

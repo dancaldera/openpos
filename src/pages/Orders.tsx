@@ -20,13 +20,17 @@ import {
   TableRow,
   Text,
 } from '../components/ui'
+import { useTranslation } from '../hooks/useTranslation'
 import { authService } from '../services/auth-sqlite'
 import { companySettingsService } from '../services/company-settings-sqlite'
 import { type Order, orderService } from '../services/orders-sqlite'
 import { type Product, productService } from '../services/products-sqlite'
 import { userService } from '../services/users-sqlite'
+import { PrintService } from '../services/print-service'
 
 export default function Orders() {
+  const { t } = useTranslation()
+
   const [orders, setOrders] = useState<Order[]>([])
   const [allOrders, setAllOrders] = useState<Order[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -48,6 +52,8 @@ export default function Orders() {
   const [editProductSearch, setEditProductSearch] = useState('')
   const [users, setUsers] = useState<{ [key: string]: string }>({}) // userId -> userName mapping
   const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'user' | null>(null)
+  const [isPrinting, setIsPrinting] = useState(false)
+  const [printStatus, setPrintStatus] = useState<string | null>(null)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -91,9 +97,9 @@ export default function Orders() {
 
   const getDateFilterOptions = () => {
     const options = [
-      { value: 'all', label: '📋 All Orders' },
-      { value: 'today', label: '📅 Today' },
-      { value: 'yesterday', label: '📅 Yesterday' },
+      { value: 'all', label: `📋 ${t('orders.allOrders')}` },
+      { value: 'today', label: `📅 ${t('dates.today')}` },
+      { value: 'yesterday', label: `📅 ${t('dates.yesterday')}` },
     ]
 
     // Add the last 5 days
@@ -161,7 +167,7 @@ export default function Orders() {
 
       setError('')
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Failed to load data')
+      setError((err as Error)?.message || t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -232,7 +238,7 @@ export default function Orders() {
 
   const handleCreateOrder = async () => {
     if (newOrder.items.length === 0) {
-      setError('Please add at least one item to the order')
+      setError(t('orders.addItemError'))
       return
     }
 
@@ -258,10 +264,10 @@ export default function Orders() {
 
         setError('')
       } else {
-        setError(result.error || 'Failed to create order')
+        setError(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError('Failed to create order')
+      setError(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -283,10 +289,10 @@ export default function Orders() {
           setProducts(updatedProducts.filter((p) => p.isActive && p.stock > 0))
         }
       } else {
-        setError(result.error || 'Failed to update order status')
+        setError(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError('Failed to update order status')
+      setError(t('errors.generic'))
     }
   }
 
@@ -304,10 +310,10 @@ export default function Orders() {
         const updatedProducts = await productService.getProducts()
         setProducts(updatedProducts.filter((p) => p.isActive && p.stock > 0))
       } else {
-        setError(result.error || 'Failed to delete order')
+        setError(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError('Failed to delete order')
+      setError(t('errors.generic'))
     }
   }
 
@@ -346,7 +352,7 @@ export default function Orders() {
 
   const handleUpdateOrder = async () => {
     if (!editingOrder || editOrderItems.length === 0) {
-      setError('Please add at least one item to the order')
+      setError(t('orders.addItemError'))
       return
     }
 
@@ -359,7 +365,8 @@ export default function Orders() {
       })
 
       if (result.success && result.order) {
-        const updatedAllOrders = allOrders.map((o) => (o.id === editingOrder.id ? result.order! : o))
+        const updated = result.order
+        const updatedAllOrders = allOrders.map((o) => (o.id === editingOrder.id ? updated : o))
         setAllOrders(updatedAllOrders)
         setOrders(updatedAllOrders)
         setEditingOrder(null)
@@ -368,10 +375,10 @@ export default function Orders() {
         setEditNotes('')
         setError('')
       } else {
-        setError(result.error || 'Failed to update order')
+        setError(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError('Failed to update order')
+      setError(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -445,13 +452,45 @@ export default function Orders() {
     setCurrentPage(page)
   }
 
+  const handleThermalPrint = async (order: Order) => {
+    setIsPrinting(true)
+    setPrintStatus(null)
+
+    try {
+      // Get company settings for printing
+      const settings = await companySettingsService.getSettings()
+      
+      // Format receipt data
+      const receiptData = PrintService.formatReceiptData(order, settings)
+      
+      // Send to printer
+      const response = await PrintService.printThermalReceipt(receiptData)
+      
+      setPrintStatus('Print command sent successfully!')
+      console.log('Print response:', response)
+    } catch (error: any) {
+      console.error('Print error:', error)
+      setPrintStatus(`Print failed: ${error.message || error}`)
+    } finally {
+      setIsPrinting(false)
+      // Clear status after 3 seconds
+      setTimeout(() => setPrintStatus(null), 3000)
+    }
+  }
+
   const getOrderActionItems = (order: Order): DropdownItem[] => {
     const items: DropdownItem[] = [
       {
         id: `view-${order.id}`,
-        label: 'View Details',
+        label: t('orders.viewDetails'),
         icon: '👁️',
         onClick: () => setSelectedOrder(order),
+      },
+      {
+        id: `print-${order.id}`,
+        label: 'Print Receipt',
+        icon: '🖨️',
+        onClick: () => handleThermalPrint(order),
       },
     ]
 
@@ -459,19 +498,19 @@ export default function Orders() {
       items.push(
         {
           id: `edit-${order.id}`,
-          label: 'Update Order',
+          label: t('orders.updateOrder'),
           icon: '✏️',
           onClick: () => handleEditOrder(order),
         },
         {
           id: `pay-${order.id}`,
-          label: 'Mark as Paid',
+          label: t('orders.markAsPaid'),
           icon: '💰',
           onClick: () => handleUpdateStatus(order.id, 'paid'),
         },
         {
           id: `cancel-${order.id}`,
-          label: 'Cancel Order',
+          label: t('orders.cancelOrder'),
           icon: '❌',
           onClick: () => handleUpdateStatus(order.id, 'cancelled'),
           variant: 'danger',
@@ -482,7 +521,7 @@ export default function Orders() {
     if (order.status === 'paid') {
       items.push({
         id: `complete-${order.id}`,
-        label: 'Mark Complete',
+        label: t('orders.markComplete'),
         icon: '✅',
         onClick: () => handleUpdateStatus(order.id, 'completed'),
       })
@@ -500,7 +539,7 @@ export default function Orders() {
         },
         {
           id: `delete-${order.id}`,
-          label: 'Delete Order',
+          label: t('orders.deleteOrder'),
           icon: '🗑️',
           onClick: () => setDeleteConfirm(order.id),
           variant: 'danger',
@@ -516,7 +555,7 @@ export default function Orders() {
       <div class="bg-white rounded-lg shadow p-6">
         <div class="text-center py-8">
           <div class="w-8 h-8 bg-blue-600 rounded-full animate-spin border-2 border-transparent border-t-white mx-auto mb-4"></div>
-          <p class="text-gray-600">Loading orders...</p>
+          <p class="text-gray-600">{t('orders.loadingOrders')}</p>
         </div>
       </div>
     )
@@ -526,43 +565,57 @@ export default function Orders() {
     <Container size="xl">
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">Orders</h1>
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">{t('orders.title')}</h1>
           <p class="text-gray-600">
-            {totalCount} {totalCount === 1 ? 'order' : 'orders'}
+            {totalCount} {totalCount === 1 ? t('orders.order') : t('orders.orders')}
             {selectedDateFilter === 'today'
-              ? ' today'
+              ? ` ${t('dates.today').toLowerCase()}`
               : selectedDateFilter === 'yesterday'
-                ? ' yesterday'
+                ? ` ${t('dates.yesterday').toLowerCase()}`
                 : selectedDateFilter === 'all'
-                  ? ' total'
-                  : ` on ${new Date(selectedDateFilter + 'T00:00:00').toLocaleDateString('en-US', {
+                  ? ` ${t('common.total').toLowerCase()}`
+                  : ` on ${new Date(`${selectedDateFilter}T00:00:00`).toLocaleDateString('en-US', {
                       weekday: 'short',
                       month: 'short',
                       day: 'numeric',
                     })}`}
-            {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
-            {searchQuery && ` • ${filteredOrders.length} found`}
+            {totalPages > 1 && ` • ${t('pagination.page')} ${currentPage} ${t('pagination.of')} ${totalPages}`}
+            {searchQuery && ` • ${filteredOrders.length} ${t('orders.found')}`}
           </p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <span class="mr-2">➕</span>
-          Create Order
+          {t('orders.createOrder')}
         </Button>
       </div>
 
       {error && <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+
+      {/* Print Status Message */}
+      {printStatus && (
+        <div
+          class={`text-center p-3 mb-4 text-sm rounded ${
+            printStatus.includes('failed') || printStatus.includes('Print failed')
+              ? 'bg-red-100 text-red-700 border border-red-200'
+              : 'bg-green-100 text-green-700 border border-green-200'
+          }`}
+        >
+          {printStatus}
+        </div>
+      )}
 
       <div class="mb-6 space-y-4">
         <div class="flex gap-4">
           <div class="flex-1">
             <Input
               type="search"
-              placeholder="Search orders by ID, items, or total..."
+              placeholder={t('orders.searchPlaceholder')}
               value={searchQuery}
               onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
               onChange={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
               leftIcon={
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Search">
+                  <title>Search</title>
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
@@ -573,7 +626,8 @@ export default function Orders() {
               }
               rightIcon={
                 searchQuery ? (
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Clear search">
+                    <title>Clear search</title>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 ) : undefined
@@ -595,18 +649,26 @@ export default function Orders() {
               value={selectedStatus}
               onChange={(e) => setSelectedStatus((e.target as HTMLSelectElement).value as Order['status'] | 'all')}
               options={[
-                { value: 'all', label: 'All Status' },
-                { value: 'pending', label: 'Pending' },
-                { value: 'paid', label: 'Paid' },
-                { value: 'completed', label: 'Completed' },
-                { value: 'cancelled', label: 'Cancelled' },
+                { value: 'all', label: t('orders.allStatus') },
+                { value: 'pending', label: t('orders.pending') },
+                { value: 'paid', label: t('orders.paid') },
+                { value: 'completed', label: t('orders.completed') },
+                { value: 'cancelled', label: t('orders.cancelled') },
               ]}
               class="w-auto min-w-0"
             />
           </div>
           <div class="flex items-center text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg w-auto">
-            <span class="mr-2">Sort by:</span>
-            <span class="font-medium capitalize">{sortBy}</span>
+            <span class="mr-2">{t('orders.sortBy')}:</span>
+            <span class="font-medium capitalize">
+              {sortBy === 'date'
+                ? t('common.date')
+                : sortBy === 'total'
+                  ? t('common.total')
+                  : sortBy === 'status'
+                    ? t('common.status')
+                    : sortBy}
+            </span>
             <span class="ml-1">{getSortIcon(sortBy)}</span>
           </div>
         </div>
@@ -617,7 +679,7 @@ export default function Orders() {
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-3xl font-bold text-blue-600">{orderStats.pending}</div>
-                <div class="text-sm font-medium text-blue-700">Pending Orders</div>
+                <div class="text-sm font-medium text-blue-700">{t('orders.pendingOrders')}</div>
               </div>
               <div class="text-blue-400 text-2xl">⏳</div>
             </div>
@@ -626,7 +688,7 @@ export default function Orders() {
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-3xl font-bold text-green-600">{orderStats.completed}</div>
-                <div class="text-sm font-medium text-green-700">Completed</div>
+                <div class="text-sm font-medium text-green-700">{t('orders.completed')}</div>
               </div>
               <div class="text-green-400 text-2xl">✅</div>
             </div>
@@ -635,7 +697,7 @@ export default function Orders() {
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-3xl font-bold text-purple-600">{orderStats.paid}</div>
-                <div class="text-sm font-medium text-purple-700">Paid Orders</div>
+                <div class="text-sm font-medium text-purple-700">{t('orders.paidOrders')}</div>
               </div>
               <div class="text-purple-400 text-2xl">💳</div>
             </div>
@@ -644,7 +706,7 @@ export default function Orders() {
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-3xl font-bold text-red-600">{orderStats.cancelled}</div>
-                <div class="text-sm font-medium text-red-700">Cancelled</div>
+                <div class="text-sm font-medium text-red-700">{t('orders.cancelled')}</div>
               </div>
               <div class="text-red-400 text-2xl">❌</div>
             </div>
@@ -656,28 +718,28 @@ export default function Orders() {
         <Table>
           <TableHead>
             <TableRow class="bg-gray-50">
-              <TableHeader class="font-semibold text-gray-900">Order</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Items</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Payment</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('orders.order')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('orders.items')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('orders.payment')}</TableHeader>
               <TableHeader
                 class="font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
                 onClick={() => handleSort('total')}
               >
-                Total {getSortIcon('total')}
+                {t('common.total')} {getSortIcon('total')}
               </TableHeader>
               <TableHeader
                 class="font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
                 onClick={() => handleSort('status')}
               >
-                Status {getSortIcon('status')}
+                {t('common.status')} {getSortIcon('status')}
               </TableHeader>
               <TableHeader
                 class="font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
                 onClick={() => handleSort('date')}
               >
-                Date {getSortIcon('date')}
+                {t('common.date')} {getSortIcon('date')}
               </TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Actions</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('common.actions')}</TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -694,7 +756,7 @@ export default function Orders() {
                 <TableCell>
                   <div class="max-w-xs">
                     <div class="text-sm font-medium text-gray-900 mb-1">
-                      {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
+                      {order.items.length} {order.items.length === 1 ? t('orders.item') : t('orders.items')}
                     </div>
                     <div class="space-y-1">
                       {order.items.slice(0, 2).map((item) => (
@@ -704,7 +766,9 @@ export default function Orders() {
                         </div>
                       ))}
                       {order.items.length > 2 && (
-                        <div class="text-xs text-gray-500">+{order.items.length - 2} more...</div>
+                        <div class="text-xs text-gray-500">
+                          +{order.items.length - 2} {t('orders.more')}...
+                        </div>
                       )}
                     </div>
                   </div>
@@ -715,7 +779,13 @@ export default function Orders() {
                       <span class="text-lg mr-2">
                         {order.paymentMethod === 'cash' ? '💵' : order.paymentMethod === 'card' ? '💳' : '🔄'}
                       </span>
-                      <span class="text-sm font-medium text-gray-700 capitalize">{order.paymentMethod}</span>
+                      <span class="text-sm font-medium text-gray-700 capitalize">
+                        {order.paymentMethod === 'cash'
+                          ? t('orders.cash')
+                          : order.paymentMethod === 'card'
+                            ? t('orders.card')
+                            : t('orders.transfer')}
+                      </span>
                     </div>
                   )}
                 </TableCell>
@@ -725,9 +795,13 @@ export default function Orders() {
                       {formatCurrency(taxEnabled ? order.total : order.subtotal)}
                     </div>
                     {taxEnabled && order.tax > 0 && (
-                      <div class="text-xs text-gray-500">Tax: {formatCurrency(order.tax)}</div>
+                      <div class="text-xs text-gray-500">
+                        {t('common.tax')}: {formatCurrency(order.tax)}
+                      </div>
                     )}
-                    {taxEnabled && order.tax === 0 && <div class="text-xs text-gray-400 italic">No tax applied</div>}
+                    {taxEnabled && order.tax === 0 && (
+                      <div class="text-xs text-gray-400 italic">{t('orders.noTaxApplied')}</div>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -735,7 +809,13 @@ export default function Orders() {
                     class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide ${getStatusColor(order.status)} transition-all hover:scale-105`}
                   >
                     <span class="mr-1 text-sm">{getStatusIcon(order.status)}</span>
-                    {order.status}
+                    {order.status === 'pending'
+                      ? t('orders.pending')
+                      : order.status === 'paid'
+                        ? t('orders.paid')
+                        : order.status === 'completed'
+                          ? t('orders.completed')
+                          : t('orders.cancelled')}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -749,23 +829,17 @@ export default function Orders() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <Dropdown
-                      trigger={
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          class="text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all hover:shadow-md"
-                        >
-                          ⚙️ Actions
-                        </Button>
-                      }
-                      items={getOrderActionItems(order)}
-                      align="right"
-                      width="w-48"
-                    />
-                  </div>
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Dropdown
+                    trigger={
+                      <span class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-all hover:shadow-md cursor-pointer">
+                        ⚙️ {t('common.actions')}
+                      </span>
+                    }
+                    items={getOrderActionItems(order)}
+                    align="right"
+                    width="w-48"
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -803,22 +877,22 @@ export default function Orders() {
             </div>
             <Heading level={3} class="mb-3 text-gray-900">
               {searchQuery
-                ? 'No matching orders found'
+                ? t('orders.noMatchingOrders')
                 : selectedStatus === 'all'
-                  ? 'No orders yet'
-                  : `No ${selectedStatus} orders`}
+                  ? t('orders.noOrdersYet')
+                  : t('orders.noOrdersWithStatus', { status: selectedStatus })}
             </Heading>
             <Text class="text-gray-600 mb-6 max-w-md mx-auto">
               {searchQuery
-                ? `We couldn't find any orders matching "${searchQuery}". Try adjusting your search terms.`
+                ? t('orders.noMatchingOrdersDesc', { query: searchQuery })
                 : selectedStatus === 'all'
-                  ? 'Get started by creating your first order. Orders will appear here once created.'
-                  : `There are currently no orders with the status "${selectedStatus}".`}
+                  ? t('orders.noOrdersYetDesc')
+                  : t('orders.noOrdersWithStatusDesc', { status: selectedStatus })}
             </Text>
             {!searchQuery && selectedStatus === 'all' && (
               <Button onClick={() => setIsCreateModalOpen(true)} class="mt-4">
                 <span class="mr-2">➕</span>
-                Create Your First Order
+                {t('orders.createFirstOrder')}
               </Button>
             )}
           </div>
@@ -829,7 +903,7 @@ export default function Orders() {
       <Dialog
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Create New Order"
+        title={t('orders.createNewOrder')}
         size="full"
       >
         <DialogBody>
@@ -838,14 +912,14 @@ export default function Orders() {
             <div>
               <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div>
-                  <h3 class="text-lg font-semibold text-gray-900">Available Products</h3>
-                  <p class="text-sm text-gray-600 mt-1">Click on any product card to add it to your order</p>
+                  <h3 class="text-lg font-semibold text-gray-900">{t('orders.availableProducts')}</h3>
+                  <p class="text-sm text-gray-600 mt-1">{t('orders.clickToAdd')}</p>
                 </div>
                 <div class="flex items-center gap-3">
                   <div class="w-64">
                     <Input
                       type="search"
-                      placeholder="Search products..."
+                      placeholder={t('orders.searchProducts')}
                       value={productSearch}
                       onInput={(e) => setProductSearch((e.target as HTMLInputElement).value)}
                       leftIcon={
@@ -855,7 +929,10 @@ export default function Orders() {
                           viewBox="0 0 24 24"
                           stroke-width="1.5"
                           stroke="currentColor"
+                          role="img"
+                          aria-label="Search"
                         >
+                          <title>Search</title>
                           <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -865,7 +942,14 @@ export default function Orders() {
                       }
                       rightIcon={
                         productSearch ? (
-                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            role="img"
+                            aria-label="Clear search"
+                          >
+                            <title>Clear search</title>
                             <path
                               stroke-linecap="round"
                               stroke-linejoin="round"
@@ -880,7 +964,7 @@ export default function Orders() {
                     />
                   </div>
                   <div class="text-sm text-gray-500">
-                    {filteredProducts.length} of {products.length} products
+                    {filteredProducts.length} {t('orders.of')} {products.length} {t('products.title').toLowerCase()}
                   </div>
                 </div>
               </div>
@@ -888,9 +972,11 @@ export default function Orders() {
                 {filteredProducts.length === 0 ? (
                   <div class="text-center py-12">
                     <div class="text-6xl mb-4">🔍</div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">{t('orders.noProductsFound')}</h3>
                     <p class="text-gray-500">
-                      {productSearch ? `No products match "${productSearch}"` : 'No products available'}
+                      {productSearch
+                        ? t('orders.noProductsMatch', { search: productSearch })
+                        : t('orders.noProductsAvailable')}
                     </p>
                     {productSearch && (
                       <button
@@ -898,7 +984,7 @@ export default function Orders() {
                         onClick={() => setProductSearch('')}
                         class="mt-4 text-blue-600 hover:text-blue-800 font-medium"
                       >
-                        Clear search
+                        {t('orders.clearSearch')}
                       </button>
                     )}
                   </div>
@@ -907,11 +993,20 @@ export default function Orders() {
                     {filteredProducts.map((product) => (
                       <div
                         key={product.id}
-                        onClick={() => product.stock > 0 && addItemToOrder(product.id)}
                         class="group relative backdrop-blur-md bg-white/70 border border-white/40 rounded-xl p-4 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+                        onClick={() => product.stock > 0 && addItemToOrder(product.id)}
+                        role="button"
+                        tabindex={0}
+                        aria-label={`${t('orders.addProduct')} ${product.name}`}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            product.stock > 0 && addItemToOrder(product.id)
+                          }
+                        }}
                       >
                         {/* Glass highlight overlay */}
-                        <div class="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent rounded-xl opacity-60 pointer-events-none"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent rounded-xl opacity-60"></div>
 
                         <div class="relative flex justify-between items-start">
                           <div class="flex-1">
@@ -947,7 +1042,7 @@ export default function Orders() {
             {/* Order Items */}
             {newOrder.items.length > 0 && (
               <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Order Summary</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">{t('orders.orderSummary')}</h3>
                 <div class="backdrop-blur-lg bg-gradient-to-br from-blue-100/60 to-indigo-100/40 border border-blue-200/50 rounded-2xl p-6 space-y-4 shadow-xl">
                   {newOrder.items.map((item) => {
                     const product = products.find((p) => p.id === item.productId)
@@ -957,7 +1052,7 @@ export default function Orders() {
                         class="relative flex justify-between items-center backdrop-blur-md bg-white/80 border border-white/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-200"
                       >
                         {/* Glass highlight overlay */}
-                        <div class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent rounded-xl opacity-70 pointer-events-none"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent rounded-xl opacity-70"></div>
 
                         <div class="relative flex-1">
                           <div class="font-semibold text-gray-900 mb-2 drop-shadow-sm">{product.name}</div>
@@ -1026,23 +1121,23 @@ export default function Orders() {
                         >
                           <div class="space-y-3">
                             <div class="flex justify-between text-gray-700 text-lg">
-                              <span class="font-medium">Subtotal:</span>
+                              <span class="font-medium">{t('common.subtotal')}:</span>
                               <span class="font-semibold drop-shadow-sm">{formatCurrency(subtotal)}</span>
                             </div>
                             {taxEnabled && (
                               <div class="flex justify-between text-gray-700 text-lg">
-                                <span class="font-medium">Tax ({(taxRate * 100).toFixed(1)}%):</span>
+                                <span class="font-medium">
+                                  {t('common.tax')} ({(taxRate * 100).toFixed(1)}%):
+                                </span>
                                 <span class="font-semibold drop-shadow-sm">{formatCurrency(tax)}</span>
                               </div>
                             )}
                             {!taxEnabled && (
-                              <div class="text-sm text-gray-500 italic text-center py-2">
-                                Tax calculation is disabled in settings
-                              </div>
+                              <div class="text-sm text-gray-500 italic text-center py-2">{t('orders.taxDisabled')}</div>
                             )}
                             <div class="border-t border-white/40 pt-3">
                               <div class="flex justify-between text-2xl font-bold text-gray-900 backdrop-blur-sm bg-gradient-to-r from-emerald-100/60 to-green-100/40 px-4 py-3 rounded-lg border border-emerald-200/50 shadow-md">
-                                <span class="drop-shadow-sm">Total:</span>
+                                <span class="drop-shadow-sm">{t('common.total')}:</span>
                                 <span class="drop-shadow-sm text-emerald-700">{formatCurrency(total)}</span>
                               </div>
                             </div>
@@ -1059,7 +1154,7 @@ export default function Orders() {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Select
-                  label="Payment Method"
+                  label={t('orders.paymentMethod')}
                   value={newOrder.paymentMethod}
                   onChange={(e) =>
                     setNewOrder({
@@ -1068,15 +1163,15 @@ export default function Orders() {
                     })
                   }
                   options={[
-                    { value: 'cash', label: '💵 Cash' },
-                    { value: 'card', label: '💳 Card' },
-                    { value: 'transfer', label: '🔄 Transfer' },
+                    { value: 'cash', label: `💵 ${t('orders.cash')}` },
+                    { value: 'card', label: `💳 ${t('orders.card')}` },
+                    { value: 'transfer', label: `🔄 ${t('orders.transfer')}` },
                   ]}
                 />
               </div>
               <div>
                 <Input
-                  label="Order Notes"
+                  label={t('orders.orderNotes')}
                   value={newOrder.notes}
                   onInput={(e) =>
                     setNewOrder({
@@ -1084,7 +1179,7 @@ export default function Orders() {
                       notes: (e.target as HTMLInputElement).value,
                     })
                   }
-                  placeholder="Optional notes..."
+                  placeholder={t('orders.optionalNotes')}
                 />
               </div>
             </div>
@@ -1093,10 +1188,10 @@ export default function Orders() {
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)} disabled={isLoading}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="button" onClick={handleCreateOrder} disabled={isLoading || newOrder.items.length === 0}>
-            {isLoading ? 'Creating...' : 'Create Order'}
+            {isLoading ? t('common.loading') : t('orders.createOrder')}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -1111,7 +1206,7 @@ export default function Orders() {
           setEditNotes('')
           setEditProductSearch('')
         }}
-        title={`Update Order #${editingOrder?.id}`}
+        title={t('orders.updateOrderTitle', { id: editingOrder?.id ?? '' })}
         size="full"
       >
         <DialogBody>
@@ -1120,14 +1215,14 @@ export default function Orders() {
             <div>
               <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div>
-                  <h3 class="text-lg font-semibold text-gray-900">Available Products</h3>
-                  <p class="text-sm text-gray-600 mt-1">Click on any product card to add it to your order</p>
+                  <h3 class="text-lg font-semibold text-gray-900">{t('orders.availableProducts')}</h3>
+                  <p class="text-sm text-gray-600 mt-1">{t('orders.clickToAdd')}</p>
                 </div>
                 <div class="flex items-center gap-3">
                   <div class="w-64">
                     <Input
                       type="search"
-                      placeholder="Search products..."
+                      placeholder={t('orders.searchProducts')}
                       value={editProductSearch}
                       onInput={(e) => setEditProductSearch((e.target as HTMLInputElement).value)}
                       leftIcon={
@@ -1137,7 +1232,10 @@ export default function Orders() {
                           viewBox="0 0 24 24"
                           stroke-width="1.5"
                           stroke="currentColor"
+                          role="img"
+                          aria-label="Search"
                         >
+                          <title>Search</title>
                           <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -1147,7 +1245,14 @@ export default function Orders() {
                       }
                       rightIcon={
                         editProductSearch ? (
-                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            role="img"
+                            aria-label="Clear search"
+                          >
+                            <title>Clear search</title>
                             <path
                               stroke-linecap="round"
                               stroke-linejoin="round"
@@ -1162,7 +1267,7 @@ export default function Orders() {
                     />
                   </div>
                   <div class="text-sm text-gray-500">
-                    {filteredEditProducts.length} of {products.length} products
+                    {filteredEditProducts.length} {t('orders.of')} {products.length} {t('products.title').toLowerCase()}
                   </div>
                 </div>
               </div>
@@ -1170,9 +1275,11 @@ export default function Orders() {
                 {filteredEditProducts.length === 0 ? (
                   <div class="text-center py-12">
                     <div class="text-6xl mb-4">🔍</div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">{t('orders.noProductsFound')}</h3>
                     <p class="text-gray-500">
-                      {editProductSearch ? `No products match "${editProductSearch}"` : 'No products available'}
+                      {editProductSearch
+                        ? t('orders.noProductsMatch', { search: editProductSearch })
+                        : t('orders.noProductsAvailable')}
                     </p>
                     {editProductSearch && (
                       <button
@@ -1180,7 +1287,7 @@ export default function Orders() {
                         onClick={() => setEditProductSearch('')}
                         class="mt-4 text-blue-600 hover:text-blue-800 font-medium"
                       >
-                        Clear search
+                        {t('orders.clearSearch')}
                       </button>
                     )}
                   </div>
@@ -1189,10 +1296,19 @@ export default function Orders() {
                     {filteredEditProducts.map((product) => (
                       <div
                         key={product.id}
-                        onClick={() => product.stock > 0 && addItemToEditOrder(product.id)}
                         class="group relative backdrop-blur-md bg-white/70 border border-white/40 rounded-xl p-4 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:border-emerald-300/50 cursor-pointer"
+                        onClick={() => product.stock > 0 && addItemToEditOrder(product.id)}
+                        role="button"
+                        tabindex={0}
+                        aria-label={`${t('orders.addProduct')} ${product.name}`}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            product.stock > 0 && addItemToEditOrder(product.id)
+                          }
+                        }}
                       >
-                        <div class="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent rounded-xl opacity-60 pointer-events-none"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent rounded-xl opacity-60"></div>
 
                         <div class="relative flex justify-between items-start">
                           <div class="flex-1">
@@ -1228,7 +1344,7 @@ export default function Orders() {
             {/* Edit Order Items */}
             {editOrderItems.length > 0 && (
               <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Updated Order Summary</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">{t('orders.updatedOrderSummary')}</h3>
                 <div class="backdrop-blur-lg bg-gradient-to-br from-emerald-100/60 to-green-100/40 border border-emerald-200/50 rounded-2xl p-6 space-y-4 shadow-xl">
                   {editOrderItems.map((item) => {
                     const product = products.find((p) => p.id === item.productId)
@@ -1237,7 +1353,7 @@ export default function Orders() {
                         key={item.productId}
                         class="relative flex justify-between items-center backdrop-blur-md bg-white/80 border border-white/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-200"
                       >
-                        <div class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent rounded-xl opacity-70 pointer-events-none"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent rounded-xl opacity-70"></div>
 
                         <div class="relative flex-1">
                           <div class="font-semibold text-gray-900 mb-2 drop-shadow-sm">{product.name}</div>
@@ -1309,23 +1425,23 @@ export default function Orders() {
                         >
                           <div class="space-y-3">
                             <div class="flex justify-between text-gray-700 text-lg">
-                              <span class="font-medium">Subtotal:</span>
+                              <span class="font-medium">{t('common.subtotal')}:</span>
                               <span class="font-semibold drop-shadow-sm">{formatCurrency(subtotal)}</span>
                             </div>
                             {taxEnabled && (
                               <div class="flex justify-between text-gray-700 text-lg">
-                                <span class="font-medium">Tax ({(taxRate * 100).toFixed(1)}%):</span>
+                                <span class="font-medium">
+                                  {t('common.tax')} ({(taxRate * 100).toFixed(1)}%):
+                                </span>
                                 <span class="font-semibold drop-shadow-sm">{formatCurrency(tax)}</span>
                               </div>
                             )}
                             {!taxEnabled && (
-                              <div class="text-sm text-gray-500 italic text-center py-2">
-                                Tax calculation is disabled in settings
-                              </div>
+                              <div class="text-sm text-gray-500 italic text-center py-2">{t('orders.taxDisabled')}</div>
                             )}
                             <div class="border-t border-white/40 pt-3">
                               <div class="flex justify-between text-2xl font-bold text-gray-900 backdrop-blur-sm bg-gradient-to-r from-emerald-100/60 to-green-100/40 px-4 py-3 rounded-lg border border-emerald-200/50 shadow-md">
-                                <span class="drop-shadow-sm">New Total:</span>
+                                <span class="drop-shadow-sm">{t('orders.newTotal')}:</span>
                                 <span class="drop-shadow-sm text-emerald-700">{formatCurrency(total)}</span>
                               </div>
                             </div>
@@ -1342,24 +1458,24 @@ export default function Orders() {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Select
-                  label="Payment Method"
+                  label={t('orders.paymentMethod')}
                   value={editPaymentMethod}
                   onChange={(e) =>
                     setEditPaymentMethod((e.target as HTMLSelectElement).value as 'cash' | 'card' | 'transfer')
                   }
                   options={[
-                    { value: 'cash', label: '💵 Cash' },
-                    { value: 'card', label: '💳 Card' },
-                    { value: 'transfer', label: '🔄 Transfer' },
+                    { value: 'cash', label: `💵 ${t('orders.cash')}` },
+                    { value: 'card', label: `💳 ${t('orders.card')}` },
+                    { value: 'transfer', label: `🔄 ${t('orders.transfer')}` },
                   ]}
                 />
               </div>
               <div>
                 <Input
-                  label="Order Notes"
+                  label={t('orders.orderNotes')}
                   value={editNotes}
                   onInput={(e) => setEditNotes((e.target as HTMLInputElement).value)}
-                  placeholder="Optional notes..."
+                  placeholder={t('orders.optionalNotes')}
                 />
               </div>
             </div>
@@ -1379,10 +1495,10 @@ export default function Orders() {
             }}
             disabled={isLoading}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="button" onClick={handleUpdateOrder} disabled={isLoading || editOrderItems.length === 0}>
-            {isLoading ? 'Updating...' : 'Update Order'}
+            {isLoading ? t('orders.updating') : t('orders.updateOrder')}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -1392,7 +1508,7 @@ export default function Orders() {
         <Dialog
           isOpen={!!selectedOrder}
           onClose={() => setSelectedOrder(null)}
-          title={`Order Details - #${selectedOrder.id}`}
+          title={t('orders.orderDetailsTitle', { id: selectedOrder.id })}
           size="lg"
         >
           <DialogBody>
@@ -1405,7 +1521,13 @@ export default function Orders() {
                       class={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold uppercase tracking-wide ${getStatusColor(selectedOrder.status)} transition-all`}
                     >
                       <span class="mr-2 text-base">{getStatusIcon(selectedOrder.status)}</span>
-                      {selectedOrder.status}
+                      {selectedOrder.status === 'pending'
+                        ? t('orders.pending')
+                        : selectedOrder.status === 'paid'
+                          ? t('orders.paid')
+                          : selectedOrder.status === 'completed'
+                            ? t('orders.completed')
+                            : t('orders.cancelled')}
                     </div>
                     {selectedOrder.paymentMethod && (
                       <div class="flex items-center text-gray-600">
@@ -1416,19 +1538,28 @@ export default function Orders() {
                               ? '💳'
                               : '🔄'}
                         </span>
-                        <span class="text-sm capitalize">{selectedOrder.paymentMethod}</span>
+                        <span class="text-sm capitalize">
+                          {selectedOrder.paymentMethod === 'cash'
+                            ? t('orders.cash')
+                            : selectedOrder.paymentMethod === 'card'
+                              ? t('orders.card')
+                              : t('orders.transfer')}
+                        </span>
                       </div>
                     )}
                   </div>
-                  <div class="text-sm text-gray-600">Created: {new Date(selectedOrder.createdAt).toLocaleString()}</div>
+                  <div class="text-sm text-gray-600">
+                    {t('orders.created')}: {new Date(selectedOrder.createdAt).toLocaleString()}
+                  </div>
                   {selectedOrder.completedAt && (
                     <div class="text-sm text-gray-600">
-                      Completed: {new Date(selectedOrder.completedAt).toLocaleString()}
+                      {t('orders.completed')}: {new Date(selectedOrder.completedAt).toLocaleString()}
                     </div>
                   )}
                   {selectedOrder.userId && users[selectedOrder.userId] && (
                     <div class="text-sm text-gray-600">
-                      Created by: <span class="font-medium text-gray-700">{users[selectedOrder.userId]}</span>
+                      {t('orders.createdBy')}:{' '}
+                      <span class="font-medium text-gray-700">{users[selectedOrder.userId]}</span>
                     </div>
                   )}
                 </div>
@@ -1436,13 +1567,13 @@ export default function Orders() {
                   <div class="text-3xl font-bold text-gray-900">
                     {formatCurrency(taxEnabled ? selectedOrder.total : selectedOrder.subtotal)}
                   </div>
-                  <div class="text-sm text-gray-500">Total Amount</div>
+                  <div class="text-sm text-gray-500">{t('orders.totalAmount')}</div>
                 </div>
               </div>
 
               {/* Order Items */}
               <div>
-                <h4 class="text-lg font-semibold text-gray-900 mb-3">Order Items</h4>
+                <h4 class="text-lg font-semibold text-gray-900 mb-3">{t('orders.orderItems')}</h4>
                 <div class="space-y-3">
                   {selectedOrder.items.map((item, index) => (
                     <div
@@ -1451,19 +1582,21 @@ export default function Orders() {
                     >
                       <div class="flex-1">
                         <div class="font-semibold text-gray-900">{item.productName}</div>
-                        <div class="text-sm text-gray-600">Product ID: {item.productId}</div>
+                        <div class="text-sm text-gray-600">
+                          {t('orders.productId')}: {item.productId}
+                        </div>
                       </div>
                       <div class="text-center mx-4">
                         <div class="font-semibold text-gray-900">×{item.quantity}</div>
-                        <div class="text-sm text-gray-500">Quantity</div>
+                        <div class="text-sm text-gray-500">{t('common.quantity')}</div>
                       </div>
                       <div class="text-right">
                         <div class="font-semibold text-gray-900">{formatCurrency(item.unitPrice)}</div>
-                        <div class="text-sm text-gray-500">Unit Price</div>
+                        <div class="text-sm text-gray-500">{t('orders.unitPrice')}</div>
                       </div>
                       <div class="text-right ml-4 min-w-0">
                         <div class="font-bold text-lg text-gray-900">{formatCurrency(item.totalPrice)}</div>
-                        <div class="text-sm text-gray-500">Item Total</div>
+                        <div class="text-sm text-gray-500">{t('orders.itemTotal')}</div>
                       </div>
                     </div>
                   ))}
@@ -1472,25 +1605,27 @@ export default function Orders() {
 
               {/* Order Summary */}
               <div class="bg-blue-50 rounded-lg p-4">
-                <h4 class="text-lg font-semibold text-gray-900 mb-3">Order Summary</h4>
+                <h4 class="text-lg font-semibold text-gray-900 mb-3">{t('orders.orderSummary')}</h4>
                 <div class="space-y-2">
                   {/* Only show subtotal and tax breakdown when tax is enabled */}
                   {taxEnabled && (
                     <>
                       <div class="flex justify-between text-gray-700">
-                        <span>Subtotal:</span>
+                        <span>{t('common.subtotal')}:</span>
                         <span class="font-semibold">{formatCurrency(selectedOrder.subtotal)}</span>
                       </div>
                       {/* Only show tax line if the order actually has tax applied */}
                       {selectedOrder.tax > 0 && (
                         <div class="flex justify-between text-gray-700">
-                          <span>Tax ({((selectedOrder.tax / selectedOrder.subtotal) * 100).toFixed(1)}%):</span>
+                          <span>
+                            {t('common.tax')} ({((selectedOrder.tax / selectedOrder.subtotal) * 100).toFixed(1)}%):
+                          </span>
                           <span class="font-semibold">{formatCurrency(selectedOrder.tax)}</span>
                         </div>
                       )}
                       <div class="border-t border-blue-200 pt-2">
                         <div class="flex justify-between text-xl font-bold text-gray-900">
-                          <span>Total:</span>
+                          <span>{t('common.total')}:</span>
                           <span>{formatCurrency(selectedOrder.total)}</span>
                         </div>
                       </div>
@@ -1499,7 +1634,7 @@ export default function Orders() {
                   {/* When tax is disabled, only show the total */}
                   {!taxEnabled && (
                     <div class="flex justify-between text-xl font-bold text-gray-900">
-                      <span>Total:</span>
+                      <span>{t('common.total')}:</span>
                       <span>{formatCurrency(selectedOrder.subtotal)}</span>
                     </div>
                   )}
@@ -1509,7 +1644,7 @@ export default function Orders() {
               {/* Notes */}
               {selectedOrder.notes && (
                 <div>
-                  <h4 class="text-lg font-semibold text-gray-900 mb-3">Notes</h4>
+                  <h4 class="text-lg font-semibold text-gray-900 mb-3">{t('orders.notes')}</h4>
                   <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <p class="text-gray-800">{selectedOrder.notes}</p>
                   </div>
@@ -1518,8 +1653,16 @@ export default function Orders() {
 
               {/* Order Actions */}
               <div class="border-t border-gray-200 pt-4">
-                <h4 class="text-lg font-semibold text-gray-900 mb-3">Actions</h4>
+                <h4 class="text-lg font-semibold text-gray-900 mb-3">{t('common.actions')}</h4>
                 <div class="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleThermalPrint(selectedOrder)}
+                    disabled={isPrinting}
+                    class="bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    🖨️ {isPrinting ? 'Printing...' : 'Print Receipt'}
+                  </Button>
                   {selectedOrder.status === 'pending' && (
                     <>
                       <Button
@@ -1529,7 +1672,7 @@ export default function Orders() {
                           setSelectedOrder(null)
                         }}
                       >
-                        ✏️ Update Order
+                        ✏️ {t('orders.updateOrder')}
                       </Button>
                       <Button
                         size="sm"
@@ -1539,7 +1682,7 @@ export default function Orders() {
                         }}
                         class="bg-green-600 hover:bg-green-700 text-white"
                       >
-                        💰 Mark as Paid
+                        💰 {t('orders.markAsPaid')}
                       </Button>
                       <Button
                         size="sm"
@@ -1550,7 +1693,7 @@ export default function Orders() {
                         }}
                         class="text-red-600 border-red-200 hover:bg-red-50"
                       >
-                        ❌ Cancel Order
+                        ❌ {t('orders.cancelOrder')}
                       </Button>
                     </>
                   )}
@@ -1563,7 +1706,7 @@ export default function Orders() {
                       }}
                       class="bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                      ✅ Mark as Complete
+                      ✅ {t('orders.markComplete')}
                     </Button>
                   )}
                   {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
@@ -1576,7 +1719,7 @@ export default function Orders() {
                       }}
                       class="text-red-600 border-red-200 hover:bg-red-50"
                     >
-                      🗑️ Delete Order
+                      🗑️ {t('orders.deleteOrder')}
                     </Button>
                   )}
                 </div>
@@ -1585,7 +1728,7 @@ export default function Orders() {
           </DialogBody>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedOrder(null)}>
-              Close
+              {t('common.close')}
             </Button>
           </DialogFooter>
         </Dialog>
@@ -1595,9 +1738,9 @@ export default function Orders() {
         isOpen={!!deleteConfirm}
         onClose={() => setDeleteConfirm(null)}
         onConfirm={() => deleteConfirm && handleDeleteOrder(deleteConfirm)}
-        title="Confirm Delete"
-        message="Are you sure you want to delete this order? This action cannot be undone."
-        confirmText="Delete"
+        title={t('orders.confirmDelete')}
+        message={t('orders.deleteConfirmMessage')}
+        confirmText={t('common.delete')}
         variant="danger"
       />
     </Container>

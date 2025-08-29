@@ -34,10 +34,22 @@ A comprehensive Point of Sale (POS) desktop application built with modern techno
 - Member and loyalty program support
 
 ### 🎨 Modern UI/UX
-- Glass morphism design with Tailwind CSS
+- Glass morphism design with Tailwind CSS v4
 - Fully responsive across all screen sizes
-- Consistent design system and components
+- Consistent design system and component library
+- Pagination component for large data sets
+- Advanced data tables with sorting and filtering
+- Modal dialogs and form components
 - Intuitive navigation and user experience
+- Loading states and error handling
+
+### 🌐 Internationalization (i18n)
+- Multi-language support with 8 languages (EN, ES, FR, DE, IT, PT, ZH, JA)
+- Dynamic language switching with persistent preferences
+- Comprehensive translation system with interpolation support
+- RTL (Right-to-Left) language support
+- Localized date and currency formatting
+- Company-wide and user-specific language settings
 
 ## 🛠️ Tech Stack
 
@@ -103,27 +115,47 @@ post-pos/
 │   │       ├── Input.tsx        # Input components
 │   │       ├── Table.tsx        # Data table component
 │   │       ├── Dialog.tsx       # Modal dialogs
+│   │       ├── Pagination.tsx   # Data pagination component
+│   │       ├── Select.tsx       # Dropdown select component
+│   │       ├── LanguageSelector.tsx # Language selection component
 │   │       └── ...              # Other UI components
 │   ├── pages/                   # Application pages
-│   │   ├── Dashboard.tsx        # Analytics dashboard
+│   │   ├── Dashboard.tsx        # Main dashboard overview
+│   │   ├── Analytics.tsx        # Advanced analytics and reporting
 │   │   ├── Orders.tsx           # Order management
 │   │   ├── Products.tsx         # Product catalog
-│   │   ├── Customers.tsx        # Customer management
-│   │   ├── Members.tsx          # Member management
+│   │   ├── Members.tsx          # Member and customer management
 │   │   ├── Settings.tsx         # Application settings
 │   │   └── SignIn.tsx           # Authentication page
-│   ├── services/                # Business logic services
-│   │   ├── auth.ts              # Authentication service
-│   │   ├── dashboard.ts         # Dashboard data service
-│   │   ├── products.ts          # Product management
-│   │   ├── customers.ts         # Customer management
-│   │   └── orders.ts            # Order processing
+│   ├── services/                # Business logic services (SQLite-based)
+│   │   ├── auth-sqlite.ts       # Authentication service
+│   │   ├── dashboard-sqlite.ts  # Dashboard data service
+│   │   ├── analytics-sqlite.ts  # Analytics and reporting service
+│   │   ├── products-sqlite.ts   # Product management
+│   │   ├── users-sqlite.ts      # User management service
+│   │   ├── orders-sqlite.ts     # Order processing
+│   │   ├── company-settings-sqlite.ts # Company configuration
+│   │   └── translations.ts      # Translation and i18n service
 │   ├── stores/                  # State management
-│   │   └── auth/                # Authentication store
-│   │       ├── authStore.ts     # Auth state
-│   │       └── authActions.ts   # Auth actions
+│   │   ├── auth/                # Authentication store
+│   │   │   ├── authStore.ts     # Auth state
+│   │   │   └── authActions.ts   # Auth actions
+│   │   └── language/            # Language/i18n store
+│   │       ├── languageStore.ts # Language state
+│   │       └── languageActions.ts # Language actions
 │   ├── hooks/                   # Custom React hooks
-│   │   └── useAuth.ts           # Authentication hook
+│   │   ├── useAuth.ts           # Authentication hook
+│   │   └── useTranslation.ts    # Translation and i18n hook
+│   ├── locales/                 # Translation files
+│   │   ├── en.json              # English (default)
+│   │   ├── es.json              # Spanish
+│   │   ├── fr.json              # French
+│   │   ├── de.json              # German
+│   │   ├── it.json              # Italian
+│   │   ├── pt.json              # Portuguese
+│   │   ├── zh.json              # Chinese (Simplified)
+│   │   ├── ja.json              # Japanese
+│   │   └── index.ts             # Locale configuration
 │   ├── App.tsx                  # Main application component
 │   └── main.tsx                 # Application entry point
 ├── src-tauri/                   # Tauri/Rust backend
@@ -136,6 +168,7 @@ post-pos/
 ├── public/                      # Static assets
 ├── AGENTS.md                    # Detailed project documentation
 ├── CLAUDE.md                    # Claude Code instructions
+├── TRANSLATIONS.md              # Internationalization guide
 └── README.md                    # This file
 ```
 
@@ -198,13 +231,19 @@ The application includes mock authentication with three role levels:
    pnpm dev
    ```
 
-3. **Code Quality** (when available)
+3. **Code Quality**
    ```bash
    # Type checking
    pnpm tsc --noEmit
    
-   # Linting (if configured)
+   # Linting with Biome
    pnpm lint
+   
+   # Format code
+   pnpm format
+   
+   # Run all checks (lint + format + organize imports)
+   pnpm check
    ```
 
 ### Building for Production
@@ -238,9 +277,14 @@ The application includes mock authentication with three role levels:
 ### Development Guidelines
 - Follow TypeScript strict mode requirements
 - Use existing UI components from `src/components/ui/`
-- Maintain consistent code formatting
-- Test across different screen sizes
+- Maintain consistent code formatting with Biome
+- Test across different screen sizes and languages
 - Ensure role-based features work correctly
+- Use SQLite services for data persistence
+- Implement proper internationalization for new features
+- Run `pnpm check` before committing changes
+- Follow existing patterns for service architecture
+- Add translation keys for all user-facing text
 
 ## 📱 Cross-Platform Support
 
@@ -253,6 +297,28 @@ The application includes mock authentication with three role levels:
 - **iOS**: Planned support via Tauri Mobile
 - **Android**: Planned support via Tauri Mobile
 
+## 🌐 Internationalization
+
+The application supports multiple languages with a comprehensive translation system. See [TRANSLATIONS.md](./TRANSLATIONS.md) for detailed implementation guide.
+
+### Supported Languages
+- 🇺🇸 English (default)
+- 🇪🇸 Spanish (Español)
+- 🇫🇷 French (Français)
+- 🇩🇪 German (Deutsch)
+- 🇮🇹 Italian (Italiano)
+- 🇵🇹 Portuguese (Português)
+- 🇨🇳 Chinese (中文)
+- 🇯🇵 Japanese (日本語)
+
+### Translation Features
+- Dynamic language switching
+- Persistent language preferences
+- Interpolation and pluralization support
+- RTL language support
+- Localized formatting for dates and currency
+- Comprehensive fallback system
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
@@ -263,11 +329,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Preact Documentation](https://preactjs.com/)
 - [Tailwind CSS Documentation](https://tailwindcss.com/)
 - [TypeScript Documentation](https://www.typescriptlang.org/)
+- [Internationalization Guide](./TRANSLATIONS.md)
 
 ## 📞 Support
 
 For support and questions:
 - Check the [AGENTS.md](./AGENTS.md) file for detailed project documentation
+- Review the [TRANSLATIONS.md](./TRANSLATIONS.md) for i18n implementation
 - Review existing issues before creating new ones
 - Follow the contributing guidelines for pull requests
 

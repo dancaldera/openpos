@@ -19,6 +19,7 @@ import {
   Text,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
+import { useTranslation } from '../hooks/useTranslation'
 import { authService, type User } from '../services/auth-sqlite'
 
 interface EditUserModalProps {
@@ -29,6 +30,8 @@ interface EditUserModalProps {
 }
 
 function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
+  const { t } = useTranslation()
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -83,17 +86,17 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
         onSave(result.user)
         onClose()
       } else {
-        setError(result.error || 'An error occurred')
+        setError(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError('An error occurred')
+      setError(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title={user ? 'Edit User' : 'Create User'} size="md">
+    <Dialog isOpen={isOpen} onClose={onClose} title={user ? t('members.editMember') : t('members.addMember')} size="md">
       <DialogBody>
         {error && (
           <div class="bg-red-500/10 backdrop-blur-sm border border-red-400/20 text-red-700 px-4 py-3 rounded-xl mb-4">
@@ -105,7 +108,7 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
           <form onSubmit={handleSubmit} class="space-y-6">
             <div>
               <Input
-                label="👤 Full Name"
+                label={`👤 ${t('members.fullName')}`}
                 value={formData.name}
                 onInput={(e) =>
                   setFormData({
@@ -115,13 +118,13 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
                 }
                 required
                 class="bg-white/80 text-gray-900"
-                placeholder="Enter full name"
+                placeholder={t('members.enterFullName')}
               />
             </div>
 
             <div>
               <Input
-                label="✉️ Email Address"
+                label={`✉️ ${t('members.emailAddress')}`}
                 type="email"
                 value={formData.email}
                 onInput={(e) =>
@@ -132,13 +135,13 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
                 }
                 required
                 class="bg-white/80 text-gray-900"
-                placeholder="Enter email address"
+                placeholder={t('members.enterEmail')}
               />
             </div>
 
             <div>
               <Select
-                label="👑 Role & Permissions"
+                label={`👑 ${t('members.rolePermissions')}`}
                 value={formData.role}
                 onChange={(e) =>
                   setFormData({
@@ -147,9 +150,9 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
                   })
                 }
                 options={[
-                  { value: 'user', label: '👤 User - Basic Access' },
-                  { value: 'manager', label: '👔 Manager - Extended Access' },
-                  { value: 'admin', label: '👑 Admin - Full Access' },
+                  { value: 'user', label: `👤 ${t('members.user')} - ${t('members.basicAccess')}` },
+                  { value: 'manager', label: `👔 ${t('members.manager')} - ${t('members.extendedAccess')}` },
+                  { value: 'admin', label: `👑 ${t('members.admin')} - ${t('members.fullAccess')}` },
                 ]}
                 class="bg-white/80"
               />
@@ -158,7 +161,7 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
             {!user && (
               <div>
                 <Input
-                  label="🔐 Password"
+                  label={`🔐 ${t('auth.password')}`}
                   type="password"
                   value={formData.password}
                   onInput={(e) =>
@@ -168,7 +171,7 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
                     })
                   }
                   required
-                  placeholder="Minimum 6 characters"
+                  placeholder={t('members.passwordMin')}
                   class="bg-white/80 text-gray-900"
                 />
               </div>
@@ -179,10 +182,10 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button type="button" onClick={() => handleSubmit(new Event('submit'))} disabled={isLoading}>
-          {isLoading ? 'Saving...' : user ? 'Update' : 'Create'}
+          {isLoading ? t('common.loading') : user ? t('common.edit') : t('common.add')}
         </Button>
       </DialogFooter>
     </Dialog>
@@ -190,6 +193,8 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
 }
 
 export default function Members() {
+  const { t } = useTranslation()
+
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -218,7 +223,7 @@ export default function Members() {
 
   const loadUsers = async (page: number = 1) => {
     if (!canManageUsers) {
-      setError("You don't have permission to view users")
+      setError(t('members.noPermissionMembers'))
       setIsLoading(false)
       return
     }
@@ -256,10 +261,10 @@ export default function Members() {
         // Reload data to reflect changes with proper pagination
         await loadUsers(currentPage)
       } else {
-        setError(result.error || 'Failed to delete user')
+        setError(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError('Failed to delete user')
+      setError(t('errors.generic'))
     }
   }
 
@@ -302,11 +307,9 @@ export default function Members() {
           <div class="text-center">
             <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
             <Heading level={3} class="mb-3 text-gray-900">
-              Access Denied
+              {t('members.accessDenied')}
             </Heading>
-            <Text class="text-gray-600 max-w-md mx-auto">
-              You don't have permission to view the members page. Contact your administrator for access.
-            </Text>
+            <Text class="text-gray-600 max-w-md mx-auto">{t('members.noPermissionMembers')}</Text>
           </div>
         </div>
       </Container>
@@ -319,7 +322,7 @@ export default function Members() {
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div class="text-center">
             <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white mx-auto mb-6 shadow-lg"></div>
-            <Text class="text-gray-600 text-lg">Loading team members...</Text>
+            <Text class="text-gray-600 text-lg">{t('members.loadingMembers')}</Text>
           </div>
         </div>
       </Container>
@@ -330,16 +333,19 @@ export default function Members() {
     <Container size="xl">
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">Team Members</h1>
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">{t('members.teamMembers')}</h1>
           <p class="text-gray-600">
-            {totalCount} {totalCount === 1 ? 'member' : 'members'} total
-            {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
+            {t('members.membersTotal', {
+              count: totalCount,
+              unit: totalCount === 1 ? t('members.member') : t('members.members'),
+            })}
+            {totalPages > 1 && ` • ${t('members.pageXofY', { current: currentPage, total: totalPages })}`}
           </p>
         </div>
         {(hasPermission('users.create') || hasRole('admin')) && (
           <Button onClick={handleCreateUser}>
             <span class="mr-2">➕</span>
-            Add Member
+            {t('members.addMember')}
           </Button>
         )}
       </div>
@@ -357,11 +363,11 @@ export default function Members() {
         <Table>
           <TableHead>
             <TableRow class="bg-gray-50">
-              <TableHeader class="font-semibold text-gray-900">User</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Role</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Created</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Last Login</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Actions</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('members.user')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('members.role')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('members.created')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('members.lastLogin')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('members.actions')}</TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -387,7 +393,11 @@ export default function Members() {
                     class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide ${getRoleColor(user.role)} transition-all hover:scale-105`}
                   >
                     <span class="mr-1 text-sm">{getRoleIcon(user.role)}</span>
-                    {user.role}
+                    {user.role === 'admin'
+                      ? t('members.admin')
+                      : user.role === 'manager'
+                        ? t('members.manager')
+                        : t('members.user')}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -414,7 +424,7 @@ export default function Members() {
                         </div>
                       </>
                     ) : (
-                      <div class="text-gray-400 italic">Never logged in</div>
+                      <div class="text-gray-400 italic">{t('members.neverLoggedIn')}</div>
                     )}
                   </div>
                 </TableCell>
@@ -427,7 +437,7 @@ export default function Members() {
                         onClick={() => handleEditUser(user)}
                         class="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all hover:shadow-md mr-2"
                       >
-                        ✏️ Edit
+                        ✏️ {t('common.edit')}
                       </Button>
                     )}
                     {(hasPermission('users.delete') || hasRole('admin')) &&
@@ -439,7 +449,7 @@ export default function Members() {
                           onClick={() => setDeleteConfirm(user.id)}
                           class="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all hover:shadow-md"
                         >
-                          🗑️ Delete
+                          🗑️ {t('common.delete')}
                         </Button>
                       )}
                   </div>
@@ -467,15 +477,13 @@ export default function Members() {
           <div class="text-center">
             <div class="text-6xl mb-6">👥</div>
             <Heading level={3} class="mb-3 text-gray-900">
-              No team members found
+              {t('members.noMembers')}
             </Heading>
-            <Text class="text-gray-600 mb-6 max-w-md mx-auto">
-              Your team is empty. Add your first team member to get started with user management.
-            </Text>
+            <Text class="text-gray-600 mb-6 max-w-md mx-auto">{t('members.emptyTeam')}</Text>
             {(hasPermission('users.create') || hasRole('admin')) && (
               <Button onClick={handleCreateUser} class="mt-4">
                 <span class="mr-2">➕</span>
-                Add First Member
+                {t('members.addFirstMember')}
               </Button>
             )}
           </div>
@@ -493,9 +501,9 @@ export default function Members() {
         isOpen={!!deleteConfirm}
         onClose={() => setDeleteConfirm(null)}
         onConfirm={() => deleteConfirm && handleDeleteUser(deleteConfirm)}
-        title="Confirm Delete"
-        message="Are you sure you want to delete this user? This action cannot be undone."
-        confirmText="Delete"
+        title={t('members.confirmDelete')}
+        message={t('members.deleteMessage')}
+        confirmText={t('common.delete')}
         variant="danger"
       />
     </Container>

@@ -33,6 +33,15 @@ export interface TopProduct {
   averagePrice: number
 }
 
+export type RecentActivity = {
+  id: string
+  type: 'order_created' | 'order_completed' | 'order_cancelled'
+  description: string
+  amount?: number
+  timestamp: string
+  userName?: string
+}
+
 export class AnalyticsService {
   private static instance: AnalyticsService
   private db: Database | null = null
@@ -56,7 +65,7 @@ export class AnalyticsService {
       const db = await this.getDatabase()
 
       let whereClause = ''
-      const params: any[] = []
+      const params: Array<string | number> = []
 
       if (startDate && endDate) {
         whereClause = 'WHERE created_at >= ? AND created_at <= ?'
@@ -127,7 +136,7 @@ export class AnalyticsService {
       const db = await this.getDatabase()
 
       let whereClause = "WHERE o.status IN ('completed', 'paid')"
-      const params: any[] = []
+      const params: Array<string | number> = []
 
       if (startDate && endDate) {
         whereClause += ' AND o.created_at >= ? AND o.created_at <= ?'
@@ -177,7 +186,7 @@ export class AnalyticsService {
       const db = await this.getDatabase()
 
       let whereClause = "WHERE o.status IN ('completed', 'paid')"
-      const params: any[] = []
+      const params: Array<string | number> = []
 
       if (startDate && endDate) {
         whereClause += ' AND o.created_at >= ? AND o.created_at <= ?'
@@ -247,7 +256,7 @@ export class AnalyticsService {
       }
 
       let whereClause = "WHERE status IN ('completed', 'paid')"
-      const params: any[] = []
+      const params: Array<string | number> = []
 
       if (startDate && endDate) {
         whereClause += ' AND created_at >= ? AND created_at <= ?'
@@ -288,16 +297,7 @@ export class AnalyticsService {
     }
   }
 
-  async getRecentActivity(limit: number = 10): Promise<
-    Array<{
-      id: string
-      type: 'order_created' | 'order_completed' | 'order_cancelled'
-      description: string
-      amount?: number
-      timestamp: string
-      userName?: string
-    }>
-  > {
+  async getRecentActivity(limit: number = 10): Promise<RecentActivity[]> {
     try {
       const db = await this.getDatabase()
 

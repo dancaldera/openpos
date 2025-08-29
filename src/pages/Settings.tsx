@@ -1,18 +1,17 @@
 import { invoke } from '@tauri-apps/api/core'
 import { useEffect, useState } from 'preact/hooks'
 import { Button, Container, Dialog, DialogBody, DialogFooter, Heading, Input, Select, Text } from '../components/ui'
-import {
-  type CompanySettings,
-  companySettingsService,
-  SUPPORTED_CURRENCIES,
-  SUPPORTED_LANGUAGES,
-} from '../services/company-settings-sqlite'
+import LanguageSelector from '../components/ui/LanguageSelector'
+import { useTranslation } from '../hooks/useTranslation'
+import { type CompanySettings, companySettingsService, SUPPORTED_CURRENCIES } from '../services/company-settings-sqlite'
 
 interface SettingsProps {
   onNavigate: (page: string) => void
 }
 
 export default function Settings({ onNavigate }: SettingsProps) {
+  const { t } = useTranslation()
+
   const [greetMsg, setGreetMsg] = useState('')
   const [name, setName] = useState('')
   const [settings, setSettings] = useState<CompanySettings | null>(null)
@@ -33,13 +32,13 @@ export default function Settings({ onNavigate }: SettingsProps) {
       setSettings(companySettings)
       setError('')
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Failed to load settings')
+      setError((err as Error)?.message || t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleUpdateSetting = async (field: keyof CompanySettings, value: any) => {
+  const handleUpdateSetting = async <K extends keyof CompanySettings>(field: K, value: CompanySettings[K]) => {
     if (!settings) return
 
     try {
@@ -48,14 +47,14 @@ export default function Settings({ onNavigate }: SettingsProps) {
 
       if (result.success && result.settings) {
         setSettings(result.settings)
-        setSuccess(`${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`)
+        setSuccess(t('settings.settingsUpdated'))
         setError('')
         setTimeout(() => setSuccess(''), 3000)
       } else {
-        setError(result.error || 'Failed to update setting')
+        setError(result.error || t('errors.generic'))
       }
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Failed to update setting')
+      setError((err as Error)?.message || t('errors.generic'))
     } finally {
       setIsUpdating(false)
     }
@@ -68,15 +67,15 @@ export default function Settings({ onNavigate }: SettingsProps) {
 
       if (result.success && result.settings) {
         setSettings(result.settings)
-        setSuccess('Settings reset to defaults successfully')
+        setSuccess(t('success.updated'))
         setError('')
         setIsResetDialogOpen(false)
         setTimeout(() => setSuccess(''), 3000)
       } else {
-        setError(result.error || 'Failed to reset settings')
+        setError(result.error || t('errors.generic'))
       }
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Failed to reset settings')
+      setError((err as Error)?.message || t('errors.generic'))
     } finally {
       setIsUpdating(false)
     }
@@ -92,7 +91,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
         <div class="bg-white rounded-lg shadow p-6">
           <div class="text-center py-8">
             <div class="w-8 h-8 bg-blue-600 rounded-full animate-spin border-2 border-transparent border-t-white mx-auto mb-4"></div>
-            <p class="text-gray-600">Loading settings...</p>
+            <p class="text-gray-600">{t('common.loading')}</p>
           </div>
         </div>
       </Container>
@@ -104,8 +103,8 @@ export default function Settings({ onNavigate }: SettingsProps) {
       <div class="space-y-6">
         <div class="flex justify-between items-center">
           <div>
-            <Heading level={3}>Application Settings</Heading>
-            <Text class="text-gray-600">Configure your POS system preferences and company information.</Text>
+            <Heading level={3}>{t('settings.title')}</Heading>
+            <Text class="text-gray-600">{t('settings.subtitle')}</Text>
           </div>
           <Button
             variant="outline"
@@ -113,7 +112,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
             disabled={isUpdating}
             class="text-red-600 border-red-200 hover:bg-red-50"
           >
-            🔄 Reset to Defaults
+            🔄 {t('settings.resetDefaults')}
           </Button>
         </div>
 
@@ -128,76 +127,76 @@ export default function Settings({ onNavigate }: SettingsProps) {
             {/* Company Information */}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <Heading level={4} class="mb-6">
-                🏢 Company Information
+                🏢 {t('settings.companyInfo')}
               </Heading>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Input
-                    label="Company Name"
+                    label={t('settings.companyName')}
                     value={settings.name}
                     onBlur={(e) => handleUpdateSetting('name', (e.target as HTMLInputElement).value)}
                     disabled={isUpdating}
-                    placeholder="Enter company name"
+                    placeholder={t('settings.companyName')}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">The name of your business</Text>
+                  <Text class="text-sm text-gray-500">{t('settings.companyNameDesc')}</Text>
                 </div>
                 <div>
                   <Input
-                    label="Description"
+                    label={t('common.description')}
                     value={settings.description}
                     onBlur={(e) => handleUpdateSetting('description', (e.target as HTMLInputElement).value)}
                     disabled={isUpdating}
-                    placeholder="Enter company description"
+                    placeholder={t('common.description')}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">Brief description of your business</Text>
+                  <Text class="text-sm text-gray-500">{t('settings.descriptionDesc')}</Text>
                 </div>
                 <div>
                   <Input
-                    label="Address"
+                    label={t('common.address')}
                     value={settings.address || ''}
-                    onBlur={(e) => handleUpdateSetting('address', (e.target as HTMLInputElement).value || null)}
+                    onBlur={(e) => handleUpdateSetting('address', (e.target as HTMLInputElement).value || undefined)}
                     disabled={isUpdating}
-                    placeholder="Enter business address"
+                    placeholder={t('common.address')}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">Physical address of your business</Text>
+                  <Text class="text-sm text-gray-500">{t('settings.addressDesc')}</Text>
                 </div>
                 <div>
                   <Input
-                    label="Phone"
+                    label={t('common.phone')}
                     value={settings.phone || ''}
-                    onBlur={(e) => handleUpdateSetting('phone', (e.target as HTMLInputElement).value || null)}
+                    onBlur={(e) => handleUpdateSetting('phone', (e.target as HTMLInputElement).value || undefined)}
                     disabled={isUpdating}
-                    placeholder="Enter phone number"
+                    placeholder={t('common.phone')}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">Business phone number</Text>
+                  <Text class="text-sm text-gray-500">{t('settings.phoneDesc')}</Text>
                 </div>
                 <div>
                   <Input
-                    label="Email"
+                    label={t('common.email')}
                     type="email"
                     value={settings.email || ''}
-                    onBlur={(e) => handleUpdateSetting('email', (e.target as HTMLInputElement).value || null)}
+                    onBlur={(e) => handleUpdateSetting('email', (e.target as HTMLInputElement).value || undefined)}
                     disabled={isUpdating}
-                    placeholder="Enter email address"
+                    placeholder={t('common.email')}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">Business email address</Text>
+                  <Text class="text-sm text-gray-500">{t('settings.emailDesc')}</Text>
                 </div>
                 <div>
                   <Input
-                    label="Website"
+                    label={t('settings.website')}
                     type="text"
                     value={settings.website || ''}
-                    onBlur={(e) => handleUpdateSetting('website', (e.target as HTMLInputElement).value || null)}
+                    onBlur={(e) => handleUpdateSetting('website', (e.target as HTMLInputElement).value || undefined)}
                     disabled={isUpdating}
                     placeholder="https://example.com"
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">Business website URL</Text>
+                  <Text class="text-sm text-gray-500">{t('settings.websiteDesc')}</Text>
                 </div>
               </div>
             </div>
@@ -205,7 +204,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
             {/* Tax Configuration */}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <Heading level={4} class="mb-6">
-                💰 Tax Configuration
+                💰 {t('settings.taxSettings')}
               </Heading>
               <div class="space-y-6">
                 <div class="flex items-center space-x-4">
@@ -217,14 +216,14 @@ export default function Settings({ onNavigate }: SettingsProps) {
                       disabled={isUpdating}
                       class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                     />
-                    <Text class="font-medium">Enable Tax Calculation</Text>
+                    <Text class="font-medium">{t('settings.enableTax')}</Text>
                   </label>
                 </div>
                 {settings.taxEnabled && (
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Input
-                        label="Tax Percentage"
+                        label={t('settings.taxRate')}
                         type="number"
                         value={settings.taxPercentage.toString()}
                         onBlur={(e) =>
@@ -234,12 +233,12 @@ export default function Settings({ onNavigate }: SettingsProps) {
                         class="mb-2"
                         placeholder="10.0"
                       />
-                      <Text class="text-sm text-gray-500">Tax rate as a percentage (0-100, e.g., 10.5)</Text>
+                      <Text class="text-sm text-gray-500">{t('settings.taxRateDesc')}</Text>
                     </div>
                     <div class="flex items-center mt-6">
                       <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <Text class="text-sm text-blue-700">
-                          Current tax rate: <span class="font-bold">{settings.taxPercentage}%</span>
+                          {t('settings.currentTaxRate')}: <span class="font-bold">{settings.taxPercentage}%</span>
                         </Text>
                       </div>
                     </div>
@@ -251,12 +250,12 @@ export default function Settings({ onNavigate }: SettingsProps) {
             {/* System Preferences */}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <Heading level={4} class="mb-6">
-                ⚙️ System Preferences
+                ⚙️ {t('settings.systemSettings')}
               </Heading>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Select
-                    label="Currency Symbol"
+                    label={t('settings.currency')}
                     value={settings.currencySymbol}
                     onChange={(e) => handleUpdateSetting('currencySymbol', (e.target as HTMLSelectElement).value)}
                     disabled={isUpdating}
@@ -266,21 +265,10 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     }))}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">Currency symbol displayed on receipts and orders</Text>
+                  <Text class="text-sm text-gray-500">{t('settings.currencyDesc')}</Text>
                 </div>
                 <div>
-                  <Select
-                    label="Language"
-                    value={settings.language}
-                    onChange={(e) => handleUpdateSetting('language', (e.target as HTMLSelectElement).value)}
-                    disabled={isUpdating}
-                    options={SUPPORTED_LANGUAGES.map((lang) => ({
-                      value: lang.code,
-                      label: lang.name,
-                    }))}
-                    class="mb-2"
-                  />
-                  <Text class="text-sm text-gray-500">Interface language (requires restart)</Text>
+                  <LanguageSelector class="mb-2" />
                 </div>
               </div>
             </div>
@@ -288,13 +276,13 @@ export default function Settings({ onNavigate }: SettingsProps) {
             {/* Developer Tools */}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <Heading level={4} class="mb-6">
-                🛠️ Developer Tools
+                🛠️ {t('settings.developerTools')}
               </Heading>
-              <Text class="mb-4 text-gray-600">Tools and utilities for development and testing.</Text>
+              <Text class="mb-4 text-gray-600">{t('settings.developerToolsDesc')}</Text>
 
               <div class="space-y-4">
                 <div>
-                  <Heading level={5}>API Testing</Heading>
+                  <Heading level={5}>{t('settings.apiTesting')}</Heading>
                   <form
                     class="flex gap-4 mb-4"
                     onSubmit={(e) => {
@@ -303,13 +291,13 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     }}
                   >
                     <Input
-                      placeholder="Enter a name..."
+                      placeholder={t('settings.enterName')}
                       value={name}
                       onInput={(e) => setName((e.target as HTMLInputElement).value)}
                       class="flex-1"
                     />
                     <Button type="submit" variant="primary">
-                      Greet
+                      {t('settings.greet')}
                     </Button>
                   </form>
 
@@ -319,7 +307,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                 </div>
 
                 <Button variant="outline" onClick={() => onNavigate('component-showcase')}>
-                  🎨 UI Components Showcase
+                  🎨 {t('settings.uiComponentsShowcase')}
                 </Button>
               </div>
             </div>
@@ -331,7 +319,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
       <Dialog
         isOpen={isResetDialogOpen}
         onClose={() => setIsResetDialogOpen(false)}
-        title="Reset Settings to Defaults"
+        title={t('settings.resetDefaults')}
         size="md"
       >
         <DialogBody>
@@ -339,29 +327,27 @@ export default function Settings({ onNavigate }: SettingsProps) {
             <div class="flex items-center space-x-3 text-amber-600 bg-amber-50 p-4 rounded-lg border border-amber-200">
               <span class="text-2xl">⚠️</span>
               <div>
-                <Text class="font-semibold">Warning: This action cannot be undone</Text>
-                <Text class="text-sm text-amber-700">
-                  All your custom settings will be reset to their default values.
-                </Text>
+                <Text class="font-semibold">{t('settings.resetConfirm')}</Text>
+                <Text class="text-sm text-amber-700">{t('settings.resetWarning')}</Text>
               </div>
             </div>
-            <Text class="text-gray-700">This will reset the following settings to their default values:</Text>
+            <Text class="text-gray-700">{t('settings.resetDescription')}</Text>
             <ul class="list-disc list-inside text-sm text-gray-600 space-y-1 ml-4">
-              <li>Company name and description</li>
-              <li>Tax configuration (enabled with 10% rate)</li>
-              <li>Currency symbol (USD $)</li>
-              <li>Language (English)</li>
-              <li>All contact information</li>
+              <li>{t('settings.resetItem1')}</li>
+              <li>{t('settings.resetItem2')}</li>
+              <li>{t('settings.resetItem3')}</li>
+              <li>{t('settings.resetItem4')}</li>
+              <li>{t('settings.resetItem5')}</li>
             </ul>
-            <Text class="text-gray-700 font-medium">Are you sure you want to proceed?</Text>
+            <Text class="text-gray-700 font-medium">{t('settings.resetProceed')}</Text>
           </div>
         </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={() => setIsResetDialogOpen(false)} disabled={isUpdating}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button onClick={handleResetToDefaults} disabled={isUpdating} class="bg-red-600 hover:bg-red-700 text-white">
-            {isUpdating ? 'Resetting...' : 'Reset Settings'}
+            {isUpdating ? t('settings.resetting') : t('settings.resetSettings')}
           </Button>
         </DialogFooter>
       </Dialog>

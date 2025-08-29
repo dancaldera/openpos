@@ -122,13 +122,21 @@ export default function Dropdown({
 
   return (
     <div class="relative inline-block" ref={dropdownRef}>
-      <div onClick={toggleDropdown} class="cursor-pointer">
+      <button
+        type="button"
+        onClick={toggleDropdown}
+        class="cursor-pointer"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-controls="dropdown-menu"
+      >
         {trigger}
-      </div>
+      </button>
 
       {isOpen && (
         <div
           ref={menuRef}
+          id="dropdown-menu"
           class={`absolute ${positionClasses} ${width} min-w-max bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-1`}
           style="animation: fadeIn 0.15s ease-out"
         >

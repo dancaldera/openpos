@@ -1,11 +1,14 @@
 import { useState } from 'preact/hooks'
 import { Button, Container, Form, FormActions, FormField, Heading, Input, Text } from '../components/ui'
+import { useTranslation } from '../hooks/useTranslation'
 
 interface SignInProps {
   onSignIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
 }
 
 export default function SignIn({ onSignIn }: SignInProps) {
+  const { t } = useTranslation()
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -35,15 +38,15 @@ export default function SignIn({ onSignIn }: SignInProps) {
     }
 
     if (!formData.email) {
-      newErrors.email = 'Email is required'
+      newErrors.email = t('validation.required')
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address'
+      newErrors.email = t('validation.invalidEmail')
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required'
+      newErrors.password = t('validation.required')
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters'
+      newErrors.password = t('validation.minLength', { min: 6 })
     }
 
     setErrors(newErrors)
@@ -60,13 +63,13 @@ export default function SignIn({ onSignIn }: SignInProps) {
       if (!result.success) {
         setErrors((prev) => ({
           ...prev,
-          general: result.error || 'Sign in failed',
+          general: result.error || t('auth.invalidCredentials'),
         }))
       }
     } catch (_error) {
       setErrors((prev) => ({
         ...prev,
-        general: 'An unexpected error occurred',
+        general: t('errors.generic'),
       }))
     } finally {
       setIsLoading(false)
@@ -96,7 +99,7 @@ export default function SignIn({ onSignIn }: SignInProps) {
               Post POS
             </Heading>
             <Text variant="caption" color="muted" class="mt-2">
-              Sign in to your account
+              {t('auth.signInToAccount')}
             </Text>
           </div>
 
@@ -130,9 +133,9 @@ export default function SignIn({ onSignIn }: SignInProps) {
           <Form onSubmit={handleSubmit} spacing="lg">
             <FormField>
               <Input
-                label="Email Address"
+                label={t('auth.email')}
                 type="email"
-                placeholder="Enter your email"
+                placeholder={t('auth.email')}
                 value={formData.email}
                 onInput={handleInputChange('email')}
                 error={errors.email}
@@ -142,9 +145,9 @@ export default function SignIn({ onSignIn }: SignInProps) {
 
             <FormField>
               <Input
-                label="Password"
+                label={t('auth.password')}
                 type="password"
-                placeholder="Enter your password"
+                placeholder={t('auth.password')}
                 value={formData.password}
                 onInput={handleInputChange('password')}
                 error={errors.password}
@@ -154,7 +157,7 @@ export default function SignIn({ onSignIn }: SignInProps) {
 
             <FormActions align="center">
               <Button type="submit" variant="primary" size="lg" disabled={isLoading} class="w-full">
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? t('common.loading') : t('auth.signIn')}
               </Button>
             </FormActions>
           </Form>

@@ -246,7 +246,7 @@ export class OrderService {
       const now = new Date().toISOString()
 
       // Create order (with user_id if column exists, without if it doesn't)
-      let orderResult: any
+      let orderResult: { lastInsertId?: number }
       try {
         // Try with user_id first (for new schema)
         orderResult = await db.execute(
@@ -266,9 +266,10 @@ export class OrderService {
             now,
           ],
         )
-      } catch (error: any) {
+      } catch (error: unknown) {
         // If user_id column doesn't exist, fall back to old schema
-        if (error.message?.includes('no column named user_id')) {
+        const message = error instanceof Error ? error.message : ''
+        if (message.includes('no column named user_id')) {
           orderResult = await db.execute(
             `INSERT INTO orders (
               subtotal, tax, total, status, 
@@ -548,7 +549,7 @@ export class OrderService {
         endDate = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
       } else {
         // Handle specific date (YYYY-MM-DD format)
-        const targetDate = new Date(dateFilter + 'T00:00:00.000Z')
+        const targetDate = new Date(`${dateFilter}T00:00:00.000Z`)
         startDate = targetDate.toISOString()
         endDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
       }
@@ -602,7 +603,7 @@ export class OrderService {
         endDate = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
       } else {
         // Handle specific date (YYYY-MM-DD format)
-        const targetDate = new Date(dateFilter + 'T00:00:00.000Z')
+        const targetDate = new Date(`${dateFilter}T00:00:00.000Z`)
         startDate = targetDate.toISOString()
         endDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
       }

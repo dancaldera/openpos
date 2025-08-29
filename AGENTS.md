@@ -8,12 +8,14 @@ Post POS is a modern Point of Sale (POS) application built as a cross-platform d
 
 ## Technology Stack
 
-- **Frontend**: Preact + TypeScript with Tailwind CSS
+- **Frontend**: Preact + TypeScript with Tailwind CSS v4
 - **Backend**: Tauri v2 (Rust)
 - **Database**: SQLite with Tauri SQL Plugin
 - **State Management**: Preact Signals
+- **Internationalization**: Custom lightweight i18n solution
 - **Build Tool**: Vite
 - **Package Manager**: pnpm
+- **Code Quality**: Biome (linting, formatting, import organization)
 
 ## Common Development Commands
 
@@ -112,22 +114,82 @@ src-tauri/
 - SQL Plugin: Enabled with SQLite support
 - Permissions: Core, opener, and SQL operations allowed
 
+## Internationalization (i18n)
+
+The application includes comprehensive multi-language support with the following features:
+
+### Translation System
+- **8 Supported Languages**: English (default), Spanish, French, German, Italian, Portuguese, Chinese (Simplified), Japanese
+- **Custom i18n Solution**: Lightweight translation system optimized for Preact
+- **Dynamic Language Switching**: Real-time language changes without page reload
+- **Persistent Preferences**: Language settings stored in SQLite and localStorage
+- **Interpolation Support**: Variable substitution in translations (e.g., "Welcome, {{name}}!")
+- **Pluralization**: Support for plural forms based on count values
+- **RTL Support**: Right-to-left language support preparation
+- **Fallback System**: Graceful degradation to English for missing translations
+
+### File Structure
+```
+src/locales/
+├── en.json              # English (default/fallback)
+├── es.json              # Spanish
+├── fr.json              # French  
+├── de.json              # German
+├── it.json              # Italian
+├── pt.json              # Portuguese
+├── zh.json              # Chinese (Simplified)
+├── ja.json              # Japanese
+└── index.ts             # Locale configuration
+```
+
+### Key Components
+- **Translation Service** (`src/services/translations.ts`): Core i18n functionality
+- **Language Store** (`src/stores/language/`): State management for language preferences
+- **Translation Hook** (`src/hooks/useTranslation.ts`): React hook for components
+- **Language Selector** (`src/components/ui/LanguageSelector.tsx`): UI component for language switching
+
+### Implementation Pattern
+```typescript
+// In components
+const { t } = useTranslation()
+return <h1>{t('dashboard.title')}</h1>
+
+// With parameters
+return <p>{t('welcome.message', { userName })}</p>
+```
+
+### Database Integration
+- Language preferences stored in `company_settings` table
+- User-specific preferences supported via `user_preferences` table
+- Automatic language detection and persistence
+
+### Development Guidelines
+- **Always** add translation keys for new user-facing text
+- Test with different languages during development
+- Use nested JSON structure for organized translations
+- Provide context comments for translators
+- Follow consistent key naming conventions (camelCase)
+- Test UI with longer translations (German, etc.)
+- Use the `useTranslation` hook in all components
+- Implement proper fallbacks for missing translations
+
 ## Key Features & Current State
 
 ### Authentication System
-- Three roles: admin, manager, user
+- Three roles: admin, manager, user with comprehensive permissions
 - Role-based permissions and menu visibility
-- SQLite-stored users with encrypted data
+- SQLite-stored users with secure authentication
 - Default test accounts:
   - admin@postpos.com / admin123
   - manager@postpos.com / manager123
   - user@postpos.com / user123
 
-### Customer Management
+### Customer & Member Management
 - Full CRUD operations with SQLite persistence
-- Customer information and contact details
-- Loyalty points and purchase history tracking
-- Search and filtering capabilities
+- Dedicated Members page for enhanced customer management
+- Customer information, contact details, and loyalty tracking
+- Purchase history and analytics integration
+- Advanced search and filtering with pagination
 - Customer relationship management features
 
 ### Product Management
@@ -138,22 +200,57 @@ src-tauri/
 - Pricing and cost management
 - Barcode support for product identification
 
+### Order Management
+- Complete order processing system with SQLite persistence
+- Order creation with multiple items and customer association
+- Order status tracking and management
+- Real-time order totals and calculations
+- Order history and analytics integration
+- Advanced order filtering and search capabilities
+
+### Analytics & Reporting
+- Comprehensive Analytics page with detailed business metrics
+- Revenue tracking with configurable date ranges (7d, 30d, 90d, custom)
+- Sales performance analytics by members and products
+- Top-performing products and customer insights
+- Recent activity tracking and monitoring
+- Role-based access control (admin-only features)
+- Company currency settings integration
+
 ### UI/UX
-- Glass morphism design with Tailwind CSS
-- Responsive design patterns
-- Consistent styling system
-- Loading states and error handling
-- Modal dialogs for confirmation actions
-- Real-time search and filtering
-- Data tables with pagination support
+- Glass morphism design with Tailwind CSS v4
+- Fully responsive design across all screen sizes
+- Comprehensive component library with consistent styling
+- Advanced pagination component for large datasets
+- Loading states, error handling, and user feedback
+- Modal dialogs and confirmation actions
+- Real-time search and filtering across all data
+- Data tables with sorting, filtering, and pagination
+- Dropdown menus and select components
 
 ## Development Guidelines
 
 ### Code Organization
-- Keep components small and focused
-- Use TypeScript for type safety
-- Separate business logic into services
-- Follow the existing naming conventions
+- Keep components small and focused with single responsibility
+- Use TypeScript strict mode for comprehensive type safety
+- Separate business logic into dedicated SQLite services
+- Follow consistent naming conventions across the codebase
+- Organize imports and use Biome for code quality
+- Always add translation keys for user-facing text
+- Use the `useTranslation` hook in all components
+
+### Internationalization Guidelines
+- **Always** implement translations for new features from the start
+- Use the `useTranslation` hook in all components with user-facing text
+- Add translation keys to appropriate language files (start with `en.json`)
+- Test components with different languages to ensure UI handles text length variations
+- Use interpolation for dynamic content: `t('welcome.message', { userName })`
+- Implement pluralization for count-based text
+- Provide context comments in translation files for translators
+- Follow nested JSON structure for organized translations
+- Use consistent key naming: `page.section.element`
+- Test RTL languages if implementing RTL support
+- Always provide fallback translations in English
 
 ### State Management
 - Use Preact Signals for reactive state
@@ -199,9 +296,19 @@ src-tauri/
 
 ## Testing & Quality
 
-Currently no formal testing framework is configured. The project uses TypeScript strict mode for type safety but lacks ESLint, Prettier, or automated testing setup.
+### Code Quality Tools
+- **Biome**: Integrated linting, formatting, and import organization
+- **TypeScript**: Strict mode enabled for comprehensive type safety
+- **Commands**: `pnpm lint`, `pnpm format`, `pnpm check`
 
 ### Database Testing
-- Manual testing with seeded data
+- Manual testing with comprehensive seeded data
 - Database migrations tested on application startup
 - CRUD operations validated through UI interactions
+- Role-based access control tested across all features
+
+### Quality Assurance
+- Run `pnpm check` before committing changes
+- Test role-based features with different user accounts
+- Validate responsive design across screen sizes
+- Ensure data persistence across application restarts

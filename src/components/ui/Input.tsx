@@ -119,16 +119,21 @@ export default function Input({
 
         {/* Right Icon */}
         {rightIcon && (
-          <div
-            class={clsx(
-              'absolute inset-y-0 right-0 pr-3 flex items-center z-10',
-              onRightIconClick
-                ? 'cursor-pointer text-gray-400 hover:text-gray-600 transition-colors'
-                : 'pointer-events-none text-gray-400',
+          <div class="absolute inset-y-0 right-0 pr-3 flex items-center z-10">
+            {onRightIconClick ? (
+              <button
+                type="button"
+                class="cursor-pointer text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={onRightIconClick}
+                aria-label="Right icon action"
+              >
+                <div class="h-4 w-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">{rightIcon}</div>
+              </button>
+            ) : (
+              <div class="pointer-events-none text-gray-400">
+                <div class="h-4 w-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">{rightIcon}</div>
+              </div>
             )}
-            onClick={onRightIconClick}
-          >
-            <div class="h-4 w-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">{rightIcon}</div>
           </div>
         )}
 

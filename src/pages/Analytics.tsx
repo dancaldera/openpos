@@ -13,19 +13,23 @@ import {
   Text,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
+import { useTranslation } from '../hooks/useTranslation'
 import {
   type AnalyticsMetrics,
   analyticsService,
+  type RecentActivity,
   type SalesByMember,
   type TopProduct,
 } from '../services/analytics-sqlite'
 import { companySettingsService } from '../services/company-settings-sqlite'
 
 export default function Analytics() {
+  const { t } = useTranslation()
+
   const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null)
   const [salesByMembers, setSalesByMembers] = useState<SalesByMember[]>([])
   const [topProducts, setTopProducts] = useState<TopProduct[]>([])
-  const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [currencySymbol, setCurrencySymbol] = useState('$')
@@ -138,11 +142,9 @@ export default function Analytics() {
           <div class="text-center">
             <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
             <Heading level={3} class="mb-3 text-gray-900">
-              Admin Access Required
+              {t('errors.unauthorized')}
             </Heading>
-            <Text class="text-gray-600 max-w-md mx-auto">
-              You need administrator privileges to access the analytics dashboard.
-            </Text>
+            <Text class="text-gray-600 max-w-md mx-auto">{t('analytics.adminOnly')}</Text>
           </div>
         </div>
       </Container>
@@ -155,7 +157,7 @@ export default function Analytics() {
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div class="text-center">
             <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white mx-auto mb-6 shadow-lg"></div>
-            <Text class="text-gray-600 text-lg">Loading analytics...</Text>
+            <Text class="text-gray-600 text-lg">{t('analytics.loadingAnalytics')}</Text>
           </div>
         </div>
       </Container>
@@ -166,12 +168,12 @@ export default function Analytics() {
     <Container size="xl">
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">📊 Analytics Dashboard</h1>
-          <p class="text-gray-600">Comprehensive business insights and performance metrics</p>
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">📊 {t('analytics.dashboardTitle')}</h1>
+          <p class="text-gray-600">{t('analytics.subtitle')}</p>
         </div>
         <Button onClick={loadAnalytics} disabled={isLoading}>
           <span class="mr-2">🔄</span>
-          Refresh Data
+          {t('analytics.refreshData')}
         </Button>
       </div>
 
@@ -186,26 +188,31 @@ export default function Analytics() {
 
       {/* Date Range Filters */}
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">📅 Date Range</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">📅 {t('analytics.dateRange')}</h3>
         <div class="flex flex-wrap gap-4 items-end">
           <div class="flex-1 min-w-48">
             <Select
-              label="Time Period"
+              label={t('analytics.timePeriod')}
               value={dateRange}
-              onChange={(e) => handleDateRangeChange((e.target as HTMLSelectElement).value as any)}
+              onChange={(e) =>
+                handleDateRangeChange((e.target as HTMLSelectElement).value as '7d' | '30d' | '90d' | 'custom')
+              }
               options={[
-                { value: '7d', label: 'Last 7 Days' },
-                { value: '30d', label: 'Last 30 Days' },
-                { value: '90d', label: 'Last 90 Days' },
-                { value: 'custom', label: 'Custom Range' },
+                { value: '7d', label: t('analytics.last7Days') },
+                { value: '30d', label: t('analytics.last30Days') },
+                { value: '90d', label: t('analytics.last90Days') },
+                { value: 'custom', label: t('analytics.customRange') },
               ]}
             />
           </div>
           {customDateRange && (
             <>
               <div class="flex-1 min-w-40">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                <label for="analytics-start-date" class="block text-sm font-medium text-gray-700 mb-2">
+                  {t('analytics.startDate')}
+                </label>
                 <input
+                  id="analytics-start-date"
                   type="date"
                   value={startDate}
                   onInput={(e) => setStartDate((e.target as HTMLInputElement).value)}
@@ -213,8 +220,11 @@ export default function Analytics() {
                 />
               </div>
               <div class="flex-1 min-w-40">
-                <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                <label for="analytics-end-date" class="block text-sm font-medium text-gray-700 mb-2">
+                  {t('analytics.endDate')}
+                </label>
                 <input
+                  id="analytics-end-date"
                   type="date"
                   value={endDate}
                   onInput={(e) => setEndDate((e.target as HTMLInputElement).value)}
@@ -233,7 +243,7 @@ export default function Analytics() {
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-3xl font-bold text-blue-600">{formatCurrency(metrics.totalRevenue)}</div>
-                <div class="text-sm font-medium text-blue-700">Total Revenue</div>
+                <div class="text-sm font-medium text-blue-700">{t('analytics.totalRevenue')}</div>
               </div>
               <div class="text-blue-400 text-3xl">💰</div>
             </div>
@@ -243,7 +253,7 @@ export default function Analytics() {
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-3xl font-bold text-green-600">{metrics.totalOrders}</div>
-                <div class="text-sm font-medium text-green-700">Total Orders</div>
+                <div class="text-sm font-medium text-green-700">{t('analytics.totalOrders')}</div>
               </div>
               <div class="text-green-400 text-3xl">📋</div>
             </div>
@@ -253,7 +263,7 @@ export default function Analytics() {
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-3xl font-bold text-purple-600">{metrics.completedOrders}</div>
-                <div class="text-sm font-medium text-purple-700">Completed Orders</div>
+                <div class="text-sm font-medium text-purple-700">{t('analytics.completedOrders')}</div>
               </div>
               <div class="text-purple-400 text-3xl">✅</div>
             </div>
@@ -263,7 +273,7 @@ export default function Analytics() {
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-3xl font-bold text-orange-600">{formatCurrency(metrics.averageOrderValue)}</div>
-                <div class="text-sm font-medium text-orange-700">Avg Order Value</div>
+                <div class="text-sm font-medium text-orange-700">{t('analytics.averageOrderValue')}</div>
               </div>
               <div class="text-orange-400 text-3xl">📊</div>
             </div>
@@ -275,15 +285,15 @@ export default function Analytics() {
         {/* Sales by Members */}
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div class="p-6 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-900">👥 Sales by Members</h3>
+            <h3 class="text-lg font-semibold text-gray-900">👥 {t('analytics.salesByMembers')}</h3>
           </div>
           <div class="max-h-96 overflow-y-auto">
             <Table>
               <TableHead>
                 <TableRow class="bg-gray-50">
-                  <TableHeader class="font-semibold text-gray-900">Member</TableHeader>
-                  <TableHeader class="font-semibold text-gray-900">Orders</TableHeader>
-                  <TableHeader class="font-semibold text-gray-900">Revenue</TableHeader>
+                  <TableHeader class="font-semibold text-gray-900">{t('analytics.member')}</TableHeader>
+                  <TableHeader class="font-semibold text-gray-900">{t('analytics.orders')}</TableHeader>
+                  <TableHeader class="font-semibold text-gray-900">{t('analytics.revenue')}</TableHeader>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -310,7 +320,7 @@ export default function Analytics() {
             {salesByMembers.length === 0 && (
               <div class="p-8 text-center text-gray-500">
                 <div class="text-4xl mb-2">👥</div>
-                <p>No sales data available for the selected period</p>
+                <p>{t('analytics.noSalesData')}</p>
               </div>
             )}
           </div>
@@ -319,15 +329,15 @@ export default function Analytics() {
         {/* Top Products */}
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div class="p-6 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-900">🏆 Top Products</h3>
+            <h3 class="text-lg font-semibold text-gray-900">🏆 {t('analytics.topProducts')}</h3>
           </div>
           <div class="max-h-96 overflow-y-auto">
             <Table>
               <TableHead>
                 <TableRow class="bg-gray-50">
-                  <TableHeader class="font-semibold text-gray-900">Product</TableHeader>
-                  <TableHeader class="font-semibold text-gray-900">Sold</TableHeader>
-                  <TableHeader class="font-semibold text-gray-900">Revenue</TableHeader>
+                  <TableHeader class="font-semibold text-gray-900">{t('analytics.product')}</TableHeader>
+                  <TableHeader class="font-semibold text-gray-900">{t('analytics.sold')}</TableHeader>
+                  <TableHeader class="font-semibold text-gray-900">{t('analytics.revenue')}</TableHeader>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -354,7 +364,7 @@ export default function Analytics() {
             {topProducts.length === 0 && (
               <div class="p-8 text-center text-gray-500">
                 <div class="text-4xl mb-2">📦</div>
-                <p>No product sales data available</p>
+                <p>{t('analytics.noProductSales')}</p>
               </div>
             )}
           </div>
@@ -363,7 +373,7 @@ export default function Analytics() {
 
       {/* Recent Activity */}
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">🕒 Recent Activity</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">🕒 {t('analytics.recentActivity')}</h3>
         <div class="space-y-3 max-h-96 overflow-y-auto">
           {recentActivity.map((activity) => (
             <div
@@ -375,7 +385,7 @@ export default function Analytics() {
                 <div>
                   <div class="font-medium text-gray-900">{activity.description}</div>
                   <div class="text-sm text-gray-600">
-                    by {activity.userName} • {new Date(activity.timestamp).toLocaleString()}
+                    {t('analytics.by')} {activity.userName} • {new Date(activity.timestamp).toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -386,7 +396,7 @@ export default function Analytics() {
         {recentActivity.length === 0 && (
           <div class="text-center text-gray-500 py-8">
             <div class="text-4xl mb-2">🕒</div>
-            <p>No recent activity</p>
+            <p>{t('analytics.noRecentActivity')}</p>
           </div>
         )}
       </div>

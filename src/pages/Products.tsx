@@ -18,6 +18,7 @@ import {
   Textarea,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
+import { useTranslation } from '../hooks/useTranslation'
 import { PRODUCT_CATEGORIES, type Product, productService } from '../services/products-sqlite'
 
 interface EditProductModalProps {
@@ -28,6 +29,8 @@ interface EditProductModalProps {
 }
 
 function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModalProps) {
+  const { t } = useTranslation()
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -103,17 +106,22 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
         onSave(result.product)
         onClose()
       } else {
-        setError(result.error || 'An error occurred')
+        setError(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError('An error occurred')
+      setError(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title={product ? 'Edit Product' : 'Create Product'} size="md">
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={product ? t('products.editProduct') : t('products.addProduct')}
+      size="md"
+    >
       <DialogBody>
         {error && (
           <div class="bg-red-500/10 backdrop-blur-sm border border-red-400/20 text-red-700 px-4 py-3 rounded-xl mb-6">
@@ -129,7 +137,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
             <div class="grid grid-cols-2 gap-6">
               <div>
                 <Input
-                  label="📦 Product Name"
+                  label={`📦 ${t('products.productName')}`}
                   value={formData.name}
                   onInput={(e) =>
                     setFormData({
@@ -139,13 +147,13 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
                   }
                   required
                   class="bg-white/80 text-gray-900"
-                  placeholder="Enter product name"
+                  placeholder={t('products.productName')}
                 />
               </div>
 
               <div>
                 <Select
-                  label="🏷️ Category"
+                  label={`🏷️ ${t('products.category')}`}
                   value={formData.category}
                   onChange={(e) =>
                     setFormData({
@@ -154,7 +162,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
                     })
                   }
                   required
-                  placeholder="Select a category"
+                  placeholder={t('products.selectCategory')}
                   options={PRODUCT_CATEGORIES.map((category) => ({
                     value: category,
                     label: category,
@@ -166,7 +174,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
 
             <div>
               <Textarea
-                label="📝 Description"
+                label={`📝 ${t('products.description')}`}
                 value={formData.description}
                 onInput={(e) =>
                   setFormData({
@@ -176,14 +184,14 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
                 }
                 rows={3}
                 class="bg-white/80 text-gray-900"
-                placeholder="Enter product description"
+                placeholder={t('products.enterDescription')}
               />
             </div>
 
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <Input
-                  label="💰 Price"
+                  label={`💰 ${t('products.priceLabel')}`}
                   type="number"
                   value={formData.price.toString()}
                   onInput={(e) =>
@@ -200,7 +208,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
 
               <div>
                 <Input
-                  label="🏭 Cost"
+                  label={`🏭 ${t('products.cost')}`}
                   type="number"
                   value={formData.cost.toString()}
                   onInput={(e) =>
@@ -217,7 +225,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
 
               <div>
                 <Input
-                  label="📊 Stock"
+                  label={`📊 ${t('products.stockLabel')}`}
                   type="number"
                   value={formData.stock.toString()}
                   onInput={(e) =>
@@ -236,7 +244,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
             <div class="grid grid-cols-2 gap-6">
               <div>
                 <Input
-                  label="📊 Barcode (Optional)"
+                  label={`📊 ${t('products.barcodeOptional')}`}
                   value={formData.barcode}
                   onInput={(e) =>
                     setFormData({
@@ -244,14 +252,14 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
                       barcode: (e.target as HTMLInputElement).value,
                     })
                   }
-                  placeholder="Enter barcode"
+                  placeholder={t('products.enterBarcode')}
                   class="bg-white/80 text-gray-900"
                 />
               </div>
 
               <div>
                 <Select
-                  label="✅ Status"
+                  label={`✅ ${t('products.status')}`}
                   value={formData.isActive ? 'active' : 'inactive'}
                   onChange={(e) =>
                     setFormData({
@@ -262,11 +270,11 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
                   options={[
                     {
                       value: 'active',
-                      label: '✅ Active - Available for sale',
+                      label: `✅ ${t('products.activeStatus')}`,
                     },
                     {
                       value: 'inactive',
-                      label: '⛔ Inactive - Hidden from sales',
+                      label: `⛔ ${t('products.inactiveStatus')}`,
                     },
                   ]}
                   class="bg-white/80"
@@ -278,13 +286,13 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
             {formData.price > 0 && formData.cost > 0 && (
               <div class="backdrop-blur-md bg-emerald-100/60 rounded-xl p-4 border border-emerald-200/50 shadow-md">
                 <div class="flex justify-between items-center">
-                  <span class="font-semibold text-emerald-800">Profit Margin:</span>
+                  <span class="font-semibold text-emerald-800">{t('products.profitMarginLabel')}</span>
                   <span class="text-xl font-bold text-emerald-600">
                     {(((formData.price - formData.cost) / formData.cost) * 100).toFixed(1)}%
                   </span>
                 </div>
                 <div class="text-sm text-emerald-700 mt-1">
-                  Profit: ${(formData.price - formData.cost).toFixed(2)} per unit
+                  {t('products.profitPerUnit', { amount: `$${(formData.price - formData.cost).toFixed(2)}` })}
                 </div>
               </div>
             )}
@@ -294,10 +302,10 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button type="button" onClick={() => handleSubmit(new Event('submit'))} disabled={isLoading}>
-          {isLoading ? 'Saving...' : product ? 'Update' : 'Create'}
+          {isLoading ? t('common.loading') : product ? t('common.edit') : t('common.add')}
         </Button>
       </DialogFooter>
     </Dialog>
@@ -305,6 +313,8 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
 }
 
 export default function Products() {
+  const { t } = useTranslation()
+
   const [products, setProducts] = useState<Product[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -339,7 +349,7 @@ export default function Products() {
 
   const loadProducts = async (page: number = 1) => {
     if (!canManageProducts) {
-      setError("You don't have permission to view products")
+      setError(t('errors.unauthorized'))
       setIsLoading(false)
       return
     }
@@ -357,7 +367,7 @@ export default function Products() {
       setTotalPages(paginatedResult.totalPages)
       setCurrentPage(paginatedResult.currentPage)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load products'
+      const message = err instanceof Error ? err.message : t('errors.generic')
       setError(message)
     } finally {
       setIsLoading(false)
@@ -379,7 +389,7 @@ export default function Products() {
       setTotalPages(searchResults.totalPages)
       setCurrentPage(searchResults.currentPage)
     } catch (_err) {
-      setError('Search failed')
+      setError(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -403,10 +413,10 @@ export default function Products() {
         setProducts(products.filter((p) => p.id !== productId))
         setDeleteConfirm(null)
       } else {
-        setError(result.error || 'Failed to delete product')
+        setError(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError('Failed to delete product')
+      setError(t('errors.generic'))
     }
   }
 
@@ -464,10 +474,8 @@ export default function Products() {
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div class="text-center">
             <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-3">Access Denied</h3>
-            <p class="text-gray-600 max-w-md mx-auto">
-              You don't have permission to view the products page. Contact your administrator for access.
-            </p>
+            <h3 class="text-2xl font-bold text-gray-900 mb-3">{t('products.accessDenied')}</h3>
+            <p class="text-gray-600 max-w-md mx-auto">{t('products.noPermission')}</p>
           </div>
         </div>
       </Container>
@@ -480,7 +488,7 @@ export default function Products() {
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div class="text-center">
             <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white mx-auto mb-6 shadow-lg"></div>
-            <p class="text-gray-600 text-lg">Loading products catalog...</p>
+            <p class="text-gray-600 text-lg">{t('products.loadingCatalog')}</p>
           </div>
         </div>
       </Container>
@@ -491,17 +499,17 @@ export default function Products() {
     <Container size="xl">
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">Products</h1>
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">{t('products.title')}</h1>
           <p class="text-gray-600">
-            {totalCount} {totalCount === 1 ? 'product' : 'products'} total
-            {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
-            {searchQuery && ` • Searching for "${searchQuery}"`}
+            {totalCount} {t('products.productsTotal')}
+            {totalPages > 1 && ` • ${t('products.pageXofY', { current: currentPage, total: totalPages })}`}
+            {searchQuery && ` • ${t('products.searchingFor')} "${searchQuery}"`}
           </p>
         </div>
         {(hasPermission('products.create') || hasRole('admin') || hasRole('manager')) && (
           <Button onClick={handleCreateProduct}>
             <span class="mr-2">➕</span>
-            Add Product
+            {t('products.addProduct')}
           </Button>
         )}
       </div>
@@ -509,7 +517,7 @@ export default function Products() {
       <div class="mb-6">
         <Input
           type="search"
-          placeholder="Search products by name, description, category, or barcode..."
+          placeholder={t('products.searchProducts')}
           value={searchQuery}
           onInput={(e) => {
             setCurrentPage(1)
@@ -522,7 +530,10 @@ export default function Products() {
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
+              role="img"
+              aria-label="Search"
             >
+              <title>Search</title>
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -532,7 +543,8 @@ export default function Products() {
           }
           rightIcon={
             searchQuery ? (
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Clear search">
+                <title>Clear search</title>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             ) : undefined
@@ -562,13 +574,13 @@ export default function Products() {
         <Table>
           <TableHead>
             <TableRow class="bg-gray-50">
-              <TableHeader class="font-semibold text-gray-900">Product</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Category</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Price</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Cost</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Stock</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Status</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">Actions</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('common.name')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('products.category')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('common.price')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('products.costPrice')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('products.stock')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('common.status')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">{t('common.actions')}</TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -608,7 +620,7 @@ export default function Products() {
                 <TableCell>
                   <div class="text-gray-600 font-medium">{formatCurrency(product.cost)}</div>
                   <div class="text-xs text-gray-500">
-                    Margin: {(((product.price - product.cost) / product.cost) * 100).toFixed(1)}%
+                    {t('products.profitMargin')}: {(((product.price - product.cost) / product.cost) * 100).toFixed(1)}%
                   </div>
                 </TableCell>
                 <TableCell>
@@ -616,7 +628,7 @@ export default function Products() {
                     class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105 ${getStockColor(product.stock)} shadow-sm`}
                   >
                     <span class="mr-1">{getStockIcon(product.stock)}</span>
-                    {product.stock} units
+                    {product.stock} {t('common.quantity').toLowerCase()}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -624,7 +636,7 @@ export default function Products() {
                     class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide ${getStatusColor(product.isActive)} transition-all hover:scale-105`}
                   >
                     <span class="mr-1">{product.isActive ? '✅' : '⛔'}</span>
-                    {product.isActive ? 'Active' : 'Inactive'}
+                    {product.isActive ? t('members.active') : t('members.inactive')}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -636,7 +648,7 @@ export default function Products() {
                         onClick={() => handleEditProduct(product)}
                         class="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all hover:shadow-md mr-2"
                       >
-                        ✏️ Edit
+                        ✏️ {t('common.edit')}
                       </Button>
                     )}
                     {(hasPermission('products.delete') || hasRole('admin') || hasRole('manager')) && (
@@ -646,7 +658,7 @@ export default function Products() {
                         onClick={() => setDeleteConfirm(product.id)}
                         class="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all hover:shadow-md"
                       >
-                        🗑️ Delete
+                        🗑️ {t('common.delete')}
                       </Button>
                     )}
                   </div>
@@ -674,17 +686,17 @@ export default function Products() {
           <div class="text-center">
             <div class="text-6xl mb-6">{searchQuery ? '🔍' : '📦'}</div>
             <h3 class="text-2xl font-bold text-gray-900 mb-3">
-              {searchQuery ? 'No products found' : 'No products in catalog'}
+              {searchQuery ? t('products.noProducts') : t('products.noProducts')}
             </h3>
             <p class="text-gray-600 mb-6 max-w-md mx-auto">
               {searchQuery
-                ? `We couldn't find any products matching "${searchQuery}". Try adjusting your search terms.`
-                : 'Your product catalog is empty. Add your first product to get started with inventory management.'}
+                ? t('products.noProductsSearch', { query: searchQuery })
+                : t('products.emptyProductsCatalog')}
             </p>
             {!searchQuery && (hasPermission('products.create') || hasRole('admin') || hasRole('manager')) && (
               <Button onClick={handleCreateProduct} class="mt-4">
                 <span class="mr-2">➕</span>
-                Add First Product
+                {t('products.addFirstProduct')}
               </Button>
             )}
           </div>
@@ -702,9 +714,9 @@ export default function Products() {
         isOpen={!!deleteConfirm}
         onClose={() => setDeleteConfirm(null)}
         onConfirm={() => deleteConfirm && handleDeleteProduct(deleteConfirm)}
-        title="Confirm Delete"
-        message="Are you sure you want to delete this product? This action cannot be undone."
-        confirmText="Delete"
+        title={t('products.deleteConfirm')}
+        message={t('products.deleteMessage')}
+        confirmText={t('common.delete')}
         variant="danger"
       />
     </Container>

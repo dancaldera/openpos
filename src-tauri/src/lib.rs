@@ -1,9 +1,67 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
+use std::process::Command;
+use std::env;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+#[tauri::command]
+async fn print_thermal_receipt(receipt_data: String) -> Result<String, String> {
+    println!("Tauri print command called with data length: {}", receipt_data.len());
+    
+    // Escape single quotes in the JSON data for shell safety
+    let escaped_data: String = receipt_data.replace("'", "'\\''"); 
+    
+    // Create the exact command string that works in your terminal
+    let command: String = format!("print print '{}'", escaped_data);
+    
+    println!("Executing command: {}", command);
+    
+    // Load user's shell configuration and ensure PATH is correctly set
+    // This ensures the command is run in the same environment as your terminal
+    // Choose shell based on operating system
+    let shell = if env::consts::OS == "macos" {
+        "zsh"
+    } else {
+        "bash"
+    };
+    
+    println!("Using shell: {}", shell);
+    
+    let output = Command::new(shell)
+        .arg("-l")  // Login shell to load full environment
+        .arg("-i")  // Interactive mode to ensure all user configs are loaded
+        .arg("-c")
+        .arg(&command)
+        .output()
+        .map_err(|e| {
+            let error_msg = format!("Failed to execute shell command '{}': {}", command, e);
+            println!("Command execution error: {}", error_msg);
+            error_msg
+        })?;
+    
+    let stdout = String::from_utf8(output.stdout)
+        .unwrap_or_else(|_| "[Invalid UTF-8 in stdout]".to_string());
+    let stderr = String::from_utf8(output.stderr)
+        .unwrap_or_else(|_| "[Invalid UTF-8 in stderr]".to_string());
+    
+    println!("Command exit status: {}", output.status);
+    println!("Command stdout: {}", stdout);
+    println!("Command stderr: {}", stderr);
+    
+    if output.status.success() {
+        Ok(format!("Print command executed successfully. Output: {}", stdout.trim()))
+    } else {
+        let error_msg = if stderr.trim().is_empty() {
+            format!("Print command failed with exit code: {} (no error message)", output.status)
+        } else {
+            format!("Print command failed: {}", stderr.trim())
+        };
+        Err(error_msg)
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -168,7 +226,7 @@ pub fn run() {
                 .add_migrations("sqlite:postpos.db", migrations)
                 .build()
         )
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, print_thermal_receipt])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
