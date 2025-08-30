@@ -996,7 +996,7 @@ export default function Orders() {
                     {filteredProducts.map((product) => (
                       <div
                         key={product.id}
-                        class="group relative backdrop-blur-md bg-white/70 border border-white/40 rounded-xl p-4 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+                        class="group relative backdrop-blur-md bg-white/70 border-2 border-gray-200 rounded-xl p-4 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300 cursor-pointer"
                         onClick={() => product.stock > 0 && addItemToOrder(product.id)}
                         role="button"
                         tabindex={0}
@@ -1299,7 +1299,7 @@ export default function Orders() {
                     {filteredEditProducts.map((product) => (
                       <div
                         key={product.id}
-                        class="group relative backdrop-blur-md bg-white/70 border border-white/40 rounded-xl p-4 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:border-emerald-300/50 cursor-pointer"
+                        class="group relative backdrop-blur-md bg-white/70 border-2 border-gray-200 rounded-xl p-4 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300 cursor-pointer"
                         onClick={() => product.stock > 0 && addItemToEditOrder(product.id)}
                         role="button"
                         tabindex={0}
