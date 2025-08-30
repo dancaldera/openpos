@@ -131,8 +131,8 @@ function Dialog({ isOpen, onClose, title, children, size = 'md' }: DialogProps) 
       <div 
         class={clsx(
           'absolute inset-0',
-          // Opaque overlay without transparency or blur
-          'bg-black transition-all duration-300 ease-out',
+          // Semi-transparent overlay without blur
+          'bg-black/40 transition-all duration-300 ease-out',
         )}
         aria-label="Close dialog"
       />
