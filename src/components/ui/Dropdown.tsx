@@ -27,14 +27,14 @@ export default function Dropdown({
   trigger,
   items,
   align = 'right',
-  width = 'w-56',
+  // width = 'w-56', // Currently unused - could be used for future menu width customization
   isOpen: controlledOpen,
   onOpenChange,
   usePortal = false,
 }: DropdownProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const [dropDirection, setDropDirection] = useState<'down' | 'up'>('down')
-  const [position, setPosition] = useState({ top: 0, left: 0, right: 0 })
+  const [position, setPosition] = useState({ top: 0, left: 0, right: undefined as number | undefined })
   const dropdownRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const isControlled = controlledOpen !== undefined
@@ -88,7 +88,7 @@ export default function Dropdown({
     
     // Calculate horizontal position
     let left = align === 'left' ? rect.left : rect.right - menuWidth
-    let right = 'auto'
+    let right: number | undefined = undefined
     
     // Ensure menu doesn't go off screen horizontally
     if (left < 10) {
@@ -214,9 +214,7 @@ export default function Dropdown({
     </div>
   )
 
-  const alignmentClasses = align === 'left' ? 'left-0' : 'right-0'
-  const positionClasses =
-    dropDirection === 'up' ? `${alignmentClasses} bottom-full mb-2` : `${alignmentClasses} top-full mt-2`
+  // alignmentClasses and positionClasses removed - using portal positioning instead
 
   return (
     <>
