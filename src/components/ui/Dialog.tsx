@@ -46,7 +46,7 @@ function DialogHeader({ children, onClose }: DialogHeaderProps) {
         <button
           type="button"
           onClick={onClose}
-          class="p-2 text-gray-600 border border-gray-300 rounded-lg bg-white/40 backdrop-blur-sm hover:bg-white/60 hover:border-gray-400 hover:text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="p-2 text-gray-600 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 hover:border-gray-400 hover:text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <svg
             class="w-5 h-5"
@@ -131,8 +131,8 @@ function Dialog({ isOpen, onClose, title, children, size = 'md' }: DialogProps) 
       <div 
         class={clsx(
           'absolute inset-0',
-          // Overlay with visible frame border and added transparency
-          'bg-black/40 backdrop-blur-sm transition-all duration-300 ease-out border-2 border-white/20',
+          // Opaque overlay without transparency or blur
+          'bg-black transition-all duration-300 ease-out',
         )}
         aria-label="Close dialog"
       />
@@ -140,8 +140,8 @@ function Dialog({ isOpen, onClose, title, children, size = 'md' }: DialogProps) 
       <div class="relative z-10 flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div
           class={clsx(
-            // Dialog card with added transparency and refined border
-            'relative w-full bg-white/60 backdrop-blur-xl border-2 border-white/50 rounded-2xl shadow-2xl',
+            // Opaque dialog card without transparency or blur
+            'relative w-full bg-white border-2 border-gray-300 rounded-2xl shadow-2xl',
             'transition-all duration-300 ease-out transform will-change-transform will-change-opacity',
             'my-8 overflow-hidden text-left align-middle sm:my-8',
             isAnimating ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-4',

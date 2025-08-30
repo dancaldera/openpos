@@ -38,7 +38,7 @@ export function Table({
       <div class="flow-root">
         <div {...props} class={clsx(className, '-mx-4 overflow-x-auto whitespace-nowrap')}>
           <div class={clsx('inline-block min-w-full align-middle', !bleed && 'sm:px-4')}>
-            <table class="min-w-full text-left text-sm/6 text-gray-900 dark:text-white">{children}</table>
+            <table class="min-w-full text-left text-sm/6 text-gray-900 dark:text-white relative">{children}</table>
           </div>
         </div>
       </div>

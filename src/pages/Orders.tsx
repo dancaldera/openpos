@@ -829,16 +829,19 @@ export default function Orders() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableCell onClick={(e) => e.stopPropagation()} class="relative">
                   <Dropdown
                     trigger={
-                      <span class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-all hover:shadow-md cursor-pointer">
-                        ⚙️ {t('common.actions')}
+                      <span class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all hover:shadow-md cursor-pointer group">
+                        <span class="mr-2 group-hover:scale-110 transition-transform">⚙️</span>
+                        <span class="font-semibold">{t('common.actions')}</span>
+                        <span class="ml-1 text-xs group-hover:rotate-180 transition-transform duration-200">▼</span>
                       </span>
                     }
                     items={getOrderActionItems(order)}
                     align="right"
-                    width="w-48"
+                    width="w-52"
+                    usePortal={true}
                   />
                 </TableCell>
               </TableRow>
