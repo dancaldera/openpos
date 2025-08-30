@@ -1,8 +1,6 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
 use std::process::Command;
 use std::env;
-use std::time::Duration;
-use std::thread;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -36,11 +34,31 @@ async fn print_thermal_receipt(receipt_data: String) -> Result<String, String> {
     
     println!("Using shell: {}", shell);
     
-    // Use output() to capture stdout and stderr, with environment loading
+    // First try to see if print is available with which command
+    let which_cmd = "which print";
+    println!("Checking if print command exists: {}", which_cmd);
+    
+    let which_output = Command::new(shell)
+        .arg("-l")
+        .arg("-c")
+        .arg(which_cmd)
+        .output()
+        .unwrap_or_else(|_| std::process::Output {
+            status: std::process::ExitStatus::from_raw(1),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        });
+        
+    println!("Which print result: {}", String::from_utf8_lossy(&which_output.stdout));
+    
+    // Try the actual command with both login shell and source the shell config
+    let full_command = format!("source ~/.zshrc 2>/dev/null || source ~/.bash_profile 2>/dev/null || true; {}", command);
+    println!("Executing with source: {}", full_command);
+    
     let output = Command::new(shell)
-        .arg("-l")  // Load login shell environment for user's PATH and functions  
+        .arg("-l")  // Load login shell environment
         .arg("-c")  // Execute command
-        .arg(&command)
+        .arg(&full_command)
         .output()
         .map_err(|e| {
             let error_msg = format!("Failed to execute shell command '{}': {}", command, e);
