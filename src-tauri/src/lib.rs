@@ -23,7 +23,7 @@ async fn print_thermal_receipt(receipt_data: String) -> Result<String, String> {
     let escaped_data: String = receipt_data.replace("'", "'\\''"); 
     
     // Create the exact command string that works in your terminal
-    let command: String = format!("print '{}'", escaped_data);
+    let command: String = format!("print print '{}'", escaped_data);
     
     println!("Executing command: {}", command);
     
