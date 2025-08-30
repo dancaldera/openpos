@@ -116,17 +116,11 @@ function Dialog({ isOpen, onClose, title, children, size = 'md' }: DialogProps) 
 
   if (!shouldRender) return null
 
-  const handleOverlayClick = (e: any) => {
-    // Only close if clicking the overlay itself, not child elements
-    if (e.target === e.currentTarget) {
-      onClose()
-    }
-  }
+  // Close when clicking the background overlay
 
   return (
     <div 
       class={clsx('fixed inset-0 z-50 overflow-y-auto', isAnimating ? 'opacity-100' : 'opacity-0')}
-      onClick={handleOverlayClick}
     >
       <div 
         class={clsx(
@@ -134,6 +128,7 @@ function Dialog({ isOpen, onClose, title, children, size = 'md' }: DialogProps) 
           // Semi-transparent overlay without blur
           'bg-black/40 transition-all duration-300 ease-out',
         )}
+        onClick={onClose}
         aria-label="Close dialog"
       />
 
