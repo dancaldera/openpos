@@ -2,6 +2,7 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 use std::process::Command;
 use std::env;
 use std::time::Duration;
+use std::thread;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -71,7 +72,7 @@ async fn print_thermal_receipt(receipt_data: String) -> Result<String, String> {
                     return Err("Print command timed out after 10 seconds".to_string());
                 }
                 // Sleep briefly before checking again
-                tokio::time::sleep(Duration::from_millis(100)).await;
+                thread::sleep(Duration::from_millis(100));
             }
             Err(e) => {
                 println!("Error waiting for command: {}", e);
