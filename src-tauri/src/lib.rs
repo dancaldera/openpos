@@ -36,50 +36,42 @@ async fn print_thermal_receipt(receipt_data: String) -> Result<String, String> {
     
     println!("Using shell: {}", shell);
     
-    // Use spawn instead of output to have more control and prevent hanging
-    let mut child = Command::new(shell)
-        .arg("-c")  // Only use -c flag, avoid interactive flags
+    // Use output() to capture stdout and stderr, with environment loading
+    let output = Command::new(shell)
+        .arg("-l")  // Load login shell environment for user's PATH and functions  
+        .arg("-c")  // Execute command
         .arg(&command)
-        .spawn()
+        .output()
         .map_err(|e| {
-            let error_msg = format!("Failed to spawn shell command '{}': {}", command, e);
-            println!("Command spawn error: {}", error_msg);
+            let error_msg = format!("Failed to execute shell command '{}': {}", command, e);
+            println!("Command execution error: {}", error_msg);
             error_msg
         })?;
     
-    // Set a reasonable timeout to prevent hanging (10 seconds)
-    let timeout = Duration::from_secs(10);
-    let start_time = std::time::Instant::now();
+    let stdout = String::from_utf8(output.stdout)
+        .unwrap_or_else(|_| "[Invalid UTF-8 in stdout]".to_string());
+    let stderr = String::from_utf8(output.stderr)
+        .unwrap_or_else(|_| "[Invalid UTF-8 in stderr]".to_string());
     
-    // Poll for completion with timeout
-    loop {
-        match child.try_wait() {
-            Ok(Some(status)) => {
-                println!("Command completed with status: {}", status);
-                
-                if status.success() {
-                    return Ok("Print command executed successfully".to_string());
-                } else {
-                    return Err(format!("Print command failed with exit code: {}", status));
-                }
-            }
-            Ok(None) => {
-                // Process is still running, check timeout
-                if start_time.elapsed() > timeout {
-                    println!("Command timed out, killing process");
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    return Err("Print command timed out after 10 seconds".to_string());
-                }
-                // Sleep briefly before checking again
-                thread::sleep(Duration::from_millis(100));
-            }
-            Err(e) => {
-                println!("Error waiting for command: {}", e);
-                let _ = child.kill();
-                return Err(format!("Error executing print command: {}", e));
-            }
-        }
+    println!("Command exit status: {}", output.status);
+    println!("Command stdout: {}", stdout);
+    println!("Command stderr: {}", stderr);
+    
+    if output.status.success() {
+        // Return the actual stdout output from the print command
+        let output_msg = if stdout.trim().is_empty() {
+            "Print command executed successfully (no output)".to_string()
+        } else {
+            format!("Print command executed: {}", stdout.trim())
+        };
+        Ok(output_msg)
+    } else {
+        let error_msg = if stderr.trim().is_empty() {
+            format!("Print command failed with exit code: {} (no error message)", output.status)
+        } else {
+            format!("Print command failed: {}", stderr.trim())
+        };
+        Err(error_msg)
     }
 }
 
