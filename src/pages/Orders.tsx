@@ -996,12 +996,12 @@ export default function Orders() {
                     {filteredProducts.map((product) => (
                       <div
                         key={product.id}
-                        class="group relative backdrop-blur-md bg-white/70 border-2 border-gray-200 rounded-xl p-4 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300 cursor-pointer"
-                        onClick={() => product.stock > 0 && addItemToOrder(product.id)}
-                        role="button"
-                        tabindex={0}
-                        aria-label={`${t('orders.addProduct')} ${product.name}`}
-                        onKeyDown={(e) => {
+                        class="group relative backdrop-blur-md bg-white/70 border-2 border-gray-200 rounded-xl p-4 hover:bg-white hover:shadow-sm transition-colors duration-150 hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-200 cursor-pointer"
+                         onClick={() => product.stock > 0 && addItemToOrder(product.id)}
+                         role="button"
+                         tabindex={0}
+                          aria-label={`${t('orders.addProduct')} ${product.name}`}
+                          onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
                             product.stock > 0 && addItemToOrder(product.id)
@@ -1299,12 +1299,12 @@ export default function Orders() {
                     {filteredEditProducts.map((product) => (
                       <div
                         key={product.id}
-                        class="group relative backdrop-blur-md bg-white/70 border-2 border-gray-200 rounded-xl p-4 hover:bg-white/80 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300 cursor-pointer"
-                        onClick={() => product.stock > 0 && addItemToEditOrder(product.id)}
-                        role="button"
-                        tabindex={0}
-                        aria-label={`${t('orders.addProduct')} ${product.name}`}
-                        onKeyDown={(e) => {
+                        class="group relative backdrop-blur-md bg-white/70 border-2 border-gray-200 rounded-xl p-4 hover:bg-white hover:shadow-sm transition-colors duration-150 hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-200 cursor-pointer"
+                          onClick={() => product.stock > 0 && addItemToEditOrder(product.id)}
+                          role="button"
+                          tabindex={0}
+                          aria-label={`${t('orders.addProduct')} ${product.name}`}
+                          onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
                             product.stock > 0 && addItemToEditOrder(product.id)
