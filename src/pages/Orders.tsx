@@ -453,6 +453,8 @@ export default function Orders() {
   }
 
   const handleThermalPrint = async (order: Order) => {
+    if (isPrinting) return // Prevent concurrent prints
+    
     setIsPrinting(true)
     setPrintStatus(null)
 

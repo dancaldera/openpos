@@ -59,9 +59,13 @@ export class PrintService {
           const response = await invoke('print_thermal_receipt', { receiptData: jsonString })
           console.log('Tauri print response:', response)
           return response as string
-        } catch (invokeError) {
+        } catch (invokeError: any) {
           console.error('Tauri invoke failed, falling back to clipboard:', invokeError)
-          // Fall through to clipboard fallback
+          // Re-throw the error if it's a fatal/unrecoverable error to prevent silent failures
+          if (invokeError?.message?.includes('fatal') || invokeError?.message?.includes('crash')) {
+            throw new Error(`Print service crashed: ${invokeError.message}`)
+          }
+          // Fall through to clipboard fallback for other errors
         }
       }
       

@@ -96,6 +96,8 @@ export class CompanySettingsService {
 
   async getSettings(): Promise<CompanySettings> {
     try {
+      // Force fresh database connection to prevent stale connection issues
+      this.db = null
       const db = await this.getDatabase()
       await new Promise((resolve) => setTimeout(resolve, 100))
 
