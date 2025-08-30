@@ -38,18 +38,16 @@ async fn print_thermal_receipt(receipt_data: String) -> Result<String, String> {
     let which_cmd = "which print";
     println!("Checking if print command exists: {}", which_cmd);
     
-    let which_output = Command::new(shell)
+    if let Ok(which_output) = Command::new(shell)
         .arg("-l")
         .arg("-c")
         .arg(which_cmd)
-        .output()
-        .unwrap_or_else(|_| std::process::Output {
-            status: std::process::ExitStatus::from_raw(1),
-            stdout: Vec::new(),
-            stderr: Vec::new(),
-        });
-        
-    println!("Which print result: {}", String::from_utf8_lossy(&which_output.stdout));
+        .output() {
+        println!("Which print result: {}", String::from_utf8_lossy(&which_output.stdout));
+        println!("Which print stderr: {}", String::from_utf8_lossy(&which_output.stderr));
+    } else {
+        println!("Failed to run which command");
+    }
     
     // Try the actual command with both login shell and source the shell config
     let full_command = format!("source ~/.zshrc 2>/dev/null || source ~/.bash_profile 2>/dev/null || true; {}", command);
