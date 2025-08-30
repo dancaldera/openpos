@@ -1,6 +1,7 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
 use std::process::Command;
 use std::env;
+use std::time::Duration;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -12,6 +13,11 @@ fn greet(name: &str) -> String {
 async fn print_thermal_receipt(receipt_data: String) -> Result<String, String> {
     println!("Tauri print command called with data length: {}", receipt_data.len());
     
+    // Validate input data is not empty
+    if receipt_data.trim().is_empty() {
+        return Err("Receipt data cannot be empty".to_string());
+    }
+    
     // Escape single quotes in the JSON data for shell safety
     let escaped_data: String = receipt_data.replace("'", "'\\''"); 
     
@@ -20,8 +26,6 @@ async fn print_thermal_receipt(receipt_data: String) -> Result<String, String> {
     
     println!("Executing command: {}", command);
     
-    // Load user's shell configuration and ensure PATH is correctly set
-    // This ensures the command is run in the same environment as your terminal
     // Choose shell based on operating system
     let shell = if env::consts::OS == "macos" {
         "zsh"
@@ -31,36 +35,50 @@ async fn print_thermal_receipt(receipt_data: String) -> Result<String, String> {
     
     println!("Using shell: {}", shell);
     
-    let output = Command::new(shell)
-        .arg("-l")  // Login shell to load full environment
-        .arg("-i")  // Interactive mode to ensure all user configs are loaded
-        .arg("-c")
+    // Use spawn instead of output to have more control and prevent hanging
+    let mut child = Command::new(shell)
+        .arg("-c")  // Only use -c flag, avoid interactive flags
         .arg(&command)
-        .output()
+        .spawn()
         .map_err(|e| {
-            let error_msg = format!("Failed to execute shell command '{}': {}", command, e);
-            println!("Command execution error: {}", error_msg);
+            let error_msg = format!("Failed to spawn shell command '{}': {}", command, e);
+            println!("Command spawn error: {}", error_msg);
             error_msg
         })?;
     
-    let stdout = String::from_utf8(output.stdout)
-        .unwrap_or_else(|_| "[Invalid UTF-8 in stdout]".to_string());
-    let stderr = String::from_utf8(output.stderr)
-        .unwrap_or_else(|_| "[Invalid UTF-8 in stderr]".to_string());
+    // Set a reasonable timeout to prevent hanging (10 seconds)
+    let timeout = Duration::from_secs(10);
+    let start_time = std::time::Instant::now();
     
-    println!("Command exit status: {}", output.status);
-    println!("Command stdout: {}", stdout);
-    println!("Command stderr: {}", stderr);
-    
-    if output.status.success() {
-        Ok(format!("Print command executed successfully. Output: {}", stdout.trim()))
-    } else {
-        let error_msg = if stderr.trim().is_empty() {
-            format!("Print command failed with exit code: {} (no error message)", output.status)
-        } else {
-            format!("Print command failed: {}", stderr.trim())
-        };
-        Err(error_msg)
+    // Poll for completion with timeout
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                println!("Command completed with status: {}", status);
+                
+                if status.success() {
+                    return Ok("Print command executed successfully".to_string());
+                } else {
+                    return Err(format!("Print command failed with exit code: {}", status));
+                }
+            }
+            Ok(None) => {
+                // Process is still running, check timeout
+                if start_time.elapsed() > timeout {
+                    println!("Command timed out, killing process");
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err("Print command timed out after 10 seconds".to_string());
+                }
+                // Sleep briefly before checking again
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+            Err(e) => {
+                println!("Error waiting for command: {}", e);
+                let _ = child.kill();
+                return Err(format!("Error executing print command: {}", e));
+            }
+        }
     }
 }
 
