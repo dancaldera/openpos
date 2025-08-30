@@ -49,14 +49,23 @@ async fn print_thermal_receipt(receipt_data: String) -> Result<String, String> {
         println!("Failed to run which command");
     }
     
-    // Try the actual command with both login shell and source the shell config
-    let full_command = format!("source ~/.zshrc 2>/dev/null || source ~/.bash_profile 2>/dev/null || true; {}", command);
-    println!("Executing with source: {}", full_command);
+    // Check if it's available as a function after sourcing
+    let test_function = "source ~/.zshrc 2>/dev/null || true; type print";
+    println!("Testing print after sourcing: {}", test_function);
     
+    if let Ok(test_output) = Command::new(shell)
+        .arg("-c")
+        .arg(&test_function)
+        .output() {
+        println!("Type print result: {}", String::from_utf8_lossy(&test_output.stdout));
+        println!("Type print stderr: {}", String::from_utf8_lossy(&test_output.stderr));
+    }
+    
+    // Try with interactive shell to load functions
     let output = Command::new(shell)
-        .arg("-l")  // Load login shell environment
-        .arg("-c")  // Execute command
-        .arg(&full_command)
+        .arg("-i")  // Interactive mode to load shell functions
+        .arg("-c")  // Execute command  
+        .arg(&command)
         .output()
         .map_err(|e| {
             let error_msg = format!("Failed to execute shell command '{}': {}", command, e);
