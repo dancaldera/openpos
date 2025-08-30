@@ -103,7 +103,13 @@ export default function Dropdown({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      // If click is inside the trigger container, ignore
+      const clickedInsideTrigger = dropdownRef.current?.contains(target)
+      // If using portal and click is inside the menu, ignore
+      const clickedInsideMenu = menuRef.current?.contains(target)
+
+      if (!clickedInsideTrigger && !clickedInsideMenu) {
         closeDropdown()
       }
     }
