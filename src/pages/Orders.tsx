@@ -54,6 +54,7 @@ export default function Orders() {
   const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'user' | null>(null)
   const [isPrinting, setIsPrinting] = useState(false)
   const [printStatus, setPrintStatus] = useState<string | null>(null)
+  const [lastPrintTime, setLastPrintTime] = useState<number>(0)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -455,12 +456,36 @@ export default function Orders() {
   const handleThermalPrint = async (order: Order) => {
     if (isPrinting) return // Prevent concurrent prints
     
+    // Add debounce protection (2 seconds between prints)
+    const now = Date.now()
+    if (now - lastPrintTime < 2000) {
+      setPrintStatus('Please wait before printing again')
+      return
+    }
+    setLastPrintTime(now)
+    
     setIsPrinting(true)
     setPrintStatus(null)
 
+    // Add timeout to prevent hanging
+    const timeoutId = setTimeout(() => {
+      setIsPrinting(false)
+      setPrintStatus('Print failed: Operation timed out')
+    }, 15000) // 15 second timeout
+
     try {
+      // Validate order data
+      if (!order || !order.id || !order.items || order.items.length === 0) {
+        throw new Error('Invalid order data')
+      }
+
       // Get company settings for printing
       const settings = await companySettingsService.getSettings()
+      
+      // Validate settings
+      if (!settings) {
+        throw new Error('Could not load company settings')
+      }
       
       // Format receipt data
       const receiptData = PrintService.formatReceiptData(order, settings)
@@ -468,9 +493,11 @@ export default function Orders() {
       // Send to printer
       const response = await PrintService.printThermalReceipt(receiptData)
       
+      clearTimeout(timeoutId)
       setPrintStatus('Print command sent successfully!')
       console.log('Print response:', response)
     } catch (error: any) {
+      clearTimeout(timeoutId)
       console.error('Print error:', error)
       setPrintStatus(`Print failed: ${error.message || error}`)
     } finally {

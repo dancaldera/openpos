@@ -79,19 +79,37 @@ export class PrintService {
         return 'Receipt data copied to clipboard (running in web browser)'
       } else {
         // Fallback for older browsers or non-secure contexts
-        const textArea = document.createElement('textarea')
-        textArea.value = jsonString
-        textArea.style.position = 'fixed'
-        textArea.style.left = '-9999px'
-        document.body.appendChild(textArea)
-        textArea.select()
-        const success = document.execCommand('copy')
-        document.body.removeChild(textArea)
-        
-        if (success) {
-          return 'Receipt data copied to clipboard (fallback method - running in web browser)'
-        } else {
-          throw new Error('Failed to copy to clipboard - no clipboard access available')
+        let textArea: HTMLTextAreaElement | null = null
+        try {
+          textArea = document.createElement('textarea')
+          textArea.value = jsonString
+          textArea.style.position = 'fixed'
+          textArea.style.left = '-9999px'
+          textArea.style.opacity = '0'
+          textArea.setAttribute('readonly', '')
+          document.body.appendChild(textArea)
+          textArea.select()
+          textArea.setSelectionRange(0, 99999) // For mobile devices
+          
+          const success = document.execCommand('copy')
+          
+          if (success) {
+            return 'Receipt data copied to clipboard (fallback method - running in web browser)'
+          } else {
+            throw new Error('Failed to copy to clipboard - no clipboard access available')
+          }
+        } catch (fallbackError) {
+          console.error('Clipboard fallback error:', fallbackError)
+          throw new Error('Failed to copy to clipboard - clipboard operation failed')
+        } finally {
+          // Ensure cleanup even if errors occur
+          if (textArea && textArea.parentNode) {
+            try {
+              document.body.removeChild(textArea)
+            } catch (cleanupError) {
+              console.warn('Failed to cleanup textarea element:', cleanupError)
+            }
+          }
         }
       }
     } catch (error) {
