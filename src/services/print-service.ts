@@ -127,7 +127,7 @@ export class PrintService {
     const baseSubtotal = order?.subtotal || 0
     const taxRate = customTaxRate !== undefined ? customTaxRate / 100 : (settings?.taxPercentage || 0) / 100
     const taxAmount = baseSubtotal * taxRate
-    const total = baseSubtotal + taxAmount
+    const total = settings?.taxEnabled ? baseSubtotal + taxAmount : baseSubtotal
 
     // Format items for receipt
     const formattedItems: PrintReceiptItem[] = order.items?.map((item: any) => ({
