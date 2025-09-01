@@ -119,10 +119,8 @@ function Dialog({ isOpen, onClose, title, children, size = 'md' }: DialogProps) 
   // Close when clicking the background overlay
 
   return (
-    <div 
-      class={clsx('fixed inset-0 z-50 overflow-y-auto', isAnimating ? 'opacity-100' : 'opacity-0')}
-    >
-      <div 
+    <div class={clsx('fixed inset-0 z-50 overflow-y-auto', isAnimating ? 'opacity-100' : 'opacity-0')}>
+      <div
         class={clsx(
           'absolute inset-0',
           // Semi-transparent overlay without blur

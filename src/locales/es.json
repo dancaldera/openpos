@@ -62,7 +62,8 @@
     "invalidCredentials": "Correo o contraseña inválidos",
     "welcomeBack": "¡Bienvenido de vuelta!",
     "signInToAccount": "Inicia sesión en tu cuenta",
-    "enterCredentials": "Ingresa tus credenciales para acceder a tu cuenta"
+    "enterCredentials": "Ingresa tus credenciales para acceder a tu cuenta",
+    "demoCredentialsLoaded": "Credenciales de demostración cargadas"
   },
   "dashboard": {
     "title": "Panel",
@@ -170,11 +171,7 @@
     "cancelled": "Cancelado",
     "paid": "Pagada",
     "refunded": "Reembolsado",
-    "paymentMethod": "Método de Pago",
-    "cash": "Efectivo",
-    "card": "Tarjeta",
     "digital": "Digital",
-    "notes": "Notas",
     "removeItem": "Eliminar Artículo",
     "updateQuantity": "Actualizar Cantidad",
     "allOrders": "Todas las Órdenes",
@@ -214,7 +211,6 @@
     "noProductsMatch": "Ningún producto coincide con \"{search}\"",
     "noProductsAvailable": "No hay productos disponibles",
     "clearSearch": "Limpiar búsqueda",
-    "orderSummary": "Resumen de la Orden",
     "taxDisabled": "El cálculo de impuestos está deshabilitado en la configuración",
     "paymentMethod": "Método de Pago",
     "cash": "Efectivo",
@@ -230,7 +226,6 @@
     "created": "Creada",
     "createdBy": "Creada por",
     "totalAmount": "Importe Total",
-    "orderItems": "Artículos de la Orden",
     "productId": "ID del Producto",
     "unitPrice": "Precio Unitario",
     "itemTotal": "Total del Artículo",

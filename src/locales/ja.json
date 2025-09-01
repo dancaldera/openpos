@@ -62,7 +62,8 @@
     "invalidCredentials": "メールまたはパスワードが無効です",
     "welcomeBack": "おかえりなさい！",
     "signInToAccount": "アカウントにサインイン",
-    "enterCredentials": "アカウントにアクセスするために認証情報を入力してください"
+    "enterCredentials": "アカウントにアクセスするために認証情報を入力してください",
+    "demoCredentialsLoaded": "デモ認証情報が読み込まれました"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -90,8 +91,7 @@
     "lowStockAlert": "低在庫アラート",
     "needsRestocking": "商品の入荷が必要です",
     "pendingOrders": "保留中の注文",
-    "awaitingProcessing": "処理待ち",
-    "subtitle": "お帰りなさい！今日のビジネスの状況をご紹介します。"
+    "awaitingProcessing": "処理待ち"
   },
   "products": {
     "title": "商品",

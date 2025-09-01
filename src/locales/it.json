@@ -41,7 +41,8 @@
     "invalidCredentials": "Email o password non validi",
     "welcomeBack": "Bentornato!",
     "signInToAccount": "Accedi al tuo account",
-    "enterCredentials": "Inserisci le tue credenziali per accedere al tuo account"
+    "enterCredentials": "Inserisci le tue credenziali per accedere al tuo account",
+    "demoCredentialsLoaded": "Credenziali demo caricate"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -69,8 +70,7 @@
     "lowStockAlert": "Avviso Stock Basso",
     "needsRestocking": "I prodotti necessitano di rifornimento",
     "pendingOrders": "Ordini in Attesa",
-    "awaitingProcessing": "In attesa di elaborazione",
-    "subtitle": "Bentornato! Ecco cosa sta accadendo con la tua attività oggi."
+    "awaitingProcessing": "In attesa di elaborazione"
   },
   "products": {
     "title": "Prodotti",

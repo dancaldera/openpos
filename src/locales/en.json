@@ -62,7 +62,8 @@
     "invalidCredentials": "Invalid email or password",
     "welcomeBack": "Welcome back!",
     "signInToAccount": "Sign in to your account",
-    "enterCredentials": "Enter your credentials below to access your account"
+    "enterCredentials": "Enter your credentials below to access your account",
+    "demoCredentialsLoaded": "Demo credentials loaded"
   },
   "dashboard": {
     "title": "Dashboard",

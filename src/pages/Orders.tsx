@@ -24,9 +24,9 @@ import { useTranslation } from '../hooks/useTranslation'
 import { authService } from '../services/auth-sqlite'
 import { companySettingsService } from '../services/company-settings-sqlite'
 import { type Order, orderService } from '../services/orders-sqlite'
+import { PrintService } from '../services/print-service'
 import { type Product, productService } from '../services/products-sqlite'
 import { userService } from '../services/users-sqlite'
-import { PrintService } from '../services/print-service'
 
 export default function Orders() {
   const { t } = useTranslation()
@@ -390,7 +390,7 @@ export default function Orders() {
 
     if (existingItem) {
       const newQuantity = existingItem.quantity + quantity
-      
+
       if (newQuantity <= 0) {
         // Remove item completely if quantity becomes 0 or negative
         removeItemFromEditOrder(productId)
@@ -462,7 +462,7 @@ export default function Orders() {
 
   const handleThermalPrint = async (order: Order) => {
     if (isPrinting) return // Prevent concurrent prints
-    
+
     // Add debounce protection (2 seconds between prints)
     const now = Date.now()
     if (now - lastPrintTime < 2000) {
@@ -470,7 +470,7 @@ export default function Orders() {
       return
     }
     setLastPrintTime(now)
-    
+
     setIsPrinting(true)
     setPrintStatus(null)
 
@@ -488,18 +488,18 @@ export default function Orders() {
 
       // Get company settings for printing
       const settings = await companySettingsService.getSettings()
-      
+
       // Validate settings
       if (!settings) {
         throw new Error('Could not load company settings')
       }
-      
+
       // Format receipt data
       const receiptData = PrintService.formatReceiptData(order, settings)
-      
+
       // Send to printer
       const response = await PrintService.printThermalReceipt(receiptData)
-      
+
       clearTimeout(timeoutId)
       setPrintStatus('Print command sent successfully!')
       console.log('Print response:', response)
@@ -1033,11 +1033,11 @@ export default function Orders() {
                       <div
                         key={product.id}
                         class="group relative backdrop-blur-md bg-white/70 border-2 border-gray-200 rounded-xl p-4 hover:bg-white hover:shadow-sm transition-colors duration-150 hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-200 cursor-pointer"
-                         onClick={() => product.stock > 0 && addItemToOrder(product.id)}
-                         role="button"
-                         tabindex={0}
-                          aria-label={`${t('orders.addProduct')} ${product.name}`}
-                          onKeyDown={(e) => {
+                        onClick={() => product.stock > 0 && addItemToOrder(product.id)}
+                        role="button"
+                        tabindex={0}
+                        aria-label={`${t('orders.addProduct')} ${product.name}`}
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
                             product.stock > 0 && addItemToOrder(product.id)
@@ -1336,11 +1336,11 @@ export default function Orders() {
                       <div
                         key={product.id}
                         class="group relative backdrop-blur-md bg-white/70 border-2 border-gray-200 rounded-xl p-4 hover:bg-white hover:shadow-sm transition-colors duration-150 hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-200 cursor-pointer"
-                          onClick={() => product.stock > 0 && addItemToEditOrder(product.id)}
-                          role="button"
-                          tabindex={0}
-                          aria-label={`${t('orders.addProduct')} ${product.name}`}
-                          onKeyDown={(e) => {
+                        onClick={() => product.stock > 0 && addItemToEditOrder(product.id)}
+                        role="button"
+                        tabindex={0}
+                        aria-label={`${t('orders.addProduct')} ${product.name}`}
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
                             product.stock > 0 && addItemToEditOrder(product.id)

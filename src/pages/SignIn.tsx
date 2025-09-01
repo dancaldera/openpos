@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks'
+import { Toaster, toast } from 'sonner'
 import { Button, Container, Form, FormActions, FormField, Heading, Input, Text } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
 
@@ -16,7 +17,6 @@ export default function SignIn({ onSignIn }: SignInProps) {
   const [errors, setErrors] = useState({
     email: '',
     password: '',
-    general: '',
   })
   const [isLoading, setIsLoading] = useState(false)
 
@@ -26,7 +26,7 @@ export default function SignIn({ onSignIn }: SignInProps) {
 
     // Clear field error when user starts typing
     if (errors[field as keyof typeof errors]) {
-      setErrors((prev) => ({ ...prev, [field]: '', general: '' }))
+      setErrors((prev) => ({ ...prev, [field]: '' }))
     }
   }
 
@@ -34,7 +34,6 @@ export default function SignIn({ onSignIn }: SignInProps) {
     const newErrors = {
       email: '',
       password: '',
-      general: '',
     }
 
     if (!formData.email) {
@@ -61,16 +60,12 @@ export default function SignIn({ onSignIn }: SignInProps) {
       const result = await onSignIn(formData.email, formData.password)
 
       if (!result.success) {
-        setErrors((prev) => ({
-          ...prev,
-          general: result.error || t('auth.invalidCredentials'),
-        }))
+        toast.error(result.error || t('auth.invalidCredentials'))
+      } else {
+        toast.success(t('auth.signInSuccess'))
       }
     } catch (_error) {
-      setErrors((prev) => ({
-        ...prev,
-        general: t('errors.generic'),
-      }))
+      toast.error(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -81,7 +76,8 @@ export default function SignIn({ onSignIn }: SignInProps) {
       email: 'admin@postpos.com',
       password: 'admin123',
     })
-    setErrors({ email: '', password: '', general: '' })
+    setErrors({ email: '', password: '' })
+    toast.success(t('auth.demoCredentialsLoaded'))
   }
 
   return (
@@ -117,15 +113,6 @@ export default function SignIn({ onSignIn }: SignInProps) {
               <Button variant="outline" size="sm" onClick={fillDemoCredentials} class="w-full">
                 Use Demo Credentials
               </Button>
-            </div>
-          )}
-
-          {/* General Error */}
-          {errors.general && (
-            <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <Text variant="small" color="danger">
-                {errors.general}
-              </Text>
             </div>
           )}
 
@@ -170,6 +157,7 @@ export default function SignIn({ onSignIn }: SignInProps) {
           </div>
         </div>
       </Container>
+      <Toaster position="top-right" />
     </div>
   )
 }

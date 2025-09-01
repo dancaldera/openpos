@@ -41,7 +41,8 @@
     "invalidCredentials": "Email ou senha inválidos",
     "welcomeBack": "Bem-vindo de volta!",
     "signInToAccount": "Entre em sua conta",
-    "enterCredentials": "Digite suas credenciais para acessar sua conta"
+    "enterCredentials": "Digite suas credenciais para acessar sua conta",
+    "demoCredentialsLoaded": "Credenciais de demonstração carregadas"
   },
   "dashboard": {
     "title": "Painel",
@@ -69,8 +70,7 @@
     "lowStockAlert": "Alerta de Estoque Baixo",
     "needsRestocking": "Produtos precisam de reposição",
     "pendingOrders": "Pedidos Pendentes",
-    "awaitingProcessing": "Aguardando processamento",
-    "subtitle": "Bem-vindo de volta! Aqui está o que está acontecendo com seu negócio hoje."
+    "awaitingProcessing": "Aguardando processamento"
   },
   "products": {
     "title": "Produtos",

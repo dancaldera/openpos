@@ -62,7 +62,8 @@
     "invalidCredentials": "邮箱或密码无效",
     "welcomeBack": "欢迎回来！",
     "signInToAccount": "登录您的账户",
-    "enterCredentials": "输入您的登录凭据以访问您的账户"
+    "enterCredentials": "输入您的登录凭据以访问您的账户",
+    "demoCredentialsLoaded": "演示凭据已加载"
   },
   "dashboard": {
     "title": "仪表板",
@@ -90,8 +91,7 @@
     "lowStockAlert": "低库存警报",
     "needsRestocking": "产品需要补货",
     "pendingOrders": "待处理订单",
-    "awaitingProcessing": "等待处理",
-    "subtitle": "欢迎回来！这是您的业务今天发生的情况。"
+    "awaitingProcessing": "等待处理"
   },
   "products": {
     "title": "产品",

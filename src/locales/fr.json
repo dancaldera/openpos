@@ -62,7 +62,8 @@
     "invalidCredentials": "Email ou mot de passe invalide",
     "welcomeBack": "Bon retour!",
     "signInToAccount": "Connectez-vous à votre compte",
-    "enterCredentials": "Entrez vos identifiants pour accéder à votre compte"
+    "enterCredentials": "Entrez vos identifiants pour accéder à votre compte",
+    "demoCredentialsLoaded": "Identifiants de démonstration chargés"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -214,11 +215,7 @@
     "noProductsMatch": "Aucun produit ne correspond à \"{search}\"",
     "noProductsAvailable": "Aucun produit disponible",
     "clearSearch": "Effacer la recherche",
-    "orderSummary": "Résumé de la commande",
     "taxDisabled": "Le calcul des taxes est désactivé dans les paramètres",
-    "paymentMethod": "Méthode de paiement",
-    "cash": "Espèces",
-    "card": "Carte",
     "transfer": "Virement",
     "orderNotes": "Notes de commande",
     "optionalNotes": "Notes optionnelles...",
@@ -230,11 +227,9 @@
     "created": "Créée",
     "createdBy": "Créée par",
     "totalAmount": "Montant total",
-    "orderItems": "Articles de la commande",
     "productId": "ID du produit",
     "unitPrice": "Prix unitaire",
     "itemTotal": "Total de l'article",
-    "notes": "Notes",
     "printReceipt": "Imprimer le reçu",
     "printing": "Impression...",
     "confirmDelete": "Confirmer la suppression",

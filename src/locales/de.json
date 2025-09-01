@@ -62,7 +62,8 @@
     "invalidCredentials": "Ungültige E-Mail oder Passwort",
     "welcomeBack": "Willkommen zurück!",
     "signInToAccount": "Melden Sie sich in Ihrem Konto an",
-    "enterCredentials": "Geben Sie Ihre Anmeldedaten ein, um auf Ihr Konto zuzugreifen"
+    "enterCredentials": "Geben Sie Ihre Anmeldedaten ein, um auf Ihr Konto zuzugreifen",
+    "demoCredentialsLoaded": "Demo-Zugangsdaten geladen"
   },
   "dashboard": {
     "title": "Dashboard",

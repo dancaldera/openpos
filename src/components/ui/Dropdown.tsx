@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact'
-import { useEffect, useRef, useState } from 'preact/hooks'
 import { createPortal } from 'preact/compat'
+import { useEffect, useRef, useState } from 'preact/hooks'
 
 export interface DropdownItem {
   id: string
@@ -69,14 +69,14 @@ export default function Dropdown({
     const viewportWidth = window.innerWidth
     const menuHeight = items.length * 48 + 16 // More accurate height: 48px per item + padding
     const menuWidth = 224 // Approximate width for w-56
-    
+
     // Calculate vertical position
     const spaceBelow = viewportHeight - rect.bottom - 10 // 10px margin
     const spaceAbove = rect.top - 10 // 10px margin
-    
+
     let top = rect.bottom + 8 // 8px offset below
     let direction: 'down' | 'up' = 'down'
-    
+
     // If there's not enough space below but enough above, drop up
     if (spaceBelow < menuHeight && spaceAbove >= menuHeight) {
       top = rect.top - menuHeight - 8 // 8px offset above
@@ -85,18 +85,18 @@ export default function Dropdown({
       // Not enough space either way - prefer down but adjust height
       top = Math.max(10, Math.min(rect.bottom + 8, viewportHeight - menuHeight - 10))
     }
-    
+
     // Calculate horizontal position
     let left = align === 'left' ? rect.left : rect.right - menuWidth
-    let right: number | undefined = undefined
-    
+    let right: number | undefined
+
     // Ensure menu doesn't go off screen horizontally
     if (left < 10) {
       left = 10
     } else if (left + menuWidth > viewportWidth - 10) {
       left = viewportWidth - menuWidth - 10
     }
-    
+
     setDropDirection(direction)
     setPosition({ top, left, right })
   }
