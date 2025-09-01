@@ -230,6 +230,8 @@
     "productId": "商品ID",
     "unitPrice": "単価",
     "itemTotal": "アイテム合計",
+    "printReceipt": "レシート印刷",
+    "printing": "印刷中...",
     "confirmDelete": "削除の確認",
     "deleteConfirmMessage": "この注文を削除してもよろしいですか？この操作は元に戻せません。"
   },

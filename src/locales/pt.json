@@ -209,6 +209,8 @@
     "productId": "ID do Produto",
     "unitPrice": "Preço Unitário",
     "itemTotal": "Total do Item",
+    "printReceipt": "Imprimir Recibo",
+    "printing": "Imprimindo...",
     "confirmDelete": "Confirmar Exclusão",
     "deleteConfirmMessage": "Tem certeza de que deseja excluir este pedido? Esta ação não pode ser desfeita."
   },

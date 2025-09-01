@@ -235,6 +235,8 @@
     "unitPrice": "Prix unitaire",
     "itemTotal": "Total de l'article",
     "notes": "Notes",
+    "printReceipt": "Imprimer le reçu",
+    "printing": "Impression...",
     "confirmDelete": "Confirmer la suppression",
     "deleteConfirmMessage": "Êtes-vous sûr de vouloir supprimer cette commande ? Cette action ne peut pas être annulée."
   },

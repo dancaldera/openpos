@@ -229,6 +229,8 @@
     "productId": "Produkt-ID",
     "unitPrice": "Stückpreis",
     "itemTotal": "Artikel-Gesamtsumme",
+    "printReceipt": "Beleg drucken",
+    "printing": "Drucken...",
     "confirmDelete": "Löschen bestätigen",
     "deleteConfirmMessage": "Sind Sie sicher, dass Sie diese Bestellung löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
   },

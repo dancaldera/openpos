@@ -235,6 +235,8 @@
     "unitPrice": "Precio Unitario",
     "itemTotal": "Total del Artículo",
     "notes": "Notas",
+    "printReceipt": "Imprimir Recibo",
+    "printing": "Imprimiendo...",
     "confirmDelete": "Confirmar Eliminar",
     "deleteConfirmMessage": "¿Estás seguro de que quieres eliminar esta orden? Esta acción no se puede deshacer."
   },

@@ -209,6 +209,8 @@
     "productId": "ID Prodotto",
     "unitPrice": "Prezzo Unitario",
     "itemTotal": "Totale Articolo",
+    "printReceipt": "Stampa Ricevuta",
+    "printing": "Stampa in corso...",
     "confirmDelete": "Conferma Eliminazione",
     "deleteConfirmMessage": "Sei sicuro di voler eliminare questo ordine? Questa azione non può essere annullata."
   },
