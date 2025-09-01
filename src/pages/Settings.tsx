@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { useEffect, useState } from 'preact/hooks'
+import { toast } from 'sonner'
 import { Button, Container, Dialog, DialogBody, DialogFooter, Heading, Input, Select, Text } from '../components/ui'
 import LanguageSelector from '../components/ui/LanguageSelector'
 import { useTranslation } from '../hooks/useTranslation'
@@ -17,8 +18,6 @@ export default function Settings({ onNavigate }: SettingsProps) {
   const [settings, setSettings] = useState<CompanySettings | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
 
   useEffect(() => {
@@ -30,9 +29,8 @@ export default function Settings({ onNavigate }: SettingsProps) {
       setIsLoading(true)
       const companySettings = await companySettingsService.getSettings()
       setSettings(companySettings)
-      setError('')
     } catch (err: unknown) {
-      setError((err as Error)?.message || t('errors.generic'))
+      toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -47,14 +45,12 @@ export default function Settings({ onNavigate }: SettingsProps) {
 
       if (result.success && result.settings) {
         setSettings(result.settings)
-        setSuccess(t('settings.settingsUpdated'))
-        setError('')
-        setTimeout(() => setSuccess(''), 3000)
+        toast.success(t('settings.settingsUpdated'))
       } else {
-        setError(result.error || t('errors.generic'))
+        toast.error(result.error || t('errors.generic'))
       }
     } catch (err: unknown) {
-      setError((err as Error)?.message || t('errors.generic'))
+      toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
       setIsUpdating(false)
     }
@@ -67,22 +63,26 @@ export default function Settings({ onNavigate }: SettingsProps) {
 
       if (result.success && result.settings) {
         setSettings(result.settings)
-        setSuccess(t('success.updated'))
-        setError('')
+        toast.success(t('success.updated'))
         setIsResetDialogOpen(false)
-        setTimeout(() => setSuccess(''), 3000)
       } else {
-        setError(result.error || t('errors.generic'))
+        toast.error(result.error || t('errors.generic'))
       }
     } catch (err: unknown) {
-      setError((err as Error)?.message || t('errors.generic'))
+      toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
       setIsUpdating(false)
     }
   }
 
   async function greet() {
-    setGreetMsg(await invoke('greet', { name }))
+    try {
+      const message = await invoke('greet', { name })
+      setGreetMsg(message as string)
+      toast.success(t('settings.greetingSuccess'))
+    } catch (err: unknown) {
+      toast.error((err as Error)?.message || t('errors.generic'))
+    }
   }
 
   if (isLoading) {
@@ -115,12 +115,6 @@ export default function Settings({ onNavigate }: SettingsProps) {
             🔄 {t('settings.resetDefaults')}
           </Button>
         </div>
-
-        {error && <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">{error}</div>}
-
-        {success && (
-          <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">{success}</div>
-        )}
 
         {settings && (
           <div class="space-y-8">

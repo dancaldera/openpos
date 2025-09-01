@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks'
-import { Toaster, toast } from 'sonner'
+import { toast } from 'sonner'
 import { Button, Container, Form, FormActions, FormField, Heading, Input, Text } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
 
@@ -157,7 +157,6 @@ export default function SignIn({ onSignIn }: SignInProps) {
           </div>
         </div>
       </Container>
-      <Toaster position="top-right" />
     </div>
   )
 }

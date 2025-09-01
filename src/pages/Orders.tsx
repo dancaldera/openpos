@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
+import { toast } from 'sonner'
 import {
   Button,
   Container,
@@ -35,7 +36,6 @@ export default function Orders() {
   const [allOrders, setAllOrders] = useState<Order[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<Order['status'] | 'all'>('all')
   const [selectedDateFilter, setSelectedDateFilter] = useState<string>('today')
@@ -166,9 +166,8 @@ export default function Orders() {
       })
       setUsers(userMapping)
 
-      setError('')
     } catch (err: unknown) {
-      setError((err as Error)?.message || t('errors.generic'))
+      toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -239,7 +238,7 @@ export default function Orders() {
 
   const handleCreateOrder = async () => {
     if (newOrder.items.length === 0) {
-      setError(t('orders.addItemError'))
+      toast.error(t('orders.addItemError'))
       return
     }
 
@@ -249,6 +248,7 @@ export default function Orders() {
 
       if (result.success && result.order) {
         const newOrdersList = [...allOrders, result.order]
+        toast.success(t('orders.orderCreated'))
         setAllOrders(newOrdersList)
         setOrders(newOrdersList)
         setIsCreateModalOpen(false)
@@ -263,12 +263,11 @@ export default function Orders() {
         const updatedProducts = await productService.getProducts()
         setProducts(updatedProducts.filter((p) => p.isActive && p.stock > 0))
 
-        setError('')
-      } else {
-        setError(result.error || t('errors.generic'))
+        } else {
+        toast.error(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError(t('errors.generic'))
+      toast.error(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -279,6 +278,7 @@ export default function Orders() {
       const result = await orderService.updateOrderStatus(orderId, status)
       if (result.success && result.order) {
         const updatedOrder = result.order
+        toast.success(t('orders.statusUpdated'))
         const updatedAllOrders = allOrders.map((o) => (o.id === orderId ? updatedOrder : o))
         setAllOrders(updatedAllOrders)
         setOrders(updatedAllOrders)
@@ -290,10 +290,10 @@ export default function Orders() {
           setProducts(updatedProducts.filter((p) => p.isActive && p.stock > 0))
         }
       } else {
-        setError(result.error || t('errors.generic'))
+        toast.error(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError(t('errors.generic'))
+      toast.error(t('errors.generic'))
     }
   }
 
@@ -305,23 +305,32 @@ export default function Orders() {
         setAllOrders(filteredAllOrders)
         setOrders(filteredAllOrders)
         setDeleteConfirm(null)
+        toast.success(t('orders.orderDeleted'))
 
         // Reload data with current filter
         await loadData(selectedDateFilter)
         const updatedProducts = await productService.getProducts()
         setProducts(updatedProducts.filter((p) => p.isActive && p.stock > 0))
       } else {
-        setError(result.error || t('errors.generic'))
+        toast.error(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError(t('errors.generic'))
+      toast.error(t('errors.generic'))
     }
   }
 
   const addItemToOrder = (productId: string, quantity: number = 1) => {
     const existingItem = newOrder.items.find((item) => item.productId === productId)
+    const product = products.find((p) => p.id === productId)
+    const productName = product?.name || 'Product'
 
     if (existingItem) {
+      const newQuantity = existingItem.quantity + quantity
+      if (quantity > 0) {
+        toast.success(t('orders.itemAdded', { product: productName, quantity: newQuantity }))
+      } else {
+        toast.info(t('orders.quantityUpdated', { product: productName, quantity: newQuantity }))
+      }
       setNewOrder({
         ...newOrder,
         items: newOrder.items.map((item) =>
@@ -329,6 +338,7 @@ export default function Orders() {
         ),
       })
     } else {
+      toast.success(t('orders.itemAdded', { product: productName, quantity }))
       setNewOrder({
         ...newOrder,
         items: [...newOrder.items, { productId, quantity }],
@@ -337,6 +347,10 @@ export default function Orders() {
   }
 
   const removeItemFromOrder = (productId: string) => {
+    const product = products.find((p) => p.id === productId)
+    const productName = product?.name || 'Product'
+    
+    toast.info(t('orders.itemRemoved', { product: productName }))
     setNewOrder({
       ...newOrder,
       items: newOrder.items.filter((item) => item.productId !== productId),
@@ -353,7 +367,7 @@ export default function Orders() {
 
   const handleUpdateOrder = async () => {
     if (!editingOrder || editOrderItems.length === 0) {
-      setError(t('orders.addItemError'))
+      toast.error(t('orders.addItemError'))
       return
     }
 
@@ -367,6 +381,7 @@ export default function Orders() {
 
       if (result.success && result.order) {
         const updated = result.order
+        toast.success(t('orders.orderUpdated'))
         const updatedAllOrders = allOrders.map((o) => (o.id === editingOrder.id ? updated : o))
         setAllOrders(updatedAllOrders)
         setOrders(updatedAllOrders)
@@ -374,12 +389,11 @@ export default function Orders() {
         setEditOrderItems([])
         setEditPaymentMethod('cash')
         setEditNotes('')
-        setError('')
-      } else {
-        setError(result.error || t('errors.generic'))
+        } else {
+        toast.error(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError(t('errors.generic'))
+      toast.error(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -387,6 +401,8 @@ export default function Orders() {
 
   const addItemToEditOrder = (productId: string, quantity: number = 1) => {
     const existingItem = editOrderItems.find((item) => item.productId === productId)
+    const product = products.find((p) => p.id === productId)
+    const productName = product?.name || 'Product'
 
     if (existingItem) {
       const newQuantity = existingItem.quantity + quantity
@@ -395,16 +411,26 @@ export default function Orders() {
         // Remove item completely if quantity becomes 0 or negative
         removeItemFromEditOrder(productId)
       } else {
+        if (quantity > 0) {
+          toast.success(t('orders.itemAdded', { product: productName, quantity: newQuantity }))
+        } else {
+          toast.info(t('orders.quantityUpdated', { product: productName, quantity: newQuantity }))
+        }
         setEditOrderItems(
           editOrderItems.map((item) => (item.productId === productId ? { ...item, quantity: newQuantity } : item)),
         )
       }
     } else {
+      toast.success(t('orders.itemAdded', { product: productName, quantity: Math.max(quantity, 1) }))
       setEditOrderItems([...editOrderItems, { productId, quantity: Math.max(quantity, 1) }])
     }
   }
 
   const removeItemFromEditOrder = (productId: string) => {
+    const product = products.find((p) => p.id === productId)
+    const productName = product?.name || 'Product'
+    
+    toast.info(t('orders.itemRemoved', { product: productName }))
     setEditOrderItems(editOrderItems.filter((item) => item.productId !== productId))
   }
 
@@ -501,12 +527,12 @@ export default function Orders() {
       const response = await PrintService.printThermalReceipt(receiptData)
 
       clearTimeout(timeoutId)
-      setPrintStatus('Print command sent successfully!')
+      toast.success(t('orders.printSuccess'))
       console.log('Print response:', response)
     } catch (error: any) {
       clearTimeout(timeoutId)
       console.error('Print error:', error)
-      setPrintStatus(`Print failed: ${error.message || error}`)
+      toast.error(t('orders.printError'))
     } finally {
       setIsPrinting(false)
       // Clear status after 3 seconds
@@ -625,7 +651,6 @@ export default function Orders() {
         </Button>
       </div>
 
-      {error && <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 
       {/* Print Status Message */}
       {printStatus && (

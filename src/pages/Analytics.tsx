@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
+import { toast } from 'sonner'
 import {
   Button,
   Container,
@@ -31,7 +32,6 @@ export default function Analytics() {
   const [topProducts, setTopProducts] = useState<TopProduct[]>([])
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
   const [currencySymbol, setCurrencySymbol] = useState('$')
 
   // Date filters
@@ -79,7 +79,7 @@ export default function Analytics() {
 
   const loadAnalytics = async () => {
     if (!isAdmin) {
-      setError("You don't have permission to view analytics")
+      toast.error("You don't have permission to view analytics")
       setIsLoading(false)
       return
     }
@@ -101,9 +101,8 @@ export default function Analytics() {
       setTopProducts(productsData)
       setRecentActivity(activityData)
       setCurrencySymbol(settings.currencySymbol)
-      setError('')
     } catch (err: unknown) {
-      setError((err as Error)?.message || 'Failed to load analytics')
+      toast.error((err as Error)?.message || 'Failed to load analytics')
     } finally {
       setIsLoading(false)
     }
@@ -177,14 +176,6 @@ export default function Analytics() {
         </Button>
       </div>
 
-      {error && (
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
-          <div class="flex items-center">
-            <span class="text-red-500 mr-2">⚠️</span>
-            {error}
-          </div>
-        </div>
-      )}
 
       {/* Date Range Filters */}
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
+import { Toaster } from 'sonner'
 import Layout from './components/Layout'
 import { useAuth } from './hooks/useAuth'
 import Analytics from './pages/Analytics'
@@ -41,7 +42,12 @@ function App() {
 
   // Show SignIn page if not authenticated
   if (!isAuthenticated) {
-    return <SignIn onSignIn={signIn} />
+    return (
+      <>
+        <SignIn onSignIn={signIn} />
+        <Toaster position="top-right" />
+      </>
+    )
   }
 
   const renderPage = () => {
@@ -71,9 +77,12 @@ function App() {
   }
 
   return (
-    <Layout currentPage={currentPage} onNavigate={handleNavigate}>
-      {renderPage()}
-    </Layout>
+    <>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate}>
+        {renderPage()}
+      </Layout>
+      <Toaster position="top-right" />
+    </>
   )
 }
 

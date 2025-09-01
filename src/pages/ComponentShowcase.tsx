@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks'
+import { toast } from 'sonner'
 import {
   Button,
   Container,
@@ -223,6 +224,26 @@ export default function ComponentShowcase() {
               </Button>
               <Button variant="danger" disabled>
                 Disabled Danger
+              </Button>
+            </div>
+          </div>
+          <div>
+            <h5 class="text-sm font-medium text-gray-700 mb-2">Toast Notifications</h5>
+            <div class="flex flex-wrap gap-2">
+              <Button variant="primary" onClick={() => toast.success('Success! Operation completed successfully.')}>
+                Success Toast
+              </Button>
+              <Button variant="secondary" onClick={() => toast.error('Error! Something went wrong.')}>
+                Error Toast
+              </Button>
+              <Button variant="outline" onClick={() => toast.info('Info: This is an informational message.')}>
+                Info Toast
+              </Button>
+              <Button variant="secondary" onClick={() => toast.warning('Warning: Please check your input.')}>
+                Warning Toast
+              </Button>
+              <Button variant="outline" onClick={() => toast.loading('Loading...', { duration: 2000 })}>
+                Loading Toast
               </Button>
             </div>
           </div>

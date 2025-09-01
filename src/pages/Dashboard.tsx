@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
+import { toast } from 'sonner'
 import { Container } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
 import { dashboardService } from '../services/dashboard-sqlite'
@@ -18,7 +19,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     pendingOrders: 0,
   })
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
     loadDashboardData()
@@ -29,10 +29,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       setIsLoading(true)
       const dashboardStats = await dashboardService.getDashboardStats()
       setStats(dashboardStats)
-      setError('')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('errors.generic')
-      setError(message)
+      toast.error(message)
     } finally {
       setIsLoading(false)
     }
@@ -85,26 +84,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     )
   }
 
-  if (error) {
-    return (
-      <Container size="xl">
-        <div class="mb-6">
-          <h1 class="text-3xl font-bold text-gray-900 mb-2">{t('dashboard.title')}</h1>
-          <p class="text-gray-600">{t('dashboard.loadError')}</p>
-        </div>
-
-        <div class="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl backdrop-blur-sm">
-          <div class="flex items-center">
-            <span class="text-red-500 mr-3 text-xl">⚠️</span>
-            <div>
-              <h3 class="font-semibold">{t('dashboard.dashboardError')}</h3>
-              <p class="text-sm mt-1">{error}</p>
-            </div>
-          </div>
-        </div>
-      </Container>
-    )
-  }
 
   return (
     <Container size="xl">
@@ -113,17 +92,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <p class="text-gray-600">{t('dashboard.subtitle')}</p>
       </div>
 
-      {error && (
-        <div class="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-6 backdrop-blur-sm">
-          <div class="flex items-center">
-            <span class="text-red-500 mr-3 text-xl">⚠️</span>
-            <div>
-              <h3 class="font-semibold">{t('dashboard.dashboardError')}</h3>
-              <p class="text-sm mt-1">{error}</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Main Stats Cards */}
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
+import { toast } from 'sonner'
 import {
   Button,
   Container,
@@ -39,7 +40,6 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
     password: '',
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
 
   useEffect(() => {
     if (user && isOpen) {
@@ -57,13 +57,11 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
         password: '',
       })
     }
-    setError('')
   }, [user, isOpen])
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
 
     try {
       let result: { success: boolean; user?: User; error?: string }
@@ -85,11 +83,12 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
       if (result.success && result.user) {
         onSave(result.user)
         onClose()
+        toast.success(user ? t('members.userUpdated') : t('members.userCreated'))
       } else {
-        setError(result.error || t('errors.generic'))
+        toast.error(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError(t('errors.generic'))
+      toast.error(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -98,11 +97,6 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title={user ? t('members.editMember') : t('members.addMember')} size="md">
       <DialogBody>
-        {error && (
-          <div class="bg-red-500/10 backdrop-blur-sm border border-red-400/20 text-red-700 px-4 py-3 rounded-xl mb-4">
-            {error}
-          </div>
-        )}
 
         <div class="backdrop-blur-lg bg-gradient-to-br from-blue-50/60 to-indigo-50/40 border border-blue-200/50 rounded-2xl p-6 shadow-xl">
           <form onSubmit={handleSubmit} class="space-y-6">
@@ -197,7 +191,6 @@ export default function Members() {
 
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
@@ -223,7 +216,7 @@ export default function Members() {
 
   const loadUsers = async (page: number = 1) => {
     if (!canManageUsers) {
-      setError(t('members.noPermissionMembers'))
+      toast.error(t('members.noPermissionMembers'))
       setIsLoading(false)
       return
     }
@@ -237,7 +230,7 @@ export default function Members() {
       setCurrentPage(paginatedResult.currentPage)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to load users'
-      setError(message)
+      toast.error(message)
     } finally {
       setIsLoading(false)
     }
@@ -258,13 +251,14 @@ export default function Members() {
       const result = await authService.deleteUser(userId)
       if (result.success) {
         setDeleteConfirm(null)
+        toast.success(t('members.userDeleted'))
         // Reload data to reflect changes with proper pagination
         await loadUsers(currentPage)
       } else {
-        setError(result.error || t('errors.generic'))
+        toast.error(result.error || t('errors.generic'))
       }
     } catch (_err) {
-      setError(t('errors.generic'))
+      toast.error(t('errors.generic'))
     }
   }
 
@@ -350,14 +344,6 @@ export default function Members() {
         )}
       </div>
 
-      {error && (
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 backdrop-blur-sm">
-          <div class="flex items-center">
-            <span class="text-red-500 mr-2">⚠️</span>
-            {error}
-          </div>
-        </div>
-      )}
 
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <Table>
