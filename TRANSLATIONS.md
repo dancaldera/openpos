@@ -1,10 +1,10 @@
 # TRANSLATIONS.md
 
-Comprehensive guide for implementing and managing internationalization (i18n) in Post POS application.
+Comprehensive guide for implementing and managing internationalization (i18n) in Titanic POS application.
 
 ## Overview
 
-The Post POS application supports multiple languages through a comprehensive translation system that allows for easy localization and internationalization. The system is designed to be developer-friendly, performant, and easily maintainable.
+The Titanic POS application supports multiple languages through a comprehensive translation system that allows for easy localization and internationalization. The system is designed to be developer-friendly, performant, and easily maintainable.
 
 ## Architecture
 
@@ -684,4 +684,4 @@ if (DEBUG_TRANSLATIONS && !translation) {
 }
 ```
 
-This comprehensive translation system provides a solid foundation for internationalizing the Post POS application while maintaining performance and developer experience.
+This comprehensive translation system provides a solid foundation for internationalizing the Titanic POS application while maintaining performance and developer experience.

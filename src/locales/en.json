@@ -70,7 +70,7 @@
     "incorrectPassword": "Incorrect password. Please try again.",
     "emailNotFound": "We couldn't find an account with that email.",
     "accountLocked": "This account is locked. Please contact an administrator.",
-    "environmentError": "Desktop features require the Post POS app. Please run the Tauri desktop build.",
+    "environmentError": "Desktop features require the Titanic POS app. Please run the Tauri desktop build.",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "enter6digitPin": "Enter your 6-digit PIN",

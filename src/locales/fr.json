@@ -70,7 +70,7 @@
     "incorrectPassword": "Mot de passe incorrect. Veuillez réessayer.",
     "emailNotFound": "Aucun compte trouvé avec cet e-mail.",
     "accountLocked": "Ce compte est verrouillé. Veuillez contacter un administrateur.",
-    "environmentError": "Les fonctionnalités de bureau nécessitent l'application Post POS. Exécutez la version bureau Tauri.",
+    "environmentError": "Les fonctionnalités de bureau nécessitent l'application Titanic POS. Exécutez la version bureau Tauri.",
     "showPassword": "Afficher le mot de passe",
     "hidePassword": "Masquer le mot de passe",
     "enter6digitPin": "Entrez votre code PIN à 6 chiffres",

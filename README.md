@@ -1,4 +1,4 @@
-# Post POS - Point of Sale Application
+# Titanic POS - Point of Sale Application
 
 A comprehensive Point of Sale (POS) desktop application built with modern technologies. Features role-based authentication, real-time dashboard analytics, complete inventory management, and customer relationship management in a sleek, responsive interface.
 

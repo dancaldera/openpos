@@ -70,7 +70,7 @@
     "incorrectPassword": "密码错误。请重试。",
     "emailNotFound": "未找到使用该邮箱的账户。",
     "accountLocked": "此账户已被锁定。请联系管理员。",
-    "environmentError": "桌面功能需要 Post POS 应用，请运行 Tauri 桌面版本。",
+    "environmentError": "桌面功能需要 Titanic POS 应用，请运行 Tauri 桌面版本。",
     "showPassword": "显示密码",
     "hidePassword": "隐藏密码",
     "enter6digitPin": "输入您的6位PIN码",

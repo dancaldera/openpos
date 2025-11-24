@@ -218,7 +218,7 @@ pub fn run() {
             description: "create_company_settings_table",
             sql: "CREATE TABLE IF NOT EXISTS company_settings (
                 id INTEGER PRIMARY KEY CHECK (id = 1),
-                name TEXT NOT NULL DEFAULT 'Post POS',
+                name TEXT NOT NULL DEFAULT 'Titanic POS',
                 description TEXT DEFAULT 'Modern Point of Sale System',
                 tax_enabled BOOLEAN DEFAULT 1,
                 tax_percentage REAL DEFAULT 10.0,
@@ -238,7 +238,7 @@ pub fn run() {
             version: 10,
             description: "insert_default_company_settings",
             sql: "INSERT OR IGNORE INTO company_settings (id, name, description, tax_enabled, tax_percentage, currency_symbol, language, created_at, updated_at) VALUES
-                (1, 'Post POS', 'Modern Point of Sale System', 1, 10.0, '$', 'en', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');",
+                (1, 'Titanic POS', 'Modern Point of Sale System', 1, 10.0, '$', 'en', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');",
             kind: MigrationKind::Up,
         },
         Migration {

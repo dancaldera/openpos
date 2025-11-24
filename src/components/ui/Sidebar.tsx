@@ -26,7 +26,7 @@ function clsx(...classes: (string | undefined | boolean)[]): string {
 
 export default function Sidebar({
   items = [],
-  title = 'Post POS',
+  title = 'Titanic POS',
   width = 'md',
   collapsible = false,
   defaultCollapsed = false,

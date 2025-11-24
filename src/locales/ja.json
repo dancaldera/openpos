@@ -70,7 +70,7 @@
     "incorrectPassword": "パスワードが正しくありません。もう一度お試しください。",
     "emailNotFound": "そのメールアドレスのアカウントが見つかりませんでした。",
     "accountLocked": "このアカウントはロックされています。管理者に連絡してください。",
-    "environmentError": "デスクトップ機能を利用するには Post POS アプリが必要です。Tauri デスクトップ版を実行してください。",
+    "environmentError": "デスクトップ機能を利用するには Titanic POS アプリが必要です。Tauri デスクトップ版を実行してください。",
     "showPassword": "パスワードを表示",
     "hidePassword": "パスワードを非表示",
     "enter6digitPin": "6桁のPINを入力してください",

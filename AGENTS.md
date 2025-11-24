@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Post POS is a modern Point of Sale (POS) application built as a cross-platform desktop application using Tauri framework. It combines a Rust backend with a Preact + TypeScript frontend, styled with Tailwind CSS.
+Titanic POS is a modern Point of Sale (POS) application built as a cross-platform desktop application using Tauri framework. It combines a Rust backend with a Preact + TypeScript frontend, styled with Tailwind CSS.
 
 ## Technology Stack
 

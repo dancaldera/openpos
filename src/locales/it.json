@@ -49,7 +49,7 @@
     "incorrectPassword": "Password errata. Riprova.",
     "emailNotFound": "Non abbiamo trovato un account con questa email.",
     "accountLocked": "Questo account è bloccato. Contatta un amministratore.",
-    "environmentError": "Le funzioni desktop richiedono l'app Post POS. Esegui la versione desktop Tauri.",
+    "environmentError": "Le funzioni desktop richiedono l'app Titanic POS. Esegui la versione desktop Tauri.",
     "showPassword": "Mostra password",
     "hidePassword": "Nascondi password",
     "enter6digitPin": "Inserisci il tuo PIN a 6 cifre",
