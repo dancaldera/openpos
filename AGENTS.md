@@ -180,9 +180,9 @@ return <p>{t('welcome.message', { userName })}</p>
 - Role-based permissions and menu visibility
 - SQLite-stored users with secure authentication
 - Default test accounts:
-  - admin@postpos.com / admin123
-  - manager@postpos.com / manager123
-  - user@postpos.com / user123
+  - admin@postpos.com / 123456
+  - manager@postpos.com / 123456
+  - user@postpos.com / 123456
 
 ### Customer & Member Management
 - Full CRUD operations with SQLite persistence

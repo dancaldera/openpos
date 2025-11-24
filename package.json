@@ -13,20 +13,20 @@
     "check": "biome check src --write"
   },
   "dependencies": {
-    "@preact/signals": "^2.3.1",
-    "@tailwindcss/vite": "^4.1.12",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-sql": "^2.3.0",
-    "preact": "^10.25.1",
+    "@preact/signals": "^2.5.1",
+    "@tailwindcss/vite": "^4.1.17",
+    "@tauri-apps/api": "^2.9.0",
+    "@tauri-apps/plugin-opener": "^2.5.2",
+    "@tauri-apps/plugin-sql": "^2.3.1",
+    "preact": "^10.27.2",
     "sonner": "^2.0.7",
-    "tailwindcss": "^4.1.12"
+    "tailwindcss": "^4.1.17"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.2",
     "@preact/preset-vite": "^2.9.3",
-    "@tauri-apps/cli": "^2",
+    "@tauri-apps/cli": "^2.9.4",
     "typescript": "~5.6.2",
-    "vite": "^6.0.3"
+    "vite": "^6.4.1"
   }
 }

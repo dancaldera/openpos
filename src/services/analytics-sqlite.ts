@@ -8,6 +8,7 @@ export interface AnalyticsMetrics {
   cancelledOrders: number
   averageOrderValue: number
   totalRevenue: number
+  totalProfit: number
 }
 
 export interface SalesByMember {
@@ -72,7 +73,7 @@ export class AnalyticsService {
         params.push(startDate, endDate)
       }
 
-      const [metricsResult, avgOrderResult] = await Promise.all([
+      const [metricsResult, avgOrderResult, profitResult] = await Promise.all([
         db.select<
           {
             total_orders: number
@@ -83,7 +84,7 @@ export class AnalyticsService {
           }[]
         >(
           `
-          SELECT 
+          SELECT
             COUNT(*) as total_orders,
             SUM(CASE WHEN status = 'completed' OR status = 'paid' THEN 1 ELSE 0 END) as completed_orders,
             SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
@@ -96,10 +97,22 @@ export class AnalyticsService {
 
         db.select<{ avg_order_value: number }[]>(
           `
-          SELECT 
+          SELECT
             COALESCE(AVG(total), 0) as avg_order_value
-          FROM orders 
+          FROM orders
           WHERE status IN ('completed', 'paid') ${startDate && endDate ? 'AND created_at >= ? AND created_at <= ?' : ''}
+        `,
+          startDate && endDate ? params : [],
+        ),
+
+        db.select<{ total_profit: number }[]>(
+          `
+          SELECT
+            COALESCE(SUM((oi.unit_price - COALESCE(p.cost, 0)) * oi.quantity), 0) as total_profit
+          FROM order_items oi
+          JOIN orders o ON oi.order_id = o.id
+          LEFT JOIN products p ON oi.product_id = p.id
+          WHERE o.status IN ('completed', 'paid') ${startDate && endDate ? 'AND o.created_at >= ? AND o.created_at <= ?' : ''}
         `,
           startDate && endDate ? params : [],
         ),
@@ -107,6 +120,7 @@ export class AnalyticsService {
 
       const metrics = metricsResult[0]
       const avgOrder = avgOrderResult[0]
+      const profit = profitResult[0]
 
       return {
         totalSales: metrics.completed_orders,
@@ -116,6 +130,7 @@ export class AnalyticsService {
         cancelledOrders: metrics.cancelled_orders,
         averageOrderValue: avgOrder.avg_order_value,
         totalRevenue: metrics.total_revenue,
+        totalProfit: profit.total_profit,
       }
     } catch (error) {
       console.error('Get overall metrics error:', error)
@@ -127,6 +142,7 @@ export class AnalyticsService {
         cancelledOrders: 0,
         averageOrderValue: 0,
         totalRevenue: 0,
+        totalProfit: 0,
       }
     }
   }

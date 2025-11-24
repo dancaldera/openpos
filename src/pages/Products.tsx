@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'preact/hooks'
 import {
   Button,
-  Container,
   Dialog,
-  DialogBody,
   DialogConfirm,
-  DialogFooter,
   Input,
   Pagination,
   Select,
@@ -122,7 +119,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
       title={product ? t('products.editProduct') : t('products.addProduct')}
       size="md"
     >
-      <DialogBody>
+      <div>
         {error && (
           <div class="bg-red-500/10 backdrop-blur-sm border border-red-400/20 text-red-700 px-4 py-3 rounded-xl mb-6">
             <div class="flex items-center">
@@ -298,16 +295,16 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
             )}
           </form>
         </div>
-      </DialogBody>
+      </div>
 
-      <DialogFooter>
+      <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
           {t('common.cancel')}
         </Button>
         <Button type="button" onClick={() => handleSubmit(new Event('submit'))} disabled={isLoading}>
           {isLoading ? t('common.loading') : product ? t('common.edit') : t('common.add')}
         </Button>
-      </DialogFooter>
+      </div>
     </Dialog>
   )
 }
@@ -470,7 +467,7 @@ export default function Products() {
 
   if (!canManageProducts) {
     return (
-      <Container size="xl">
+      <div class="max-w-6xl mx-auto">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div class="text-center">
             <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
@@ -478,25 +475,25 @@ export default function Products() {
             <p class="text-gray-600 max-w-md mx-auto">{t('products.noPermission')}</p>
           </div>
         </div>
-      </Container>
+      </div>
     )
   }
 
   if (isLoading) {
     return (
-      <Container size="xl">
+      <div class="max-w-6xl mx-auto">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div class="text-center">
             <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white mx-auto mb-6 shadow-lg"></div>
             <p class="text-gray-600 text-lg">{t('products.loadingCatalog')}</p>
           </div>
         </div>
-      </Container>
+      </div>
     )
   }
 
   return (
-    <Container size="xl">
+    <div class="max-w-6xl mx-auto">
       <div class="flex justify-between items-center mb-6">
         <div>
           <h1 class="text-2xl font-bold text-gray-900 mb-2">{t('products.title')}</h1>
@@ -719,6 +716,6 @@ export default function Products() {
         confirmText={t('common.delete')}
         variant="danger"
       />
-    </Container>
+    </div>
   )
 }

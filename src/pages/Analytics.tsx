@@ -1,18 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
-import {
-  Button,
-  Container,
-  Heading,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Text,
-} from '../components/ui'
+import { Button, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import {
@@ -136,35 +124,33 @@ export default function Analytics() {
 
   if (!isAdmin) {
     return (
-      <Container size="xl">
+      <div class="max-w-6xl mx-auto px-6 py-4">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div class="text-center">
             <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
-            <Heading level={3} class="mb-3 text-gray-900">
-              {t('errors.unauthorized')}
-            </Heading>
-            <Text class="text-gray-600 max-w-md mx-auto">{t('analytics.adminOnly')}</Text>
+            <h2 class="text-lg font-semibold mb-3 text-gray-900">{t('errors.unauthorized')}</h2>
+            <p class="text-gray-600 max-w-md mx-auto">{t('analytics.adminOnly')}</p>
           </div>
         </div>
-      </Container>
+      </div>
     )
   }
 
   if (isLoading) {
     return (
-      <Container size="xl">
+      <div class="max-w-6xl mx-auto px-6 py-4">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div class="text-center">
             <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white mx-auto mb-6 shadow-lg"></div>
-            <Text class="text-gray-600 text-lg">{t('analytics.loadingAnalytics')}</Text>
+            <p class="text-gray-600 text-lg">{t('analytics.loadingAnalytics')}</p>
           </div>
         </div>
-      </Container>
+      </div>
     )
   }
 
   return (
-    <Container size="xl">
+    <div class="max-w-6xl mx-auto px-6 py-4">
       <div class="flex justify-between items-center mb-6">
         <div>
           <h1 class="text-2xl font-bold text-gray-900 mb-2">📊 {t('analytics.dashboardTitle')}</h1>
@@ -175,7 +161,6 @@ export default function Analytics() {
           {t('analytics.refreshData')}
         </Button>
       </div>
-
 
       {/* Date Range Filters */}
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
@@ -243,10 +228,10 @@ export default function Analytics() {
           <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-3xl font-bold text-green-600">{metrics.totalOrders}</div>
-                <div class="text-sm font-medium text-green-700">{t('analytics.totalOrders')}</div>
+                <div class="text-3xl font-bold text-green-600">{formatCurrency(metrics.totalProfit)}</div>
+                <div class="text-sm font-medium text-green-700">{t('analytics.totalProfit')}</div>
               </div>
-              <div class="text-green-400 text-3xl">📋</div>
+              <div class="text-green-400 text-3xl">💵</div>
             </div>
           </div>
 
@@ -391,6 +376,6 @@ export default function Analytics() {
           </div>
         )}
       </div>
-    </Container>
+    </div>
   )
 }

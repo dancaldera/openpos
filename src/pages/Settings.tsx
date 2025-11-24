@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
-import { Button, Container, Dialog, DialogBody, DialogFooter, Heading, Input, Select, Text } from '../components/ui'
+import { Button, Dialog, Input, Select } from '../components/ui'
 import LanguageSelector from '../components/ui/LanguageSelector'
 import { useTranslation } from '../hooks/useTranslation'
 import { type CompanySettings, companySettingsService, SUPPORTED_CURRENCIES } from '../services/company-settings-sqlite'
@@ -87,24 +87,24 @@ export default function Settings({ onNavigate }: SettingsProps) {
 
   if (isLoading) {
     return (
-      <Container size="xl">
+      <div class="max-w-6xl mx-auto px-6 py-4">
         <div class="bg-white rounded-lg shadow p-6">
           <div class="text-center py-8">
             <div class="w-8 h-8 bg-blue-600 rounded-full animate-spin border-2 border-transparent border-t-white mx-auto mb-4"></div>
             <p class="text-gray-600">{t('common.loading')}</p>
           </div>
         </div>
-      </Container>
+      </div>
     )
   }
 
   return (
-    <Container size="xl">
+    <div class="max-w-6xl mx-auto px-6 py-4">
       <div class="space-y-6">
         <div class="flex justify-between items-center">
           <div>
-            <Heading level={3}>{t('settings.title')}</Heading>
-            <Text class="text-gray-600">{t('settings.subtitle')}</Text>
+            <h2 class="text-2xl font-bold text-gray-900">{t('settings.title')}</h2>
+            <span class="text-gray-600">{t('settings.subtitle')}</span>
           </div>
           <Button
             variant="outline"
@@ -120,9 +120,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
           <div class="space-y-8">
             {/* Company Information */}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <Heading level={4} class="mb-6">
-                🏢 {t('settings.companyInfo')}
-              </Heading>
+              <h2 class="text-xl font-semibold text-gray-900 mb-6">🏢 {t('settings.companyInfo')}</h2>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Input
@@ -133,7 +131,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     placeholder={t('settings.companyName')}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">{t('settings.companyNameDesc')}</Text>
+                  <span class="text-sm text-gray-500">{t('settings.companyNameDesc')}</span>
                 </div>
                 <div>
                   <Input
@@ -144,7 +142,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     placeholder={t('common.description')}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">{t('settings.descriptionDesc')}</Text>
+                  <span class="text-sm text-gray-500">{t('settings.descriptionDesc')}</span>
                 </div>
                 <div>
                   <Input
@@ -155,7 +153,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     placeholder={t('common.address')}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">{t('settings.addressDesc')}</Text>
+                  <span class="text-sm text-gray-500">{t('settings.addressDesc')}</span>
                 </div>
                 <div>
                   <Input
@@ -166,7 +164,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     placeholder={t('common.phone')}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">{t('settings.phoneDesc')}</Text>
+                  <span class="text-sm text-gray-500">{t('settings.phoneDesc')}</span>
                 </div>
                 <div>
                   <Input
@@ -178,7 +176,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     placeholder={t('common.email')}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">{t('settings.emailDesc')}</Text>
+                  <span class="text-sm text-gray-500">{t('settings.emailDesc')}</span>
                 </div>
                 <div>
                   <Input
@@ -190,16 +188,14 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     placeholder="https://example.com"
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">{t('settings.websiteDesc')}</Text>
+                  <span class="text-sm text-gray-500">{t('settings.websiteDesc')}</span>
                 </div>
               </div>
             </div>
 
             {/* Tax Configuration */}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <Heading level={4} class="mb-6">
-                💰 {t('settings.taxSettings')}
-              </Heading>
+              <h2 class="text-xl font-semibold text-gray-900 mb-6">💰 {t('settings.taxSettings')}</h2>
               <div class="space-y-6">
                 <div class="flex items-center space-x-4">
                   <label class="flex items-center space-x-2 cursor-pointer">
@@ -210,7 +206,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                       disabled={isUpdating}
                       class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                     />
-                    <Text class="font-medium">{t('settings.enableTax')}</Text>
+                    <span class="font-medium">{t('settings.enableTax')}</span>
                   </label>
                 </div>
                 {settings.taxEnabled && (
@@ -227,13 +223,13 @@ export default function Settings({ onNavigate }: SettingsProps) {
                         class="mb-2"
                         placeholder="10.0"
                       />
-                      <Text class="text-sm text-gray-500">{t('settings.taxRateDesc')}</Text>
+                      <span class="text-sm text-gray-500">{t('settings.taxRateDesc')}</span>
                     </div>
                     <div class="flex items-center mt-6">
                       <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <Text class="text-sm text-blue-700">
+                        <span class="text-sm text-blue-700">
                           {t('settings.currentTaxRate')}: <span class="font-bold">{settings.taxPercentage}%</span>
-                        </Text>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -243,9 +239,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
 
             {/* System Preferences */}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <Heading level={4} class="mb-6">
-                ⚙️ {t('settings.systemSettings')}
-              </Heading>
+              <h2 class="text-xl font-semibold text-gray-900 mb-6">⚙️ {t('settings.systemSettings')}</h2>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Select
@@ -259,7 +253,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     }))}
                     class="mb-2"
                   />
-                  <Text class="text-sm text-gray-500">{t('settings.currencyDesc')}</Text>
+                  <span class="text-sm text-gray-500">{t('settings.currencyDesc')}</span>
                 </div>
                 <div>
                   <LanguageSelector class="mb-2" />
@@ -269,14 +263,12 @@ export default function Settings({ onNavigate }: SettingsProps) {
 
             {/* Developer Tools */}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <Heading level={4} class="mb-6">
-                🛠️ {t('settings.developerTools')}
-              </Heading>
-              <Text class="mb-4 text-gray-600">{t('settings.developerToolsDesc')}</Text>
+              <h2 class="text-xl font-semibold text-gray-900 mb-6">🛠️ {t('settings.developerTools')}</h2>
+              <span class="mb-4 text-gray-600">{t('settings.developerToolsDesc')}</span>
 
               <div class="space-y-4">
                 <div>
-                  <Heading level={5}>{t('settings.apiTesting')}</Heading>
+                  <h2 class="text-lg font-medium text-gray-900">{t('settings.apiTesting')}</h2>
                   <form
                     class="flex gap-4 mb-4"
                     onSubmit={(e) => {
@@ -316,16 +308,16 @@ export default function Settings({ onNavigate }: SettingsProps) {
         title={t('settings.resetDefaults')}
         size="md"
       >
-        <DialogBody>
+        <div>
           <div class="space-y-4">
             <div class="flex items-center space-x-3 text-amber-600 bg-amber-50 p-4 rounded-lg border border-amber-200">
               <span class="text-2xl">⚠️</span>
               <div>
-                <Text class="font-semibold">{t('settings.resetConfirm')}</Text>
-                <Text class="text-sm text-amber-700">{t('settings.resetWarning')}</Text>
+                <span class="font-semibold">{t('settings.resetConfirm')}</span>
+                <span class="text-sm text-amber-700">{t('settings.resetWarning')}</span>
               </div>
             </div>
-            <Text class="text-gray-700">{t('settings.resetDescription')}</Text>
+            <span class="text-gray-700">{t('settings.resetDescription')}</span>
             <ul class="list-disc list-inside text-sm text-gray-600 space-y-1 ml-4">
               <li>{t('settings.resetItem1')}</li>
               <li>{t('settings.resetItem2')}</li>
@@ -333,18 +325,18 @@ export default function Settings({ onNavigate }: SettingsProps) {
               <li>{t('settings.resetItem4')}</li>
               <li>{t('settings.resetItem5')}</li>
             </ul>
-            <Text class="text-gray-700 font-medium">{t('settings.resetProceed')}</Text>
+            <span class="text-gray-700 font-medium">{t('settings.resetProceed')}</span>
           </div>
-        </DialogBody>
-        <DialogFooter>
+        </div>
+        <div>
           <Button variant="outline" onClick={() => setIsResetDialogOpen(false)} disabled={isUpdating}>
             {t('common.cancel')}
           </Button>
           <Button onClick={handleResetToDefaults} disabled={isUpdating} class="bg-red-600 hover:bg-red-700 text-white">
             {isUpdating ? t('settings.resetting') : t('settings.resetSettings')}
           </Button>
-        </DialogFooter>
+        </div>
       </Dialog>
-    </Container>
+    </div>
   )
 }

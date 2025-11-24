@@ -45,27 +45,24 @@ export default function Select({
 }: SelectProps & Omit<JSX.HTMLAttributes<HTMLSelectElement>, 'size'>) {
   const selectId = id || `select-${Math.random().toString(36).substring(2, 11)}`
 
-  // Unify with Input styles: glass border on the element, accessible focus-visible ring
   const baseClasses = clsx(
-    'relative w-full appearance-none rounded-xl transition-colors duration-150',
-    'backdrop-blur-md bg-white/10 border border-white/20',
-    'focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-offset-2 focus-visible:ring-offset-white/10',
-    'shadow-lg',
-    disabled && 'opacity-40 cursor-not-allowed',
+    'w-full appearance-none rounded-xl border transition-colors duration-150',
+    'focus:outline-none focus:ring-2 focus:ring-offset-2',
+    disabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'bg-white',
   )
 
   const stateClasses = error
-    ? clsx('border-red-400/50', 'bg-red-50/10', 'focus-visible:ring-red-500/60')
-    : clsx('border-white/20', 'focus-visible:ring-blue-500/60')
+    ? clsx('border-red-500 text-red-900', 'focus:ring-red-500 focus:border-red-500')
+    : clsx('border-gray-300 text-gray-900', 'focus:ring-blue-500 focus:border-blue-500', 'hover:border-gray-400')
 
   const paddingClasses = multiple ? 'px-4 py-2.5 text-sm' : 'pl-4 pr-10 py-2.5 text-sm'
 
   return (
     <div class="w-full">
       {label && (
-        <label for={selectId} class="block text-sm font-medium text-gray-700 mb-2 drop-shadow-sm">
+        <label for={selectId} class="block text-sm font-medium text-gray-700 mb-2">
           {label}
-          {required && <span class="text-red-500 ml-1 drop-shadow-sm">*</span>}
+          {required && <span class="text-red-500 ml-1">*</span>}
         </label>
       )}
 
@@ -79,13 +76,7 @@ export default function Select({
           onChange={onChange}
           onFocus={onFocus}
           onBlur={onBlur}
-          class={clsx(
-            baseClasses,
-            paddingClasses,
-            // Match Input: no explicit text color/placeholder styling
-            stateClasses,
-            className,
-          )}
+          class={clsx(baseClasses, paddingClasses, stateClasses, className)}
           {...props}
         >
           {placeholder && (
@@ -101,9 +92,9 @@ export default function Select({
         </select>
 
         {!multiple && (
-          <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 z-10">
+          <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
             <svg
-              class={clsx('w-4 h-4 stroke-gray-600 sm:w-3.5 sm:h-3.5 drop-shadow-sm', disabled && 'stroke-gray-400')}
+              class={clsx('w-4 h-4 text-gray-600', disabled && 'text-gray-400')}
               viewBox="0 0 16 16"
               aria-hidden="true"
               fill="none"
@@ -113,27 +104,11 @@ export default function Select({
             </svg>
           </span>
         )}
-
-        {/* Glass highlight overlay */}
-        <div
-          class={clsx(
-            'absolute inset-0 rounded-xl pointer-events-none',
-            'bg-gradient-to-b from-white/10 via-transparent to-transparent',
-            'opacity-60',
-          )}
-        />
       </div>
 
-      {error && (
-        <div class="mt-2 p-2 rounded-lg bg-red-500/10 backdrop-blur-sm border border-red-400/20">
-          <p class="text-sm text-red-600 flex items-center drop-shadow-sm">
-            <span class="mr-2">⚠️</span>
-            {error}
-          </p>
-        </div>
-      )}
+      {error && <p class="mt-2 text-sm text-red-600">{error}</p>}
 
-      {helperText && !error && <p class="mt-1 text-sm text-gray-600 drop-shadow-sm">{helperText}</p>}
+      {helperText && !error && <p class="mt-1 text-sm text-gray-600">{helperText}</p>}
     </div>
   )
 }

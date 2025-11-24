@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
-import { Container } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
 import { dashboardService } from '../services/dashboard-sqlite'
 
@@ -43,7 +42,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   if (isLoading) {
     return (
-      <Container size="xl">
+      <div class="max-w-6xl mx-auto px-6 py-4">
         <div class="mb-6">
           <h1 class="text-3xl font-bold text-gray-900 mb-2">{t('dashboard.title')}</h1>
           <p class="text-gray-600">{t('common.loading')}</p>
@@ -80,18 +79,16 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             </div>
           ))}
         </div>
-      </Container>
+      </div>
     )
   }
 
-
   return (
-    <Container size="xl">
+    <div class="max-w-6xl mx-auto px-6 py-4">
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 mb-2">{t('dashboard.title')}</h1>
         <p class="text-gray-600">{t('dashboard.subtitle')}</p>
       </div>
-
 
       {/* Main Stats Cards */}
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -187,6 +184,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           <p class="text-xs text-rose-600 mt-2">{t('dashboard.awaitingProcessing')}</p>
         </div>
       </div>
-    </Container>
+    </div>
   )
 }

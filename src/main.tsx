@@ -1,5 +1,6 @@
 import { render } from 'preact'
 import App from './App'
+import '@tauri-apps/api'
 
 const root = document.getElementById('root')
 if (!root) {

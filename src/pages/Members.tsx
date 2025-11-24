@@ -2,12 +2,8 @@ import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import {
   Button,
-  Container,
   Dialog,
-  DialogBody,
   DialogConfirm,
-  DialogFooter,
-  Heading,
   Input,
   Pagination,
   Select,
@@ -17,7 +13,6 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Text,
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
@@ -32,6 +27,7 @@ interface EditUserModalProps {
 
 function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
   const { t } = useTranslation()
+  const { hasRole } = useAuth()
 
   const [formData, setFormData] = useState({
     name: '',
@@ -66,11 +62,23 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
     try {
       let result: { success: boolean; user?: User; error?: string }
       if (user) {
-        result = await authService.updateUser(user.id, {
+        const updates: {
+          name: string
+          email: string
+          role: User['role']
+          password?: string
+        } = {
           name: formData.name,
           email: formData.email,
           role: formData.role,
-        })
+        }
+
+        // Only include password if admin is resetting it
+        if (formData.password && hasRole('admin')) {
+          updates.password = formData.password
+        }
+
+        result = await authService.updateUser(user.id, updates)
       } else {
         result = await authService.createUser({
           name: formData.name,
@@ -95,10 +103,9 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
   }
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title={user ? t('members.editMember') : t('members.addMember')} size="md">
-      <DialogBody>
-
-        <div class="backdrop-blur-lg bg-gradient-to-br from-blue-50/60 to-indigo-50/40 border border-blue-200/50 rounded-2xl p-6 shadow-xl">
+    <Dialog isOpen={isOpen} onClose={onClose} title={user ? t('members.editMember') : t('members.addMember')}>
+      <div>
+        <div class="bg-white border border-gray-200 rounded-xl p-6">
           <form onSubmit={handleSubmit} class="space-y-6">
             <div>
               <Input
@@ -111,7 +118,6 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
                   })
                 }
                 required
-                class="bg-white/80 text-gray-900"
                 placeholder={t('members.enterFullName')}
               />
             </div>
@@ -128,7 +134,6 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
                   })
                 }
                 required
-                class="bg-white/80 text-gray-900"
                 placeholder={t('members.enterEmail')}
               />
             </div>
@@ -148,40 +153,46 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
                   { value: 'manager', label: `👔 ${t('members.manager')} - ${t('members.extendedAccess')}` },
                   { value: 'admin', label: `👑 ${t('members.admin')} - ${t('members.fullAccess')}` },
                 ]}
-                class="bg-white/80"
               />
             </div>
 
-            {!user && (
+            {(!user || (user && hasRole('admin'))) && (
               <div>
                 <Input
-                  label={`🔐 ${t('auth.password')}`}
-                  type="password"
+                  label={`🔐 ${user ? t('members.resetPassword') : t('auth.password')}`}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d{6}"
+                  maxLength={6}
                   value={formData.password}
-                  onInput={(e) =>
+                  onInput={(e) => {
+                    const value = (e.target as HTMLInputElement).value
+                    // Only allow digits
+                    const numericValue = value.replace(/\D/g, '')
                     setFormData({
                       ...formData,
-                      password: (e.target as HTMLInputElement).value,
+                      password: numericValue,
                     })
-                  }
-                  required
-                  placeholder={t('members.passwordMin')}
-                  class="bg-white/80 text-gray-900"
+                  }}
+                  required={!user}
+                  placeholder={user ? t('members.leaveBlankKeepCurrent') : t('members.password6digits')}
                 />
+                {user && <p class="text-xs text-gray-600 mt-2">{t('members.passwordResetHint')}</p>}
+                {!user && <p class="text-xs text-gray-600 mt-2">{t('members.passwordMust6Numbers')}</p>}
               </div>
             )}
           </form>
         </div>
-      </DialogBody>
+      </div>
 
-      <DialogFooter>
+      <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
           {t('common.cancel')}
         </Button>
         <Button type="button" onClick={() => handleSubmit(new Event('submit'))} disabled={isLoading}>
           {isLoading ? t('common.loading') : user ? t('common.edit') : t('common.add')}
         </Button>
-      </DialogFooter>
+      </div>
     </Dialog>
   )
 }
@@ -190,10 +201,14 @@ export default function Members() {
   const { t } = useTranslation()
 
   const [users, setUsers] = useState<User[]>([])
+  const [deletedUsers, setDeletedUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [restoreConfirm, setRestoreConfirm] = useState<string | null>(null)
+  const [hardDeleteConfirm, setHardDeleteConfirm] = useState<string | null>(null)
+  const [showDeletedUsers, setShowDeletedUsers] = useState(false)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -207,7 +222,10 @@ export default function Members() {
 
   useEffect(() => {
     loadUsers()
-  }, [])
+    if (hasPermission('users.delete') || hasRole('admin')) {
+      loadDeletedUsers()
+    }
+  }, [showDeletedUsers])
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -236,6 +254,20 @@ export default function Members() {
     }
   }
 
+  const loadDeletedUsers = async () => {
+    if (!canManageUsers || (!hasPermission('users.delete') && !hasRole('admin'))) {
+      return
+    }
+
+    try {
+      const deleted = await authService.getDeletedUsers()
+      setDeletedUsers(deleted)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load deleted users'
+      toast.error(message)
+    }
+  }
+
   const handleCreateUser = () => {
     setEditingUser(null)
     setIsModalOpen(true)
@@ -251,9 +283,45 @@ export default function Members() {
       const result = await authService.deleteUser(userId)
       if (result.success) {
         setDeleteConfirm(null)
-        toast.success(t('members.userDeleted'))
+        toast.success(t('members.userArchived'))
         // Reload data to reflect changes with proper pagination
         await loadUsers(currentPage)
+        if (hasPermission('users.delete') || hasRole('admin')) {
+          await loadDeletedUsers()
+        }
+      } else {
+        toast.error(result.error || t('errors.generic'))
+      }
+    } catch (_err) {
+      toast.error(t('errors.generic'))
+    }
+  }
+
+  const handleRestoreUser = async (userId: string) => {
+    try {
+      const result = await authService.restoreUser(userId)
+      if (result.success) {
+        setRestoreConfirm(null)
+        toast.success(t('members.userRestored'))
+        // Reload both active and deleted users
+        await loadUsers(currentPage)
+        await loadDeletedUsers()
+      } else {
+        toast.error(result.error || t('errors.generic'))
+      }
+    } catch (_err) {
+      toast.error(t('errors.generic'))
+    }
+  }
+
+  const handleHardDeleteUser = async (userId: string) => {
+    try {
+      const result = await authService.hardDeleteUser(userId)
+      if (result.success) {
+        setHardDeleteConfirm(null)
+        toast.success(t('members.userPermanentlyDeleted'))
+        // Reload deleted users
+        await loadDeletedUsers()
       } else {
         toast.error(result.error || t('errors.generic'))
       }
@@ -296,35 +364,33 @@ export default function Members() {
 
   if (!canManageUsers) {
     return (
-      <Container size="xl">
+      <div class="max-w-6xl mx-auto">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div class="text-center">
             <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
-            <Heading level={3} class="mb-3 text-gray-900">
-              {t('members.accessDenied')}
-            </Heading>
-            <Text class="text-gray-600 max-w-md mx-auto">{t('members.noPermissionMembers')}</Text>
+            <h2 class="text-lg font-semibold mb-3 text-gray-900">{t('members.accessDenied')}</h2>
+            <p class="text-gray-600 max-w-md mx-auto">{t('members.noPermissionMembers')}</p>
           </div>
         </div>
-      </Container>
+      </div>
     )
   }
 
   if (isLoading) {
     return (
-      <Container size="xl">
+      <div class="max-w-6xl mx-auto">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div class="text-center">
             <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white mx-auto mb-6 shadow-lg"></div>
-            <Text class="text-gray-600 text-lg">{t('members.loadingMembers')}</Text>
+            <p class="text-gray-600 text-lg">{t('members.loadingMembers')}</p>
           </div>
         </div>
-      </Container>
+      </div>
     )
   }
 
   return (
-    <Container size="xl">
+    <div class="max-w-6xl mx-auto">
       <div class="flex justify-between items-center mb-6">
         <div>
           <h1 class="text-2xl font-bold text-gray-900 mb-2">{t('members.teamMembers')}</h1>
@@ -336,14 +402,29 @@ export default function Members() {
             {totalPages > 1 && ` • ${t('members.pageXofY', { current: currentPage, total: totalPages })}`}
           </p>
         </div>
-        {(hasPermission('users.create') || hasRole('admin')) && (
-          <Button onClick={handleCreateUser}>
-            <span class="mr-2">➕</span>
-            {t('members.addMember')}
-          </Button>
-        )}
+        <div class="flex gap-3">
+          {(hasPermission('users.delete') || hasRole('admin')) && (
+            <Button
+              variant="outline"
+              onClick={() => setShowDeletedUsers(!showDeletedUsers)}
+              class={showDeletedUsers ? 'bg-orange-50 border-orange-200 text-orange-700' : ''}
+            >
+              {showDeletedUsers ? `👥 ${t('members.activeUsers')}` : `🗂️ ${t('members.archivedUsers')}`}
+              {deletedUsers.length > 0 && !showDeletedUsers && (
+                <span class="ml-2 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+                  {deletedUsers.length}
+                </span>
+              )}
+            </Button>
+          )}
+          {(hasPermission('users.create') || hasRole('admin')) && (
+            <Button onClick={handleCreateUser}>
+              <span class="mr-2">➕</span>
+              {t('members.addMember')}
+            </Button>
+          )}
+        </div>
       </div>
-
 
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <Table>
@@ -351,32 +432,51 @@ export default function Members() {
             <TableRow class="bg-gray-50">
               <TableHeader class="font-semibold text-gray-900">{t('members.user')}</TableHeader>
               <TableHeader class="font-semibold text-gray-900">{t('members.role')}</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">{t('members.created')}</TableHeader>
+              <TableHeader class="font-semibold text-gray-900">
+                {showDeletedUsers ? t('members.archived') : t('members.created')}
+              </TableHeader>
               <TableHeader class="font-semibold text-gray-900">{t('members.lastLogin')}</TableHeader>
               <TableHeader class="font-semibold text-gray-900">{t('members.actions')}</TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
-            {users.map((user, index) => (
+            {(showDeletedUsers ? deletedUsers : users).map((user, index) => (
               <TableRow
                 key={user.id}
-                class="hover:bg-gray-50 transition-all duration-200 hover:shadow-sm"
+                class={`hover:bg-gray-50 transition-all duration-200 hover:shadow-sm ${
+                  showDeletedUsers ? 'bg-orange-50/50' : ''
+                }`}
                 style={`animation-delay: ${index * 50}ms`}
               >
                 <TableCell>
                   <div class="flex items-center">
-                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-lg font-bold mr-4">
+                    <div
+                      class={`w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold mr-4 ${
+                        showDeletedUsers
+                          ? 'bg-gradient-to-br from-orange-500 to-red-600'
+                          : 'bg-gradient-to-br from-blue-500 to-purple-600'
+                      }`}
+                    >
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div class="font-semibold text-gray-900">{user.name}</div>
+                      <div class="font-semibold text-gray-900 flex items-center gap-2">
+                        {user.name}
+                        {showDeletedUsers && (
+                          <span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                            Archived
+                          </span>
+                        )}
+                      </div>
                       <div class="text-sm text-gray-600">{user.email}</div>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div
-                    class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide ${getRoleColor(user.role)} transition-all hover:scale-105`}
+                    class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide ${
+                      showDeletedUsers ? 'bg-gray-100 text-gray-600 border border-gray-300' : getRoleColor(user.role)
+                    } transition-all hover:scale-105`}
                   >
                     <span class="mr-1 text-sm">{getRoleIcon(user.role)}</span>
                     {user.role === 'admin'
@@ -388,9 +488,15 @@ export default function Members() {
                 </TableCell>
                 <TableCell>
                   <div class="text-sm text-gray-600">
-                    <div>{new Date(user.createdAt).toLocaleDateString()}</div>
+                    <div>
+                      {new Date(
+                        showDeletedUsers ? (user.deletedAt ?? user.createdAt) : user.createdAt,
+                      ).toLocaleDateString()}
+                    </div>
                     <div class="text-xs text-gray-500">
-                      {new Date(user.createdAt).toLocaleTimeString([], {
+                      {new Date(
+                        showDeletedUsers ? (user.deletedAt ?? user.createdAt) : user.createdAt,
+                      ).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
@@ -416,28 +522,55 @@ export default function Members() {
                 </TableCell>
                 <TableCell>
                   <div class="flex space-x-2">
-                    {(hasPermission('users.edit') || hasRole('admin')) && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditUser(user)}
-                        class="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all hover:shadow-md mr-2"
-                      >
-                        ✏️ {t('common.edit')}
-                      </Button>
+                    {showDeletedUsers ? (
+                      // Actions for deleted users
+                      <>
+                        {(hasPermission('users.delete') || hasRole('admin')) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setRestoreConfirm(user.id)}
+                            class="text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300 transition-all hover:shadow-md"
+                          >
+                            ↩️ {t('members.restore')}
+                          </Button>
+                        )}
+                        {(hasPermission('users.delete') || hasRole('admin')) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setHardDeleteConfirm(user.id)}
+                            class="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all hover:shadow-md"
+                          >
+                            ⛔ {t('members.permanentDelete')}
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      // Actions for active users
+                      <>
+                        {(hasPermission('users.edit') || hasRole('admin')) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditUser(user)}
+                            class="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all hover:shadow-md mr-2"
+                          >
+                            ✏️ {t('common.edit')}
+                          </Button>
+                        )}
+                        {(hasPermission('users.delete') || hasRole('admin')) && user.id !== currentUser?.id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setDeleteConfirm(user.id)}
+                            class="text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 transition-all hover:shadow-md"
+                          >
+                            📁 {t('members.archive')}
+                          </Button>
+                        )}
+                      </>
                     )}
-                    {(hasPermission('users.delete') || hasRole('admin')) &&
-                      user.id !== currentUser?.id &&
-                      user.role !== 'admin' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setDeleteConfirm(user.id)}
-                          class="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all hover:shadow-md"
-                        >
-                          🗑️ {t('common.delete')}
-                        </Button>
-                      )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -458,15 +591,17 @@ export default function Members() {
         />
       )}
 
-      {users.length === 0 && (
+      {(showDeletedUsers ? deletedUsers : users).length === 0 && (
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div class="text-center">
-            <div class="text-6xl mb-6">👥</div>
-            <Heading level={3} class="mb-3 text-gray-900">
-              {t('members.noMembers')}
-            </Heading>
-            <Text class="text-gray-600 mb-6 max-w-md mx-auto">{t('members.emptyTeam')}</Text>
-            {(hasPermission('users.create') || hasRole('admin')) && (
+            <div class="text-6xl mb-6">{showDeletedUsers ? '🗂️' : '👥'}</div>
+            <h2 class="text-lg font-semibold mb-3 text-gray-900">
+              {showDeletedUsers ? t('members.noArchivedUsers') : t('members.noMembers')}
+            </h2>
+            <p class="text-gray-600 mb-6 max-w-md mx-auto">
+              {showDeletedUsers ? t('members.noArchivedUsersDesc') : t('members.emptyTeam')}
+            </p>
+            {(hasPermission('users.create') || hasRole('admin')) && !showDeletedUsers && (
               <Button onClick={handleCreateUser} class="mt-4">
                 <span class="mr-2">➕</span>
                 {t('members.addFirstMember')}
@@ -487,11 +622,31 @@ export default function Members() {
         isOpen={!!deleteConfirm}
         onClose={() => setDeleteConfirm(null)}
         onConfirm={() => deleteConfirm && handleDeleteUser(deleteConfirm)}
-        title={t('members.confirmDelete')}
-        message={t('members.deleteMessage')}
-        confirmText={t('common.delete')}
+        title={t('members.archiveUserTitle')}
+        message={t('members.archiveUserMessage')}
+        confirmText={t('members.archiveUserConfirm')}
+        variant="primary"
+      />
+
+      <DialogConfirm
+        isOpen={!!restoreConfirm}
+        onClose={() => setRestoreConfirm(null)}
+        onConfirm={() => restoreConfirm && handleRestoreUser(restoreConfirm)}
+        title={t('members.restoreUserTitle')}
+        message={t('members.restoreUserMessage')}
+        confirmText={t('members.restoreUserConfirm')}
+        variant="primary"
+      />
+
+      <DialogConfirm
+        isOpen={!!hardDeleteConfirm}
+        onClose={() => setHardDeleteConfirm(null)}
+        onConfirm={() => hardDeleteConfirm && handleHardDeleteUser(hardDeleteConfirm)}
+        title={t('members.permanentDeleteTitle')}
+        message={`⚠️ ${t('members.permanentDeleteMessage')}`}
+        confirmText={t('members.permanentDeleteConfirm')}
         variant="danger"
       />
-    </Container>
+    </div>
   )
 }

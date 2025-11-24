@@ -6,11 +6,10 @@
  * @property {(page: string) => void} onNavigate - Callback function for navigation events
  */
 import type { ComponentChildren } from 'preact'
-import { useState } from 'preact/hooks'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
-import { Dropdown, type DropdownItem, Heading, Text } from './ui'
-import Sidebar, { SidebarGroup, SidebarItem, SidebarNav } from './ui/Sidebar'
+import { Button } from './ui'
+import Sidebar from './ui/Sidebar'
 
 interface LayoutProps {
   children: ComponentChildren
@@ -38,7 +37,6 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
    * State for controlling the user profile dropdown visibility
    * @type {[boolean, function]} isDropdownOpen - Dropdown open state and setter
    */
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   /**
    * Authentication context providing user information and signOut function
@@ -52,27 +50,6 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
    * Translation hook providing translation function and language utilities
    */
   const { t } = useTranslation()
-
-  /**
-   * User dropdown menu items configuration
-   * @type {DropdownItem[]}
-   */
-  const userDropdownItems: DropdownItem[] = [
-    {
-      id: 'settings',
-      label: t('navigation.settings'),
-      icon: '⚙️',
-      onClick: () => onNavigate('settings'),
-    },
-    {
-      id: 'signout',
-      label: t('navigation.signOut'),
-      icon: '🚪',
-      onClick: signOut,
-      variant: 'danger',
-      separator: true,
-    },
-  ]
 
   /**
    * Navigation menu items configuration with role-based filtering
@@ -139,25 +116,15 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
         @param {boolean} collapsible - Whether sidebar can be collapsed
         @param {boolean} defaultCollapsed - Initial collapsed state
       */}
-      <Sidebar width="md" backgroundColor="dark" collapsible defaultCollapsed={false}>
-        {({ isCollapsed }: { isCollapsed: boolean }) => (
-          <SidebarNav>
-            <SidebarGroup title="" isCollapsed={isCollapsed}>
-              {menuItems.map((item) => (
-                <SidebarItem
-                  key={item.id}
-                  item={{
-                    ...item,
-                    active: currentPage === item.id,
-                    onClick: () => onNavigate(item.id),
-                  }}
-                  isCollapsed={isCollapsed}
-                />
-              ))}
-            </SidebarGroup>
-          </SidebarNav>
-        )}
-      </Sidebar>
+      <Sidebar
+        items={menuItems.map((item) => ({
+          id: item.id,
+          label: item.label,
+          icon: item.icon,
+          active: currentPage === item.id,
+          onClick: () => onNavigate(item.id),
+        }))}
+      />
 
       {/* Main content area with header and scrollable content */}
       <div class="flex-1 flex flex-col overflow-hidden">
@@ -168,33 +135,37 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
         <header class="bg-white shadow-sm border-b border-gray-200">
           <div class="flex items-center justify-between px-6 py-4">
             <div>
-              <Heading>{menuItems.find((item) => item.id === currentPage)?.label}</Heading>
-              <Text>{menuItems.find((item) => item.id === currentPage)?.description}</Text>
+              <h1 class="text-lg font-semibold text-gray-900">
+                {menuItems.find((item) => item.id === currentPage)?.label}
+              </h1>
+              <p class="text-sm text-gray-600">{menuItems.find((item) => item.id === currentPage)?.description}</p>
             </div>
 
-            {/* Header right section with notifications and user profile */}
+            {/* Header right section with user info and logout */}
             <div class="flex items-center space-x-4">
-              {/*
-                User profile dropdown component
-                Contains user avatar, name, email, and dropdown menu
-              */}
-              <Dropdown
-                items={userDropdownItems}
-                isOpen={isDropdownOpen}
-                onOpenChange={setIsDropdownOpen}
-                trigger={
-                  <div class="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
-                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold text-white">
-                      A
-                    </div>
-                    <div class="flex flex-col items-start">
-                      <span class="font-medium">{user?.name || 'User'}</span>
-                      <span class="text-xs text-gray-500">{user?.email}</span>
-                    </div>
-                    <span class={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}>▼</span>
-                  </div>
-                }
-              />
+              {/* User info display */}
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold text-white">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                <div class="flex flex-col items-start">
+                  <span class="font-medium text-gray-900">{user?.name || 'User'}</span>
+                  <span class="text-xs text-gray-500">{user?.email}</span>
+                </div>
+              </div>
+
+              {/* Visual separator */}
+              <div class="h-8 w-px bg-gray-300"></div>
+
+              {/* Logout button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                class="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+              >
+                {t('navigation.signOut')}
+              </Button>
             </div>
           </div>
         </header>

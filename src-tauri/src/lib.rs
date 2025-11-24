@@ -123,9 +123,9 @@ pub fn run() {
             version: 2,
             description: "insert_default_users",
             sql: "INSERT OR IGNORE INTO users (id, email, password, name, role, permissions, created_at, last_login) VALUES 
-                (1, 'admin@postpos.com', 'admin123', 'Admin User', 'admin', '[\"*\"]', '2024-01-01T00:00:00.000Z', '2025-01-24T10:30:00.000Z'),
-                (2, 'manager@postpos.com', 'manager123', 'Store Manager', 'manager', '[\"sales.view\",\"sales.create\",\"sales.edit\",\"products.view\",\"products.create\",\"products.edit\",\"products.delete\",\"inventory.view\",\"inventory.edit\",\"reports.view\",\"reports.export\",\"users.view\",\"users.create\",\"users.edit\",\"users.delete\"]', '2024-01-15T00:00:00.000Z', '2025-01-23T14:45:00.000Z'),
-                (3, 'user@postpos.com', 'user123', 'John Cashier', 'user', '[\"sales.view\",\"sales.create\",\"products.view\"]', '2024-02-01T00:00:00.000Z', '2025-01-24T09:00:00.000Z');",
+                (1, 'admin@postpos.com', '123456', 'Admin User', 'admin', '[\"*\"]', '2024-01-01T00:00:00.000Z', '2025-01-24T10:30:00.000Z'),
+                (2, 'manager@postpos.com', '123456', 'Store Manager', 'manager', '[\"sales.view\",\"sales.create\",\"sales.edit\",\"products.view\",\"products.create\",\"products.edit\",\"products.delete\",\"inventory.view\",\"inventory.edit\",\"reports.view\",\"reports.export\",\"users.view\",\"users.create\",\"users.edit\",\"users.delete\"]', '2024-01-15T00:00:00.000Z', '2025-01-23T14:45:00.000Z'),
+                (3, 'user@postpos.com', '123456', 'John Cashier', 'user', '[\"sales.view\",\"sales.create\",\"products.view\"]', '2024-02-01T00:00:00.000Z', '2025-01-24T09:00:00.000Z');",
             kind: MigrationKind::Up,
         },
         Migration {
@@ -251,6 +251,12 @@ pub fn run() {
             version: 12,
             description: "update_existing_orders_with_default_user",
             sql: "UPDATE orders SET user_id = 1 WHERE user_id IS NULL;",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 13,
+            description: "add_deleted_at_to_users",
+            sql: "ALTER TABLE users ADD COLUMN deleted_at DATETIME;",
             kind: MigrationKind::Up,
         }
     ];

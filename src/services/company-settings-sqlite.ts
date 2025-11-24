@@ -13,6 +13,7 @@ export interface CompanySettings {
   phone?: string
   email?: string
   website?: string
+  receiptFooter?: string
   createdAt: string
   updatedAt: string
 }

@@ -8,6 +8,7 @@ export interface User {
   permissions: string[]
   createdAt: string
   lastLogin?: string
+  deletedAt?: string
 }
 
 export const DEFAULT_PERMISSIONS = {
@@ -41,6 +42,7 @@ interface DatabaseUser {
   permissions: string
   created_at: string
   last_login?: string
+  deleted_at?: string
 }
 
 export class AuthService {
@@ -57,7 +59,12 @@ export class AuthService {
 
   private async getDatabase(): Promise<Database> {
     if (!this.db) {
-      this.db = await Database.load('sqlite:postpos.db')
+      try {
+        this.db = await Database.load('sqlite:postpos.db')
+      } catch (error) {
+        console.error('Database initialization error:', error)
+        throw new Error('Failed to connect to database')
+      }
     }
     return this.db
   }
@@ -71,6 +78,7 @@ export class AuthService {
       permissions: JSON.parse(dbUser.permissions),
       createdAt: dbUser.created_at,
       lastLogin: dbUser.last_login,
+      deletedAt: dbUser.deleted_at,
     }
   }
 
@@ -78,16 +86,15 @@ export class AuthService {
     try {
       const db = await this.getDatabase()
 
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      const users = await db.select<DatabaseUser[]>('SELECT * FROM users WHERE email = ? LIMIT 1', [
-        email.toLowerCase(),
-      ])
+      const users = await db.select<DatabaseUser[]>(
+        'SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1',
+        [email.toLowerCase()],
+      )
 
       if (users.length === 0) {
         return {
           success: false,
-          error: 'No account found with this email address',
+          error: 'Invalid email or password',
         }
       }
 
@@ -96,7 +103,7 @@ export class AuthService {
       if (dbUser.password !== password) {
         return {
           success: false,
-          error: 'Incorrect password. Please try again.',
+          error: 'Invalid email or password',
         }
       }
 
@@ -105,9 +112,7 @@ export class AuthService {
       await db.execute('UPDATE users SET last_login = ? WHERE id = ?', [new Date().toISOString(), dbUser.id])
 
       this.currentUser = user
-
       localStorage.setItem('pos_user', JSON.stringify(user))
-      localStorage.setItem('pos_token', this.generateToken(user))
 
       return {
         success: true,
@@ -117,7 +122,7 @@ export class AuthService {
       console.error('Sign in error:', error)
       return {
         success: false,
-        error: 'An error occurred during sign in',
+        error: error instanceof Error ? error.message : 'Sign in failed',
       }
     }
   }
@@ -125,7 +130,6 @@ export class AuthService {
   signOut(): void {
     this.currentUser = null
     localStorage.removeItem('pos_user')
-    localStorage.removeItem('pos_token')
   }
 
   getCurrentUser(): User | null {
@@ -134,11 +138,13 @@ export class AuthService {
     }
 
     const storedUser = localStorage.getItem('pos_user')
-    const storedToken = localStorage.getItem('pos_token')
-
-    if (storedUser && storedToken && this.isValidToken(storedToken)) {
-      this.currentUser = JSON.parse(storedUser)
-      return this.currentUser
+    if (storedUser) {
+      try {
+        this.currentUser = JSON.parse(storedUser)
+        return this.currentUser
+      } catch {
+        return null
+      }
     }
 
     return null
@@ -162,27 +168,6 @@ export class AuthService {
     return user?.role === role
   }
 
-  private generateToken(user: User): string {
-    const payload = {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      iat: Date.now(),
-      exp: Date.now() + 24 * 60 * 60 * 1000,
-    }
-
-    return btoa(JSON.stringify(payload))
-  }
-
-  private isValidToken(token: string): boolean {
-    try {
-      const payload = JSON.parse(atob(token))
-      return payload.exp > Date.now()
-    } catch {
-      return false
-    }
-  }
-
   async getUsers(): Promise<User[]> {
     if (!this.hasPermission('users.view') && !this.hasRole('admin')) {
       throw new Error('Insufficient permissions')
@@ -196,6 +181,20 @@ export class AuthService {
     } catch (error) {
       console.error('Get users error:', error)
       throw new Error('Failed to fetch users')
+    }
+  }
+
+  async getAllUsersForLogin(): Promise<User[]> {
+    // Public method for login page - no authentication required
+    // Only return active users (not deleted)
+    try {
+      const db = await this.getDatabase()
+      const users = await db.select<DatabaseUser[]>('SELECT * FROM users WHERE deleted_at IS NULL ORDER BY name ASC')
+
+      return users.map((user) => this.convertDbUser(user))
+    } catch (error) {
+      console.error('Get users for login error:', error)
+      return []
     }
   }
 
@@ -218,16 +217,18 @@ export class AuthService {
       const db = await this.getDatabase()
       const offset = (page - 1) * limit
 
-      // Get total count
-      const countResult = await db.select<{ count: number }[]>('SELECT COUNT(*) as count FROM users')
+      // Get total count (active users only)
+      const countResult = await db.select<{ count: number }[]>(
+        'SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL',
+      )
       const totalCount = countResult[0]?.count || 0
       const totalPages = Math.ceil(totalCount / limit)
 
-      // Get paginated users
-      const users = await db.select<DatabaseUser[]>('SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?', [
-        limit,
-        offset,
-      ])
+      // Get paginated users (active users only)
+      const users = await db.select<DatabaseUser[]>(
+        'SELECT * FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?',
+        [limit, offset],
+      )
 
       return {
         users: users.map((user) => this.convertDbUser(user)),
@@ -249,10 +250,10 @@ export class AuthService {
       return { success: false, error: 'Not authenticated' }
     }
 
-    if (newPassword.length < 6) {
+    if (!/^\d{6}$/.test(newPassword)) {
       return {
         success: false,
-        error: 'New password must be at least 6 characters',
+        error: 'Password must be exactly 6 numbers',
       }
     }
 
@@ -289,10 +290,10 @@ export class AuthService {
       return { success: false, error: 'Insufficient permissions' }
     }
 
-    if (userData.password.length < 6) {
+    if (!/^\d{6}$/.test(userData.password)) {
       return {
         success: false,
-        error: 'Password must be at least 6 characters',
+        error: 'Password must be exactly 6 numbers',
       }
     }
 
@@ -339,7 +340,7 @@ export class AuthService {
 
   async updateUser(
     userId: string,
-    updates: Partial<Omit<User, 'id' | 'createdAt'>>,
+    updates: Partial<Omit<User, 'id' | 'createdAt'> & { password?: string }>,
   ): Promise<{ success: boolean; user?: User; error?: string }> {
     if (!this.hasPermission('users.edit') && !this.hasRole('admin')) {
       return { success: false, error: 'Insufficient permissions' }
@@ -348,10 +349,12 @@ export class AuthService {
     try {
       const db = await this.getDatabase()
 
-      const users = await db.select<DatabaseUser[]>('SELECT * FROM users WHERE id = ? LIMIT 1', [parseInt(userId, 10)])
+      const users = await db.select<DatabaseUser[]>('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1', [
+        parseInt(userId, 10),
+      ])
 
       if (users.length === 0) {
-        return { success: false, error: 'User not found' }
+        return { success: false, error: 'User not found or has been deleted' }
       }
 
       const currentUser = this.getCurrentUser()
@@ -393,6 +396,18 @@ export class AuthService {
         updateValues.push(JSON.stringify(DEFAULT_PERMISSIONS[updates.role]))
       }
 
+      // Allow admin to reset password when editing user
+      if (updates.password && this.hasRole('admin')) {
+        if (!/^\d{6}$/.test(updates.password)) {
+          return {
+            success: false,
+            error: 'Password must be exactly 6 numbers',
+          }
+        }
+        updateFields.push('password = ?')
+        updateValues.push(updates.password)
+      }
+
       if (updateFields.length > 0) {
         updateValues.push(parseInt(userId, 10))
 
@@ -424,16 +439,120 @@ export class AuthService {
     try {
       const db = await this.getDatabase()
 
-      const result = await db.execute('DELETE FROM users WHERE id = ?', [parseInt(userId, 10)])
+      // Soft delete by setting deleted_at timestamp
+      const result = await db.execute('UPDATE users SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL', [
+        new Date().toISOString(),
+        parseInt(userId, 10),
+      ])
 
       if (result.rowsAffected === 0) {
-        return { success: false, error: 'User not found' }
+        return { success: false, error: 'User not found or already deleted' }
       }
 
       return { success: true }
     } catch (error) {
       console.error('Delete user error:', error)
       return { success: false, error: 'Failed to delete user' }
+    }
+  }
+
+  async getDeletedUsers(): Promise<User[]> {
+    if (!this.hasPermission('users.delete') && !this.hasRole('admin')) {
+      throw new Error('Insufficient permissions')
+    }
+
+    try {
+      const db = await this.getDatabase()
+      const users = await db.select<DatabaseUser[]>(
+        'SELECT * FROM users WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC',
+      )
+
+      return users.map((user) => this.convertDbUser(user))
+    } catch (error) {
+      console.error('Get deleted users error:', error)
+      throw new Error('Failed to fetch deleted users')
+    }
+  }
+
+  async restoreUser(userId: string): Promise<{ success: boolean; user?: User; error?: string }> {
+    if (!this.hasPermission('users.delete') && !this.hasRole('admin')) {
+      return { success: false, error: 'Insufficient permissions' }
+    }
+
+    try {
+      const db = await this.getDatabase()
+
+      // Restore by setting deleted_at to NULL
+      const result = await db.execute('UPDATE users SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL', [
+        parseInt(userId, 10),
+      ])
+
+      if (result.rowsAffected === 0) {
+        return { success: false, error: 'Deleted user not found' }
+      }
+
+      // Get the restored user
+      const users = await db.select<DatabaseUser[]>('SELECT * FROM users WHERE id = ? LIMIT 1', [parseInt(userId, 10)])
+
+      if (users.length === 0) {
+        return { success: false, error: 'Failed to retrieve restored user' }
+      }
+
+      const restoredUser = this.convertDbUser(users[0])
+      return { success: true, user: restoredUser }
+    } catch (error) {
+      console.error('Restore user error:', error)
+      return { success: false, error: 'Failed to restore user' }
+    }
+  }
+
+  async hardDeleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.hasPermission('users.delete') && !this.hasRole('admin')) {
+      return { success: false, error: 'Insufficient permissions' }
+    }
+
+    const currentUser = this.getCurrentUser()
+    if (currentUser?.id === userId) {
+      return { success: false, error: 'Cannot delete your own account' }
+    }
+
+    try {
+      const db = await this.getDatabase()
+
+      // First verify user is already soft deleted
+      const users = await db.select<DatabaseUser[]>(
+        'SELECT * FROM users WHERE id = ? AND deleted_at IS NOT NULL LIMIT 1',
+        [parseInt(userId, 10)],
+      )
+
+      if (users.length === 0) {
+        return { success: false, error: 'User not found or not deleted' }
+      }
+
+      // Disable foreign key constraints temporarily
+      await db.execute('PRAGMA foreign_keys = OFF')
+
+      try {
+        // Permanently delete the user
+        const result = await db.execute('DELETE FROM users WHERE id = ?', [parseInt(userId, 10)])
+
+        if (result.rowsAffected === 0) {
+          await db.execute('PRAGMA foreign_keys = ON')
+          return { success: false, error: 'User not found' }
+        }
+
+        // Set user_id to NULL in orders table for this deleted user
+        await db.execute('UPDATE orders SET user_id = NULL WHERE user_id = ?', [parseInt(userId, 10)])
+
+        await db.execute('PRAGMA foreign_keys = ON')
+        return { success: true }
+      } catch (innerError) {
+        await db.execute('PRAGMA foreign_keys = ON')
+        throw innerError
+      }
+    } catch (error) {
+      console.error('Hard delete user error:', error)
+      return { success: false, error: 'Failed to permanently delete user' }
     }
   }
 }

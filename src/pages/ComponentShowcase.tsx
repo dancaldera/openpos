@@ -1,20 +1,6 @@
 import { useState } from 'preact/hooks'
 import { toast } from 'sonner'
-import {
-  Button,
-  Container,
-  Form,
-  FormActions,
-  FormField,
-  FormGroup,
-  Heading,
-  Input,
-  Sidebar,
-  SidebarGroup,
-  SidebarItem,
-  SidebarNav,
-  Text,
-} from '../components/ui'
+import { Button, Form, Input, Sidebar } from '../components/ui'
 
 export default function ComponentShowcase() {
   const [inputValue, setInputValue] = useState('')
@@ -40,94 +26,72 @@ export default function ComponentShowcase() {
   return (
     <div class="space-y-8">
       <div class="bg-white rounded-lg shadow p-6">
-        <Heading level={1}>UI Components Showcase</Heading>
-        <Text variant="lead" color="muted" class="mt-2">
-          This is a developer showcase for all UI components in the system.
-        </Text>
+        <h2 class="text-3xl font-bold">UI Components Showcase</h2>
+        <p class="text-lg text-gray-600 mt-2">This is a developer showcase for all UI components in the system.</p>
       </div>
 
       {/* Typography Showcase */}
       <div class="bg-white rounded-lg shadow p-6">
-        <Heading level={2}>Typography Components</Heading>
+        <h2 class="text-2xl font-semibold">Typography Components</h2>
 
         <div class="space-y-6 mt-6">
           <div>
-            <Text variant="caption" color="muted" class="mb-3">
-              Headings
-            </Text>
+            <p class="text-sm text-gray-500 mb-3">h2s</p>
             <div class="space-y-3">
-              <Heading level={1}>Heading Level 1</Heading>
-              <Heading level={2}>Heading Level 2</Heading>
-              <Heading level={3}>Heading Level 3</Heading>
-              <Heading level={4}>Heading Level 4</Heading>
-              <Heading level={5}>Heading Level 5</Heading>
-              <Heading level={6}>Heading Level 6</Heading>
+              <h2 class="text-3xl font-bold">h2 Level 1</h2>
+              <h2 class="text-2xl font-semibold">h2 Level 2</h2>
+              <h2 class="text-xl font-semibold">h2 Level 3</h2>
+              <h2 class="text-lg font-medium">h2 Level 4</h2>
+              <h2 class="text-base font-medium">h2 Level 5</h2>
+              <h2 class="text-sm font-medium">h2 Level 6</h2>
             </div>
           </div>
 
           <div>
-            <Text variant="caption" color="muted" class="mb-3">
-              Heading Sizes
-            </Text>
+            <p class="text-sm text-gray-500 mb-3">h2 Sizes</p>
             <div class="space-y-3">
-              <Heading level={2} size="4xl">
-                Custom 4XL Size
-              </Heading>
-              <Heading level={3} size="2xl" color="success">
-                Success Colored Heading
-              </Heading>
-              <Heading level={4} weight="normal" align="center">
-                Centered Normal Weight
-              </Heading>
+              <h2 class="text-2xl font-semibold">Custom 4XL Size</h2>
+              <h2 class="text-xl font-semibold">Success Colored h2</h2>
+              <h2 class="text-lg font-medium">Centered Normal Weight</h2>
             </div>
           </div>
 
           <div>
-            <Text variant="caption" color="muted" class="mb-3">
-              Text Variants
-            </Text>
+            <p class="text-sm text-gray-500 mb-3">p Variants</p>
             <div class="space-y-3">
-              <Text variant="lead">Lead text - larger and more prominent for introductions</Text>
-              <Text variant="body">Body text - the standard text used in most content</Text>
-              <Text variant="caption">Caption text - smaller text for captions and metadata</Text>
-              <Text variant="small">Small text - the smallest text size available</Text>
+              <p class="text-lg">Lead text - larger and more prominent for introductions</p>
+              <p class="text-base">Body text - the standard text used in most content</p>
+              <p class="text-sm">Caption text - smaller text for captions and metadata</p>
+              <p class="text-xs">Small text - the smallest text size available</p>
             </div>
           </div>
 
           <div>
-            <Text variant="caption" color="muted" class="mb-3">
-              Text Colors & Styles
-            </Text>
+            <p class="text-sm text-gray-500 mb-3">p Colors & Styles</p>
             <div class="space-y-2">
-              <Text color="primary">Primary text color</Text>
-              <Text color="secondary">Secondary text color</Text>
-              <Text color="muted">Muted text color</Text>
-              <Text color="success">Success text color</Text>
-              <Text color="warning">Warning text color</Text>
-              <Text color="danger">Danger text color</Text>
-              <Text weight="bold">Bold text weight</Text>
-              <Text decoration="underline">Underlined text</Text>
-              <Text transform="uppercase">Uppercase text</Text>
-              <Text truncate class="w-48">
+              <p class="text-blue-600">Primary text color</p>
+              <p class="text-gray-700">Secondary text color</p>
+              <p class="text-gray-500">Muted text color</p>
+              <p>Success text color</p>
+              <p class="text-yellow-600">Warning text color</p>
+              <p class="text-red-600">Danger text color</p>
+              <p class="font-bold">Bold text weight</p>
+              <p class="underline">Underlined text</p>
+              <p class="uppercase">Uppercase text</p>
+              <p class="truncate w-48">
                 This is a very long text that will be truncated when it exceeds the container width
-              </Text>
+              </p>
             </div>
           </div>
 
           <div>
-            <Text variant="caption" color="muted" class="mb-3">
-              Text Elements
-            </Text>
+            <p class="text-sm text-gray-500 mb-3">p Elements</p>
             <div class="space-y-2">
-              <Text as="p">Paragraph element</Text>
-              <Text as="span">Span element (inline)</Text>
-              <Text as="strong" weight="bold">
-                Strong element
-              </Text>
-              <Text as="em">Emphasized element</Text>
-              <Text as="small" variant="small">
-                Small element
-              </Text>
+              <p class="block">Paragraph element</p>
+              <p class="inline">Span element (inline)</p>
+              <p class="font-bold">Strong element</p>
+              <p class="italic">Emphasized element</p>
+              <p class="text-xs">Small element</p>
             </div>
           </div>
         </div>
@@ -315,57 +279,53 @@ export default function ComponentShowcase() {
         </div>
       </div>
 
-      {/* Container Showcase */}
+      {/* div Showcase */}
       <div class="bg-white rounded-lg shadow p-6">
-        <Heading level={2}>Container Component</Heading>
+        <h2 class="text-2xl font-semibold">div Component</h2>
 
         <div class="space-y-6 mt-6">
           <div>
-            <Text variant="caption" color="muted" class="mb-3">
-              Different Container Sizes
-            </Text>
+            <p class="text-sm text-gray-500 mb-3">Different Container Sizes</p>
             <div class="space-y-4">
               <div class="bg-gray-100 p-2">
-                <Container size="sm" class="bg-blue-50 border border-blue-200">
-                  <Text>Small Container (max-w-sm)</Text>
-                </Container>
+                <div class="max-w-sm bg-blue-50 border border-blue-200 p-4">
+                  <p>Small Container (max-w-sm)</p>
+                </div>
               </div>
 
               <div class="bg-gray-100 p-2">
-                <Container size="md" class="bg-green-50 border border-green-200">
-                  <Text>Medium Container (max-w-md)</Text>
-                </Container>
+                <div class="max-w-md bg-green-50 border border-green-200 p-4">
+                  <p>Medium Container (max-w-md)</p>
+                </div>
               </div>
 
               <div class="bg-gray-100 p-2">
-                <Container size="lg" class="bg-yellow-50 border border-yellow-200">
-                  <Text>Large Container (max-w-4xl) - Default size</Text>
-                </Container>
+                <div class="max-w-4xl bg-yellow-50 border border-yellow-200 p-4">
+                  <p>Large Container (max-w-4xl) - Default size</p>
+                </div>
               </div>
 
               <div class="bg-gray-100 p-2">
-                <Container size="xl" class="bg-purple-50 border border-purple-200">
-                  <Text>Extra Large Container (max-w-6xl)</Text>
-                </Container>
+                <div class="max-w-6xl bg-purple-50 border border-purple-200 p-4">
+                  <p>Extra Large Container (max-w-6xl)</p>
+                </div>
               </div>
             </div>
           </div>
 
           <div>
-            <Text variant="caption" color="muted" class="mb-3">
-              Container with Different Padding
-            </Text>
+            <p class="text-sm text-gray-500 mb-3">Containers with Different Padding</p>
             <div class="space-y-4">
               <div class="bg-gray-100 p-2">
-                <Container size="md" padding="sm" class="bg-red-50 border border-red-200">
-                  <Text>Small Padding</Text>
-                </Container>
+                <div class="max-w-md bg-red-50 border border-red-200 p-2">
+                  <p>Small Padding</p>
+                </div>
               </div>
 
               <div class="bg-gray-100 p-2">
-                <Container size="md" padding="lg" class="bg-indigo-50 border border-indigo-200">
-                  <Text>Large Padding</Text>
-                </Container>
+                <div class="max-w-md bg-indigo-50 border border-indigo-200 p-6">
+                  <p>Large Padding</p>
+                </div>
               </div>
             </div>
           </div>
@@ -374,68 +334,70 @@ export default function ComponentShowcase() {
 
       {/* Form Components Showcase */}
       <div class="bg-white rounded-lg shadow p-6">
-        <Heading level={2}>Form Components</Heading>
+        <h2 class="text-2xl font-semibold">Form Components</h2>
 
         <div class="space-y-8 mt-6">
           <div>
-            <Text variant="caption" color="muted" class="mb-4">
-              Basic Form with FormField
-            </Text>
-            <Container size="md" padding="md" class="bg-gray-50 border border-gray-200">
+            <p class="text-sm text-gray-500 mb-4">Basic Form Example</p>
+            <div class="max-w-md p-4 bg-gray-50 border border-gray-200">
               <Form onSubmit={(e) => console.log('Form submitted!', e)}>
-                <FormField>
+                <div>
                   <Input label="Username" placeholder="Enter your username" required />
-                </FormField>
+                </div>
 
-                <FormField>
+                <div>
                   <Input label="Password" type="password" placeholder="Enter your password" required />
-                </FormField>
+                </div>
 
-                <FormActions>
+                <div class="flex gap-3">
                   <Button type="button" variant="outline">
                     Cancel
                   </Button>
                   <Button type="submit" variant="primary">
                     Sign In
                   </Button>
-                </FormActions>
+                </div>
               </Form>
-            </Container>
+            </div>
           </div>
 
           <div>
-            <Text variant="caption" color="muted" class="mb-4">
-              Advanced Form with FormGroup
-            </Text>
-            <Container size="lg" padding="md" class="bg-gray-50 border border-gray-200">
+            <p class="text-sm text-gray-500 mb-4">Advanced Form Example</p>
+            <div class="max-w-4xl p-6 bg-gray-50 border border-gray-200">
               <Form spacing="lg" onSubmit={(e) => console.log('Advanced form submitted!', e)}>
-                <FormGroup title="Personal Information" description="Please provide your basic information">
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField>
-                      <Input label="First Name" placeholder="John" required />
-                    </FormField>
+                <div class="space-y-6">
+                  <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Personal Information</h3>
+                    <p class="text-sm text-gray-600 mb-4">Please provide your basic information</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Input label="First Name" placeholder="John" required />
+                      </div>
 
-                    <FormField>
-                      <Input label="Last Name" placeholder="Doe" required />
-                    </FormField>
+                      <div>
+                        <Input label="Last Name" placeholder="Doe" required />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Input label="Email Address" type="email" placeholder="john.doe@example.com" required />
+                    </div>
                   </div>
 
-                  <FormField>
-                    <Input label="Email Address" type="email" placeholder="john.doe@example.com" required />
-                  </FormField>
-                </FormGroup>
+                  <div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Contact Details</h3>
+                    <p class="text-sm text-gray-600 mb-4">How can we reach you?</p>
+                    <div>
+                      <Input label="Phone Number" type="tel" placeholder="+1 (555) 123-4567" />
+                    </div>
 
-                <FormGroup title="Contact Details" description="How can we reach you?">
-                  <FormField>
-                    <Input label="Phone Number" type="tel" placeholder="+1 (555) 123-4567" />
-                  </FormField>
+                    <div>
+                      <Input label="Company" placeholder="Acme Corp" />
+                    </div>
+                  </div>
+                </div>
 
-                  <FormField>
-                    <Input label="Company" placeholder="Acme Corp" />
-                  </FormField>
-                </FormGroup>
-
-                <FormActions align="between">
+                <div class="flex justify-between items-center mt-6">
                   <Button type="button" variant="ghost">
                     Save Draft
                   </Button>
@@ -448,49 +410,41 @@ export default function ComponentShowcase() {
                       Submit Application
                     </Button>
                   </div>
-                </FormActions>
+                </div>
               </Form>
-            </Container>
+            </div>
           </div>
 
           <div>
-            <Text variant="caption" color="muted" class="mb-4">
-              Form Actions Alignment Options
-            </Text>
+            <p class="text-sm text-gray-500 mb-4">Form Actions Alignment Options</p>
             <div class="space-y-4">
-              <Container size="md" padding="sm" class="bg-gray-50 border border-gray-200">
-                <Text variant="small" color="muted" class="mb-2">
-                  Left Aligned
-                </Text>
-                <FormActions align="left">
+              <div class="max-w-md p-3 bg-gray-50 border border-gray-200">
+                <p class="text-xs text-gray-500 mb-2">Left Aligned</p>
+                <div class="flex justify-start gap-2">
                   <Button variant="primary" size="sm">
                     Save
                   </Button>
                   <Button variant="outline" size="sm">
                     Cancel
                   </Button>
-                </FormActions>
-              </Container>
+                </div>
+              </div>
 
-              <Container size="md" padding="sm" class="bg-gray-50 border border-gray-200">
-                <Text variant="small" color="muted" class="mb-2">
-                  Center Aligned
-                </Text>
-                <FormActions align="center">
+              <div class="max-w-md p-3 bg-gray-50 border border-gray-200">
+                <p class="text-xs text-gray-500 mb-2">Center Aligned</p>
+                <div class="flex justify-center gap-2">
                   <Button variant="primary" size="sm">
                     Save
                   </Button>
                   <Button variant="outline" size="sm">
                     Cancel
                   </Button>
-                </FormActions>
-              </Container>
+                </div>
+              </div>
 
-              <Container size="md" padding="sm" class="bg-gray-50 border border-gray-200">
-                <Text variant="small" color="muted" class="mb-2">
-                  Space Between
-                </Text>
-                <FormActions align="between">
+              <div class="max-w-md p-3 bg-gray-50 border border-gray-200">
+                <p class="text-xs text-gray-500 mb-2">Space Between</p>
+                <div class="flex justify-between items-center">
                   <Button variant="ghost" size="sm">
                     Reset
                   </Button>
@@ -502,8 +456,8 @@ export default function ComponentShowcase() {
                       Save
                     </Button>
                   </div>
-                </FormActions>
-              </Container>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -511,66 +465,51 @@ export default function ComponentShowcase() {
 
       {/* Sidebar Component Showcase */}
       <div class="bg-white rounded-lg shadow p-6">
-        <Heading level={2}>Sidebar Component</Heading>
+        <h2 class="text-2xl font-semibold">Sidebar Component</h2>
 
         <div class="space-y-8 mt-6">
           <div>
-            <Text variant="caption" color="muted" class="mb-4">
-              Interactive Sidebar with Navigation
-            </Text>
+            <p class="text-sm text-gray-500 mb-4">Interactive Sidebar with Navigation</p>
             <div class="h-96 flex border border-gray-200 rounded-lg overflow-hidden">
-              <Sidebar width="md" backgroundColor="dark" collapsible defaultCollapsed={false}>
-                <SidebarNav>
-                  {({ isCollapsed }: { isCollapsed: boolean }) => (
-                    <SidebarGroup title="Navigation" isCollapsed={isCollapsed}>
-                      <SidebarItem
-                        item={{
-                          id: 'dashboard',
-                          label: 'Dashboard',
-                          icon: '📊',
-                          active: true,
-                          onClick: () => console.log('Dashboard clicked'),
-                        }}
-                        isCollapsed={isCollapsed}
-                      />
-                      <SidebarItem
-                        item={{
-                          id: 'sales',
-                          label: 'Sales',
-                          icon: '💰',
-                          onClick: () => console.log('Sales clicked'),
-                        }}
-                        isCollapsed={isCollapsed}
-                      />
-                      <SidebarItem
-                        item={{
-                          id: 'products',
-                          label: 'Products',
-                          icon: '📦',
-                          badge: '12',
-                          onClick: () => console.log('Products clicked'),
-                        }}
-                        isCollapsed={isCollapsed}
-                      />
-                      <SidebarItem
-                        item={{
-                          id: 'settings',
-                          label: 'Settings',
-                          icon: '⚙️',
-                          onClick: () => console.log('Settings clicked'),
-                        }}
-                        isCollapsed={isCollapsed}
-                      />
-                    </SidebarGroup>
-                  )}
-                </SidebarNav>
-              </Sidebar>
+              <Sidebar
+                width="md"
+                collapsible
+                defaultCollapsed={false}
+                items={[
+                  {
+                    id: 'dashboard',
+                    label: 'Dashboard',
+                    icon: '📊',
+                    active: true,
+                    onClick: () => console.log('Dashboard clicked'),
+                  },
+                  {
+                    id: 'sales',
+                    label: 'Sales',
+                    icon: '💰',
+                    onClick: () => console.log('Sales clicked'),
+                  },
+                  {
+                    id: 'products',
+                    label: 'Products',
+                    icon: '📦',
+                    badge: '12',
+                    onClick: () => console.log('Products clicked'),
+                  },
+                  {
+                    id: 'settings',
+                    label: 'Settings',
+                    icon: '⚙️',
+                    onClick: () => console.log('Settings clicked'),
+                  },
+                ]}
+              />
 
               <div class="flex-1 p-6 bg-gray-50">
-                <Text variant="lead">Try the collapse button!</Text>
-                <Text color="muted" class="mt-2">
+                <p class="text-lg">Try the collapse button!</p>
+                <p class="text-gray-500 mt-2">
                   Click the arrow button in the sidebar header to collapse/expand the sidebar.
-                </Text>
+                </p>
               </div>
             </div>
           </div>

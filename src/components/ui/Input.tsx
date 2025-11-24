@@ -19,6 +19,9 @@ interface InputProps {
   leftIcon?: JSX.Element
   rightIcon?: JSX.Element
   onRightIconClick?: () => void
+  pattern?: string
+  inputMode?: string
+  maxLength?: number
 }
 
 function clsx(...classes: (string | undefined | boolean)[]): string {
@@ -49,16 +52,9 @@ export default function Input({
   const inputId = id || `input-${Math.random().toString(36).substring(2, 11)}`
 
   const baseClasses = clsx(
-    // Base layout and glass effect
-    'relative w-full rounded-xl transition-colors duration-150',
-    'backdrop-blur-md bg-white/10 border border-white/20',
-    // Accessible focus-visible ring (matches Button)
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white/10',
-    'hover:bg-white/15',
-    // Disabled state
-    disabled ? 'opacity-40 cursor-not-allowed' : '',
-    // Shadow for depth (no change on focus)
-    'shadow-lg',
+    'w-full rounded-xl border transition-colors duration-150',
+    'focus:outline-none focus:ring-2 focus:ring-offset-2',
+    disabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'bg-white',
   )
 
   const sizes = {
@@ -68,17 +64,11 @@ export default function Input({
   }
 
   const stateClasses = error
-    ? clsx(
-        'border-red-400/50',
-        'bg-red-50/10',
-        // Red focus ring when invalid
-        'focus-visible:ring-red-500/60',
-      )
+    ? clsx('border-red-500 text-red-900 placeholder-red-300', 'focus:ring-red-500 focus:border-red-500')
     : clsx(
-        'border-white/20',
-        'hover:border-white/30',
-        // Blue focus ring by default
-        'focus-visible:ring-blue-500/60',
+        'border-gray-300 text-gray-900 placeholder-gray-500',
+        'focus:ring-blue-500 focus:border-blue-500',
+        'hover:border-gray-400',
       )
 
   const classes = clsx(baseClasses, sizes[size], stateClasses, className)
@@ -86,16 +76,16 @@ export default function Input({
   return (
     <div class="w-full">
       {label && (
-        <label for={inputId} class="block text-sm font-medium text-gray-700 mb-2 drop-shadow-sm">
+        <label for={inputId} class="block text-sm font-medium text-gray-700 mb-2">
           {label}
-          {required && <span class="text-red-500 ml-1 drop-shadow-sm">*</span>}
+          {required && <span class="text-red-500 ml-1">*</span>}
         </label>
       )}
 
       <div class="relative">
         {/* Left Icon */}
         {leftIcon && (
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <div class="h-5 w-5 text-gray-400 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">
               {leftIcon}
             </div>
@@ -119,7 +109,7 @@ export default function Input({
 
         {/* Right Icon */}
         {rightIcon && (
-          <div class="absolute inset-y-0 right-0 pr-3 flex items-center z-10">
+          <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
             {onRightIconClick ? (
               <button
                 type="button"
@@ -136,27 +126,11 @@ export default function Input({
             )}
           </div>
         )}
-
-        {/* Glass highlight overlay */}
-        <div
-          class={clsx(
-            'absolute inset-0 rounded-xl pointer-events-none z-0',
-            'bg-gradient-to-b from-white/10 via-transparent to-transparent',
-            'opacity-60',
-          )}
-        />
       </div>
 
-      {error && (
-        <div class="mt-2 p-2 rounded-lg bg-red-500/10 backdrop-blur-sm border border-red-400/20">
-          <p class="text-sm text-red-600 flex items-center drop-shadow-sm">
-            <span class="mr-2">⚠️</span>
-            {error}
-          </p>
-        </div>
-      )}
+      {error && <p class="mt-2 text-sm text-red-600">{error}</p>}
 
-      {helperText && !error && <p class="mt-1 text-sm text-gray-600 drop-shadow-sm">{helperText}</p>}
+      {helperText && !error && <p class="mt-1 text-sm text-gray-600">{helperText}</p>}
     </div>
   )
 }

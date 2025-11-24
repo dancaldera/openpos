@@ -16,7 +16,7 @@ import Orders from './pages/Orders'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
-  const { isAuthenticated, isLoading, signIn } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
 
   // Initialize auth and language on app start
   useEffect(() => {
@@ -44,7 +44,7 @@ function App() {
   if (!isAuthenticated) {
     return (
       <>
-        <SignIn onSignIn={signIn} />
+        <SignIn />
         <Toaster position="top-right" />
       </>
     )

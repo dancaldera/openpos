@@ -52,70 +52,52 @@ export function Pagination({
 
   if (totalPages <= 1) return null
 
-  const visiblePages = getVisiblePages()
-
   return (
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+    <div class="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg">
       <div class="text-sm text-gray-700">
         Showing <span class="font-medium">{startItem}</span> to <span class="font-medium">{endItem}</span> of{' '}
         <span class="font-medium">{totalCount}</span> results
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex items-center space-x-2">
         <Button
-          size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage <= 1 || isLoading}
-          class="flex items-center gap-1"
+          disabled={currentPage === 1 || isLoading}
+          class="px-3 py-1"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Previous">
-            <title>Previous page</title>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
           Previous
         </Button>
 
-        <div class="flex items-center gap-1">
-          {visiblePages.map((page, index) =>
-            page === '...' ? (
-              <span
-                key={`ellipsis-${String(visiblePages[index - 1])}-${String(visiblePages[index + 1])}`}
-                class="px-2 py-1 text-gray-500"
-              >
-                ...
-              </span>
-            ) : (
-              <Button
-                key={page}
-                size="sm"
-                variant={currentPage === page ? 'primary' : 'outline'}
-                onClick={() => onPageChange(page as number)}
-                disabled={isLoading}
-                class={`min-w-[2.5rem] ${
-                  currentPage === page
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'text-gray-700 border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {page}
-              </Button>
-            ),
-          )}
+        <div class="flex items-center space-x-1">
+          {getVisiblePages().map((page, index) => {
+            const key = typeof page === 'number' ? `page-${page}` : `ellipsis-${index}`
+            return (
+              <div key={key}>
+                {page === '...' ? (
+                  <span class="px-3 py-1 text-gray-500">...</span>
+                ) : (
+                  <Button
+                    variant={currentPage === page ? 'primary' : 'ghost'}
+                    onClick={() => onPageChange(page as number)}
+                    disabled={isLoading}
+                    class="px-3 py-1 min-w-[40px]"
+                  >
+                    {page}
+                  </Button>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         <Button
-          size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages || isLoading}
-          class="flex items-center gap-1"
+          disabled={currentPage === totalPages || isLoading}
+          class="px-3 py-1"
         >
           Next
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Next">
-            <title>Next page</title>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
         </Button>
       </div>
     </div>

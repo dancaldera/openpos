@@ -2,14 +2,8 @@ import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import {
   Button,
-  Container,
   Dialog,
-  DialogBody,
   DialogConfirm,
-  DialogFooter,
-  Dropdown,
-  type DropdownItem,
-  Heading,
   Input,
   Pagination,
   Select,
@@ -19,13 +13,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Text,
 } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
 import { authService } from '../services/auth-sqlite'
 import { companySettingsService } from '../services/company-settings-sqlite'
 import { type Order, orderService } from '../services/orders-sqlite'
-import { PrintService } from '../services/print-service'
+import { formatReceiptData, printThermalReceipt } from '../services/print-service'
 import { type Product, productService } from '../services/products-sqlite'
 import { userService } from '../services/users-sqlite'
 
@@ -139,6 +132,11 @@ export default function Orders() {
       ])
 
       // Set pagination data
+      console.log('Orders loaded:', {
+        orders: ordersResult.orders,
+        totalCount: ordersResult.totalCount,
+        allOrdersForStats,
+      })
       setOrders(ordersResult.orders)
       setAllOrders(allOrdersForStats) // All orders for filtering and statistics
       setTotalCount(ordersResult.totalCount)
@@ -165,7 +163,6 @@ export default function Orders() {
         userMapping[user.id] = user.name
       })
       setUsers(userMapping)
-
     } catch (err: unknown) {
       toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
@@ -205,6 +202,12 @@ export default function Orders() {
       return sortOrder === 'asc' ? comparison : -comparison
     })
 
+    console.log('Filtered orders:', {
+      selectedStatus,
+      searchQuery,
+      filteredCount: filtered.length,
+      filtered,
+    })
     return filtered
   })()
 
@@ -262,8 +265,7 @@ export default function Orders() {
         await loadData(selectedDateFilter)
         const updatedProducts = await productService.getProducts()
         setProducts(updatedProducts.filter((p) => p.isActive && p.stock > 0))
-
-        } else {
+      } else {
         toast.error(result.error || t('errors.generic'))
       }
     } catch (_err) {
@@ -349,7 +351,7 @@ export default function Orders() {
   const removeItemFromOrder = (productId: string) => {
     const product = products.find((p) => p.id === productId)
     const productName = product?.name || 'Product'
-    
+
     toast.info(t('orders.itemRemoved', { product: productName }))
     setNewOrder({
       ...newOrder,
@@ -389,7 +391,7 @@ export default function Orders() {
         setEditOrderItems([])
         setEditPaymentMethod('cash')
         setEditNotes('')
-        } else {
+      } else {
         toast.error(result.error || t('errors.generic'))
       }
     } catch (_err) {
@@ -429,7 +431,7 @@ export default function Orders() {
   const removeItemFromEditOrder = (productId: string) => {
     const product = products.find((p) => p.id === productId)
     const productName = product?.name || 'Product'
-    
+
     toast.info(t('orders.itemRemoved', { product: productName }))
     setEditOrderItems(editOrderItems.filter((item) => item.productId !== productId))
   }
@@ -521,15 +523,15 @@ export default function Orders() {
       }
 
       // Format receipt data
-      const receiptData = PrintService.formatReceiptData(order, settings)
+      const receiptData = formatReceiptData(order, settings)
 
       // Send to printer
-      const response = await PrintService.printThermalReceipt(receiptData)
+      const response = await printThermalReceipt(receiptData)
 
       clearTimeout(timeoutId)
       toast.success(t('orders.printSuccess'))
       console.log('Print response:', response)
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId)
       console.error('Print error:', error)
       toast.error(t('orders.printError'))
@@ -538,78 +540,6 @@ export default function Orders() {
       // Clear status after 3 seconds
       setTimeout(() => setPrintStatus(null), 3000)
     }
-  }
-
-  const getOrderActionItems = (order: Order): DropdownItem[] => {
-    const items: DropdownItem[] = [
-      {
-        id: `view-${order.id}`,
-        label: t('orders.viewDetails'),
-        icon: '👁️',
-        onClick: () => setSelectedOrder(order),
-      },
-      {
-        id: `print-${order.id}`,
-        label: t('orders.printReceipt'),
-        icon: '🖨️',
-        onClick: () => handleThermalPrint(order),
-      },
-    ]
-
-    if (order.status === 'pending') {
-      items.push(
-        {
-          id: `edit-${order.id}`,
-          label: t('orders.updateOrder'),
-          icon: '✏️',
-          onClick: () => handleEditOrder(order),
-        },
-        {
-          id: `pay-${order.id}`,
-          label: t('orders.markAsPaid'),
-          icon: '💰',
-          onClick: () => handleUpdateStatus(order.id, 'paid'),
-        },
-        {
-          id: `cancel-${order.id}`,
-          label: t('orders.cancelOrder'),
-          icon: '❌',
-          onClick: () => handleUpdateStatus(order.id, 'cancelled'),
-          variant: 'danger',
-        },
-      )
-    }
-
-    if (order.status === 'paid') {
-      items.push({
-        id: `complete-${order.id}`,
-        label: t('orders.markComplete'),
-        icon: '✅',
-        onClick: () => handleUpdateStatus(order.id, 'completed'),
-      })
-    }
-
-    // Only show delete option for admin and manager roles
-    if (currentUserRole === 'admin' || currentUserRole === 'manager') {
-      items.push(
-        {
-          id: `separator-${order.id}`,
-          label: '',
-          icon: '',
-          onClick: () => {},
-          separator: true,
-        },
-        {
-          id: `delete-${order.id}`,
-          label: t('orders.deleteOrder'),
-          icon: '🗑️',
-          onClick: () => setDeleteConfirm(order.id),
-          variant: 'danger',
-        },
-      )
-    }
-
-    return items
   }
 
   if (isLoading) {
@@ -624,7 +554,7 @@ export default function Orders() {
   }
 
   return (
-    <Container size="xl">
+    <div class="max-w-6xl mx-auto px-6 py-4">
       <div class="flex justify-between items-center mb-6">
         <div>
           <h1 class="text-2xl font-bold text-gray-900 mb-2">{t('orders.title')}</h1>
@@ -650,7 +580,6 @@ export default function Orders() {
           {t('orders.createOrder')}
         </Button>
       </div>
-
 
       {/* Print Status Message */}
       {printStatus && (
@@ -812,7 +741,7 @@ export default function Orders() {
                 onClick={() => setSelectedOrder(order)}
               >
                 <TableCell>
-                  <Text>#{order.id}</Text>
+                  <span class="font-medium">#{order.id}</span>
                 </TableCell>
                 <TableCell>
                   <div class="max-w-xs">
@@ -890,20 +819,10 @@ export default function Orders() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()} class="relative">
-                  <Dropdown
-                    trigger={
-                      <span class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all hover:shadow-md cursor-pointer group">
-                        <span class="mr-2 group-hover:scale-110 transition-transform">⚙️</span>
-                        <span class="font-semibold">{t('common.actions')}</span>
-                        <span class="ml-1 text-xs group-hover:rotate-180 transition-transform duration-200">▼</span>
-                      </span>
-                    }
-                    items={getOrderActionItems(order)}
-                    align="right"
-                    width="w-52"
-                    usePortal={true}
-                  />
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Button size="sm" variant="outline" onClick={() => setSelectedOrder(order)}>
+                    👁️ {t('orders.viewDetails')}
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -939,20 +858,20 @@ export default function Orders() {
                         ? '💳'
                         : '❌'}
             </div>
-            <Heading level={3} class="mb-3 text-gray-900">
+            <h2 class="text-lg font-semibold mb-3 text-gray-900">
               {searchQuery
                 ? t('orders.noMatchingOrders')
                 : selectedStatus === 'all'
                   ? t('orders.noOrdersYet')
                   : t('orders.noOrdersWithStatus', { status: selectedStatus })}
-            </Heading>
-            <Text class="text-gray-600 mb-6 max-w-md mx-auto">
+            </h2>
+            <p class="text-gray-600 mb-6 max-w-md mx-auto">
               {searchQuery
                 ? t('orders.noMatchingOrdersDesc', { query: searchQuery })
                 : selectedStatus === 'all'
                   ? t('orders.noOrdersYetDesc')
                   : t('orders.noOrdersWithStatusDesc', { status: selectedStatus })}
-            </Text>
+            </p>
             {!searchQuery && selectedStatus === 'all' && (
               <Button onClick={() => setIsCreateModalOpen(true)} class="mt-4">
                 <span class="mr-2">➕</span>
@@ -970,11 +889,11 @@ export default function Orders() {
         title={t('orders.createNewOrder')}
         size="full"
       >
-        <DialogBody>
-          <div class="space-y-6">
+        <div>
+          <div class="space-y-8">
             {/* Available Products */}
             <div>
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                 <div>
                   <h3 class="text-lg font-semibold text-gray-900">{t('orders.availableProducts')}</h3>
                   <p class="text-sm text-gray-600 mt-1">{t('orders.clickToAdd')}</p>
@@ -1032,7 +951,7 @@ export default function Orders() {
                   </div>
                 </div>
               </div>
-              <div class="max-h-96 overflow-y-auto backdrop-blur-lg bg-gradient-to-br from-white/20 to-white/10 border border-white/30 rounded-2xl p-6 shadow-2xl">
+              <div class="max-h-96 overflow-y-auto bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
                 {filteredProducts.length === 0 ? (
                   <div class="text-center py-12">
                     <div class="text-6xl mb-4">🔍</div>
@@ -1055,48 +974,37 @@ export default function Orders() {
                 ) : (
                   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                     {filteredProducts.map((product) => (
-                      <div
+                      <button
                         key={product.id}
-                        class="group relative backdrop-blur-md bg-white/70 border-2 border-gray-200 rounded-xl p-4 hover:bg-white hover:shadow-sm transition-colors duration-150 hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-200 cursor-pointer"
+                        type="button"
+                        class="group relative bg-white border border-gray-200 rounded-lg p-4 hover:bg-gray-50 hover:shadow-sm transition-colors duration-150 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-left"
                         onClick={() => product.stock > 0 && addItemToOrder(product.id)}
-                        role="button"
-                        tabindex={0}
+                        disabled={product.stock === 0}
                         aria-label={`${t('orders.addProduct')} ${product.name}`}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            product.stock > 0 && addItemToOrder(product.id)
-                          }
-                        }}
                       >
-                        {/* Glass highlight overlay */}
-                        <div class="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent rounded-xl opacity-60"></div>
-
-                        <div class="relative flex justify-between items-start">
+                        <div class="flex flex-col h-full">
                           <div class="flex-1">
-                            <div class="font-semibold text-gray-900 mb-1 drop-shadow-sm">{product.name}</div>
-                            <div class="text-sm text-gray-700 mb-3 font-medium backdrop-blur-sm bg-white/40 px-2 py-1 rounded-full w-fit">
+                            <div class="font-semibold text-gray-900 mb-2 text-sm leading-tight">{product.name}</div>
+                            <div class="text-xs text-gray-600 mb-3 font-medium bg-gray-100 px-2 py-1 rounded-full inline-block">
                               {product.category}
                             </div>
-                            <div class="flex items-center justify-between">
-                              <div class="text-xl font-bold text-emerald-600 drop-shadow-md">
-                                {formatCurrency(product.price)}
-                              </div>
-                              <div
-                                class={`text-sm px-3 py-1.5 rounded-full font-semibold backdrop-blur-sm border transition-all ${
-                                  product.stock > 10
-                                    ? 'bg-emerald-100/80 text-emerald-800 border-emerald-200/50 shadow-emerald-100/50'
-                                    : product.stock > 0
-                                      ? 'bg-amber-100/80 text-amber-800 border-amber-200/50 shadow-amber-100/50'
-                                      : 'bg-red-100/80 text-red-800 border-red-200/50 shadow-red-100/50'
-                                } shadow-lg`}
-                              >
-                                📦 {product.stock}
-                              </div>
+                          </div>
+                          <div class="flex items-center justify-between mt-auto">
+                            <div class="text-lg font-bold text-blue-600">{formatCurrency(product.price)}</div>
+                            <div
+                              class={`text-xs px-2 py-1 rounded-full font-medium ${
+                                product.stock > 10
+                                  ? 'bg-green-100 text-green-800'
+                                  : product.stock > 0
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                              }`}
+                            >
+                              {product.stock > 0 ? `📦 ${product.stock}` : '❌ Out'}
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -1106,28 +1014,23 @@ export default function Orders() {
             {/* Order Items */}
             {newOrder.items.length > 0 && (
               <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">{t('orders.orderSummary')}</h3>
-                <div class="backdrop-blur-lg bg-gradient-to-br from-blue-100/60 to-indigo-100/40 border border-blue-200/50 rounded-2xl p-6 space-y-4 shadow-xl">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">{t('orders.orderSummary')}</h3>
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 space-y-4">
                   {newOrder.items.map((item) => {
                     const product = products.find((p) => p.id === item.productId)
                     return product ? (
                       <div
                         key={item.productId}
-                        class="relative flex justify-between items-center backdrop-blur-md bg-white/80 border border-white/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-200"
+                        class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200"
                       >
-                        {/* Glass highlight overlay */}
-                        <div class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent rounded-xl opacity-70"></div>
-
-                        <div class="relative flex-1">
-                          <div class="font-semibold text-gray-900 mb-2 drop-shadow-sm">{product.name}</div>
-                          <div class="text-sm text-gray-700 backdrop-blur-sm bg-white/60 px-3 py-1 rounded-full w-fit">
+                        <div class="flex-1">
+                          <div class="font-semibold text-gray-900 mb-2">{product.name}</div>
+                          <div class="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full inline-block">
                             {formatCurrency(product.price)} × {item.quantity} ={' '}
-                            <span class="font-bold text-emerald-600">
-                              {formatCurrency(product.price * item.quantity)}
-                            </span>
+                            <span class="font-bold text-blue-600">{formatCurrency(product.price * item.quantity)}</span>
                           </div>
                         </div>
-                        <div class="relative flex items-center space-x-3">
+                        <div class="flex items-center space-x-2">
                           <Button
                             size="sm"
                             variant="outline"
@@ -1138,11 +1041,11 @@ export default function Orders() {
                                 removeItemFromOrder(item.productId)
                               }
                             }}
-                            class="w-10 h-10 p-0 flex items-center justify-center backdrop-blur-sm bg-white/70 border-white/60 hover:bg-white/90 hover:shadow-lg transition-all duration-200 hover:scale-110"
+                            class="w-8 h-8 p-0 flex items-center justify-center"
                           >
-                            <span class="drop-shadow-sm">➖</span>
+                            −
                           </Button>
-                          <div class="w-14 text-center font-bold text-xl backdrop-blur-sm bg-gradient-to-r from-indigo-100/80 to-blue-100/80 px-3 py-2 rounded-lg border border-white/40 shadow-md">
+                          <div class="w-12 text-center font-bold text-lg bg-blue-50 px-2 py-1 rounded border border-blue-200">
                             {item.quantity}
                           </div>
                           <Button
@@ -1150,17 +1053,17 @@ export default function Orders() {
                             variant="outline"
                             onClick={() => addItemToOrder(item.productId, 1)}
                             disabled={item.quantity >= product.stock}
-                            class="w-10 h-10 p-0 flex items-center justify-center backdrop-blur-sm bg-white/70 border-white/60 hover:bg-white/90 hover:shadow-lg transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:hover:scale-100"
+                            class="w-8 h-8 p-0 flex items-center justify-center"
                           >
-                            <span class="drop-shadow-sm">➕</span>
+                            +
                           </Button>
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="danger"
                             onClick={() => removeItemFromOrder(item.productId)}
-                            class="backdrop-blur-sm bg-red-100/70 text-red-700 border-red-200/60 hover:bg-red-200/80 hover:shadow-lg transition-all duration-200 hover:scale-110 ml-2"
+                            class="w-8 h-8 p-0 flex items-center justify-center ml-2"
                           >
-                            <span class="drop-shadow-sm">🗑️</span>
+                            ×
                           </Button>
                         </div>
                       </div>
@@ -1168,7 +1071,7 @@ export default function Orders() {
                   })}
 
                   {/* Order Totals */}
-                  <div class="border-t border-white/40 pt-4 mt-6">
+                  <div class="border-t border-gray-200 pt-6 mt-6">
                     {(() => {
                       const subtotal = newOrder.items.reduce((total, item) => {
                         const product = products.find((p) => p.id === item.productId)
@@ -1178,31 +1081,27 @@ export default function Orders() {
                       const total = subtotal + tax
 
                       return (
-                        <div
-                          class={`backdrop-blur-md rounded-xl p-5 border shadow-lg ${
-                            taxEnabled ? 'bg-white/60 border-white/50' : 'bg-gray-50/60 border-gray-200/50'
-                          }`}
-                        >
-                          <div class="space-y-3">
-                            <div class="flex justify-between text-gray-700 text-lg">
+                        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                          <div class="space-y-4">
+                            <div class="flex justify-between text-gray-700">
                               <span class="font-medium">{t('common.subtotal')}:</span>
-                              <span class="font-semibold drop-shadow-sm">{formatCurrency(subtotal)}</span>
+                              <span class="font-semibold">{formatCurrency(subtotal)}</span>
                             </div>
                             {taxEnabled && (
-                              <div class="flex justify-between text-gray-700 text-lg">
+                              <div class="flex justify-between text-gray-700">
                                 <span class="font-medium">
                                   {t('common.tax')} ({(taxRate * 100).toFixed(1)}%):
                                 </span>
-                                <span class="font-semibold drop-shadow-sm">{formatCurrency(tax)}</span>
+                                <span class="font-semibold">{formatCurrency(tax)}</span>
                               </div>
                             )}
                             {!taxEnabled && (
                               <div class="text-sm text-gray-500 italic text-center py-2">{t('orders.taxDisabled')}</div>
                             )}
-                            <div class="border-t border-white/40 pt-3">
-                              <div class="flex justify-between text-2xl font-bold text-gray-900 backdrop-blur-sm bg-gradient-to-r from-emerald-100/60 to-green-100/40 px-4 py-3 rounded-lg border border-emerald-200/50 shadow-md">
-                                <span class="drop-shadow-sm">{t('common.total')}:</span>
-                                <span class="drop-shadow-sm text-emerald-700">{formatCurrency(total)}</span>
+                            <div class="border-t border-gray-200 pt-4">
+                              <div class="flex justify-between text-xl font-bold text-gray-900 bg-blue-50 px-4 py-3 rounded-lg">
+                                <span>{t('common.total')}:</span>
+                                <span class="text-blue-600">{formatCurrency(total)}</span>
                               </div>
                             </div>
                           </div>
@@ -1215,7 +1114,7 @@ export default function Orders() {
             )}
 
             {/* Payment & Notes */}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Select
                   label={t('orders.paymentMethod')}
@@ -1247,17 +1146,18 @@ export default function Orders() {
                 />
               </div>
             </div>
-          </div>
-        </DialogBody>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)} disabled={isLoading}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="button" onClick={handleCreateOrder} disabled={isLoading || newOrder.items.length === 0}>
-            {isLoading ? t('common.loading') : t('orders.createOrder')}
-          </Button>
-        </DialogFooter>
+            {/* Action Buttons */}
+            <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)} disabled={isLoading}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="button" onClick={handleCreateOrder} disabled={isLoading || newOrder.items.length === 0}>
+                {isLoading ? t('common.loading') : t('orders.createOrder')}
+              </Button>
+            </div>
+          </div>
+        </div>
       </Dialog>
 
       {/* Edit Order Modal */}
@@ -1273,7 +1173,7 @@ export default function Orders() {
         title={t('orders.updateOrderTitle', { id: editingOrder?.id ?? '' })}
         size="full"
       >
-        <DialogBody>
+        <div>
           <div class="space-y-6">
             {/* Available Products for Editing */}
             <div>
@@ -1335,7 +1235,7 @@ export default function Orders() {
                   </div>
                 </div>
               </div>
-              <div class="max-h-96 overflow-y-auto backdrop-blur-lg bg-gradient-to-br from-emerald-50/40 to-blue-50/30 border border-emerald-200/30 rounded-2xl p-6 shadow-2xl">
+              <div class="max-h-96 overflow-y-auto bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
                 {filteredEditProducts.length === 0 ? (
                   <div class="text-center py-12">
                     <div class="text-6xl mb-4">🔍</div>
@@ -1358,47 +1258,37 @@ export default function Orders() {
                 ) : (
                   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                     {filteredEditProducts.map((product) => (
-                      <div
+                      <button
                         key={product.id}
-                        class="group relative backdrop-blur-md bg-white/70 border-2 border-gray-200 rounded-xl p-4 hover:bg-white hover:shadow-sm transition-colors duration-150 hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-200 cursor-pointer"
+                        type="button"
+                        class="group relative bg-white border border-gray-200 rounded-lg p-4 hover:bg-gray-50 hover:shadow-sm transition-colors duration-150 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-left"
                         onClick={() => product.stock > 0 && addItemToEditOrder(product.id)}
-                        role="button"
-                        tabindex={0}
+                        disabled={product.stock === 0}
                         aria-label={`${t('orders.addProduct')} ${product.name}`}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            product.stock > 0 && addItemToEditOrder(product.id)
-                          }
-                        }}
                       >
-                        <div class="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent rounded-xl opacity-60"></div>
-
-                        <div class="relative flex justify-between items-start">
+                        <div class="flex flex-col h-full">
                           <div class="flex-1">
-                            <div class="font-semibold text-gray-900 mb-1 drop-shadow-sm">{product.name}</div>
-                            <div class="text-sm text-gray-700 mb-3 font-medium backdrop-blur-sm bg-white/40 px-2 py-1 rounded-full w-fit">
+                            <div class="font-semibold text-gray-900 mb-2 text-sm leading-tight">{product.name}</div>
+                            <div class="text-xs text-gray-600 mb-3 font-medium bg-gray-100 px-2 py-1 rounded-full inline-block">
                               {product.category}
                             </div>
-                            <div class="flex items-center justify-between">
-                              <div class="text-xl font-bold text-emerald-600 drop-shadow-md">
-                                {formatCurrency(product.price)}
-                              </div>
-                              <div
-                                class={`text-sm px-3 py-1.5 rounded-full font-semibold backdrop-blur-sm border transition-all ${
-                                  product.stock > 10
-                                    ? 'bg-emerald-100/80 text-emerald-800 border-emerald-200/50 shadow-emerald-100/50'
-                                    : product.stock > 0
-                                      ? 'bg-amber-100/80 text-amber-800 border-amber-200/50 shadow-amber-100/50'
-                                      : 'bg-red-100/80 text-red-800 border-red-200/50 shadow-red-100/50'
-                                } shadow-lg`}
-                              >
-                                📦 {product.stock}
-                              </div>
+                          </div>
+                          <div class="flex items-center justify-between mt-auto">
+                            <div class="text-lg font-bold text-blue-600">{formatCurrency(product.price)}</div>
+                            <div
+                              class={`text-xs px-2 py-1 rounded-full font-medium ${
+                                product.stock > 10
+                                  ? 'bg-green-100 text-green-800'
+                                  : product.stock > 0
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                              }`}
+                            >
+                              {product.stock > 0 ? `📦 ${product.stock}` : '❌ Out'}
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -1408,36 +1298,32 @@ export default function Orders() {
             {/* Edit Order Items */}
             {editOrderItems.length > 0 && (
               <div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">{t('orders.updatedOrderSummary')}</h3>
-                <div class="backdrop-blur-lg bg-gradient-to-br from-emerald-100/60 to-green-100/40 border border-emerald-200/50 rounded-2xl p-6 space-y-4 shadow-xl">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">{t('orders.updatedOrderSummary')}</h3>
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 space-y-4">
                   {editOrderItems.map((item) => {
                     const product = products.find((p) => p.id === item.productId)
                     return product ? (
                       <div
                         key={item.productId}
-                        class="relative flex justify-between items-center backdrop-blur-md bg-white/80 border border-white/50 rounded-xl p-5 shadow-lg hover:shadow-xl transition-all duration-200"
+                        class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200"
                       >
-                        <div class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent rounded-xl opacity-70"></div>
-
-                        <div class="relative flex-1">
-                          <div class="font-semibold text-gray-900 mb-2 drop-shadow-sm">{product.name}</div>
-                          <div class="text-sm text-gray-700 backdrop-blur-sm bg-white/60 px-3 py-1 rounded-full w-fit">
+                        <div class="flex-1">
+                          <div class="font-semibold text-gray-900 mb-2">{product.name}</div>
+                          <div class="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full inline-block">
                             {formatCurrency(product.price)} × {item.quantity} ={' '}
-                            <span class="font-bold text-emerald-600">
-                              {formatCurrency(product.price * item.quantity)}
-                            </span>
+                            <span class="font-bold text-blue-600">{formatCurrency(product.price * item.quantity)}</span>
                           </div>
                         </div>
-                        <div class="relative flex items-center space-x-3">
+                        <div class="flex items-center space-x-2">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => addItemToEditOrder(item.productId, -1)}
-                            class="w-10 h-10 p-0 flex items-center justify-center backdrop-blur-sm bg-white/70 border-white/60 hover:bg-white/90 hover:shadow-lg transition-all duration-200 hover:scale-110"
+                            class="w-8 h-8 p-0 flex items-center justify-center"
                           >
-                            <span class="drop-shadow-sm">➖</span>
+                            −
                           </Button>
-                          <div class="w-14 text-center font-bold text-xl backdrop-blur-sm bg-gradient-to-r from-emerald-100/80 to-green-100/80 px-3 py-2 rounded-lg border border-white/40 shadow-md">
+                          <div class="w-12 text-center font-bold text-lg bg-blue-50 px-2 py-1 rounded border border-blue-200">
                             {item.quantity}
                           </div>
                           <Button
@@ -1445,17 +1331,17 @@ export default function Orders() {
                             variant="outline"
                             onClick={() => addItemToEditOrder(item.productId, 1)}
                             disabled={item.quantity >= product.stock}
-                            class="w-10 h-10 p-0 flex items-center justify-center backdrop-blur-sm bg-white/70 border-white/60 hover:bg-white/90 hover:shadow-lg transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:hover:scale-100"
+                            class="w-8 h-8 p-0 flex items-center justify-center"
                           >
-                            <span class="drop-shadow-sm">➕</span>
+                            +
                           </Button>
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="danger"
                             onClick={() => removeItemFromEditOrder(item.productId)}
-                            class="backdrop-blur-sm bg-red-100/70 text-red-700 border-red-200/60 hover:bg-red-200/80 hover:shadow-lg transition-all duration-200 hover:scale-110 ml-2"
+                            class="w-8 h-8 p-0 flex items-center justify-center ml-2"
                           >
-                            <span class="drop-shadow-sm">🗑️</span>
+                            ×
                           </Button>
                         </div>
                       </div>
@@ -1463,7 +1349,7 @@ export default function Orders() {
                   })}
 
                   {/* Updated Order Totals */}
-                  <div class="border-t border-white/40 pt-4 mt-6">
+                  <div class="border-t border-gray-200 pt-6 mt-6">
                     {(() => {
                       const subtotal = editOrderItems.reduce((total, item) => {
                         const product = products.find((p) => p.id === item.productId)
@@ -1473,31 +1359,27 @@ export default function Orders() {
                       const total = subtotal + tax
 
                       return (
-                        <div
-                          class={`backdrop-blur-md rounded-xl p-5 border shadow-lg ${
-                            taxEnabled ? 'bg-white/60 border-white/50' : 'bg-gray-50/60 border-gray-200/50'
-                          }`}
-                        >
-                          <div class="space-y-3">
-                            <div class="flex justify-between text-gray-700 text-lg">
+                        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                          <div class="space-y-4">
+                            <div class="flex justify-between text-gray-700">
                               <span class="font-medium">{t('common.subtotal')}:</span>
-                              <span class="font-semibold drop-shadow-sm">{formatCurrency(subtotal)}</span>
+                              <span class="font-semibold">{formatCurrency(subtotal)}</span>
                             </div>
                             {taxEnabled && (
-                              <div class="flex justify-between text-gray-700 text-lg">
+                              <div class="flex justify-between text-gray-700">
                                 <span class="font-medium">
                                   {t('common.tax')} ({(taxRate * 100).toFixed(1)}%):
                                 </span>
-                                <span class="font-semibold drop-shadow-sm">{formatCurrency(tax)}</span>
+                                <span class="font-semibold">{formatCurrency(tax)}</span>
                               </div>
                             )}
                             {!taxEnabled && (
                               <div class="text-sm text-gray-500 italic text-center py-2">{t('orders.taxDisabled')}</div>
                             )}
-                            <div class="border-t border-white/40 pt-3">
-                              <div class="flex justify-between text-2xl font-bold text-gray-900 backdrop-blur-sm bg-gradient-to-r from-emerald-100/60 to-green-100/40 px-4 py-3 rounded-lg border border-emerald-200/50 shadow-md">
-                                <span class="drop-shadow-sm">{t('orders.newTotal')}:</span>
-                                <span class="drop-shadow-sm text-emerald-700">{formatCurrency(total)}</span>
+                            <div class="border-t border-gray-200 pt-4">
+                              <div class="flex justify-between text-xl font-bold text-gray-900 bg-blue-50 px-4 py-3 rounded-lg">
+                                <span>{t('orders.newTotal')}:</span>
+                                <span class="text-blue-600">{formatCurrency(total)}</span>
                               </div>
                             </div>
                           </div>
@@ -1535,9 +1417,9 @@ export default function Orders() {
               </div>
             </div>
           </div>
-        </DialogBody>
+        </div>
 
-        <DialogFooter>
+        <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
           <Button
             type="button"
             variant="outline"
@@ -1555,7 +1437,7 @@ export default function Orders() {
           <Button type="button" onClick={handleUpdateOrder} disabled={isLoading || editOrderItems.length === 0}>
             {isLoading ? t('orders.updating') : t('orders.updateOrder')}
           </Button>
-        </DialogFooter>
+        </div>
       </Dialog>
 
       {/* Order Details Modal */}
@@ -1566,7 +1448,7 @@ export default function Orders() {
           title={t('orders.orderDetailsTitle', { id: selectedOrder.id })}
           size="lg"
         >
-          <DialogBody>
+          <div>
             <div class="space-y-6">
               {/* Order Header */}
               <div class="flex justify-between items-start pb-4 border-b border-gray-200">
@@ -1707,85 +1589,81 @@ export default function Orders() {
               )}
 
               {/* Order Actions */}
-              <div class="border-t border-gray-200 pt-4">
-                <h4 class="text-lg font-semibold text-gray-900 mb-3">{t('common.actions')}</h4>
-                <div class="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => handleThermalPrint(selectedOrder)}
-                    disabled={isPrinting}
-                    class="bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    🖨️ {isPrinting ? t('orders.printing') : t('orders.printReceipt')}
-                  </Button>
-                  {selectedOrder.status === 'pending' && (
-                    <>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          handleEditOrder(selectedOrder)
-                          setSelectedOrder(null)
-                        }}
-                      >
-                        ✏️ {t('orders.updateOrder')}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          handleUpdateStatus(selectedOrder.id, 'paid')
-                          setSelectedOrder(null)
-                        }}
-                        class="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        💰 {t('orders.markAsPaid')}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          handleUpdateStatus(selectedOrder.id, 'cancelled')
-                          setSelectedOrder(null)
-                        }}
-                        class="text-red-600 border-red-200 hover:bg-red-50"
-                      >
-                        ❌ {t('orders.cancelOrder')}
-                      </Button>
-                    </>
-                  )}
-                  {selectedOrder.status === 'paid' && (
+              <div class="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200">
+                <Button
+                  size="sm"
+                  onClick={() => handleThermalPrint(selectedOrder)}
+                  disabled={isPrinting}
+                  class="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  🖨️ {isPrinting ? t('orders.printing') : t('orders.printReceipt')}
+                </Button>
+                {selectedOrder.status === 'pending' && (
+                  <>
                     <Button
                       size="sm"
                       onClick={() => {
-                        handleUpdateStatus(selectedOrder.id, 'completed')
+                        handleEditOrder(selectedOrder)
                         setSelectedOrder(null)
                       }}
-                      class="bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                      ✅ {t('orders.markComplete')}
+                      ✏️ {t('orders.updateOrder')}
                     </Button>
-                  )}
-                  {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        handleUpdateStatus(selectedOrder.id, 'paid')
+                        setSelectedOrder(null)
+                      }}
+                      class="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      💰 {t('orders.markAsPaid')}
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        setDeleteConfirm(selectedOrder.id)
+                        handleUpdateStatus(selectedOrder.id, 'cancelled')
                         setSelectedOrder(null)
                       }}
                       class="text-red-600 border-red-200 hover:bg-red-50"
                     >
-                      🗑️ {t('orders.deleteOrder')}
+                      ❌ {t('orders.cancelOrder')}
                     </Button>
-                  )}
-                </div>
+                  </>
+                )}
+                {selectedOrder.status === 'paid' && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      handleUpdateStatus(selectedOrder.id, 'completed')
+                      setSelectedOrder(null)
+                    }}
+                    class="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    ✅ {t('orders.markComplete')}
+                  </Button>
+                )}
+                {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setDeleteConfirm(selectedOrder.id)
+                      setSelectedOrder(null)
+                    }}
+                    class="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    🗑️ {t('orders.deleteOrder')}
+                  </Button>
+                )}
+                <div class="flex-1" />
+                <Button size="sm" variant="outline" onClick={() => setSelectedOrder(null)}>
+                  {t('common.close')}
+                </Button>
               </div>
             </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedOrder(null)}>
-              {t('common.close')}
-            </Button>
-          </DialogFooter>
+          </div>
         </Dialog>
       )}
 
@@ -1798,6 +1676,6 @@ export default function Orders() {
         confirmText={t('common.delete')}
         variant="danger"
       />
-    </Container>
+    </div>
   )
 }

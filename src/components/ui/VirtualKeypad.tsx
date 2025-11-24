@@ -1,0 +1,66 @@
+import { useTranslation } from '../../hooks/useTranslation'
+
+interface VirtualKeypadProps {
+  onDigitPress: (digit: string) => void
+  onBackspace: () => void
+  disabled?: boolean
+}
+
+export function VirtualKeypad({ onDigitPress, onBackspace, disabled = false }: VirtualKeypadProps) {
+  const { t } = useTranslation()
+
+  const handleDigitPress = (value: string) => {
+    if (!disabled) {
+      if (value === 'backspace') {
+        onBackspace()
+      } else {
+        onDigitPress(value)
+      }
+    }
+  }
+
+  return (
+    <div class="w-full max-w-48 mx-auto mt-3 px-1">
+      <div class="grid grid-cols-3 gap-2 bg-gray-100 rounded-lg p-3 border border-gray-300">
+        {/* Numbers 1-9 */}
+        {Array.from({ length: 9 }, (_, i) => i + 1).map((num) => (
+          <button
+            key={num}
+            type="button"
+            onClick={() => handleDigitPress(num.toString())}
+            disabled={disabled}
+            class="aspect-square rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label={`Digit ${num}`}
+          >
+            {num}
+          </button>
+        ))}
+
+        {/* Backspace button */}
+        <button
+          type="button"
+          onClick={() => handleDigitPress('backspace')}
+          disabled={disabled}
+          class="aspect-square rounded bg-red-500 hover:bg-red-600 text-white font-bold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500"
+          aria-label={t('auth.backspace')}
+        >
+          ⌫
+        </button>
+
+        {/* Zero button */}
+        <button
+          type="button"
+          onClick={() => handleDigitPress('0')}
+          disabled={disabled}
+          class="aspect-square rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Digit 0"
+        >
+          0
+        </button>
+
+        {/* Empty space for grid layout */}
+        <div class="aspect-square"></div>
+      </div>
+    </div>
+  )
+}
