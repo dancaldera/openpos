@@ -70,7 +70,7 @@
     "incorrectPassword": "Falsches Passwort. Bitte versuche es erneut.",
     "emailNotFound": "Kein Konto mit dieser E-Mail gefunden.",
     "accountLocked": "Dieses Konto ist gesperrt. Bitte wende dich an einen Administrator.",
-    "environmentError": "Desktop-Funktionen erfordern die Post-POS-App. Starte die Tauri-Desktop-Version.",
+    "environmentError": "Desktop-Funktionen erfordern die TITANIC-POS-App. Starte die Tauri-Desktop-Version.",
     "showPassword": "Passwort anzeigen",
     "hidePassword": "Passwort verbergen",
     "enter6digitPin": "Geben Sie Ihre 6-stellige PIN ein",

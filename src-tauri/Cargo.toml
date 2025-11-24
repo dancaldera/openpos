@@ -1,7 +1,7 @@
 [package]
-name = "post-pos"
+name = "titanic-pos"
 version = "0.1.0"
-description = "A Tauri App"
+description = "A Titanic POS"
 authors = ["you"]
 edition = "2021"
 
