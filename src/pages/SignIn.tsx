@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { toast } from 'sonner'
-import { Button, Form } from '../components/ui'
+import { Form } from '../components/ui'
 import { VirtualKeypad } from '../components/ui/VirtualKeypad'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
@@ -11,54 +11,28 @@ export default function SignIn() {
   const { signIn } = useAuth()
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [password, setPassword] = useState('')
   const [pinDigits, setPinDigits] = useState(['', '', '', '', '', ''])
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [loginInProgress, setLoginInProgress] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const pinInputRefs = useRef<(HTMLInputElement | null)[]>([])
   const dropdownRef = useRef<HTMLDivElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const animationRef = useRef<number>(0)
 
   // Load users on mount
   useEffect(() => {
     loadUsers()
   }, [])
 
-  // Sync PIN digits with password state
-  useEffect(() => {
-    setPassword(pinDigits.join(''))
-  }, [pinDigits])
-
-  // Auto-login when 6 digits are entered and user is selected
+  // Auto-login when 6 digits are entered
   useEffect(() => {
     const pinValue = pinDigits.join('')
-    const isComplete = pinDigits.every((d) => d !== '') && pinValue.length === 6
-
-    // Only trigger if we have exactly 6 digits, user is selected, and not already processing
-    if (isComplete && selectedUser && !isLoading && !loginInProgress) {
-      // Prevent duplicate login attempts
-      setLoginInProgress(true)
-
-      // Brief delay to ensure UI feels responsive and capture stable state
-      const timer = setTimeout(() => {
-        // Final verification with current state
-        const currentPin = pinDigits.join('')
-        if (currentPin.length === 6 && selectedUser && !isLoading) {
-          performLogin()
-        } else {
-          // Reset if state changed during delay (e.g., user deleted digits)
-          setLoginInProgress(false)
-        }
-      }, 200)
-
-      return () => {
-        clearTimeout(timer)
-        setLoginInProgress(false)
-      }
+    if (pinValue.length === 6 && selectedUser && !isLoading) {
+      performLogin(pinValue)
     }
-  }, [pinDigits, selectedUser, isLoading, loginInProgress])
+  }, [pinDigits, selectedUser, isLoading])
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -75,6 +49,72 @@ export default function SignIn() {
       }
     }
   }, [showDropdown])
+
+  // Animated dotted background
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const gap = 16
+    const baseRadius = 1.5
+    const dots: { x: number; y: number; phase: number; speed: number }[] = []
+
+    const resize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+      dots.length = 0
+
+      for (let x = gap; x < canvas.width; x += gap) {
+        for (let y = gap; y < canvas.height; y += gap) {
+          dots.push({
+            x,
+            y,
+            phase: Math.random() * Math.PI * 2,
+            speed: 1.5 + Math.random() * 1.5,
+          })
+        }
+      }
+    }
+
+    resize()
+    window.addEventListener('resize', resize)
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      const time = Date.now() / 1000
+
+      for (const dot of dots) {
+        const pulse = (Math.sin(time * dot.speed + dot.phase) + 1) / 2
+        const radius = baseRadius + pulse * 0.3
+        const opacity = 0.2 + pulse * 0.4
+        const glowSize = 2 + pulse * 2
+
+        // Glow
+        ctx.beginPath()
+        ctx.arc(dot.x, dot.y, glowSize, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(59, 130, 246, ${opacity * 0.2})`
+        ctx.fill()
+
+        // Dot
+        ctx.beginPath()
+        ctx.arc(dot.x, dot.y, radius, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(99, 102, 241, ${opacity})`
+        ctx.fill()
+      }
+
+      animationRef.current = requestAnimationFrame(animate)
+    }
+
+    animate()
+
+    return () => {
+      window.removeEventListener('resize', resize)
+      cancelAnimationFrame(animationRef.current)
+    }
+  }, [])
 
   const loadUsers = async () => {
     try {
@@ -94,26 +134,15 @@ export default function SignIn() {
     newPinDigits[index] = digit
     setPinDigits(newPinDigits)
 
-    // Reset login progress if user is modifying PIN (except when completing to 6 digits)
-    if (digit === '' || pinDigits.filter((d) => d !== '').length < 6) {
-      setLoginInProgress(false)
-    }
-
-    // Auto-focus next input (but don't focus on the last input since auto-login will handle it)
+    // Auto-focus next input
     if (digit && index < 5) {
       pinInputRefs.current[index + 1]?.focus()
     }
   }
 
   const handlePinKeyDown = (index: number, e: KeyboardEvent) => {
-    if (e.key === 'Backspace') {
-      // Reset login progress when user deletes digits
-      setLoginInProgress(false)
-
-      if (!pinDigits[index] && index > 0) {
-        // Move to previous input on backspace if current is empty
-        pinInputRefs.current[index - 1]?.focus()
-      }
+    if (e.key === 'Backspace' && !pinDigits[index] && index > 0) {
+      pinInputRefs.current[index - 1]?.focus()
     } else if (e.key === 'ArrowLeft' && index > 0) {
       pinInputRefs.current[index - 1]?.focus()
     } else if (e.key === 'ArrowRight' && index < 5) {
@@ -122,46 +151,33 @@ export default function SignIn() {
   }
 
   const handleKeypadDigitPress = (digit: string) => {
-    // Reset login progress when modifying PIN
-    setLoginInProgress(false)
-
-    // Find the first empty input or replace the last digit if all are filled
     const emptyIndex = pinDigits.indexOf('')
-    const targetIndex = emptyIndex !== -1 ? emptyIndex : 5
+    if (emptyIndex === -1) return // All filled
 
     const newPinDigits = [...pinDigits]
-    newPinDigits[targetIndex] = digit
+    newPinDigits[emptyIndex] = digit
     setPinDigits(newPinDigits)
 
-    // Focus the input we just filled
-    pinInputRefs.current[targetIndex]?.focus()
-
-    // Auto-advance to next input if not at the end
-    if (targetIndex < 5) {
-      setTimeout(() => {
-        pinInputRefs.current[targetIndex + 1]?.focus()
-      }, 50)
+    // Focus next input
+    if (emptyIndex < 5) {
+      pinInputRefs.current[emptyIndex + 1]?.focus()
     }
   }
 
   const handleKeypadBackspace = () => {
-    // Reset login progress when deleting
-    setLoginInProgress(false)
-
-    // Find the last filled input
-    const lastFilledIndex = pinDigits
-      .map((d, i) => ({ digit: d, index: i }))
-      .filter((item) => item.digit !== '')
-      .pop()?.index
-
-    if (lastFilledIndex !== undefined) {
-      const newPinDigits = [...pinDigits]
-      newPinDigits[lastFilledIndex] = ''
-      setPinDigits(newPinDigits)
-
-      // Focus the input we just cleared
-      pinInputRefs.current[lastFilledIndex]?.focus()
+    let lastFilledIndex = -1
+    for (let i = pinDigits.length - 1; i >= 0; i--) {
+      if (pinDigits[i] !== '') {
+        lastFilledIndex = i
+        break
+      }
     }
+    if (lastFilledIndex === -1) return
+
+    const newPinDigits = [...pinDigits]
+    newPinDigits[lastFilledIndex] = ''
+    setPinDigits(newPinDigits)
+    pinInputRefs.current[lastFilledIndex]?.focus()
   }
 
   const handlePinPaste = (e: ClipboardEvent) => {
@@ -186,43 +202,25 @@ export default function SignIn() {
     }
   }
 
-  const validateForm = (showValidationError = true) => {
-    if (!selectedUser) {
-      if (showValidationError) toast.error(t('auth.selectUserFirst'))
-      return false
-    }
-    if (!password || password.length !== 6 || !/^\d{6}$/.test(password)) {
-      if (showValidationError) toast.error(t('auth.password6digitsRequired'))
-      return false
-    }
-    return true
-  }
+  const performLogin = async (pin: string) => {
+    if (!selectedUser || isLoading) return
 
-  const handleSubmit = async () => {
-    if (!validateForm(true)) return
-
-    await performLogin()
-  }
-
-  const performLogin = async () => {
     setIsLoading(true)
 
     try {
-      if (!selectedUser) return
-      const result = await signIn(selectedUser.email, password)
+      const result = await signIn(selectedUser.email, pin)
 
-      if (result.success) {
-        // Don't show success toast or reset loading - let the smooth transition happen
-        // The app will automatically redirect to dashboard
-      } else {
-        // Keep selection/password on error, just show the error message
+      if (!result.success) {
         setIsLoading(false)
-        setLoginInProgress(false)
+        setPinDigits(['', '', '', '', '', ''])
+        pinInputRefs.current[0]?.focus()
         toast.error(result.error || t('auth.signInFailed'))
       }
+      // Success: app redirects automatically
     } catch (error) {
       setIsLoading(false)
-      setLoginInProgress(false)
+      setPinDigits(['', '', '', '', '', ''])
+      pinInputRefs.current[0]?.focus()
       const message = error instanceof Error ? error.message : t('errors.generic')
       toast.error(message)
     }
@@ -231,9 +229,7 @@ export default function SignIn() {
   const handleUserSelect = (user: User) => {
     setSelectedUser(user)
     setShowDropdown(false)
-    // Reset login state when user changes
-    setLoginInProgress(false)
-    // Focus the first PIN input after selection
+    setPinDigits(['', '', '', '', '', ''])
     setTimeout(() => {
       pinInputRefs.current[0]?.focus()
     }, 100)
@@ -253,9 +249,10 @@ export default function SignIn() {
   }
 
   return (
-    <div class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div class="w-full max-w-md">
-        <div class="bg-white rounded-lg shadow-lg p-8">
+    <div class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-blue-100">
+      <canvas ref={canvasRef} class="absolute inset-0" />
+      <div class="w-full max-w-md relative z-10">
+        <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-8">
           {/* Logo and Title */}
           <div class="text-center mb-8">
             <h1 class="text-2xl font-bold text-gray-900">⚓ Titanic POS</h1>
@@ -263,7 +260,7 @@ export default function SignIn() {
           </div>
 
           {/* Sign In Form */}
-          <Form onSubmit={handleSubmit} spacing="lg">
+          <Form onSubmit={() => {}} spacing="lg">
             {/* User Selection */}
             <div>
               <h3 class="block text-sm font-medium text-gray-700 mb-2">{t('auth.selectUser')}</h3>
@@ -377,7 +374,7 @@ export default function SignIn() {
                   </div>
 
                   {/* PIN Input Boxes */}
-                  <div class="flex gap-1 justify-center" onPaste={handlePinPaste}>
+                  <div class="flex gap-2 justify-center" onPaste={handlePinPaste}>
                     {pinDigits.map((digit, index) => (
                       <input
                         key={`pin-position-${index + 1}`}
@@ -390,7 +387,8 @@ export default function SignIn() {
                         value={digit}
                         onInput={(e) => handlePinInput(index, (e.target as HTMLInputElement).value)}
                         onKeyDown={(e) => handlePinKeyDown(index, e as unknown as KeyboardEvent)}
-                        class="w-8 h-10 text-center text-lg font-bold border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-200 focus:outline-none transition-all duration-200 bg-white hover:border-gray-400"
+                        disabled={isLoading}
+                        class="w-10 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                         style={{
                           WebkitTextSecurity: showPassword ? 'none' : 'disc',
                         }}
@@ -410,30 +408,18 @@ export default function SignIn() {
               <VirtualKeypad
                 onDigitPress={handleKeypadDigitPress}
                 onBackspace={handleKeypadBackspace}
-                disabled={isLoading || loginInProgress}
+                disabled={isLoading}
               />
             )}
 
-            {/* Sign In Button - Only show when user is selected */}
-            {selectedUser && (
-              <div class="w-full text-center">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  disabled={isLoading || password.length !== 6}
-                  class="w-full"
-                >
-                  {isLoading ? t('common.loading') : t('auth.signIn')}
-                </Button>
-              </div>
-            )}
+            {/* Loading indicator */}
+            {isLoading && <div class="text-center text-sm text-gray-500">{t('common.loading')}</div>}
           </Form>
 
           {/* Footer */}
           <div class="mt-8 pt-6 border-t border-gray-200 text-center">
             <span class="text-xs text-gray-500">
-              © 2025 SSO, by{' '}
+              v0.2.0 • © 2025 SSO, by{' '}
               <a
                 href="https://github.com/dancaldera"
                 target="_blank"
