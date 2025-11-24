@@ -16,6 +16,7 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
+  const [showPinDialog, setShowPinDialog] = useState(false)
   const pinInputRefs = useRef<(HTMLInputElement | null)[]>([])
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -230,9 +231,16 @@ export default function SignIn() {
     setSelectedUser(user)
     setShowDropdown(false)
     setPinDigits(['', '', '', '', '', ''])
+    setShowPinDialog(true)
     setTimeout(() => {
       pinInputRefs.current[0]?.focus()
     }, 100)
+  }
+
+  const handleCloseDialog = () => {
+    setShowPinDialog(false)
+    setSelectedUser(null)
+    setPinDigits(['', '', '', '', '', ''])
   }
 
   const getRoleIcon = (role: string) => {
@@ -265,100 +273,111 @@ export default function SignIn() {
             <div>
               <h3 class="block text-sm font-medium text-gray-700 mb-2">{t('auth.selectUser')}</h3>
 
-              {/* Selected User Display */}
-              {selectedUser && (
-                <div class="mb-2 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
-                  <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-                    {selectedUser.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-gray-900">{selectedUser.name}</div>
-                    <div class="text-xs text-gray-600">{selectedUser.email}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedUser(null)
-                      setPinDigits(['', '', '', '', '', ''])
-                    }}
-                    class="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                  >
-                    {t('common.change')}
-                  </button>
-                </div>
-              )}
-
               {/* Custom Beautiful Dropdown */}
-              {!selectedUser && (
-                <div class="relative" ref={dropdownRef}>
-                  {/* Dropdown Button */}
+              <div class="relative" ref={dropdownRef}>
+                {/* Dropdown Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all bg-white text-gray-900 font-medium text-left flex items-center justify-between hover:border-gray-400"
+                >
+                  <span class="text-gray-500">{t('auth.selectAccount')}</span>
+                  <svg
+                    class={`w-5 h-5 text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <title>Dropdown arrow</title>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Dropdown Menu */}
+                {showDropdown && (
+                  <div class="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                    {users.length === 0 ? (
+                      <div class="px-4 py-3 text-gray-500 text-center text-sm">{t('auth.noAccountsAvailable')}</div>
+                    ) : (
+                      users.map((user) => (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => handleUserSelect(user)}
+                          class="w-full px-4 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+                        >
+                          {/* Avatar */}
+                          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+
+                          {/* User Info */}
+                          <div class="flex-1 text-left min-w-0">
+                            <div class="font-semibold text-gray-900">{user.name}</div>
+                            <div class="text-xs text-gray-600">{user.email}</div>
+                          </div>
+
+                          {/* Role Badge */}
+                          <div
+                            class={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ${
+                              user.role === 'admin'
+                                ? 'bg-red-100 text-red-700'
+                                : user.role === 'manager'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-green-100 text-green-700'
+                            }`}
+                          >
+                            {getRoleIcon(user.role)} {user.role}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Form>
+
+          {/* PIN Entry Dialog */}
+          {showPinDialog && selectedUser && (
+            <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+              {/* Backdrop */}
+              <button
+                type="button"
+                class="absolute inset-0 bg-black/50 backdrop-blur-sm cursor-default"
+                onClick={handleCloseDialog}
+                aria-label="Close dialog"
+              />
+
+              {/* Dialog */}
+              <div class="relative bg-white rounded-xl shadow-2xl p-8 w-full max-w-md max-h-[90vh] overflow-y-auto">
+                {/* Header */}
+                <div class="flex items-center justify-between mb-6">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                      {selectedUser.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div class="font-semibold text-gray-900">{selectedUser.name}</div>
+                      <div class="text-xs text-gray-600">{selectedUser.email}</div>
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setShowDropdown(!showDropdown)}
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all bg-white text-gray-900 font-medium text-left flex items-center justify-between hover:border-gray-400"
+                    onClick={handleCloseDialog}
+                    class="text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Close"
                   >
-                    <span class="text-gray-500">{t('auth.selectAccount')}</span>
-                    <svg
-                      class={`w-5 h-5 text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <title>Dropdown arrow</title>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <title>Close</title>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
-
-                  {/* Dropdown Menu */}
-                  {showDropdown && (
-                    <div class="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
-                      {users.length === 0 ? (
-                        <div class="px-4 py-3 text-gray-500 text-center text-sm">{t('auth.noAccountsAvailable')}</div>
-                      ) : (
-                        users.map((user) => (
-                          <button
-                            key={user.id}
-                            type="button"
-                            onClick={() => handleUserSelect(user)}
-                            class="w-full px-4 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
-                          >
-                            {/* Avatar */}
-                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-                              {user.name.charAt(0).toUpperCase()}
-                            </div>
-
-                            {/* User Info */}
-                            <div class="flex-1 text-left min-w-0">
-                              <div class="font-semibold text-gray-900">{user.name}</div>
-                              <div class="text-xs text-gray-600">{user.email}</div>
-                            </div>
-
-                            {/* Role Badge */}
-                            <div
-                              class={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ${
-                                user.role === 'admin'
-                                  ? 'bg-red-100 text-red-700'
-                                  : user.role === 'manager'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-green-100 text-green-700'
-                              }`}
-                            >
-                              {getRoleIcon(user.role)} {user.role}
-                            </div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Password Field - Only show when user is selected */}
-            {selectedUser && (
-              <div>
-                <div class="space-y-3">
+                {/* PIN Input */}
+                <div class="space-y-4">
                   <div class="flex items-center justify-between">
                     <label htmlFor="pin-input-0" class="block text-sm font-medium text-gray-700">
                       {t('auth.password')}
@@ -373,7 +392,7 @@ export default function SignIn() {
                     </button>
                   </div>
 
-                  {/* PIN Input Boxes */}
+                  {/* Larger PIN Input Boxes */}
                   <div class="flex gap-2 justify-center" onPaste={handlePinPaste}>
                     {pinDigits.map((digit, index) => (
                       <input
@@ -388,7 +407,7 @@ export default function SignIn() {
                         onInput={(e) => handlePinInput(index, (e.target as HTMLInputElement).value)}
                         onKeyDown={(e) => handlePinKeyDown(index, e as unknown as KeyboardEvent)}
                         disabled={isLoading}
-                        class="w-10 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        class="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                         style={{
                           WebkitTextSecurity: showPassword ? 'none' : 'disc',
                         }}
@@ -398,28 +417,27 @@ export default function SignIn() {
                     ))}
                   </div>
 
-                  <p class="text-xs text-center text-gray-500 mt-2">{t('auth.enter6digitPin')}</p>
+                  <p class="text-xs text-center text-gray-500">{t('auth.enter6digitPin')}</p>
                 </div>
+
+                {/* Virtual Keypad */}
+                <VirtualKeypad
+                  onDigitPress={handleKeypadDigitPress}
+                  onBackspace={handleKeypadBackspace}
+                  disabled={isLoading}
+                  size="large"
+                />
+
+                {/* Loading indicator */}
+                {isLoading && <div class="text-center text-sm text-gray-500 mt-4">{t('common.loading')}</div>}
               </div>
-            )}
-
-            {/* Virtual Keypad */}
-            {selectedUser && (
-              <VirtualKeypad
-                onDigitPress={handleKeypadDigitPress}
-                onBackspace={handleKeypadBackspace}
-                disabled={isLoading}
-              />
-            )}
-
-            {/* Loading indicator */}
-            {isLoading && <div class="text-center text-sm text-gray-500">{t('common.loading')}</div>}
-          </Form>
+            </div>
+          )}
 
           {/* Footer */}
           <div class="mt-8 pt-6 border-t border-gray-200 text-center">
             <span class="text-xs text-gray-500">
-              v0.2.0 • © 2025 SSO, by{' '}
+              v0.2.1 • © 2025 OSS, by{' '}
               <a
                 href="https://github.com/dancaldera"
                 target="_blank"

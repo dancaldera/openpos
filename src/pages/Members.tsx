@@ -148,15 +148,22 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
                     role: (e.target as HTMLSelectElement).value as User['role'],
                   })
                 }
-                options={[
-                  { value: 'user', label: `👤 ${t('members.user')} - ${t('members.basicAccess')}` },
-                  { value: 'manager', label: `👔 ${t('members.manager')} - ${t('members.extendedAccess')}` },
-                  { value: 'admin', label: `👑 ${t('members.admin')} - ${t('members.fullAccess')}` },
-                ]}
+                options={
+                  hasRole('admin')
+                    ? [
+                        { value: 'user', label: `👤 ${t('members.user')} - ${t('members.basicAccess')}` },
+                        { value: 'manager', label: `👔 ${t('members.manager')} - ${t('members.extendedAccess')}` },
+                        { value: 'admin', label: `👑 ${t('members.admin')} - ${t('members.fullAccess')}` },
+                      ]
+                    : [
+                        { value: 'user', label: `👤 ${t('members.user')} - ${t('members.basicAccess')}` },
+                        { value: 'manager', label: `👔 ${t('members.manager')} - ${t('members.extendedAccess')}` },
+                      ]
+                }
               />
             </div>
 
-            {(!user || (user && hasRole('admin'))) && (
+            {(!user || (user && hasRole('admin')) || (user && hasRole('manager') && user.role !== 'admin')) && (
               <div>
                 <Input
                   label={`🔐 ${user ? t('members.resetPassword') : t('auth.password')}`}
@@ -207,7 +214,6 @@ export default function Members() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [restoreConfirm, setRestoreConfirm] = useState<string | null>(null)
-  const [hardDeleteConfirm, setHardDeleteConfirm] = useState<string | null>(null)
   const [showDeletedUsers, setShowDeletedUsers] = useState(false)
 
   // Pagination state
@@ -221,11 +227,15 @@ export default function Members() {
   const canManageUsers = currentUser && (hasRole('admin') || hasRole('manager') || hasPermission('users.view'))
 
   useEffect(() => {
-    loadUsers()
-    if (hasPermission('users.delete') || hasRole('admin')) {
-      loadDeletedUsers()
+    if (canManageUsers) {
+      loadUsers()
+      if (hasPermission('users.delete') || hasRole('admin')) {
+        loadDeletedUsers()
+      }
+    } else if (currentUser) {
+      setIsLoading(false)
     }
-  }, [showDeletedUsers])
+  }, [showDeletedUsers, canManageUsers, currentUser])
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -305,22 +315,6 @@ export default function Members() {
         toast.success(t('members.userRestored'))
         // Reload both active and deleted users
         await loadUsers(currentPage)
-        await loadDeletedUsers()
-      } else {
-        toast.error(result.error || t('errors.generic'))
-      }
-    } catch (_err) {
-      toast.error(t('errors.generic'))
-    }
-  }
-
-  const handleHardDeleteUser = async (userId: string) => {
-    try {
-      const result = await authService.hardDeleteUser(userId)
-      if (result.success) {
-        setHardDeleteConfirm(null)
-        toast.success(t('members.userPermanentlyDeleted'))
-        // Reload deleted users
         await loadDeletedUsers()
       } else {
         toast.error(result.error || t('errors.generic'))
@@ -524,51 +518,42 @@ export default function Members() {
                   <div class="flex space-x-2">
                     {showDeletedUsers ? (
                       // Actions for deleted users
-                      <>
-                        {(hasPermission('users.delete') || hasRole('admin')) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setRestoreConfirm(user.id)}
-                            class="text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300 transition-all hover:shadow-md"
-                          >
-                            ↩️ {t('members.restore')}
-                          </Button>
-                        )}
-                        {(hasPermission('users.delete') || hasRole('admin')) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setHardDeleteConfirm(user.id)}
-                            class="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all hover:shadow-md"
-                          >
-                            ⛔ {t('members.permanentDelete')}
-                          </Button>
-                        )}
-                      </>
+                      (hasPermission('users.delete') || hasRole('admin')) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setRestoreConfirm(user.id)}
+                          class="text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300 transition-all hover:shadow-md"
+                        >
+                          ↩️ {t('members.restore')}
+                        </Button>
+                      )
                     ) : (
                       // Actions for active users
                       <>
-                        {(hasPermission('users.edit') || hasRole('admin')) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditUser(user)}
-                            class="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all hover:shadow-md mr-2"
-                          >
-                            ✏️ {t('common.edit')}
-                          </Button>
-                        )}
-                        {(hasPermission('users.delete') || hasRole('admin')) && user.id !== currentUser?.id && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setDeleteConfirm(user.id)}
-                            class="text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 transition-all hover:shadow-md"
-                          >
-                            📁 {t('members.archive')}
-                          </Button>
-                        )}
+                        {(hasPermission('users.edit') || hasRole('admin')) &&
+                          !(hasRole('manager') && !hasRole('admin') && user.role === 'admin') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditUser(user)}
+                              class="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all hover:shadow-md mr-2"
+                            >
+                              ✏️ {t('common.edit')}
+                            </Button>
+                          )}
+                        {(hasPermission('users.delete') || hasRole('admin')) &&
+                          user.id !== currentUser?.id &&
+                          !(hasRole('manager') && !hasRole('admin') && user.role === 'admin') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setDeleteConfirm(user.id)}
+                              class="text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 transition-all hover:shadow-md"
+                            >
+                              📁 {t('members.archive')}
+                            </Button>
+                          )}
                       </>
                     )}
                   </div>
@@ -636,16 +621,6 @@ export default function Members() {
         message={t('members.restoreUserMessage')}
         confirmText={t('members.restoreUserConfirm')}
         variant="primary"
-      />
-
-      <DialogConfirm
-        isOpen={!!hardDeleteConfirm}
-        onClose={() => setHardDeleteConfirm(null)}
-        onConfirm={() => hardDeleteConfirm && handleHardDeleteUser(hardDeleteConfirm)}
-        title={t('members.permanentDeleteTitle')}
-        message={`⚠️ ${t('members.permanentDeleteMessage')}`}
-        confirmText={t('members.permanentDeleteConfirm')}
-        variant="danger"
       />
     </div>
   )
