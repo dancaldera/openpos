@@ -14,25 +14,25 @@ Titanic POS is a modern Point of Sale (POS) application built as a cross-platfor
 - **State Management**: Preact Signals
 - **Internationalization**: Custom lightweight i18n solution
 - **Build Tool**: Vite
-- **Package Manager**: pnpm
+- **Package Manager**: bun
 - **Code Quality**: Biome (linting, formatting, import organization)
 
 ## Common Development Commands
 
 ### Development
-- `pnpm tauri dev` - Start full development environment (frontend + backend)
-- `pnpm dev` - Start Vite development server (frontend only, runs on port 1420)
-- `pnpm preview` - Preview built application
+- `bun tauri dev` - Start full development environment (frontend + backend)
+- `bun dev` - Start Vite development server (frontend only, runs on port 1420)
+- `bun preview` - Preview built application
 
 ### Build & Deploy
-- `pnpm build` - Build frontend only
-- `pnpm tauri build` - Build complete application for production
-- `pnpm tauri bundle` - Generate platform-specific installers
+- `bun build` - Build frontend only
+- `bun tauri build` - Build complete application for production
+- `bun tauri bundle` - Generate platform-specific installers
 
 ### Tauri Commands
-- `pnpm tauri info` - Show environment information
-- `pnpm tauri android` - Android development commands
-- `pnpm tauri ios` - iOS development commands
+- `bun tauri info` - Show environment information
+- `bun tauri android` - Android development commands
+- `bun tauri ios` - iOS development commands
 
 ## Architecture Overview
 
@@ -299,7 +299,7 @@ return <p>{t('welcome.message', { userName })}</p>
 ### Code Quality Tools
 - **Biome**: Integrated linting, formatting, and import organization
 - **TypeScript**: Strict mode enabled for comprehensive type safety
-- **Commands**: `pnpm lint`, `pnpm format`, `pnpm check`
+- **Commands**: `bun lint`, `bun format`, `bun check`
 
 ### Database Testing
 - Manual testing with comprehensive seeded data
@@ -308,7 +308,7 @@ return <p>{t('welcome.message', { userName })}</p>
 - Role-based access control tested across all features
 
 ### Quality Assurance
-- Run `pnpm check` before committing changes
+- Run `bun check` before committing changes
 - Test role-based features with different user accounts
 - Validate responsive design across screen sizes
 - Ensure data persistence across application restarts

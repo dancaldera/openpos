@@ -58,12 +58,12 @@ A comprehensive Point of Sale (POS) desktop application built with modern techno
 - **Styling**: Tailwind CSS v4
 - **State Management**: Preact Signals
 - **Build Tool**: Vite
-- **Package Manager**: pnpm
+- **Package Manager**: bun
 
 ## 📋 Prerequisites
 
 - [Node.js](https://nodejs.org/) (v16 or higher)
-- [pnpm](https://pnpm.io/) (recommended package manager)
+- [bun](https://bun.io/) (recommended package manager)
 - [Rust](https://rustup.rs/) (for Tauri backend)
 
 ## 🚀 Getting Started
@@ -76,12 +76,12 @@ A comprehensive Point of Sale (POS) desktop application built with modern techno
 
 2. **Install dependencies**
    ```bash
-   pnpm install
+   bun install
    ```
 
 3. **Start development server**
    ```bash
-   pnpm tauri dev
+   bun tauri dev
    ```
 
 The application will open as a desktop app with the frontend served on `http://localhost:1420`.
@@ -89,19 +89,19 @@ The application will open as a desktop app with the frontend served on `http://l
 ## 📜 Available Scripts
 
 ### Development
-- `pnpm tauri dev` - Start full development environment (frontend + backend)
-- `pnpm dev` - Start Vite development server (frontend only)
-- `pnpm preview` - Preview built application
+- `bun tauri dev` - Start full development environment (frontend + backend)
+- `bun dev` - Start Vite development server (frontend only)
+- `bun preview` - Preview built application
 
 ### Build & Deploy
-- `pnpm build` - Build frontend only
-- `pnpm tauri build` - Build complete application for production
-- `pnpm tauri bundle` - Generate platform-specific installers
+- `bun build` - Build frontend only
+- `bun tauri build` - Build complete application for production
+- `bun tauri bundle` - Generate platform-specific installers
 
 ### Tauri Commands
-- `pnpm tauri info` - Show environment information
-- `pnpm tauri android` - Android development commands
-- `pnpm tauri ios` - iOS development commands
+- `bun tauri info` - Show environment information
+- `bun tauri android` - Android development commands
+- `bun tauri ios` - iOS development commands
 
 ## 🏗️ Project Structure
 
@@ -225,43 +225,43 @@ The application includes mock authentication with three role levels:
 2. **Development Server**
    ```bash
    # Start with hot reload
-   pnpm tauri dev
+   bun tauri dev
    
    # Frontend only (for UI development)
-   pnpm dev
+   bun dev
    ```
 
 3. **Code Quality**
    ```bash
    # Type checking
-   pnpm tsc --noEmit
+   bun tsc --noEmit
    
    # Linting with Biome
-   pnpm lint
+   bun lint
    
    # Format code
-   pnpm format
+   bun format
    
    # Run all checks (lint + format + organize imports)
-   pnpm check
+   bun check
    ```
 
 ### Building for Production
 
 1. **Development Build**
    ```bash
-   pnpm tauri build --debug
+   bun tauri build --debug
    ```
 
 2. **Production Build**
    ```bash
-   pnpm tauri build
+   bun tauri build
    ```
 
 3. **Platform-specific Builds**
    ```bash
    # Generate installers for current platform
-   pnpm tauri bundle
+   bun tauri bundle
    ```
 
 ## 🤝 Contributing
@@ -282,7 +282,7 @@ The application includes mock authentication with three role levels:
 - Ensure role-based features work correctly
 - Use SQLite services for data persistence
 - Implement proper internationalization for new features
-- Run `pnpm check` before committing changes
+- Run `bun check` before committing changes
 - Follow existing patterns for service architecture
 - Add translation keys for all user-facing text
 
