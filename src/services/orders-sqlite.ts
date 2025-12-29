@@ -15,6 +15,7 @@ export interface OrderItem {
 export interface Order {
   id: string
   userId?: string
+  customerId?: string
   items: OrderItem[]
   subtotal: number
   tax: number
@@ -32,6 +33,7 @@ export interface CreateOrderRequest {
     productId: string
     quantity: number
   }>
+  customerId?: string
   paymentMethod?: 'cash' | 'card' | 'transfer'
   notes?: string
 }
@@ -48,6 +50,7 @@ export interface UpdateOrderRequest {
 interface DatabaseOrder {
   id: number
   user_id?: number
+  customer_id?: number
   subtotal: number
   tax: number
   total: number
@@ -106,6 +109,7 @@ export class OrderService {
     return {
       id: dbOrder.id.toString(),
       userId: dbOrder.user_id?.toString(),
+      customerId: dbOrder.customer_id?.toString(),
       items,
       subtotal: dbOrder.subtotal,
       tax: dbOrder.tax,
@@ -247,17 +251,18 @@ export class OrderService {
       const { tax: taxAmount, total } = await companySettingsService.calculateTotalWithTax(subtotal)
       const now = new Date().toISOString()
 
-      // Create order (with user_id if column exists, without if it doesn't)
+      // Create order (with user_id and customer_id if columns exist, without if they don't)
       let orderResult: { lastInsertId?: number }
       try {
-        // Try with user_id first (for new schema)
+        // Try with user_id and customer_id first (for new schema)
         orderResult = await db.execute(
           `INSERT INTO orders (
-            user_id, subtotal, tax, total, status, 
+            user_id, customer_id, subtotal, tax, total, status,
             payment_method, notes, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             1, // Default to Admin User (id=1)
+            orderData.customerId ? parseInt(orderData.customerId, 10) : null,
             subtotal,
             taxAmount,
             total,

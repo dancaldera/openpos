@@ -258,6 +258,67 @@ pub fn run() {
             description: "add_deleted_at_to_users",
             sql: "ALTER TABLE users ADD COLUMN deleted_at DATETIME;",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 14,
+            description: "create_customers_table",
+            sql: "CREATE TABLE IF NOT EXISTS customers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_number TEXT UNIQUE NOT NULL,
+                first_name TEXT NOT NULL,
+                last_name TEXT NOT NULL,
+                company_name TEXT,
+                email TEXT,
+                phone TEXT,
+                phone_secondary TEXT,
+                address_line1 TEXT,
+                address_line2 TEXT,
+                city TEXT,
+                state TEXT,
+                postal_code TEXT,
+                country TEXT DEFAULT 'US',
+                customer_type TEXT CHECK (customer_type IN ('individual', 'business')) DEFAULT 'individual',
+                customer_segment TEXT,
+                credit_limit REAL DEFAULT 0,
+                current_balance REAL DEFAULT 0,
+                tax_exempt BOOLEAN DEFAULT 0,
+                tax_id TEXT,
+                loyalty_points INTEGER DEFAULT 0,
+                total_purchases REAL DEFAULT 0,
+                total_orders INTEGER DEFAULT 0,
+                first_purchase_date DATETIME,
+                last_purchase_date DATETIME,
+                is_active BOOLEAN DEFAULT 1,
+                notes TEXT,
+                tags TEXT,
+                custom_fields TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES users(id),
+                deleted_at DATETIME
+            );
+            CREATE INDEX idx_customers_customer_number ON customers(customer_number);
+            CREATE INDEX idx_customers_email ON customers(email);
+            CREATE INDEX idx_customers_phone ON customers(phone);
+            CREATE INDEX idx_customers_name ON customers(last_name, first_name);
+            CREATE INDEX idx_customers_active ON customers(is_active);",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 15,
+            description: "add_customer_id_to_orders",
+            sql: "ALTER TABLE orders ADD COLUMN customer_id INTEGER REFERENCES customers(id);
+            CREATE INDEX idx_orders_customer_id ON orders(customer_id);",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 16,
+            description: "insert_default_customers",
+            sql: "INSERT OR IGNORE INTO customers (id, customer_number, first_name, last_name, email, phone, customer_type, is_active, created_at, updated_at) VALUES
+                (1, 'CUST-00001', 'Walk-In', 'Customer', NULL, NULL, 'individual', 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
+                (2, 'CUST-00002', 'John', 'Doe', 'john.doe@example.com', '555-0100', 'individual', 1, '2024-01-02T00:00:00.000Z', '2024-01-02T00:00:00.000Z'),
+                (3, 'CUST-00003', 'Acme', 'Corporation', 'billing@acme.com', '555-0200', 'business', 1, '2024-01-03T00:00:00.000Z', '2024-01-03T00:00:00.000Z');",
+            kind: MigrationKind::Up,
         }
     ];
 

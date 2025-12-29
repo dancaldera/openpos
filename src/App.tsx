@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import { useAuth } from './hooks/useAuth'
 import Analytics from './pages/Analytics'
 import ComponentShowcase from './pages/ComponentShowcase'
+import Customers from './pages/Customers'
 import Dashboard from './pages/Dashboard'
 import Members from './pages/Members'
 import Products from './pages/Products'
@@ -58,6 +59,8 @@ function App() {
         return <Orders />
       case 'products':
         return <Products />
+      case 'customers':
+        return <Customers />
       case 'members':
         return <Members />
       case 'analytics':

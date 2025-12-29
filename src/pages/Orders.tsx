@@ -17,6 +17,7 @@ import {
 import { useTranslation } from '../hooks/useTranslation'
 import { authService } from '../services/auth-sqlite'
 import { companySettingsService } from '../services/company-settings-sqlite'
+import { type Customer, customerService } from '../services/customers-sqlite'
 import { type Order, orderService } from '../services/orders-sqlite'
 import { formatReceiptData, printThermalReceipt } from '../services/print-service'
 import { type Product, productService } from '../services/products-sqlite'
@@ -28,6 +29,7 @@ export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([])
   const [allOrders, setAllOrders] = useState<Order[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<Order['status'] | 'all'>('all')
@@ -63,6 +65,7 @@ export default function Orders() {
 
   const [newOrder, setNewOrder] = useState({
     items: [] as Array<{ productId: string; quantity: number }>,
+    customerId: '' as string,
     paymentMethod: 'cash' as 'cash' | 'card' | 'transfer',
     notes: '',
   })
@@ -121,7 +124,7 @@ export default function Orders() {
       const filterToUse = dateFilter || selectedDateFilter
       const pageToUse = page || currentPage
 
-      const [ordersResult, productsData, settings, usersData, allOrdersForStats] = await Promise.all([
+      const [ordersResult, productsData, settings, usersData, allOrdersForStats, customersData] = await Promise.all([
         filterToUse === 'all'
           ? orderService.getOrdersPaginated(pageToUse, pageSize)
           : orderService.getOrdersByDateFilterPaginated(filterToUse, pageToUse, pageSize),
@@ -129,6 +132,7 @@ export default function Orders() {
         companySettingsService.getSettings(),
         userService.getUsers(),
         filterToUse === 'all' ? orderService.getOrders() : orderService.getOrdersByDateFilter(filterToUse),
+        customerService.getCustomers(),
       ])
 
       // Set pagination data
@@ -153,6 +157,7 @@ export default function Orders() {
       setOrderStats(stats)
 
       setProducts(productsData.filter((p) => p.isActive && p.stock > 0))
+      setCustomers(customersData.filter((c) => c.isActive))
       setTaxEnabled(settings.taxEnabled)
       setTaxRate(settings.taxEnabled ? settings.taxPercentage / 100 : 0)
       setCurrencySymbol(settings.currencySymbol)
@@ -257,6 +262,7 @@ export default function Orders() {
         setIsCreateModalOpen(false)
         setNewOrder({
           items: [],
+          customerId: '',
           paymentMethod: 'cash',
           notes: '',
         })
@@ -1112,6 +1118,27 @@ export default function Orders() {
                 </div>
               </div>
             )}
+
+            {/* Customer Selection */}
+            <div>
+              <Select
+                label={`👤 ${t('orders.customer')}`}
+                value={newOrder.customerId}
+                onChange={(e) =>
+                  setNewOrder({
+                    ...newOrder,
+                    customerId: (e.target as HTMLSelectElement).value,
+                  })
+                }
+                options={[
+                  { value: '', label: t('orders.selectCustomerPlaceholder') },
+                  ...customers.map((customer) => ({
+                    value: customer.id,
+                    label: `${customer.firstName} ${customer.lastName}${customer.companyName ? ` (${customer.companyName})` : ''} - ${customer.customerNumber}`,
+                  })),
+                ]}
+              />
+            </div>
 
             {/* Payment & Notes */}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

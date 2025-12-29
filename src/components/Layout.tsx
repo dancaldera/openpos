@@ -76,6 +76,12 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
       description: t('products.subtitle'),
     },
     {
+      id: 'customers',
+      label: t('navigation.customers'),
+      icon: '👥',
+      description: t('customers.subtitle'),
+    },
+    {
       id: 'members',
       label: t('navigation.members'),
       icon: '👤',
