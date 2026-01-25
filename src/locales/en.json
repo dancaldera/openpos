@@ -598,5 +598,23 @@
     "exported": "Successfully exported",
     "sent": "Successfully sent",
     "processed": "Successfully processed"
+  },
+  "categories": {
+    "beverages": "Beverages",
+    "bakery": "Bakery",
+    "coffeeTea": "Coffee & Tea",
+    "dairy": "Dairy",
+    "snacks": "Snacks",
+    "frozenFoods": "Frozen Foods",
+    "freshProduce": "Fresh Produce",
+    "meatPoultry": "Meat & Poultry",
+    "seafood": "Seafood",
+    "pantryItems": "Pantry Items",
+    "condimentsSauces": "Condiments & Sauces",
+    "breakfastItems": "Breakfast Items",
+    "householdItems": "Household Items",
+    "personalCare": "Personal Care",
+    "electronics": "Electronics",
+    "other": "Other"
   }
 }

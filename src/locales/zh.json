@@ -50,6 +50,7 @@
     "analytics": "分析",
     "orders": "订单",
     "products": "产品",
+    "customers": "客户",
     "members": "成员",
     "settings": "设置",
     "signOut": "退出"
@@ -507,5 +508,23 @@
     "exported": "导出成功",
     "sent": "发送成功",
     "processed": "处理成功"
+  },
+  "categories": {
+    "beverages": "饮料",
+    "bakery": "烘焙",
+    "coffeeTea": "咖啡和茶",
+    "dairy": "乳制品",
+    "snacks": "零食",
+    "frozenFoods": "冷冻食品",
+    "freshProduce": "新鲜农产品",
+    "meatPoultry": "肉类和家禽",
+    "seafood": "海鲜",
+    "pantryItems": "食品储藏室",
+    "condimentsSauces": "调味品和酱汁",
+    "breakfastItems": "早餐食品",
+    "householdItems": "家居用品",
+    "personalCare": "个人护理",
+    "electronics": "电子产品",
+    "other": "其他"
   }
 }

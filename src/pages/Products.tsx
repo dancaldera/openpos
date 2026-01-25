@@ -18,6 +18,42 @@ import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import { PRODUCT_CATEGORIES, type Product, productService } from '../services/products-sqlite'
 
+type TranslateFunction = (key: string, params?: Record<string, string | number | boolean>) => string
+
+const getCategoryIcon = (category: string): string => {
+  const icons: { [key: string]: string } = {
+    Beverages: '🥤',
+    Bakery: '🍞',
+    'Coffee & Tea': '☕',
+    Dairy: '🥛',
+    Snacks: '🍫',
+    Seafood: '🐟',
+    'Frozen Foods': '🧊',
+    'Fresh Produce': '🍎',
+    'Meat & Poultry': '🍖',
+    'Pantry Items': '🥫',
+    'Condiments & Sauces': '🫙',
+    'Breakfast Items': '🍳',
+    'Household Items': '🧽',
+    'Personal Care': '🧴',
+    Electronics: '📱',
+    Other: '📦',
+  }
+  return icons[category] || '📦'
+}
+
+const getCategoryLabel = (category: string, t: TranslateFunction): string => {
+  const key = category.replace(/[^a-zA-Z0-9]/g, '').replace(/^([A-Z])/, (m) => m.toLowerCase())
+  const translated = t(`categories.${key}`)
+  return translated === `categories.${key}` ? category : translated
+}
+
+const getCategoryOptions = (t: TranslateFunction) =>
+  PRODUCT_CATEGORIES.map((category) => ({
+    value: category,
+    label: `${getCategoryIcon(category)} ${getCategoryLabel(category, t)}`,
+  }))
+
 interface EditProductModalProps {
   product: Product | null
   isOpen: boolean
@@ -160,10 +196,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
                   }
                   required
                   placeholder={t('products.selectCategory')}
-                  options={PRODUCT_CATEGORIES.map((category) => ({
-                    value: category,
-                    label: category,
-                  }))}
+                  options={getCategoryOptions(t)}
                   class="bg-white/80"
                 />
               </div>
@@ -445,22 +478,6 @@ export default function Products() {
     return '✅'
   }
 
-  const getCategoryIcon = (category: string) => {
-    const icons: { [key: string]: string } = {
-      Beverages: '🥤',
-      Bakery: '🍞',
-      'Coffee & Tea': '☕',
-      Dairy: '🥛',
-      Snacks: '🍫',
-      Seafood: '🐟',
-      'Frozen Foods': '🧊',
-      'Fresh Produce': '🍎',
-      'Household Items': '🧽',
-      'Personal Care': '🧴',
-    }
-    return icons[category] || '📦'
-  }
-
   const formatCurrency = (amount: number) => {
     return `$${amount.toFixed(2)}`
   }
@@ -608,7 +625,7 @@ export default function Products() {
                 <TableCell>
                   <div class="inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-indigo-200 text-blue-800 border border-blue-300 shadow-sm">
                     <span class="mr-1">{getCategoryIcon(product.category)}</span>
-                    {product.category}
+                    {getCategoryLabel(product.category, t)}
                   </div>
                 </TableCell>
                 <TableCell>

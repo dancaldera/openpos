@@ -29,6 +29,7 @@
     "analytics": "Análises",
     "orders": "Pedidos",
     "products": "Produtos",
+    "customers": "Clientes",
     "members": "Membros",
     "settings": "Configurações",
     "signOut": "Sair"
@@ -439,6 +440,29 @@
   "success": {
     "saved": "Salvo com sucesso",
     "updated": "Atualizado com sucesso",
-    "deleted": "Excluído com sucesso"
+    "deleted": "Excluído com sucesso",
+    "created": "Criado com sucesso",
+    "imported": "Importado com sucesso",
+    "exported": "Exportado com sucesso",
+    "sent": "Enviado com sucesso",
+    "processed": "Processado com sucesso"
+  },
+  "categories": {
+    "beverages": "Bebidas",
+    "bakery": "Padaria",
+    "coffeeTea": "Café e Chá",
+    "dairy": "Laticínios",
+    "snacks": "Lanches",
+    "frozenFoods": "Congelados",
+    "freshProduce": "Frutas e Verduras",
+    "meatPoultry": "Carnes e Aves",
+    "seafood": "Frutos do Mar",
+    "pantryItems": "Despensa",
+    "condimentsSauces": "Condimentos e Molhos",
+    "breakfastItems": "Café da Manhã",
+    "householdItems": "Artigos para o Lar",
+    "personalCare": "Cuidados Pessoais",
+    "electronics": "Eletrônicos",
+    "other": "Outros"
   }
 }

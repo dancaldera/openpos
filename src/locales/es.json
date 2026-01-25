@@ -50,6 +50,7 @@
     "analytics": "Análisis",
     "orders": "Órdenes",
     "products": "Productos",
+    "customers": "Clientes",
     "members": "Miembros",
     "settings": "Configuración",
     "signOut": "Cerrar Sesión"
@@ -503,13 +504,31 @@
     "timeout": "La solicitud expiró. Por favor inténtalo de nuevo."
   },
   "success": {
-    "saved": "Guardado exitosamente",
-    "updated": "Actualizado exitosamente",
-    "deleted": "Eliminado exitosamente",
-    "created": "Creado exitosamente",
-    "imported": "Importado exitosamente",
-    "exported": "Exportado exitosamente",
-    "sent": "Enviado exitosamente",
-    "processed": "Procesado exitosamente"
+    "saved": "Guardado correctamente",
+    "updated": "Actualizado correctamente",
+    "deleted": "Eliminado correctamente",
+    "created": "Creado correctamente",
+    "imported": "Importado correctamente",
+    "exported": "Exportado correctamente",
+    "sent": "Enviado correctamente",
+    "processed": "Procesado correctamente"
+  },
+  "categories": {
+    "beverages": "Bebidas",
+    "bakery": "Panadería",
+    "coffeeTea": "Café y Té",
+    "dairy": "Lácteos",
+    "snacks": "Snacks",
+    "frozenFoods": "Congelados",
+    "freshProduce": "Frutas y Verduras",
+    "meatPoultry": "Carnes y Aves",
+    "seafood": "Mariscos",
+    "pantryItems": "Despensa",
+    "condimentsSauces": "Condimentos y Salsas",
+    "breakfastItems": "Desayunos",
+    "householdItems": "Artículos del Hogar",
+    "personalCare": "Cuidado Personal",
+    "electronics": "Electrónica",
+    "other": "Otros"
   }
 }

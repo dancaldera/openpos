@@ -50,6 +50,7 @@
     "analytics": "Analytik",
     "orders": "Bestellungen",
     "products": "Produkte",
+    "customers": "Kunden",
     "members": "Mitglieder",
     "settings": "Einstellungen",
     "signOut": "Abmelden"
@@ -508,5 +509,23 @@
     "exported": "Erfolgreich exportiert",
     "sent": "Erfolgreich gesendet",
     "processed": "Erfolgreich verarbeitet"
+  },
+  "categories": {
+    "beverages": "Getränke",
+    "bakery": "Bäckerei",
+    "coffeeTea": "Kaffee und Tee",
+    "dairy": "Milchprodukte",
+    "snacks": "Snacks",
+    "frozenFoods": "Tiefkühlkost",
+    "freshProduce": "Obst und Gemüse",
+    "meatPoultry": "Fleisch und Geflügel",
+    "seafood": "Meeresfrüchte",
+    "pantryItems": "Vorratskammer",
+    "condimentsSauces": "Gewürze und Saucen",
+    "breakfastItems": "Frühstücksartikel",
+    "householdItems": "Haushaltsartikel",
+    "personalCare": "Körperpflege",
+    "electronics": "Elektronik",
+    "other": "Sonstiges"
   }
 }

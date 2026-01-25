@@ -50,6 +50,7 @@
     "analytics": "分析",
     "orders": "注文",
     "products": "商品",
+    "customers": "顧客",
     "members": "メンバー",
     "settings": "設定",
     "signOut": "サインアウト"
@@ -507,5 +508,23 @@
     "exported": "エクスポートしました",
     "sent": "送信しました",
     "processed": "処理しました"
+  },
+  "categories": {
+    "beverages": "飲料",
+    "bakery": "ベーカリー",
+    "coffeeTea": "コーヒー＆お茶",
+    "dairy": "乳製品",
+    "snacks": "スナック",
+    "frozenFoods": "冷凍食品",
+    "freshProduce": "生鮮食品",
+    "meatPoultry": "肉類・鶏肉",
+    "seafood": "シーフード",
+    "pantryItems": "パントリー",
+    "condimentsSauces": "調味料・ソース",
+    "breakfastItems": "朝食用品",
+    "householdItems": "日用品",
+    "personalCare": "パーソナルケア",
+    "electronics": "家電製品",
+    "other": "その他"
   }
 }
