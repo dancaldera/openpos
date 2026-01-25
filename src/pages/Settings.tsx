@@ -5,6 +5,7 @@ import { Button, Dialog, Input, Select } from '../components/ui'
 import LanguageSelector from '../components/ui/LanguageSelector'
 import { useTranslation } from '../hooks/useTranslation'
 import { type CompanySettings, companySettingsService, SUPPORTED_CURRENCIES } from '../services/company-settings-sqlite'
+import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 interface SettingsProps {
   onNavigate: (page: string) => void
@@ -56,6 +57,8 @@ export default function Settings({ onNavigate }: SettingsProps) {
       if (result.success && result.settings) {
         setSettings(result.settings)
         setLocalSettings(result.settings)
+        appSettingsStore.appName.value = result.settings.appName
+        appSettingsStore.companyName.value = result.settings.name
         setHasChanges(false)
         toast.success(t('settings.settingsUpdated'))
       } else {
@@ -83,6 +86,8 @@ export default function Settings({ onNavigate }: SettingsProps) {
       if (result.success && result.settings) {
         setSettings(result.settings)
         setLocalSettings(result.settings)
+        appSettingsStore.appName.value = result.settings.appName
+        appSettingsStore.companyName.value = result.settings.name
         setHasChanges(false)
         toast.success(t('success.updated'))
         setIsResetDialogOpen(false)
