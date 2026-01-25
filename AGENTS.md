@@ -130,23 +130,58 @@ The application includes comprehensive multi-language support with the following
 
 ### File Structure
 ```
-src/locales/
-├── en.json              # English (default/fallback)
-├── es.json              # Spanish
-├── fr.json              # French  
-├── de.json              # German
-├── it.json              # Italian
-├── pt.json              # Portuguese
-├── zh.json              # Chinese (Simplified)
-├── ja.json              # Japanese
-└── index.ts             # Locale configuration
+src/
+├── locales/                  # Translation files
+│   ├── en.json              # English (default/fallback)
+│   ├── es.json              # Spanish
+│   ├── fr.json              # French
+│   ├── de.json              # German
+│   ├── it.json              # Italian
+│   ├── pt.json              # Portuguese
+│   ├── zh.json              # Chinese (Simplified)
+│   ├── ja.json              # Japanese
+│   └── index.ts             # Locale exports and configuration
+├── services/
+│   └── translations.ts      # Translation service and utilities
+├── stores/
+│   └── language/            # Language state management
+│       ├── languageStore.ts
+│       └── languageActions.ts
+├── hooks/
+│   └── useTranslation.ts    # Translation hook for components
+└── components/
+    └── ui/
+        └── LanguageSelector.tsx
 ```
 
 ### Key Components
-- **Translation Service** (`src/services/translations.ts`): Core i18n functionality
+- **Translation Service** (`src/services/translations.ts`): Core i18n functionality with lazy loading
 - **Language Store** (`src/stores/language/`): State management for language preferences
-- **Translation Hook** (`src/hooks/useTranslation.ts`): React hook for components
+- **Translation Hook** (`src/hooks/useTranslation.ts`): Hook for components
 - **Language Selector** (`src/components/ui/LanguageSelector.tsx`): UI component for language switching
+
+### Translation File Format
+
+Each translation file uses nested JSON structure:
+
+```json
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "analytics": "Analytics"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "welcomeBack": "Welcome back!"
+  }
+}
+```
 
 ### Implementation Pattern
 ```typescript
@@ -156,12 +191,57 @@ return <h1>{t('dashboard.title')}</h1>
 
 // With parameters
 return <p>{t('welcome.message', { userName })}</p>
+
+// Pluralization
+const key = count === 1 ? 'items.one' : 'items.other'
+return <span>{t(key, { count })}</span>
 ```
 
 ### Database Integration
 - Language preferences stored in `company_settings` table
-- User-specific preferences supported via `user_preferences` table
+- User-specific preferences via `user_preferences` table
 - Automatic language detection and persistence
+
+### Supported Locales
+```typescript
+export const SUPPORTED_LOCALES = [
+  { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
+  { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸' },
+  { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷' },
+  { code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪' },
+  { code: 'it', name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹' },
+  { code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇵🇹' },
+  { code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳' },
+  { code: 'ja', name: 'Japanese', nativeName: '日本語', flag: '🇯🇵' },
+]
+```
+
+### Best Practices
+- Use nested structure: `page.section.element`
+- Use descriptive names: `products.deleteConfirm` instead of `products.confirm`
+- Keep text concise and consider cultural context
+- Test with longer translations (German) to verify UI handles overflow
+- Lazy load translation files for performance
+- Cache translations in memory and localStorage
+
+### Advanced Features
+
+**RTL Support:**
+```typescript
+const isRTL = getSupportedLocales()
+  .find(l => l.code === getCurrentLocale())?.rtl || false
+```
+
+**Date/Number Formatting:**
+```typescript
+export function formatDate(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale).format(date)
+}
+
+export function formatCurrency(amount: number, locale: string, currency: string): string {
+  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount)
+}
+```
 
 ### Development Guidelines
 - **Always** add translation keys for new user-facing text
@@ -169,7 +249,6 @@ return <p>{t('welcome.message', { userName })}</p>
 - Use nested JSON structure for organized translations
 - Provide context comments for translators
 - Follow consistent key naming conventions (camelCase)
-- Test UI with longer translations (German, etc.)
 - Use the `useTranslation` hook in all components
 - Implement proper fallbacks for missing translations
 

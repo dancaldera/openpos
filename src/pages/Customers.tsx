@@ -488,7 +488,9 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                 />
                 <div>
                   <span class="text-sm font-medium text-gray-700">{t('customers.active')}</span>
-                  <p class="text-xs text-gray-500">{formData.isActive ? t('customers.active') : t('customers.inactive')}</p>
+                  <p class="text-xs text-gray-500">
+                    {formData.isActive ? t('customers.active') : t('customers.inactive')}
+                  </p>
                 </div>
               </label>
             </div>
@@ -689,8 +691,7 @@ export default function Customers() {
                             : 'bg-blue-100 text-blue-800'
                         }`}
                       >
-                        {customer.customerType === 'business' ? '🏢' : '👤'}{' '}
-                        {t(`customers.${customer.customerType}`)}
+                        {customer.customerType === 'business' ? '🏢' : '👤'} {t(`customers.${customer.customerType}`)}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -708,12 +709,11 @@ export default function Customers() {
                     <TableCell>
                       <span
                         class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          customer.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                          customer.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                         }`}
                       >
-                        {customer.isActive ? '✓' : '✗'} {customer.isActive ? t('customers.active') : t('customers.inactive')}
+                        {customer.isActive ? '✓' : '✗'}{' '}
+                        {customer.isActive ? t('customers.active') : t('customers.inactive')}
                       </span>
                     </TableCell>
                     <TableCell>

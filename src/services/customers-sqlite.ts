@@ -563,10 +563,9 @@ export class CustomerService {
         await db.execute(`UPDATE customers SET ${updateFields.join(', ')} WHERE id = ?`, updateValues)
       }
 
-      const updatedCustomer = await db.select<DatabaseCustomer[]>(
-        'SELECT * FROM customers WHERE id = ? LIMIT 1',
-        [parseInt(id, 10)],
-      )
+      const updatedCustomer = await db.select<DatabaseCustomer[]>('SELECT * FROM customers WHERE id = ? LIMIT 1', [
+        parseInt(id, 10),
+      ])
 
       return {
         success: true,
