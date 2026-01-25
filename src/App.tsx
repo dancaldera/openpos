@@ -10,6 +10,7 @@ import Members from './pages/Members'
 import Products from './pages/Products'
 import Settings from './pages/Settings'
 import SignIn from './pages/SignIn'
+import { appSettingsStore } from './stores/appSettings/appSettingsStore'
 import { authActions } from './stores/auth/authActions'
 import { languageActions } from './stores/language/languageActions'
 import './App.css'
@@ -19,10 +20,11 @@ function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
   const { isAuthenticated, isLoading } = useAuth()
 
-  // Initialize auth and language on app start
+  // Initialize auth, language, and app settings on app start
   useEffect(() => {
     authActions.initializeAuth()
     languageActions.initializeLanguage()
+    appSettingsStore.initialize()
   }, [])
 
   const handleNavigate = (page: string) => {

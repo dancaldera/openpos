@@ -24,10 +24,6 @@ export default function SignIn() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const animationRef = useRef<number>(0)
 
-  useEffect(() => {
-    appSettingsStore.initialize()
-  }, [])
-
   // Load users on mount
   useEffect(() => {
     loadUsers()

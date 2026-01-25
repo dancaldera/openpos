@@ -6,7 +6,6 @@
  * @property {(page: string) => void} onNavigate - Callback function for navigation events
  */
 import type { ComponentChildren } from 'preact'
-import { useEffect } from 'preact/hooks'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
@@ -54,10 +53,6 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
   const { t } = useTranslation()
 
   const { appName } = appSettingsStore
-
-  useEffect(() => {
-    appSettingsStore.initialize()
-  }, [])
 
   /**
    * Navigation menu items configuration with role-based filtering
