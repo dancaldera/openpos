@@ -123,9 +123,9 @@ pub fn run() {
             version: 2,
             description: "insert_default_users",
             sql: "INSERT OR IGNORE INTO users (id, email, password, name, role, permissions, created_at, last_login) VALUES 
-                (1, 'admin@postpos.com', '123456', 'Admin User', 'admin', '[\"*\"]', '2024-01-01T00:00:00.000Z', '2025-01-24T10:30:00.000Z'),
-                (2, 'manager@postpos.com', '123456', 'Store Manager', 'manager', '[\"sales.view\",\"sales.create\",\"sales.edit\",\"products.view\",\"products.create\",\"products.edit\",\"products.delete\",\"inventory.view\",\"inventory.edit\",\"reports.view\",\"reports.export\",\"users.view\",\"users.create\",\"users.edit\",\"users.delete\"]', '2024-01-15T00:00:00.000Z', '2025-01-23T14:45:00.000Z'),
-                (3, 'user@postpos.com', '123456', 'John Cashier', 'user', '[\"sales.view\",\"sales.create\",\"products.view\"]', '2024-02-01T00:00:00.000Z', '2025-01-24T09:00:00.000Z');",
+                (1, 'admin@danpos.com', '123456', 'Admin User', 'admin', '[\"*\"]', '2024-01-01T00:00:00.000Z', '2025-01-24T10:30:00.000Z'),
+                (2, 'manager@danpos.com', '123456', 'Store Manager', 'manager', '[\"sales.view\",\"sales.create\",\"sales.edit\",\"products.view\",\"products.create\",\"products.edit\",\"products.delete\",\"inventory.view\",\"inventory.edit\",\"reports.view\",\"reports.export\",\"users.view\",\"users.create\",\"users.edit\",\"users.delete\"]', '2024-01-15T00:00:00.000Z', '2025-01-23T14:45:00.000Z'),
+                (3, 'user@danpos.com', '123456', 'John Cashier', 'user', '[\"sales.view\",\"sales.create\",\"products.view\"]', '2024-02-01T00:00:00.000Z', '2025-01-24T09:00:00.000Z');",
             kind: MigrationKind::Up,
         },
         Migration {
@@ -219,6 +219,7 @@ pub fn run() {
             sql: "CREATE TABLE IF NOT EXISTS company_settings (
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 name TEXT NOT NULL DEFAULT 'Titanic POS',
+                app_name TEXT NOT NULL DEFAULT 'DAN POS',
                 description TEXT DEFAULT 'Modern Point of Sale System',
                 tax_enabled BOOLEAN DEFAULT 1,
                 tax_percentage REAL DEFAULT 10.0,
@@ -237,8 +238,8 @@ pub fn run() {
         Migration {
             version: 10,
             description: "insert_default_company_settings",
-            sql: "INSERT OR IGNORE INTO company_settings (id, name, description, tax_enabled, tax_percentage, currency_symbol, language, created_at, updated_at) VALUES
-                (1, 'Titanic POS', 'Modern Point of Sale System', 1, 10.0, '$', 'en', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');",
+            sql: "INSERT OR IGNORE INTO company_settings (id, name, app_name, description, tax_enabled, tax_percentage, currency_symbol, language, created_at, updated_at) VALUES
+                (1, 'Titanic POS', 'DAN POS', 'Modern Point of Sale System', 1, 10.0, '$', 'en', '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z');",
             kind: MigrationKind::Up,
         },
         Migration {
@@ -316,8 +317,39 @@ pub fn run() {
             description: "insert_default_customers",
             sql: "INSERT OR IGNORE INTO customers (id, customer_number, first_name, last_name, email, phone, customer_type, is_active, created_at, updated_at) VALUES
                 (1, 'CUST-00001', 'Walk-In', 'Customer', NULL, NULL, 'individual', 1, '2024-01-01T00:00:00.000Z', '2024-01-01T00:00:00.000Z'),
-                (2, 'CUST-00002', 'John', 'Doe', 'john.doe@example.com', '555-0100', 'individual', 1, '2024-01-02T00:00:00.000Z', '2024-01-02T00:00:00.000Z'),
+                (2, 'CUST-00002', 'John', 'Doe', 'john.doe@email.com', '555-0100', 'individual', 1, '2024-01-02T00:00:00.000Z', '2024-01-02T00:00:00.000Z'),
                 (3, 'CUST-00003', 'Acme', 'Corporation', 'billing@acme.com', '555-0200', 'business', 1, '2024-01-03T00:00:00.000Z', '2024-01-03T00:00:00.000Z');",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 17,
+            description: "insert_additional_test_customers",
+            sql: "INSERT OR IGNORE INTO customers (id, customer_number, first_name, last_name, email, phone, customer_type, is_active, created_at, updated_at) VALUES
+                (4, 'CUST-00004', 'Jane', 'Smith', 'jane.smith@email.com', '555-0300', 'individual', 1, '2024-01-04T00:00:00.000Z', '2024-01-04T00:00:00.000Z'),
+                (5, 'CUST-00005', 'Bob', 'Johnson', 'bob.j@email.com', '555-0400', 'individual', 1, '2024-01-05T00:00:00.000Z', '2024-01-05T00:00:00.000Z'),
+                (6, 'CUST-00006', 'Tech', 'Solutions', 'contact@techsolutions.com', '555-0500', 'business', 1, '2024-01-06T00:00:00.000Z', '2024-01-06T00:00:00.000Z');",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 18,
+            description: "insert_sample_orders",
+            sql: "INSERT OR IGNORE INTO orders (id, subtotal, tax, total, status, payment_method, user_id, customer_id, created_at, updated_at, completed_at) VALUES
+                (3, 15.99, 1.60, 17.59, 'completed', 'cash', 3, 2, '2025-01-20T10:30:00.000Z', '2025-01-20T10:35:00.000Z', '2025-01-20T10:35:00.000Z'),
+                (4, 42.97, 4.30, 47.27, 'completed', 'card', 3, 3, '2025-01-21T14:45:00.000Z', '2025-01-21T14:50:00.000Z', '2025-01-21T14:50:00.000Z'),
+                (5, 8.50, 0.85, 9.35, 'completed', 'cash', 3, NULL, '2025-01-22T09:15:00.000Z', '2025-01-22T09:20:00.000Z', '2025-01-22T09:20:00.000Z');",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 19,
+            description: "insert_sample_order_items",
+            sql: "INSERT OR IGNORE INTO order_items (id, order_id, product_id, product_name, quantity, unit_price, total_price) VALUES
+                (4, 3, 1, 'Coca Cola 500ml', 3, 2.50, 7.50),
+                (5, 3, 2, 'Bread Loaf', 2, 3.99, 7.98),
+                (6, 4, 3, 'Premium Coffee Beans 1kg', 1, 24.99, 24.99),
+                (7, 4, 4, 'Organic Milk 1L', 2, 4.50, 9.00),
+                (8, 4, 5, 'Chocolate Bar', 3, 5.99, 17.97),
+                (9, 5, 6, 'Fresh Salmon Fillet', 1, 18.99, 18.99),
+                (10, 5, 1, 'Coca Cola 500ml', 2, 2.50, 5.00);",
             kind: MigrationKind::Up,
         }
     ];

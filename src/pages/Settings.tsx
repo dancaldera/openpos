@@ -135,6 +135,17 @@ export default function Settings({ onNavigate }: SettingsProps) {
                 </div>
                 <div>
                   <Input
+                    label={t('settings.appName')}
+                    value={settings.appName}
+                    onBlur={(e) => handleUpdateSetting('appName', (e.target as HTMLInputElement).value)}
+                    disabled={isUpdating}
+                    placeholder={t('settings.appName')}
+                    class="mb-2"
+                  />
+                  <span class="text-sm text-gray-500">{t('settings.appNameDesc')}</span>
+                </div>
+                <div>
+                  <Input
                     label={t('common.description')}
                     value={settings.description}
                     onBlur={(e) => handleUpdateSetting('description', (e.target as HTMLInputElement).value)}

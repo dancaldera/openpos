@@ -393,6 +393,8 @@
     "companyInfo": "会社情報",
     "companyName": "会社名",
     "companyNameDesc": "あなたのビジネスの名称",
+    "appName": "アプリ名",
+    "appNameDesc": "サイドバーとログイン画面に表示される名前",
     "descriptionDesc": "あなたのビジネスの簡潔な説明",
     "addressDesc": "あなたのビジネスの物理的な住所",
     "phoneDesc": "ビジネスの電話番号",

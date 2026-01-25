@@ -1,5 +1,5 @@
 [package]
-name = "titanic-pos"
+name = "dan-pos"
 version = "0.1.0"
 description = "A Titanic POS"
 authors = ["you"]

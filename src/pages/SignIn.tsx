@@ -5,10 +5,12 @@ import { VirtualKeypad } from '../components/ui/VirtualKeypad'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import { authService, type User } from '../services/auth-sqlite'
+import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 export default function SignIn() {
   const { t } = useTranslation()
   const { signIn } = useAuth()
+  const { appName } = appSettingsStore
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [pinDigits, setPinDigits] = useState(['', '', '', '', '', ''])
@@ -21,6 +23,10 @@ export default function SignIn() {
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const animationRef = useRef<number>(0)
+
+  useEffect(() => {
+    appSettingsStore.initialize()
+  }, [])
 
   // Load users on mount
   useEffect(() => {
@@ -121,9 +127,13 @@ export default function SignIn() {
     try {
       const result = await authService.getAllUsersForLogin()
       setUsers(result)
+      if (result.length === 0) {
+        console.warn('No users found in database')
+      }
     } catch (error) {
       // Silent fail - users list is optional
       console.error('Failed to load users:', error)
+      toast.error('Failed to load users: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 
@@ -263,7 +273,7 @@ export default function SignIn() {
         <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-8">
           {/* Logo and Title */}
           <div class="text-center mb-8">
-            <h1 class="text-2xl font-bold text-gray-900">⚓ Titanic POS</h1>
+            <h1 class="text-2xl font-bold text-gray-900">{appName.value}</h1>
             <p class="text-sm text-gray-600 mt-2">{t('auth.signInToAccount')}</p>
           </div>
 
@@ -298,7 +308,16 @@ export default function SignIn() {
                 {showDropdown && (
                   <div class="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
                     {users.length === 0 ? (
-                      <div class="px-4 py-3 text-gray-500 text-center text-sm">{t('auth.noAccountsAvailable')}</div>
+                      <div class="px-4 py-3 text-gray-500 text-center text-sm">
+                        {t('auth.noAccountsAvailable')}
+                        <button
+                          type="button"
+                          onClick={() => loadUsers()}
+                          class="block mx-auto mt-2 text-blue-600 hover:text-blue-700 text-xs underline"
+                        >
+                          Click here to reload
+                        </button>
+                      </div>
                     ) : (
                       users.map((user) => (
                         <button

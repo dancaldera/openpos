@@ -395,6 +395,8 @@
     "companyInfo": "Informations de l'entreprise",
     "companyName": "Nom de l'entreprise",
     "companyNameDesc": "Le nom de votre entreprise",
+    "appName": "Nom de l'application",
+    "appNameDesc": "Le nom affiché dans la barre latérale et l'écran de connexion",
     "descriptionDesc": "Brève description de votre entreprise",
     "addressDesc": "Adresse physique de votre entreprise",
     "phoneDesc": "Numéro de téléphone de l'entreprise",

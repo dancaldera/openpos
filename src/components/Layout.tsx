@@ -6,8 +6,10 @@
  * @property {(page: string) => void} onNavigate - Callback function for navigation events
  */
 import type { ComponentChildren } from 'preact'
+import { useEffect } from 'preact/hooks'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
+import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 import { Button } from './ui'
 import Sidebar from './ui/Sidebar'
 
@@ -50,6 +52,12 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
    * Translation hook providing translation function and language utilities
    */
   const { t } = useTranslation()
+
+  const { appName } = appSettingsStore
+
+  useEffect(() => {
+    appSettingsStore.initialize()
+  }, [])
 
   /**
    * Navigation menu items configuration with role-based filtering
@@ -123,6 +131,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
         @param {boolean} defaultCollapsed - Initial collapsed state
       */}
       <Sidebar
+        title={appName.value}
         items={menuItems.map((item) => ({
           id: item.id,
           label: item.label,

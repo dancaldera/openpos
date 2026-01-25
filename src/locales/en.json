@@ -473,7 +473,7 @@
     "noRecentActivity": "No recent activity",
     "by": "by"
   },
-  "settings": {
+    "settings": {
     "title": "Settings",
     "subtitle": "Configure your POS system preferences and company information",
     "general": "General",
@@ -484,6 +484,8 @@
     "companyInfo": "Company Information",
     "companyName": "Company Name",
     "companyNameDesc": "The name of your business",
+    "appName": "App Name",
+    "appNameDesc": "The display name shown in the sidebar and login screen",
     "descriptionDesc": "Brief description of your business",
     "addressDesc": "Physical address of your business",
     "phoneDesc": "Business phone number",

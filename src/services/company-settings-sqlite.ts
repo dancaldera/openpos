@@ -3,6 +3,7 @@ import Database from '@tauri-apps/plugin-sql'
 export interface CompanySettings {
   id: string
   name: string
+  appName: string
   description: string
   taxEnabled: boolean
   taxPercentage: number
@@ -44,6 +45,7 @@ export const SUPPORTED_CURRENCIES = [
 interface DatabaseCompanySettings {
   id: number
   name: string
+  app_name: string
   description: string
   tax_enabled: number
   tax_percentage: number
@@ -80,6 +82,7 @@ export class CompanySettingsService {
     return {
       id: dbSettings.id.toString(),
       name: dbSettings.name,
+      appName: dbSettings.app_name,
       description: dbSettings.description,
       taxEnabled: Boolean(dbSettings.tax_enabled),
       taxPercentage: dbSettings.tax_percentage,
@@ -144,6 +147,11 @@ export class CompanySettingsService {
       if (updates.name !== undefined) {
         updateFields.push('name = ?')
         updateValues.push(updates.name)
+      }
+
+      if (updates.appName !== undefined) {
+        updateFields.push('app_name = ?')
+        updateValues.push(updates.appName)
       }
 
       if (updates.description !== undefined) {
@@ -227,11 +235,26 @@ export class CompanySettingsService {
       const now = new Date().toISOString()
       await db.execute(
         `UPDATE company_settings SET 
-         name = ?, description = ?, tax_enabled = ?, tax_percentage = ?, 
+         name = ?, app_name = ?, description = ?, tax_enabled = ?, tax_percentage = ?, 
          currency_symbol = ?, language = ?, logo_url = ?, address = ?, 
          phone = ?, email = ?, website = ?, updated_at = ? 
          WHERE id = ?`,
-        ['Titanic POS', 'Modern Point of Sale System', 1, 10.0, '$', 'en', null, null, null, null, null, now, 1],
+        [
+          'Titanic POS',
+          'DAN POS',
+          'Modern Point of Sale System',
+          1,
+          10.0,
+          '$',
+          'en',
+          null,
+          null,
+          null,
+          null,
+          null,
+          now,
+          1,
+        ],
       )
 
       const resetSettings = await db.select<DatabaseCompanySettings[]>(

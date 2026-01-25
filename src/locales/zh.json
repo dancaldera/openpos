@@ -393,6 +393,8 @@
     "companyInfo": "公司信息",
     "companyName": "公司名称",
     "companyNameDesc": "您企业的名称",
+    "appName": "应用名称",
+    "appNameDesc": "在侧边栏和登录屏幕显示的名称",
     "descriptionDesc": "您企业的简要描述",
     "addressDesc": "您企业的实体地址",
     "phoneDesc": "企业电话号码",

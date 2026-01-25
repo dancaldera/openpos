@@ -372,6 +372,8 @@
     "companyInfo": "Informações da Empresa",
     "companyName": "Nome da Empresa",
     "companyNameDesc": "O nome do seu negócio",
+    "appName": "Nome do App",
+    "appNameDesc": "O nome exibido na barra lateral e na tela de login",
     "descriptionDesc": "Breve descrição do seu negócio",
     "addressDesc": "Endereço físico do seu negócio",
     "phoneDesc": "Número de telefone da empresa",

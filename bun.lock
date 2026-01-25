@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "titanic-pos",
+      "name": "dan-pos",
       "dependencies": {
         "@preact/signals": "^2.5.1",
         "@tailwindcss/vite": "^4.1.18",
