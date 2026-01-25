@@ -720,6 +720,7 @@ export default function Customers() {
                       <div class="flex items-center space-x-2">
                         {hasPermission('users.edit') && (
                           <button
+                            type="button"
                             onClick={() => handleEditCustomer(customer)}
                             class="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
                           >
@@ -728,6 +729,7 @@ export default function Customers() {
                         )}
                         {hasPermission('users.delete') && (
                           <button
+                            type="button"
                             onClick={() => setCustomerToDelete(customer)}
                             class="text-red-600 hover:text-red-800 font-medium text-sm"
                           >
@@ -748,8 +750,8 @@ export default function Customers() {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              totalItems={totalCount}
-              itemsPerPage={itemsPerPage}
+              totalCount={totalCount}
+              pageSize={itemsPerPage}
             />
           )}
 

@@ -29,7 +29,7 @@ export interface Customer {
   isActive: boolean
   notes?: string
   tags?: string[]
-  customFields?: Record<string, any>
+  customFields?: Record<string, unknown>
   createdAt: string
   updatedAt: string
   createdBy?: string
@@ -92,7 +92,7 @@ export class CustomerService {
 
   private convertDbCustomer(dbCustomer: DatabaseCustomer): Customer {
     let tags: string[] = []
-    let customFields: Record<string, any> = {}
+    let customFields: Record<string, unknown> = {}
 
     try {
       if (dbCustomer.tags) {

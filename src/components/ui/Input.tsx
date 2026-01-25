@@ -22,6 +22,9 @@ interface InputProps {
   pattern?: string
   inputMode?: string
   maxLength?: number
+  min?: string | number
+  max?: string | number
+  step?: string | number
 }
 
 function clsx(...classes: (string | undefined | boolean)[]): string {
