@@ -131,9 +131,8 @@ export default function SignIn() {
         console.warn('No users found in database')
       }
     } catch (error) {
-      // Silent fail - users list is optional
       console.error('Failed to load users:', error)
-      toast.error('Failed to load users: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      toast.error(`Failed to load users: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 

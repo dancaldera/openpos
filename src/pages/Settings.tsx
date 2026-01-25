@@ -16,8 +16,10 @@ export default function Settings({ onNavigate }: SettingsProps) {
   const [greetMsg, setGreetMsg] = useState('')
   const [name, setName] = useState('')
   const [settings, setSettings] = useState<CompanySettings | null>(null)
+  const [localSettings, setLocalSettings] = useState<CompanySettings | null>(null)
+  const [hasChanges, setHasChanges] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [isUpdating, setIsUpdating] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
 
   useEffect(() => {
@@ -29,6 +31,8 @@ export default function Settings({ onNavigate }: SettingsProps) {
       setIsLoading(true)
       const companySettings = await companySettingsService.getSettings()
       setSettings(companySettings)
+      setLocalSettings(companySettings)
+      setHasChanges(false)
     } catch (err: unknown) {
       toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
@@ -36,15 +40,23 @@ export default function Settings({ onNavigate }: SettingsProps) {
     }
   }
 
-  const handleUpdateSetting = async <K extends keyof CompanySettings>(field: K, value: CompanySettings[K]) => {
-    if (!settings) return
+  const handleChange = <K extends keyof CompanySettings>(field: K, value: CompanySettings[K]) => {
+    if (!localSettings) return
+    setLocalSettings({ ...localSettings, [field]: value })
+    setHasChanges(true)
+  }
+
+  const handleSave = async () => {
+    if (!localSettings || !settings) return
 
     try {
-      setIsUpdating(true)
-      const result = await companySettingsService.updateSettings({ [field]: value })
+      setIsSaving(true)
+      const result = await companySettingsService.updateSettings(localSettings)
 
       if (result.success && result.settings) {
         setSettings(result.settings)
+        setLocalSettings(result.settings)
+        setHasChanges(false)
         toast.success(t('settings.settingsUpdated'))
       } else {
         toast.error(result.error || t('errors.generic'))
@@ -52,17 +64,26 @@ export default function Settings({ onNavigate }: SettingsProps) {
     } catch (err: unknown) {
       toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
-      setIsUpdating(false)
+      setIsSaving(false)
+    }
+  }
+
+  const handleCancel = () => {
+    if (settings) {
+      setLocalSettings(settings)
+      setHasChanges(false)
     }
   }
 
   const handleResetToDefaults = async () => {
     try {
-      setIsUpdating(true)
+      setIsSaving(true)
       const result = await companySettingsService.resetToDefaults()
 
       if (result.success && result.settings) {
         setSettings(result.settings)
+        setLocalSettings(result.settings)
+        setHasChanges(false)
         toast.success(t('success.updated'))
         setIsResetDialogOpen(false)
       } else {
@@ -71,7 +92,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
     } catch (err: unknown) {
       toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
-      setIsUpdating(false)
+      setIsSaving(false)
     }
   }
 
@@ -106,17 +127,29 @@ export default function Settings({ onNavigate }: SettingsProps) {
             <h2 class="text-2xl font-bold text-gray-900">{t('settings.title')}</h2>
             <span class="text-gray-600">{t('settings.subtitle')}</span>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => setIsResetDialogOpen(true)}
-            disabled={isUpdating}
-            class="text-red-600 border-red-200 hover:bg-red-50"
-          >
-            🔄 {t('settings.resetDefaults')}
-          </Button>
+          <div class="flex gap-3">
+            {hasChanges && (
+              <>
+                <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+                  {t('common.cancel')}
+                </Button>
+                <Button variant="primary" onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? t('common.loading') : t('common.save')}
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => setIsResetDialogOpen(true)}
+              disabled={isSaving}
+              class="text-red-600 border-red-200 hover:bg-red-50"
+            >
+              🔄 {t('settings.resetDefaults')}
+            </Button>
+          </div>
         </div>
 
-        {settings && (
+        {localSettings && (
           <div class="space-y-8">
             {/* Company Information */}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -125,9 +158,9 @@ export default function Settings({ onNavigate }: SettingsProps) {
                 <div>
                   <Input
                     label={t('settings.companyName')}
-                    value={settings.name}
-                    onBlur={(e) => handleUpdateSetting('name', (e.target as HTMLInputElement).value)}
-                    disabled={isUpdating}
+                    value={localSettings.name}
+                    onInput={(e) => handleChange('name', (e.target as HTMLInputElement).value)}
+                    disabled={isSaving}
                     placeholder={t('settings.companyName')}
                     class="mb-2"
                   />
@@ -136,9 +169,9 @@ export default function Settings({ onNavigate }: SettingsProps) {
                 <div>
                   <Input
                     label={t('settings.appName')}
-                    value={settings.appName}
-                    onBlur={(e) => handleUpdateSetting('appName', (e.target as HTMLInputElement).value)}
-                    disabled={isUpdating}
+                    value={localSettings.appName}
+                    onInput={(e) => handleChange('appName', (e.target as HTMLInputElement).value)}
+                    disabled={isSaving}
                     placeholder={t('settings.appName')}
                     class="mb-2"
                   />
@@ -147,9 +180,9 @@ export default function Settings({ onNavigate }: SettingsProps) {
                 <div>
                   <Input
                     label={t('common.description')}
-                    value={settings.description}
-                    onBlur={(e) => handleUpdateSetting('description', (e.target as HTMLInputElement).value)}
-                    disabled={isUpdating}
+                    value={localSettings.description}
+                    onInput={(e) => handleChange('description', (e.target as HTMLInputElement).value)}
+                    disabled={isSaving}
                     placeholder={t('common.description')}
                     class="mb-2"
                   />
@@ -158,9 +191,9 @@ export default function Settings({ onNavigate }: SettingsProps) {
                 <div>
                   <Input
                     label={t('common.address')}
-                    value={settings.address || ''}
-                    onBlur={(e) => handleUpdateSetting('address', (e.target as HTMLInputElement).value || undefined)}
-                    disabled={isUpdating}
+                    value={localSettings.address || ''}
+                    onInput={(e) => handleChange('address', (e.target as HTMLInputElement).value || undefined)}
+                    disabled={isSaving}
                     placeholder={t('common.address')}
                     class="mb-2"
                   />
@@ -169,9 +202,9 @@ export default function Settings({ onNavigate }: SettingsProps) {
                 <div>
                   <Input
                     label={t('common.phone')}
-                    value={settings.phone || ''}
-                    onBlur={(e) => handleUpdateSetting('phone', (e.target as HTMLInputElement).value || undefined)}
-                    disabled={isUpdating}
+                    value={localSettings.phone || ''}
+                    onInput={(e) => handleChange('phone', (e.target as HTMLInputElement).value || undefined)}
+                    disabled={isSaving}
                     placeholder={t('common.phone')}
                     class="mb-2"
                   />
@@ -181,9 +214,9 @@ export default function Settings({ onNavigate }: SettingsProps) {
                   <Input
                     label={t('common.email')}
                     type="email"
-                    value={settings.email || ''}
-                    onBlur={(e) => handleUpdateSetting('email', (e.target as HTMLInputElement).value || undefined)}
-                    disabled={isUpdating}
+                    value={localSettings.email || ''}
+                    onInput={(e) => handleChange('email', (e.target as HTMLInputElement).value || undefined)}
+                    disabled={isSaving}
                     placeholder={t('common.email')}
                     class="mb-2"
                   />
@@ -193,9 +226,9 @@ export default function Settings({ onNavigate }: SettingsProps) {
                   <Input
                     label={t('settings.website')}
                     type="text"
-                    value={settings.website || ''}
-                    onBlur={(e) => handleUpdateSetting('website', (e.target as HTMLInputElement).value || undefined)}
-                    disabled={isUpdating}
+                    value={localSettings.website || ''}
+                    onInput={(e) => handleChange('website', (e.target as HTMLInputElement).value || undefined)}
+                    disabled={isSaving}
                     placeholder="https://example.com"
                     class="mb-2"
                   />
@@ -212,25 +245,25 @@ export default function Settings({ onNavigate }: SettingsProps) {
                   <label class="flex items-center space-x-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={settings.taxEnabled}
-                      onChange={(e) => handleUpdateSetting('taxEnabled', (e.target as HTMLInputElement).checked)}
-                      disabled={isUpdating}
+                      checked={localSettings.taxEnabled}
+                      onChange={(e) => handleChange('taxEnabled', (e.target as HTMLInputElement).checked)}
+                      disabled={isSaving}
                       class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                     />
                     <span class="font-medium">{t('settings.enableTax')}</span>
                   </label>
                 </div>
-                {settings.taxEnabled && (
+                {localSettings.taxEnabled && (
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Input
                         label={t('settings.taxRate')}
                         type="number"
-                        value={settings.taxPercentage.toString()}
-                        onBlur={(e) =>
-                          handleUpdateSetting('taxPercentage', parseFloat((e.target as HTMLInputElement).value) || 0)
+                        value={localSettings.taxPercentage.toString()}
+                        onInput={(e) =>
+                          handleChange('taxPercentage', parseFloat((e.target as HTMLInputElement).value) || 0)
                         }
-                        disabled={isUpdating}
+                        disabled={isSaving}
                         class="mb-2"
                         placeholder="10.0"
                       />
@@ -239,7 +272,7 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     <div class="flex items-center mt-6">
                       <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <span class="text-sm text-blue-700">
-                          {t('settings.currentTaxRate')}: <span class="font-bold">{settings.taxPercentage}%</span>
+                          {t('settings.currentTaxRate')}: <span class="font-bold">{localSettings.taxPercentage}%</span>
                         </span>
                       </div>
                     </div>
@@ -255,9 +288,9 @@ export default function Settings({ onNavigate }: SettingsProps) {
                 <div>
                   <Select
                     label={t('settings.currency')}
-                    value={settings.currencySymbol}
-                    onChange={(e) => handleUpdateSetting('currencySymbol', (e.target as HTMLSelectElement).value)}
-                    disabled={isUpdating}
+                    value={localSettings.currencySymbol}
+                    onChange={(e) => handleChange('currencySymbol', (e.target as HTMLSelectElement).value)}
+                    disabled={isSaving}
                     options={SUPPORTED_CURRENCIES.map((currency) => ({
                       value: currency.symbol,
                       label: `${currency.symbol} - ${currency.name}`,
@@ -340,11 +373,11 @@ export default function Settings({ onNavigate }: SettingsProps) {
           </div>
         </div>
         <div>
-          <Button variant="outline" onClick={() => setIsResetDialogOpen(false)} disabled={isUpdating}>
+          <Button variant="outline" onClick={() => setIsResetDialogOpen(false)} disabled={isSaving}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={handleResetToDefaults} disabled={isUpdating} class="bg-red-600 hover:bg-red-700 text-white">
-            {isUpdating ? t('settings.resetting') : t('settings.resetSettings')}
+          <Button onClick={handleResetToDefaults} disabled={isSaving} class="bg-red-600 hover:bg-red-700 text-white">
+            {isSaving ? t('settings.resetting') : t('settings.resetSettings')}
           </Button>
         </div>
       </Dialog>
