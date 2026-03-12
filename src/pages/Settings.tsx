@@ -7,11 +7,7 @@ import { useTranslation } from '../hooks/useTranslation'
 import { type CompanySettings, companySettingsService, SUPPORTED_CURRENCIES } from '../services/company-settings-sqlite'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
-interface SettingsProps {
-  onNavigate: (page: string) => void
-}
-
-export default function Settings({ onNavigate }: SettingsProps) {
+export default function Settings() {
   const { t } = useTranslation()
 
   const [greetMsg, setGreetMsg] = useState('')
@@ -340,10 +336,6 @@ export default function Settings({ onNavigate }: SettingsProps) {
                     <p class="text-center text-lg font-medium text-green-600 bg-green-50 p-4 rounded-lg">{greetMsg}</p>
                   )}
                 </div>
-
-                <Button variant="outline" onClick={() => onNavigate('component-showcase')}>
-                  🎨 {t('settings.uiComponentsShowcase')}
-                </Button>
               </div>
             </div>
           </div>

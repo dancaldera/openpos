@@ -25,8 +25,7 @@ Titanic POS is a modern Point of Sale (POS) application built as a cross-platfor
 - `bun preview` - Preview built application
 
 ### Build & Deploy
-- `bun build` - Build frontend only
-- `bun tauri build` - Build complete application for production
+- `bun run build` - Build frontend only
 - `bun tauri bundle` - Generate platform-specific installers
 
 ### Tauri Commands

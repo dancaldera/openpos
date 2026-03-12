@@ -30,4 +30,24 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+
+  // Build optimizations for smaller bundle size
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Separate vendor dependencies for better caching
+          if (id.includes('node_modules/preact') || id.includes('node_modules/@preact/signals')) {
+            return 'vendor'
+          }
+          // Separate UI library
+          if (id.includes('node_modules/sonner')) {
+            return 'ui'
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+    assetsInlineLimit: 4096,
+  },
 }));
