@@ -3,10 +3,10 @@ import { Toaster } from 'sonner'
 import Layout from './components/Layout'
 import { useAuth } from './hooks/useAuth'
 import Analytics from './pages/Analytics'
-import ComponentShowcase from './pages/ComponentShowcase'
 import Customers from './pages/Customers'
 import Dashboard from './pages/Dashboard'
 import Members from './pages/Members'
+import Orders from './pages/Orders'
 import Products from './pages/Products'
 import Settings from './pages/Settings'
 import SignIn from './pages/SignIn'
@@ -14,7 +14,6 @@ import { appSettingsStore } from './stores/appSettings/appSettingsStore'
 import { authActions } from './stores/auth/authActions'
 import { languageActions } from './stores/language/languageActions'
 import './App.css'
-import Orders from './pages/Orders'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -68,9 +67,7 @@ function App() {
       case 'analytics':
         return <Analytics />
       case 'settings':
-        return <Settings onNavigate={handleNavigate} />
-      case 'component-showcase':
-        return <ComponentShowcase />
+        return <Settings />
       default:
         return (
           <div class="bg-white rounded-lg shadow p-6">
