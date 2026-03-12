@@ -4,7 +4,7 @@ import { companySettingsService } from '../../services/company-settings-sqlite'
 class AppSettingsStore {
   private static instance: AppSettingsStore
 
-  appName = signal<string>('DAN POS')
+  appName = signal<string>('OpenPOS')
   companyName = signal<string>('')
   isLoading = signal<boolean>(true)
   isInitialized = signal<boolean>(false)
@@ -27,7 +27,7 @@ class AppSettingsStore {
       this.isInitialized.value = true
     } catch (error) {
       console.error('Failed to initialize app settings:', error)
-      this.appName.value = 'DAN POS'
+      this.appName.value = 'OpenPOS'
       this.companyName.value = 'Titanic POS'
       this.isInitialized.value = true
     } finally {

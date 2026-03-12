@@ -241,7 +241,7 @@ export class CompanySettingsService {
          WHERE id = ?`,
         [
           'Titanic POS',
-          'DAN POS',
+          'OpenPOS',
           'Modern Point of Sale System',
           1,
           10.0,
