@@ -87,7 +87,6 @@ export class ProductService {
   async getProducts(): Promise<Product[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const products = await db.select<DatabaseProduct[]>('SELECT * FROM products ORDER BY name')
 
@@ -111,7 +110,6 @@ export class ProductService {
   }> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const offset = (page - 1) * limit
 
@@ -143,7 +141,6 @@ export class ProductService {
   async getProduct(id: string): Promise<Product | null> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 150))
 
       const products = await db.select<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
         parseInt(id, 10),
@@ -181,7 +178,6 @@ export class ProductService {
 
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 400))
 
       if (productData.barcode) {
         const existingBarcode = await db.select<DatabaseProduct[]>(
@@ -262,7 +258,6 @@ export class ProductService {
 
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 350))
 
       const existingProduct = await db.select<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
         parseInt(id, 10),
@@ -360,7 +355,6 @@ export class ProductService {
   async deleteProduct(id: string): Promise<{ success: boolean; error?: string }> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 300))
 
       const result = await db.execute('DELETE FROM products WHERE id = ?', [parseInt(id, 10)])
 
@@ -378,7 +372,6 @@ export class ProductService {
   async searchProducts(query: string): Promise<Product[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const searchTerm = `%${query.toLowerCase()}%`
       const products = await db.select<DatabaseProduct[]>(
@@ -412,7 +405,6 @@ export class ProductService {
   }> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const offset = (page - 1) * limit
       const searchTerm = `%${query.toLowerCase()}%`
@@ -457,7 +449,6 @@ export class ProductService {
   async getCategories(): Promise<string[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const categories = await db.select<{ category: string }[]>(
         'SELECT DISTINCT category FROM products ORDER BY category',
@@ -474,7 +465,6 @@ export class ProductService {
   async getProductsByCategory(category: string): Promise<Product[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const products = await db.select<DatabaseProduct[]>('SELECT * FROM products WHERE category = ? ORDER BY name', [
         category,
@@ -490,7 +480,6 @@ export class ProductService {
   async getLowStockProducts(threshold: number = 10): Promise<Product[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 150))
 
       const products = await db.select<DatabaseProduct[]>(
         'SELECT * FROM products WHERE stock <= ? AND is_active = 1 ORDER BY stock ASC, name',

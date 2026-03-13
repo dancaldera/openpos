@@ -150,7 +150,6 @@ export class CustomerService {
   async getCustomers(): Promise<Customer[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const customers = await db.select<DatabaseCustomer[]>(
         'SELECT * FROM customers WHERE deleted_at IS NULL ORDER BY customer_number DESC',
@@ -176,7 +175,6 @@ export class CustomerService {
   }> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const offset = (page - 1) * limit
 
@@ -210,7 +208,6 @@ export class CustomerService {
   async getCustomer(id: string): Promise<Customer | null> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 150))
 
       const customers = await db.select<DatabaseCustomer[]>(
         'SELECT * FROM customers WHERE id = ? AND deleted_at IS NULL LIMIT 1',
@@ -268,7 +265,6 @@ export class CustomerService {
 
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 400))
 
       // Check for duplicate email
       if (customerData.email) {
@@ -391,7 +387,6 @@ export class CustomerService {
 
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 350))
 
       const existingCustomer = await db.select<DatabaseCustomer[]>(
         'SELECT * FROM customers WHERE id = ? AND deleted_at IS NULL LIMIT 1',
@@ -580,7 +575,6 @@ export class CustomerService {
   async deleteCustomer(id: string): Promise<{ success: boolean; error?: string }> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 300))
 
       // Soft delete
       const now = new Date().toISOString()
@@ -603,7 +597,6 @@ export class CustomerService {
   async searchCustomers(query: string): Promise<Customer[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const searchTerm = `%${query.toLowerCase()}%`
       const customers = await db.select<DatabaseCustomer[]>(
@@ -640,7 +633,6 @@ export class CustomerService {
   }> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const offset = (page - 1) * limit
       const searchTerm = `%${query.toLowerCase()}%`
@@ -711,7 +703,6 @@ export class CustomerService {
   async getTopCustomers(limit: number = 10): Promise<Customer[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const customers = await db.select<DatabaseCustomer[]>(
         'SELECT * FROM customers WHERE deleted_at IS NULL AND is_active = 1 ORDER BY total_purchases DESC, total_orders DESC LIMIT ?',
