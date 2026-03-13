@@ -84,7 +84,13 @@
     "noAccountsAvailable": "No hay cuentas disponibles",
     "backspace": "Retroceder",
     "show": "Mostrar",
-    "hide": "Ocultar"
+    "hide": "Ocultar",
+    "passwordRequirements": "La contraseña debe tener al menos 8 caracteres con mayúsculas, minúsculas, número y carácter especial",
+    "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
+    "passwordNoUppercase": "La contraseña debe contener una letra mayúscula",
+    "passwordNoLowercase": "La contraseña debe contener una letra minúscula",
+    "passwordNoNumber": "La contraseña debe contener un número",
+    "passwordNoSpecial": "La contraseña debe contener un carácter especial"
   },
   "dashboard": {
     "title": "Panel",
@@ -550,7 +556,7 @@
     "invalidPhone": "Por favor ingresa un número de teléfono válido",
     "invalidUrl": "Por favor ingresa una URL válida",
     "passwordMismatch": "Las contraseñas no coinciden",
-    "strongPassword": "La contraseña debe tener al menos 8 caracteres con mayúsculas, minúsculas y números",
+    "strongPassword": "La contraseña debe tener al menos 8 caracteres con mayúsculas, minúsculas, número y carácter especial",
     "invalidDate": "Por favor ingresa una fecha válida",
     "futureDate": "La fecha no puede estar en el futuro",
     "pastDate": "La fecha no puede estar en el pasado"
