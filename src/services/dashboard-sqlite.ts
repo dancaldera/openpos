@@ -40,8 +40,6 @@ export class DashboardService {
 
   async getDashboardStats(): Promise<DashboardStats> {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 200))
-
       // Get all data in parallel for better performance
       const [orders, products] = await Promise.all([orderService.getOrders(), productService.getProducts()])
 
@@ -84,8 +82,6 @@ export class DashboardService {
 
   async getSalesData(days: number = 7): Promise<SalesData[]> {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 150))
-
       const orders = await orderService.getOrders()
       const completedOrders = orders.filter((o) => o.status === 'completed' || o.status === 'paid')
 
@@ -118,8 +114,6 @@ export class DashboardService {
 
   async getTopProducts(limit: number = 5): Promise<TopProduct[]> {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 200))
-
       // Use the orderService's getTopSellingProducts method for better performance
       const topProducts = await orderService.getTopSellingProducts(limit)
 
@@ -137,8 +131,6 @@ export class DashboardService {
 
   async getRecentOrders(limit: number = 5) {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
       const orders = await orderService.getOrders()
       return orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit)
     } catch (error) {
@@ -149,8 +141,6 @@ export class DashboardService {
 
   async getInventoryStatus(): Promise<InventoryStatus> {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 150))
-
       const products = await productService.getProducts()
       const activeProducts = products.filter((p) => p.isActive)
 
@@ -168,8 +158,6 @@ export class DashboardService {
 
   async getSalesDataByDateRange(startDate: string, endDate: string): Promise<SalesData[]> {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 200))
-
       const orders = await orderService.getOrdersByDateRange(startDate, endDate)
       const completedOrders = orders.filter((o) => o.status === 'completed' || o.status === 'paid')
 
@@ -196,8 +184,6 @@ export class DashboardService {
 
   async getTotalSalesAmount(): Promise<number> {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
       return await orderService.getTotalSales()
     } catch (error) {
       console.error('Total sales amount error:', error)
@@ -207,8 +193,6 @@ export class DashboardService {
 
   async getOrderStatusBreakdown() {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 150))
-
       const [pending, paid, completed, cancelled] = await Promise.all([
         orderService.getOrdersByStatus('pending'),
         orderService.getOrdersByStatus('paid'),

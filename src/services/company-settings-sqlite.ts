@@ -103,7 +103,6 @@ export class CompanySettingsService {
       // Force fresh database connection to prevent stale connection issues
       this.db = null
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const settings = await db.select<DatabaseCompanySettings[]>('SELECT * FROM company_settings WHERE id = 1 LIMIT 1')
 
@@ -139,7 +138,6 @@ export class CompanySettingsService {
 
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const updateFields = []
       const updateValues = []
@@ -230,7 +228,6 @@ export class CompanySettingsService {
   async resetToDefaults(): Promise<{ success: boolean; settings?: CompanySettings; error?: string }> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 150))
 
       const now = new Date().toISOString()
       await db.execute(

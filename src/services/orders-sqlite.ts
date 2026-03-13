@@ -126,7 +126,6 @@ export class OrderService {
   async getOrders(): Promise<Order[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const orders = await db.select<DatabaseOrder[]>('SELECT * FROM orders ORDER BY created_at DESC')
 
@@ -155,7 +154,6 @@ export class OrderService {
   }> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const offset = (page - 1) * limit
 
@@ -192,7 +190,6 @@ export class OrderService {
   async getOrder(id: string): Promise<Order | null> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 150))
 
       const orders = await db.select<DatabaseOrder[]>('SELECT * FROM orders WHERE id = ? LIMIT 1', [parseInt(id, 10)])
 
@@ -214,7 +211,6 @@ export class OrderService {
 
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 400))
 
       // Check stock availability first
       const stockCheck = await this.checkStockAvailability(orderData.items)
@@ -329,7 +325,6 @@ export class OrderService {
   ): Promise<{ success: boolean; order?: Order; error?: string }> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 300))
 
       // Get current order
       const currentOrder = await this.getOrder(id)
@@ -378,7 +373,6 @@ export class OrderService {
   async deleteOrder(id: string): Promise<{ success: boolean; error?: string }> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 250))
 
       // Get order before deleting to restore stock if needed
       const order = await this.getOrder(id)
@@ -476,7 +470,6 @@ export class OrderService {
   async getOrdersByStatus(status: Order['status']): Promise<Order[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 150))
 
       const orders = await db.select<DatabaseOrder[]>(
         'SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC',
@@ -498,7 +491,6 @@ export class OrderService {
   async getTotalSales(): Promise<number> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const result = await db.select<{ total_sales: number }[]>(
         `SELECT COALESCE(SUM(total), 0) as total_sales 
@@ -516,7 +508,6 @@ export class OrderService {
   async getOrdersByDateRange(startDate: string, endDate: string): Promise<Order[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       const orders = await db.select<DatabaseOrder[]>(
         `SELECT * FROM orders 
@@ -540,7 +531,6 @@ export class OrderService {
   async getOrdersByDateFilter(dateFilter: 'today' | 'yesterday' | string): Promise<Order[]> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       let startDate: string
       let endDate: string
@@ -594,7 +584,6 @@ export class OrderService {
   }> {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 200))
 
       let startDate: string
       let endDate: string
@@ -662,7 +651,6 @@ export class OrderService {
   > {
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 150))
 
       const results = await db.select<
         {
@@ -708,7 +696,6 @@ export class OrderService {
 
     try {
       const db = await this.getDatabase()
-      await new Promise((resolve) => setTimeout(resolve, 400))
 
       // Get current order
       const currentOrder = await this.getOrder(orderId)
