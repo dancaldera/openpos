@@ -261,7 +261,8 @@
     "printing": "Printing...",
     "confirmDelete": "Confirm Delete",
     "deleteConfirmMessage": "Are you sure you want to delete this order? This action cannot be undone.",
-    "selectCustomerPlaceholder": "Select a customer or leave blank for walk-in"
+    "selectCustomerPlaceholder": "Select a customer or leave blank for walk-in",
+    "addProduct": "Add Product"
   },
   "customers": {
     "title": "Customers",
@@ -450,6 +451,7 @@
     "completedOrders": "Completed Orders",
     "averageOrderValue": "Average Order Value",
     "salesByMembers": "Sales by Members",
+    "salesByMember": "Sales by Member",
     "member": "Member",
     "orders": "Orders",
     "topProducts": "Top Products",
