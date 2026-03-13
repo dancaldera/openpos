@@ -84,7 +84,13 @@
     "noAccountsAvailable": "No accounts available",
     "backspace": "Backspace",
     "show": "Show",
-    "hide": "Hide"
+    "hide": "Hide",
+    "passwordRequirements": "Password must be at least 8 characters with uppercase, lowercase, number, and special character",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordNoUppercase": "Password must contain an uppercase letter",
+    "passwordNoLowercase": "Password must contain a lowercase letter",
+    "passwordNoNumber": "Password must contain a number",
+    "passwordNoSpecial": "Password must contain a special character"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -550,7 +556,7 @@
     "invalidPhone": "Please enter a valid phone number",
     "invalidUrl": "Please enter a valid URL",
     "passwordMismatch": "Passwords do not match",
-    "strongPassword": "Password must be at least 8 characters with uppercase, lowercase, and numbers",
+    "strongPassword": "Password must be at least 8 characters with uppercase, lowercase, number, and special character",
     "invalidDate": "Please enter a valid date",
     "futureDate": "Date cannot be in the future",
     "pastDate": "Date cannot be in the past"

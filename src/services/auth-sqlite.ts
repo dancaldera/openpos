@@ -1,4 +1,14 @@
+import { invoke } from '@tauri-apps/api/core'
 import Database from '@tauri-apps/plugin-sql'
+
+// Helper functions for password hashing
+async function hashPassword(password: string): Promise<string> {
+  return await invoke('hash_password', { password })
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return await invoke('verify_password', { password, hash })
+}
 
 export interface User {
   id: string
@@ -43,6 +53,7 @@ interface DatabaseUser {
   created_at: string
   last_login?: string
   deleted_at?: string
+  password_hashed?: number
 }
 
 export class AuthService {
@@ -100,11 +111,23 @@ export class AuthService {
 
       const dbUser = users[0]
 
-      if (dbUser.password !== password) {
-        return {
-          success: false,
-          error: 'Invalid email or password',
+      // Check if password is already hashed
+      const isHashed = dbUser.password_hashed === 1
+
+      if (isHashed) {
+        // Bcrypt verification
+        const isValid = await verifyPassword(password, dbUser.password)
+        if (!isValid) {
+          return { success: false, error: 'Invalid email or password' }
         }
+      } else {
+        // Plain text fallback - verify then migrate
+        if (dbUser.password !== password) {
+          return { success: false, error: 'Invalid email or password' }
+        }
+        // Lazy migration: hash password and update database
+        const hashedPassword = await hashPassword(password)
+        await db.execute('UPDATE users SET password = ?, password_hashed = 1 WHERE id = ?', [hashedPassword, dbUser.id])
       }
 
       const user = this.convertDbUser(dbUser)
@@ -250,29 +273,71 @@ export class AuthService {
       return { success: false, error: 'Not authenticated' }
     }
 
-    if (!/^\d{6}$/.test(newPassword)) {
+    // Strong password validation
+    if (newPassword.length < 8) {
       return {
         success: false,
-        error: 'Password must be exactly 6 numbers',
+        error: 'Password must be at least 8 characters',
+      }
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      return {
+        success: false,
+        error: 'Password must contain an uppercase letter',
+      }
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      return {
+        success: false,
+        error: 'Password must contain a lowercase letter',
+      }
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      return {
+        success: false,
+        error: 'Password must contain a number',
+      }
+    }
+    if (!/[^A-Za-z0-9]/.test(newPassword)) {
+      return {
+        success: false,
+        error: 'Password must contain a special character',
       }
     }
 
     try {
       const db = await this.getDatabase()
 
-      const users = await db.select<DatabaseUser[]>('SELECT password FROM users WHERE id = ? LIMIT 1', [
-        parseInt(user.id, 10),
-      ])
+      const users = await db.select<DatabaseUser[]>(
+        'SELECT password, password_hashed FROM users WHERE id = ? LIMIT 1',
+        [parseInt(user.id, 10)],
+      )
 
       if (users.length === 0) {
         return { success: false, error: 'User not found' }
       }
 
-      if (users[0].password !== currentPassword) {
-        return { success: false, error: 'Current password is incorrect' }
+      const dbUser = users[0]
+      const isHashed = dbUser.password_hashed === 1
+
+      // Verify current password
+      if (isHashed) {
+        const isValid = await verifyPassword(currentPassword, dbUser.password)
+        if (!isValid) {
+          return { success: false, error: 'Current password is incorrect' }
+        }
+      } else {
+        if (dbUser.password !== currentPassword) {
+          return { success: false, error: 'Current password is incorrect' }
+        }
       }
 
-      await db.execute('UPDATE users SET password = ? WHERE id = ?', [newPassword, parseInt(user.id, 10)])
+      // Hash new password and update
+      const hashedPassword = await hashPassword(newPassword)
+      await db.execute('UPDATE users SET password = ?, password_hashed = 1 WHERE id = ?', [
+        hashedPassword,
+        parseInt(user.id, 10),
+      ])
 
       return { success: true }
     } catch (error) {
@@ -290,10 +355,35 @@ export class AuthService {
       return { success: false, error: 'Insufficient permissions' }
     }
 
-    if (!/^\d{6}$/.test(userData.password)) {
+    // Strong password validation
+    if (userData.password.length < 8) {
       return {
         success: false,
-        error: 'Password must be exactly 6 numbers',
+        error: 'Password must be at least 8 characters',
+      }
+    }
+    if (!/[A-Z]/.test(userData.password)) {
+      return {
+        success: false,
+        error: 'Password must contain an uppercase letter',
+      }
+    }
+    if (!/[a-z]/.test(userData.password)) {
+      return {
+        success: false,
+        error: 'Password must contain a lowercase letter',
+      }
+    }
+    if (!/[0-9]/.test(userData.password)) {
+      return {
+        success: false,
+        error: 'Password must contain a number',
+      }
+    }
+    if (!/[^A-Za-z0-9]/.test(userData.password)) {
+      return {
+        success: false,
+        error: 'Password must contain a special character',
       }
     }
 
@@ -309,16 +399,18 @@ export class AuthService {
       }
 
       const permissions = JSON.stringify(DEFAULT_PERMISSIONS[userData.role])
+      const hashedPassword = await hashPassword(userData.password)
 
       const result = await db.execute(
-        'INSERT INTO users (email, password, name, role, permissions, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO users (email, password, name, role, permissions, created_at, password_hashed) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [
           userData.email.toLowerCase(),
-          userData.password,
+          hashedPassword,
           userData.name,
           userData.role,
           permissions,
           new Date().toISOString(),
+          1,
         ],
       )
 
@@ -398,14 +490,42 @@ export class AuthService {
 
       // Allow admin to reset password when editing user
       if (updates.password && this.hasRole('admin')) {
-        if (!/^\d{6}$/.test(updates.password)) {
+        // Strong password validation
+        if (updates.password.length < 8) {
           return {
             success: false,
-            error: 'Password must be exactly 6 numbers',
+            error: 'Password must be at least 8 characters',
           }
         }
+        if (!/[A-Z]/.test(updates.password)) {
+          return {
+            success: false,
+            error: 'Password must contain an uppercase letter',
+          }
+        }
+        if (!/[a-z]/.test(updates.password)) {
+          return {
+            success: false,
+            error: 'Password must contain a lowercase letter',
+          }
+        }
+        if (!/[0-9]/.test(updates.password)) {
+          return {
+            success: false,
+            error: 'Password must contain a number',
+          }
+        }
+        if (!/[^A-Za-z0-9]/.test(updates.password)) {
+          return {
+            success: false,
+            error: 'Password must contain a special character',
+          }
+        }
+        const hashedPassword = await hashPassword(updates.password)
         updateFields.push('password = ?')
-        updateValues.push(updates.password)
+        updateFields.push('password_hashed = ?')
+        updateValues.push(hashedPassword)
+        updateValues.push(1)
       }
 
       if (updateFields.length > 0) {
