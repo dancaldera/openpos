@@ -20,7 +20,15 @@ import { companySettingsService } from '../services/company-settings-sqlite'
 import { type Customer, customerService } from '../services/customers-sqlite'
 import { type Order, orderService } from '../services/orders-sqlite'
 import { formatReceiptData, printThermalReceipt } from '../services/print-service'
-import { type Product, productService } from '../services/products-sqlite'
+import {
+  type Product,
+  type ProductWithVariants,
+  productService,
+} from '../services/products-sqlite'
+import {
+  productVariantsService,
+  type ProductVariant,
+} from '../services/product-variants-sqlite'
 import { userService } from '../services/users-sqlite'
 
 export default function Orders() {
@@ -63,14 +71,18 @@ export default function Orders() {
     cancelled: 0,
   })
 
+  // Variant state
+  const [productsWithVariants, setProductsWithVariants] = useState<Record<string, ProductWithVariants>>({})
+  const [selectedVariantForProduct, setSelectedVariantForProduct] = useState<Record<string, string>>({})
+
   const [newOrder, setNewOrder] = useState({
-    items: [] as Array<{ productId: string; quantity: number }>,
+    items: [] as Array<{ productId: string; quantity: number; variantId?: string }>,
     customerId: '' as string,
     paymentMethod: 'cash' as 'cash' | 'card' | 'transfer',
     notes: '',
   })
 
-  const [editOrderItems, setEditOrderItems] = useState<Array<{ productId: string; quantity: number }>>([])
+  const [editOrderItems, setEditOrderItems] = useState<Array<{ productId: string; quantity: number; variantId?: string }>>([])
   const [editPaymentMethod, setEditPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
   const [editNotes, setEditNotes] = useState('')
 
@@ -157,6 +169,22 @@ export default function Orders() {
       setOrderStats(stats)
 
       setProducts(productsData.filter((p) => p.isActive && p.stock > 0))
+
+      // Load variants for all configurable products
+      const variantsMap: Record<string, ProductWithVariants> = {}
+      for (const product of productsData) {
+        if (product.variantType === 'configurable') {
+          try {
+            const productWithVariants = await productService.getProductWithVariants(product.id)
+            if (productWithVariants) {
+              variantsMap[product.id] = productWithVariants
+            }
+          } catch (err) {
+            console.error(`Failed to load variants for product ${product.id}:`, err)
+          }
+        }
+      }
+      setProductsWithVariants(variantsMap)
       setCustomers(customersData.filter((c) => c.isActive))
       setTaxEnabled(settings.taxEnabled)
       setTaxRate(settings.taxEnabled ? settings.taxPercentage / 100 : 0)
@@ -266,6 +294,7 @@ export default function Orders() {
           paymentMethod: 'cash',
           notes: '',
         })
+        setSelectedVariantForProduct({})
 
         // Reload data with current filter
         await loadData(selectedDateFilter)
@@ -328,40 +357,115 @@ export default function Orders() {
   }
 
   const addItemToOrder = (productId: string, quantity: number = 1) => {
-    const existingItem = newOrder.items.find((item) => item.productId === productId)
     const product = products.find((p) => p.id === productId)
-    const productName = product?.name || 'Product'
+    if (!product) return
 
-    if (existingItem) {
-      const newQuantity = existingItem.quantity + quantity
-      if (quantity > 0) {
-        toast.success(t('orders.itemAdded', { product: productName, quantity: newQuantity }))
-      } else {
-        toast.info(t('orders.quantityUpdated', { product: productName, quantity: newQuantity }))
+    const productName = product.name
+    const productVariants = productsWithVariants[productId]
+
+    // Check if product is configurable and needs variant selection
+    if (product.variantType === 'configurable') {
+      const selectedVariantId = selectedVariantForProduct[productId]
+
+      if (!selectedVariantId) {
+        toast.error(`Please select a variant for ${productName}`)
+        return
       }
-      setNewOrder({
-        ...newOrder,
-        items: newOrder.items.map((item) =>
-          item.productId === productId ? { ...item, quantity: item.quantity + quantity } : item,
-        ),
-      })
+
+      // Verify variant exists and is active
+      const variant = productVariants?.variants?.find((v) => v.id === selectedVariantId)
+      if (!variant || !variant.isActive) {
+        toast.error(`Selected variant is not available for ${productName}`)
+        return
+      }
+
+      // Check stock
+      const existingItem = newOrder.items.find(
+        (item) => item.productId === productId && item.variantId === selectedVariantId,
+      )
+
+      if (existingItem) {
+        const newQuantity = existingItem.quantity + quantity
+        if (newQuantity > variant.stock) {
+          toast.error(`Insufficient stock. Available: ${variant.stock}`)
+          return
+        }
+
+        if (quantity > 0) {
+          toast.success(
+            t('orders.itemAdded', {
+              product: `${productName} (${Object.entries(variant.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')})`,
+              quantity: newQuantity,
+            }),
+          )
+        } else {
+          toast.info(t('orders.quantityUpdated', { product: productName, quantity: newQuantity }))
+        }
+
+        setNewOrder({
+          ...newOrder,
+          items: newOrder.items.map((item) =>
+            item.productId === productId && item.variantId === selectedVariantId
+              ? { ...item, quantity: item.quantity + quantity }
+              : item,
+          ),
+        })
+      } else {
+        if (quantity > variant.stock) {
+          toast.error(`Insufficient stock. Available: ${variant.stock}`)
+          return
+        }
+
+        toast.success(
+          t('orders.itemAdded', {
+            product: `${productName} (${Object.entries(variant.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')})`,
+            quantity,
+          }),
+        )
+
+        setNewOrder({
+          ...newOrder,
+          items: [...newOrder.items, { productId, quantity, variantId: selectedVariantId }],
+        })
+      }
     } else {
-      toast.success(t('orders.itemAdded', { product: productName, quantity }))
-      setNewOrder({
-        ...newOrder,
-        items: [...newOrder.items, { productId, quantity }],
-      })
+      // Simple product (no variants)
+      const existingItem = newOrder.items.find((item) => item.productId === productId)
+
+      if (existingItem) {
+        const newQuantity = existingItem.quantity + quantity
+        if (quantity > 0) {
+          toast.success(t('orders.itemAdded', { product: productName, quantity: newQuantity }))
+        } else {
+          toast.info(t('orders.quantityUpdated', { product: productName, quantity: newQuantity }))
+        }
+
+        setNewOrder({
+          ...newOrder,
+          items: newOrder.items.map((item) =>
+            item.productId === productId ? { ...item, quantity: item.quantity + quantity } : item,
+          ),
+        })
+      } else {
+        toast.success(t('orders.itemAdded', { product: productName, quantity }))
+        setNewOrder({
+          ...newOrder,
+          items: [...newOrder.items, { productId, quantity }],
+        })
+      }
     }
   }
 
-  const removeItemFromOrder = (productId: string) => {
+  const removeItemFromOrder = (productId: string, variantId?: string) => {
     const product = products.find((p) => p.id === productId)
     const productName = product?.name || 'Product'
 
     toast.info(t('orders.itemRemoved', { product: productName }))
     setNewOrder({
       ...newOrder,
-      items: newOrder.items.filter((item) => item.productId !== productId),
+      items: newOrder.items.filter(
+        (item) => !(item.productId === productId && item.variantId === variantId),
+      ),
     })
   }
 
@@ -979,39 +1083,102 @@ export default function Orders() {
                   </div>
                 ) : (
                   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                    {filteredProducts.map((product) => (
-                      <button
-                        key={product.id}
-                        type="button"
-                        class="group relative bg-white border border-gray-200 rounded-lg p-4 hover:bg-gray-50 hover:shadow-sm transition-colors duration-150 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-left"
-                        onClick={() => product.stock > 0 && addItemToOrder(product.id)}
-                        disabled={product.stock === 0}
-                        aria-label={`${t('orders.addProduct')} ${product.name}`}
-                      >
-                        <div class="flex flex-col h-full">
-                          <div class="flex-1">
-                            <div class="font-semibold text-gray-900 mb-2 text-sm leading-tight">{product.name}</div>
-                            <div class="text-xs text-gray-600 mb-3 font-medium bg-gray-100 px-2 py-1 rounded-full inline-block">
-                              {product.category}
+                    {filteredProducts.map((product) => {
+                      const productVariants = productsWithVariants[product.id]
+                      const isConfigurable = product.variantType === 'configurable'
+                      const selectedVariantId = selectedVariantForProduct[product.id]
+                      const selectedVariant = productVariants?.variants?.find((v) => v.id === selectedVariantId)
+
+                      return (
+                        <div
+                          key={product.id}
+                          class={`group relative bg-white border rounded-lg p-4 hover:shadow-sm transition-all duration-200 ${
+                            product.stock > 0 ? 'hover:border-blue-300 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                          } ${selectedVariantId ? 'border-purple-300 bg-purple-50' : 'border-gray-200'}`}
+                        >
+                          <div class="flex flex-col h-full">
+                            <div class="flex-1">
+                              <div class="flex items-start justify-between mb-2">
+                                <div class="font-semibold text-gray-900 text-sm leading-tight flex-1">{product.name}</div>
+                                {isConfigurable && (
+                                  <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full ml-2">
+                                    🏷️
+                                  </span>
+                                )}
+                              </div>
+                              <div class="text-xs text-gray-600 mb-3 font-medium bg-gray-100 px-2 py-1 rounded-full inline-block">
+                                {product.category}
+                              </div>
+
+                              {/* Variant selector for configurable products */}
+                              {isConfigurable && productVariants?.variants && productVariants.variants.length > 0 && (
+                                <div class="mt-2 space-y-2">
+                                  <select
+                                    value={selectedVariantId || ''}
+                                    onChange={(e) => {
+                                      setSelectedVariantForProduct({
+                                        ...selectedVariantForProduct,
+                                        [product.id]: (e.target as HTMLSelectElement).value,
+                                      })
+                                    }}
+                                    class="w-full text-xs border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <option value="">{t('variants.selectVariant')}</option>
+                                    {productVariants.variants
+                                      .filter((v) => v.isActive && v.stock > 0)
+                                      .map((variant) => {
+                                        const attrString = Object.entries(variant.attributes)
+                                          .map(([k, v]) => `${k}: ${v}`)
+                                          .join(', ')
+                                        return (
+                                          <option key={variant.id} value={variant.id}>
+                                            {attrString} - {formatCurrency(variant.price)} ({variant.stock} in stock)
+                                          </option>
+                                        )
+                                      })}
+                                  </select>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                          <div class="flex items-center justify-between mt-auto">
-                            <div class="text-lg font-bold text-blue-600">{formatCurrency(product.price)}</div>
-                            <div
-                              class={`text-xs px-2 py-1 rounded-full font-medium ${
-                                product.stock > 10
-                                  ? 'bg-green-100 text-green-800'
-                                  : product.stock > 0
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-red-100 text-red-800'
-                              }`}
+
+                            <div class="flex items-center justify-between mt-auto">
+                              <div class="text-lg font-bold text-blue-600">
+                                {selectedVariant
+                                  ? formatCurrency(selectedVariant.price)
+                                  : formatCurrency(product.price)}
+                              </div>
+                              <div
+                                class={`text-xs px-2 py-1 rounded-full font-medium ${
+                                  (selectedVariant ? selectedVariant.stock : product.stock) > 10
+                                    ? 'bg-green-100 text-green-800'
+                                    : (selectedVariant ? selectedVariant.stock : product.stock) > 0
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-red-100 text-red-800'
+                                }`}
+                              >
+                                {(selectedVariant ? selectedVariant.stock : product.stock) > 0
+                                  ? `📦 ${selectedVariant ? selectedVariant.stock : product.stock}`
+                                  : '❌ Out'}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => addItemToOrder(product.id)}
+                              disabled={
+                                product.stock === 0 ||
+                                (isConfigurable && !selectedVariantId) ||
+                                (selectedVariant && selectedVariant.stock === 0)
+                              }
+                              class="w-full mt-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors duration-150"
                             >
-                              {product.stock > 0 ? `📦 ${product.stock}` : '❌ Out'}
-                            </div>
+                              {isConfigurable ? t('variants.selectVariant') : t('orders.addProduct')}
+                            </button>
                           </div>
                         </div>
-                      </button>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -1024,16 +1191,32 @@ export default function Orders() {
                 <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 space-y-4">
                   {newOrder.items.map((item) => {
                     const product = products.find((p) => p.id === item.productId)
+                    const variant = item.variantId
+                      ? productsWithVariants[item.productId]?.variants?.find((v) => v.id === item.variantId)
+                      : undefined
+                    const itemPrice = variant?.price || product?.price || 0
+                    const availableStock = variant?.stock || product?.stock || 0
+                    const variantAttributes = variant?.attributes
+
                     return product ? (
                       <div
-                        key={item.productId}
+                        key={`${item.productId}-${item.variantId || 'simple'}`}
                         class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200"
                       >
                         <div class="flex-1">
-                          <div class="font-semibold text-gray-900 mb-2">{product.name}</div>
+                          <div class="font-semibold text-gray-900 mb-1">{product.name}</div>
+                          {variantAttributes && (
+                            <div class="text-xs text-purple-700 mb-2">
+                              {Object.entries(variantAttributes).map(([k, v]) => (
+                                <span key={k} class="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 mr-1 mb-1">
+                                  <span class="capitalize">{k}:</span> {v}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           <div class="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full inline-block">
-                            {formatCurrency(product.price)} × {item.quantity} ={' '}
-                            <span class="font-bold text-blue-600">{formatCurrency(product.price * item.quantity)}</span>
+                            {formatCurrency(itemPrice)} × {item.quantity} ={' '}
+                            <span class="font-bold text-blue-600">{formatCurrency(itemPrice * item.quantity)}</span>
                           </div>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -1044,7 +1227,7 @@ export default function Orders() {
                               if (item.quantity > 1) {
                                 addItemToOrder(item.productId, -1)
                               } else {
-                                removeItemFromOrder(item.productId)
+                                removeItemFromOrder(item.productId, item.variantId)
                               }
                             }}
                             class="w-8 h-8 p-0 flex items-center justify-center"
@@ -1058,7 +1241,7 @@ export default function Orders() {
                             size="sm"
                             variant="outline"
                             onClick={() => addItemToOrder(item.productId, 1)}
-                            disabled={item.quantity >= product.stock}
+                            disabled={item.quantity >= availableStock}
                             class="w-8 h-8 p-0 flex items-center justify-center"
                           >
                             +
@@ -1066,7 +1249,7 @@ export default function Orders() {
                           <Button
                             size="sm"
                             variant="danger"
-                            onClick={() => removeItemFromOrder(item.productId)}
+                            onClick={() => removeItemFromOrder(item.productId, item.variantId)}
                             class="w-8 h-8 p-0 flex items-center justify-center ml-2"
                           >
                             ×
@@ -1541,13 +1724,27 @@ export default function Orders() {
                 <div class="space-y-3">
                   {selectedOrder.items.map((item, index) => (
                     <div
-                      key={`${item.productId}-${index}`}
+                      key={`${item.productId}-${item.variantId || 'simple'}-${index}`}
                       class="flex justify-between items-center bg-gray-50 rounded-lg p-4"
                     >
                       <div class="flex-1">
                         <div class="font-semibold text-gray-900">{item.productName}</div>
+                        {item.variantAttributes && (
+                          <div class="text-xs text-purple-700 mt-1">
+                            {Object.entries(item.variantAttributes).map(([k, v]) => (
+                              <span key={k} class="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 mr-1 mb-1">
+                                <span class="capitalize">{k}:</span> {v}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <div class="text-sm text-gray-600">
                           {t('orders.productId')}: {item.productId}
+                          {item.variantId && (
+                            <span class="ml-2 text-purple-700">
+                              {t('variants.variant')} ID: {item.variantId}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div class="text-center mx-4">

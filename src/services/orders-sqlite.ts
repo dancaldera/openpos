@@ -1,6 +1,7 @@
 import Database from '@tauri-apps/plugin-sql'
 import { companySettingsService } from './company-settings-sqlite'
 import { productService } from './products-sqlite'
+import { productVariantsService, type ProductVariant } from './product-variants-sqlite'
 
 export interface OrderItem {
   productId: string
@@ -8,6 +9,8 @@ export interface OrderItem {
   quantity: number
   unitPrice: number
   totalPrice: number
+  variantId?: string
+  variantAttributes?: Record<string, string>
   variant?: string
   subtotal?: number
 }
@@ -32,6 +35,7 @@ export interface CreateOrderRequest {
   items: Array<{
     productId: string
     quantity: number
+    variantId?: string
   }>
   customerId?: string
   paymentMethod?: 'cash' | 'card' | 'transfer'
@@ -42,6 +46,7 @@ export interface UpdateOrderRequest {
   items: Array<{
     productId: string
     quantity: number
+    variantId?: string
   }>
   paymentMethod?: 'cash' | 'card' | 'transfer'
   notes?: string
@@ -70,6 +75,8 @@ interface DatabaseOrderItem {
   quantity: number
   unit_price: number
   total_price: number
+  variant_id?: number
+  variant_attributes?: string
 }
 
 export class OrderService {
@@ -98,13 +105,30 @@ export class OrderService {
       dbOrder.id,
     ])
 
-    const items: OrderItem[] = orderItems.map((item) => ({
-      productId: item.product_id.toString(),
-      productName: item.product_name,
-      quantity: item.quantity,
-      unitPrice: item.unit_price,
-      totalPrice: item.total_price,
-    }))
+    const items: OrderItem[] = []
+    for (const item of orderItems) {
+      const orderItem: OrderItem = {
+        productId: item.product_id.toString(),
+        productName: item.product_name,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        totalPrice: item.total_price,
+      }
+
+      // Load variant information if present
+      if (item.variant_id) {
+        orderItem.variantId = item.variant_id.toString()
+        if (item.variant_attributes) {
+          try {
+            orderItem.variantAttributes = JSON.parse(item.variant_attributes)
+          } catch (_e) {
+            // If JSON parsing fails, leave variantAttributes undefined
+          }
+        }
+      }
+
+      items.push(orderItem)
+    }
 
     return {
       id: dbOrder.id.toString(),
@@ -218,7 +242,7 @@ export class OrderService {
         return { success: false, error: stockCheck.error }
       }
 
-      // Build order items with product details
+      // Build order items with product/variant details
       const orderItems: OrderItem[] = []
       let subtotal = 0
 
@@ -231,13 +255,38 @@ export class OrderService {
           }
         }
 
-        const itemTotal = product.price * item.quantity
+        let itemPrice = product.price
+        let variant: ProductVariant | undefined
+        let variantAttributes: Record<string, string> | undefined
+
+        // Handle variant selection
+        if (item.variantId) {
+          variant = await productVariantsService.getVariant(item.variantId)
+          if (!variant || variant.parentProductId !== item.productId) {
+            return {
+              success: false,
+              error: `Variant ${item.variantId} not found for this product`,
+            }
+          }
+          if (!variant.isActive) {
+            return {
+              success: false,
+              error: `Variant is not active`,
+            }
+          }
+          itemPrice = variant.price
+          variantAttributes = variant.attributes
+        }
+
+        const itemTotal = itemPrice * item.quantity
         orderItems.push({
           productId: product.id,
           productName: product.name,
           quantity: item.quantity,
-          unitPrice: product.price,
+          unitPrice: itemPrice,
           totalPrice: itemTotal,
+          variantId: item.variantId,
+          variantAttributes,
         })
 
         subtotal += itemTotal
@@ -275,7 +324,7 @@ export class OrderService {
         if (message.includes('no column named user_id')) {
           orderResult = await db.execute(
             `INSERT INTO orders (
-              subtotal, tax, total, status, 
+              subtotal, tax, total, status,
               payment_method, notes, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [subtotal, taxAmount, total, 'pending', orderData.paymentMethod || null, orderData.notes || null, now, now],
@@ -287,14 +336,46 @@ export class OrderService {
 
       const orderId = orderResult.lastInsertId ?? 0
 
-      // Create order items
+      // Create order items with variant support
       for (const item of orderItems) {
-        await db.execute(
-          `INSERT INTO order_items (
-            order_id, product_id, product_name, quantity, unit_price, total_price
-          ) VALUES (?, ?, ?, ?, ?, ?)`,
-          [orderId, parseInt(item.productId, 10), item.productName, item.quantity, item.unitPrice, item.totalPrice],
+        // Check if variant_id column exists
+        const columnsCheck = await db.execute(
+          `SELECT variant_id FROM order_items LIMIT 1`,
         )
+        const hasVariantSupport = !columnsCheck.error?.toString().includes('no column named variant_id')
+
+        if (hasVariantSupport) {
+          await db.execute(
+            `INSERT INTO order_items (
+              order_id, product_id, product_name, quantity, unit_price, total_price, variant_id, variant_attributes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              orderId,
+              parseInt(item.productId, 10),
+              item.productName,
+              item.quantity,
+              item.unitPrice,
+              item.totalPrice,
+              item.variantId ? parseInt(item.variantId, 10) : null,
+              item.variantAttributes ? JSON.stringify(item.variantAttributes) : null,
+            ],
+          )
+        } else {
+          // Fallback for old schema without variant support
+          await db.execute(
+            `INSERT INTO order_items (
+              order_id, product_id, product_name, quantity, unit_price, total_price
+            ) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              orderId,
+              parseInt(item.productId, 10),
+              item.productName,
+              item.quantity,
+              item.unitPrice,
+              item.totalPrice,
+            ],
+          )
+        }
       }
 
       const newOrder: Order = {
@@ -400,7 +481,7 @@ export class OrderService {
   }
 
   private async checkStockAvailability(
-    items: Array<{ productId: string; quantity: number }>,
+    items: Array<{ productId: string; quantity: number; variantId?: string }>,
   ): Promise<{ success: boolean; error?: string }> {
     for (const item of items) {
       const product = await productService.getProduct(item.productId)
@@ -415,10 +496,46 @@ export class OrderService {
         }
       }
 
-      if (product.stock < item.quantity) {
-        return {
-          success: false,
-          error: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
+      // Check variant stock if variant is selected
+      if (item.variantId) {
+        const variant = await productVariantsService.getVariant(item.variantId)
+        if (!variant || variant.parentProductId !== item.productId) {
+          return {
+            success: false,
+            error: `Variant ${item.variantId} not found for this product`,
+          }
+        }
+
+        if (!variant.isActive) {
+          return {
+            success: false,
+            error: `Variant is not active`,
+          }
+        }
+
+        if (variant.stock < item.quantity) {
+          const variantName = Object.entries(variant.attributes)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(', ')
+          return {
+            success: false,
+            error: `Insufficient stock for ${product.name} (${variantName}). Available: ${variant.stock}, Requested: ${item.quantity}`,
+          }
+        }
+      } else {
+        // For simple products, check product stock
+        if (product.variantType === 'configurable') {
+          return {
+            success: false,
+            error: `Product ${product.name} has variants. Please select a variant.`,
+          }
+        }
+
+        if (product.stock < item.quantity) {
+          return {
+            success: false,
+            error: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
+          }
         }
       }
     }
@@ -427,28 +544,63 @@ export class OrderService {
 
   private async deductStockFromOrder(order: Order): Promise<{ success: boolean; error?: string }> {
     for (const item of order.items) {
-      const product = await productService.getProduct(item.productId)
-      if (!product) {
-        return { success: false, error: `Product ${item.productId} not found` }
-      }
-
-      if (product.stock < item.quantity) {
-        return {
-          success: false,
-          error: `Insufficient stock for ${product.name}. Available: ${product.stock}, Needed: ${item.quantity}`,
+      // If variant is specified, deduct from variant stock
+      if (item.variantId) {
+        const variant = await productVariantsService.getVariant(item.variantId)
+        if (!variant) {
+          return { success: false, error: `Variant ${item.variantId} not found` }
         }
-      }
 
-      // Update product stock
-      const updateResult = await productService.updateProduct(product.id, {
-        stock: product.stock - item.quantity,
-        updatedAt: new Date().toISOString(),
-      })
+        if (variant.stock < item.quantity) {
+          return {
+            success: false,
+            error: `Insufficient stock for variant. Available: ${variant.stock}, Needed: ${item.quantity}`,
+          }
+        }
 
-      if (!updateResult.success) {
-        return {
-          success: false,
-          error: updateResult.error || 'Failed to update product stock',
+        // Update variant stock
+        const updateResult = await productVariantsService.updateVariant(item.variantId, {
+          stock: variant.stock - item.quantity,
+        })
+
+        if (!updateResult.success) {
+          return {
+            success: false,
+            error: updateResult.error || 'Failed to update variant stock',
+          }
+        }
+      } else {
+        // For simple products, deduct from product stock
+        const product = await productService.getProduct(item.productId)
+        if (!product) {
+          return { success: false, error: `Product ${item.productId} not found` }
+        }
+
+        if (product.variantType === 'configurable') {
+          return {
+            success: false,
+            error: `Cannot deduct stock from configurable product ${product.name} without variant selection`,
+          }
+        }
+
+        if (product.stock < item.quantity) {
+          return {
+            success: false,
+            error: `Insufficient stock for ${product.name}. Available: ${product.stock}, Needed: ${item.quantity}`,
+          }
+        }
+
+        // Update product stock
+        const updateResult = await productService.updateProduct(product.id, {
+          stock: product.stock - item.quantity,
+          updatedAt: new Date().toISOString(),
+        })
+
+        if (!updateResult.success) {
+          return {
+            success: false,
+            error: updateResult.error || 'Failed to update product stock',
+          }
         }
       }
     }
@@ -457,12 +609,23 @@ export class OrderService {
 
   private async restoreStockFromOrder(order: Order): Promise<void> {
     for (const item of order.items) {
-      const product = await productService.getProduct(item.productId)
-      if (product) {
-        await productService.updateProduct(product.id, {
-          stock: product.stock + item.quantity,
-          updatedAt: new Date().toISOString(),
-        })
+      // If variant is specified, restore to variant stock
+      if (item.variantId) {
+        const variant = await productVariantsService.getVariant(item.variantId)
+        if (variant) {
+          await productVariantsService.updateVariant(item.variantId, {
+            stock: variant.stock + item.quantity,
+          })
+        }
+      } else {
+        // For simple products, restore to product stock
+        const product = await productService.getProduct(item.productId)
+        if (product && product.variantType === 'simple') {
+          await productService.updateProduct(product.id, {
+            stock: product.stock + item.quantity,
+            updatedAt: new Date().toISOString(),
+          })
+        }
       }
     }
   }
@@ -714,7 +877,7 @@ export class OrderService {
         return { success: false, error: stockCheck.error }
       }
 
-      // Build new order items with product details
+      // Build new order items with product/variant details
       const newOrderItems: OrderItem[] = []
       let newSubtotal = 0
 
@@ -727,13 +890,38 @@ export class OrderService {
           }
         }
 
-        const itemTotal = product.price * item.quantity
+        let itemPrice = product.price
+        let variant: ProductVariant | undefined
+        let variantAttributes: Record<string, string> | undefined
+
+        // Handle variant selection
+        if (item.variantId) {
+          variant = await productVariantsService.getVariant(item.variantId)
+          if (!variant || variant.parentProductId !== item.productId) {
+            return {
+              success: false,
+              error: `Variant ${item.variantId} not found for this product`,
+            }
+          }
+          if (!variant.isActive) {
+            return {
+              success: false,
+              error: `Variant is not active`,
+            }
+          }
+          itemPrice = variant.price
+          variantAttributes = variant.attributes
+        }
+
+        const itemTotal = itemPrice * item.quantity
         newOrderItems.push({
           productId: product.id,
           productName: product.name,
           quantity: item.quantity,
-          unitPrice: product.price,
+          unitPrice: itemPrice,
           totalPrice: itemTotal,
+          variantId: item.variantId,
+          variantAttributes,
         })
 
         newSubtotal += itemTotal
@@ -746,21 +934,46 @@ export class OrderService {
       // Delete existing order items
       await db.execute('DELETE FROM order_items WHERE order_id = ?', [parseInt(orderId, 10)])
 
-      // Insert new order items
+      // Insert new order items with variant support
       for (const item of newOrderItems) {
-        await db.execute(
-          `INSERT INTO order_items (
-            order_id, product_id, product_name, quantity, unit_price, total_price
-          ) VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            parseInt(orderId, 10),
-            parseInt(item.productId, 10),
-            item.productName,
-            item.quantity,
-            item.unitPrice,
-            item.totalPrice,
-          ],
+        // Check if variant_id column exists
+        const columnsCheck = await db.execute(
+          `SELECT variant_id FROM order_items LIMIT 1`,
         )
+        const hasVariantSupport = !columnsCheck.error?.toString().includes('no column named variant_id')
+
+        if (hasVariantSupport) {
+          await db.execute(
+            `INSERT INTO order_items (
+              order_id, product_id, product_name, quantity, unit_price, total_price, variant_id, variant_attributes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              parseInt(orderId, 10),
+              parseInt(item.productId, 10),
+              item.productName,
+              item.quantity,
+              item.unitPrice,
+              item.totalPrice,
+              item.variantId ? parseInt(item.variantId, 10) : null,
+              item.variantAttributes ? JSON.stringify(item.variantAttributes) : null,
+            ],
+          )
+        } else {
+          // Fallback for old schema without variant support
+          await db.execute(
+            `INSERT INTO order_items (
+              order_id, product_id, product_name, quantity, unit_price, total_price
+            ) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              parseInt(orderId, 10),
+              parseInt(item.productId, 10),
+              item.productName,
+              item.quantity,
+              item.unitPrice,
+              item.totalPrice,
+            ],
+          )
+        }
       }
 
       // Update order totals and details
