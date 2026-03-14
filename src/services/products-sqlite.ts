@@ -1,4 +1,7 @@
 import Database from '@tauri-apps/plugin-sql'
+import { productVariantsService, ProductVariant } from './product-variants-sqlite'
+
+export type ProductVariantType = 'simple' | 'configurable'
 
 export interface Product {
   id: string
@@ -11,8 +14,18 @@ export interface Product {
   barcode?: string
   image?: string
   isActive: boolean
+  variantType: ProductVariantType
+  defaultVariantId?: string
   createdAt: string
   updatedAt: string
+}
+
+export interface ProductWithVariants extends Product {
+  variants?: ProductVariant[]
+  variantCount?: number
+  minPrice?: number
+  maxPrice?: number
+  totalStock?: number
 }
 
 export const PRODUCT_CATEGORIES = [
@@ -45,6 +58,8 @@ interface DatabaseProduct {
   barcode?: string
   image?: string
   is_active: number
+  variant_type?: string
+  default_variant_id?: number
   created_at: string
   updated_at: string
 }
@@ -79,6 +94,8 @@ export class ProductService {
       barcode: dbProduct.barcode,
       image: dbProduct.image,
       isActive: Boolean(dbProduct.is_active),
+      variantType: (dbProduct.variant_type as ProductVariantType) || 'simple',
+      defaultVariantId: dbProduct.default_variant_id?.toString(),
       createdAt: dbProduct.created_at,
       updatedAt: dbProduct.updated_at,
     }
@@ -490,6 +507,259 @@ export class ProductService {
     } catch (error) {
       console.error('Get low stock products error:', error)
       throw new Error('Failed to fetch low stock products')
+    }
+  }
+
+  // ==================== Variant Support Methods ====================
+
+  /**
+   * Get product with all its variants and variant metadata
+   */
+  async getProductWithVariants(id: string): Promise<ProductWithVariants | null> {
+    try {
+      const product = await this.getProduct(id)
+      if (!product) {
+        return null
+      }
+
+      const result: ProductWithVariants = { ...product }
+
+      // Only fetch variants for configurable products
+      if (product.variantType === 'configurable') {
+        const variants = await productVariantsService.getVariants(id)
+        result.variants = variants
+        result.variantCount = variants.length
+
+        // Calculate price range across variants
+        if (variants.length > 0) {
+          const prices = variants.map((v) => v.price).filter((p) => p > 0)
+          result.minPrice = Math.min(...prices)
+          result.maxPrice = Math.max(...prices)
+
+          // Calculate total stock across variants
+          result.totalStock = variants.reduce((sum, v) => sum + v.stock, 0)
+        }
+      }
+
+      return result
+    } catch (error) {
+      console.error('Get product with variants error:', error)
+      throw new Error('Failed to fetch product with variants')
+    }
+  }
+
+  /**
+   * Convert a simple product to configurable (enable variants)
+   */
+  async convertToConfigurable(
+    productId: string,
+    attributeIds: string[],
+  ): Promise<{ success: boolean; product?: Product; error?: string }> {
+    try {
+      const db = await this.getDatabase()
+
+      // Check if product exists
+      const product = await db.select<DatabaseProduct[]>(
+        'SELECT * FROM products WHERE id = ? LIMIT 1',
+        [parseInt(productId, 10)],
+      )
+
+      if (product.length === 0) {
+        return { success: false, error: 'Product not found' }
+      }
+
+      const existingProduct = product[0]
+
+      // Check if already configurable
+      if (existingProduct.variant_type === 'configurable') {
+        return { success: false, error: 'Product is already configurable' }
+      }
+
+      // Update product to configurable
+      await db.execute(
+        'UPDATE products SET variant_type = ?, updated_at = ? WHERE id = ?',
+        ['configurable', new Date().toISOString(), parseInt(productId, 10)],
+      )
+
+      // Create variant settings
+      await db.execute(
+        `INSERT INTO product_variant_settings (
+          product_id, has_variants, attribute_ids, pricing_strategy, stock_strategy, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          parseInt(productId, 10),
+          0, // has_variants is false until variants are created
+          JSON.stringify(attributeIds),
+          'individual',
+          'individual',
+          new Date().toISOString(),
+          new Date().toISOString(),
+        ],
+      )
+
+      // Fetch updated product
+      const updatedProduct = await db.select<DatabaseProduct[]>(
+        'SELECT * FROM products WHERE id = ? LIMIT 1',
+        [parseInt(productId, 10)],
+      )
+
+      return {
+        success: true,
+        product: this.convertDbProduct(updatedProduct[0]),
+      }
+    } catch (error) {
+      console.error('Convert to configurable error:', error)
+      return { success: false, error: 'Failed to convert product to configurable' }
+    }
+  }
+
+  /**
+   * Convert a configurable product back to simple (disable variants)
+   * This will delete all variants and variant settings
+   */
+  async convertToSimple(
+    productId: string,
+  ): Promise<{ success: boolean; product?: Product; error?: string }> {
+    try {
+      const db = await this.getDatabase()
+
+      // Check if product exists
+      const product = await db.select<DatabaseProduct[]>(
+        'SELECT * FROM products WHERE id = ? LIMIT 1',
+        [parseInt(productId, 10)],
+      )
+
+      if (product.length === 0) {
+        return { success: false, error: 'Product not found' }
+      }
+
+      const existingProduct = product[0]
+
+      // Check if already simple
+      if (existingProduct.variant_type === 'simple') {
+        return { success: false, error: 'Product is already simple' }
+      }
+
+      // Check if product has variants
+      const variants = await db.select<{ count: number }[]>(
+        'SELECT COUNT(*) as count FROM product_variants WHERE parent_product_id = ?',
+        [parseInt(productId, 10)],
+      )
+
+      if (variants[0]?.count > 0) {
+        return {
+          success: false,
+          error: 'Cannot convert product with variants. Please delete all variants first.',
+        }
+      }
+
+      // Delete variant settings
+      await db.execute(
+        'DELETE FROM product_variant_settings WHERE product_id = ?',
+        [parseInt(productId, 10)],
+      )
+
+      // Update product to simple
+      await db.execute(
+        'UPDATE products SET variant_type = ?, default_variant_id = NULL, updated_at = ? WHERE id = ?',
+        ['simple', new Date().toISOString(), parseInt(productId, 10)],
+      )
+
+      // Fetch updated product
+      const updatedProduct = await db.select<DatabaseProduct[]>(
+        'SELECT * FROM products WHERE id = ? LIMIT 1',
+        [parseInt(productId, 10)],
+      )
+
+      return {
+        success: true,
+        product: this.convertDbProduct(updatedProduct[0]),
+      }
+    } catch (error) {
+      console.error('Convert to simple error:', error)
+      return { success: false, error: 'Failed to convert product to simple' }
+    }
+  }
+
+  /**
+   * Get the default variant for a configurable product
+   */
+  async getDefaultVariant(productId: string): Promise<ProductVariant | null> {
+    try {
+      const db = await this.getDatabase()
+
+      // First check if product has a default_variant_id set
+      const product = await db.select<DatabaseProduct[]>(
+        'SELECT default_variant_id FROM products WHERE id = ? LIMIT 1',
+        [parseInt(productId, 10)],
+      )
+
+      if (product.length === 0) {
+        return null
+      }
+
+      // If default_variant_id is set, get that variant
+      if (product[0].default_variant_id) {
+        return await productVariantsService.getVariant(
+          product[0].default_variant_id.toString(),
+        )
+      }
+
+      // Otherwise, get the first active variant
+      const variants = await productVariantsService.getVariants(productId)
+      const activeVariant = variants.find((v) => v.isActive)
+
+      return activeVariant || null
+    } catch (error) {
+      console.error('Get default variant error:', error)
+      throw new Error('Failed to fetch default variant')
+    }
+  }
+
+  /**
+   * Set the default variant for a configurable product
+   */
+  async setDefaultVariant(
+    productId: string,
+    variantId: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const db = await this.getDatabase()
+
+      // Verify product exists
+      const product = await db.select<DatabaseProduct[]>(
+        'SELECT id FROM products WHERE id = ? LIMIT 1',
+        [parseInt(productId, 10)],
+      )
+
+      if (product.length === 0) {
+        return { success: false, error: 'Product not found' }
+      }
+
+      // Verify variant exists and belongs to this product
+      const variant = await db.select<{ id: number; parent_product_id: number }[]>(
+        'SELECT id, parent_product_id FROM product_variants WHERE id = ? LIMIT 1',
+        [parseInt(variantId, 10)],
+      )
+
+      if (variant.length === 0) {
+        return { success: false, error: 'Variant not found' }
+      }
+
+      if (variant[0].parent_product_id !== parseInt(productId, 10)) {
+        return { success: false, error: 'Variant does not belong to this product' }
+      }
+
+      // Update default_variant_id
+      await db.execute(
+        'UPDATE products SET default_variant_id = ?, updated_at = ? WHERE id = ?',
+        [parseInt(variantId, 10), new Date().toISOString(), parseInt(productId, 10)],
+      )
+
+      return { success: true }
+    } catch (error) {
+      console.error('Set default variant error:', error)
+      return { success: false, error: 'Failed to set default variant' }
     }
   }
 }

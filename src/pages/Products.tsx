@@ -16,7 +16,22 @@ import {
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
-import { PRODUCT_CATEGORIES, type Product, productService } from '../services/products-sqlite'
+import {
+  PRODUCT_CATEGORIES,
+  type Product,
+  type ProductWithVariants,
+  productService,
+} from '../services/products-sqlite'
+import {
+  productVariantsService,
+  type ProductVariant,
+} from '../services/product-variants-sqlite'
+import {
+  ProductVariantRow,
+  EditVariantModal,
+  VariantGenerator,
+  VariantSettingsModal,
+} from '../components/VariantManagement'
 
 type TranslateFunction = (key: string, params?: Record<string, string | number | boolean>) => string
 
@@ -347,6 +362,7 @@ export default function Products() {
 
   const [products, setProducts] = useState<Product[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
+  const [productsWithVariants, setProductsWithVariants] = useState<Record<string, ProductWithVariants>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -359,6 +375,13 @@ export default function Products() {
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [pageSize] = useState(10)
+
+  // Variant state
+  const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set())
+  const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null)
+  const [isVariantModalOpen, setIsVariantModalOpen] = useState(false)
+  const [isGeneratorOpen, setIsGeneratorOpen] = useState(false)
+  const [isVariantSettingsOpen, setIsVariantSettingsOpen] = useState(false)
 
   const { user: currentUser, hasRole, hasPermission } = useAuth()
 
@@ -458,6 +481,116 @@ export default function Products() {
       await loadProducts(currentPage)
     }
     setIsModalOpen(false)
+  }
+
+  // Variant handlers
+  const handleToggleExpand = async (productId: string) => {
+    const newExpanded = new Set(expandedProductIds)
+    if (newExpanded.has(productId)) {
+      newExpanded.delete(productId)
+    } else {
+      newExpanded.add(productId)
+      // Load variants for this product if not already loaded
+      if (!productsWithVariants[productId]) {
+        try {
+          const productWithVariants = await productService.getProductWithVariants(productId)
+          if (productWithVariants) {
+            setProductsWithVariants((prev) => ({
+              ...prev,
+              [productId]: productWithVariants,
+            }))
+          }
+        } catch (err) {
+          console.error('Failed to load variants:', err)
+        }
+      }
+    }
+    setExpandedProductIds(newExpanded)
+  }
+
+  const handleEditVariant = (variant: ProductVariant) => {
+    setEditingVariant(variant)
+    setIsVariantModalOpen(true)
+  }
+
+  const handleDeleteVariant = async (variantId: string) => {
+    try {
+      const result = await productVariantsService.deleteVariant(variantId)
+      if (result.success) {
+        // Reload variants for affected products
+        const updated = { ...productsWithVariants }
+        for (const productId in updated) {
+          if (updated[productId].variants) {
+            updated[productId].variants = updated[productId].variants!.filter((v) => v.id !== variantId)
+          }
+        }
+        setProductsWithVariants(updated)
+      } else {
+        setError(result.error || t('errors.generic'))
+      }
+    } catch (_err) {
+      setError(t('errors.generic'))
+    }
+  }
+
+  const handleSaveVariant = async (variant: ProductVariant) => {
+    // Reload variants for the product
+    const productId = variant.parentProductId
+    try {
+      const productWithVariants = await productService.getProductWithVariants(productId)
+      if (productWithVariants) {
+        setProductsWithVariants((prev) => ({
+          ...prev,
+          [productId]: productWithVariants,
+        }))
+      }
+    } catch (err) {
+      console.error('Failed to reload variants:', err)
+    }
+    setIsVariantModalOpen(false)
+    setEditingVariant(null)
+  }
+
+  const handleGenerateVariants = (productId: string) => {
+    setIsGeneratorOpen(true)
+  }
+
+  const handleVariantsGenerated = async (variants: ProductVariant[]) => {
+    // Reload the product with variants
+    try {
+      const productWithVariants = await productService.getProductWithVariants(variants[0]?.parentProductId || '')
+      if (productWithVariants && productWithVariants.variants) {
+        setProductsWithVariants((prev) => ({
+          ...prev,
+          [variants[0].parentProductId]: productWithVariants,
+        }))
+      }
+    } catch (err) {
+      console.error('Failed to reload variants:', err)
+    }
+  }
+
+  const handleEnableVariants = (product: Product) => {
+    setEditingProduct(product)
+    setIsVariantSettingsOpen(true)
+  }
+
+  const handleDisableVariants = async (product: Product) => {
+    try {
+      const result = await productService.convertToSimple(product.id)
+      if (result.success) {
+        // Reload products
+        if (searchQuery.trim()) {
+          await handleSearch(searchQuery, currentPage)
+        } else {
+          await loadProducts(currentPage)
+        }
+      } else {
+        setError(result.error || t('errors.generic'))
+      }
+    } catch (_err) {
+      setError(t('errors.generic'))
+    }
   }
 
   const getStockColor = (stock: number) => {
@@ -598,87 +731,207 @@ export default function Products() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {products.map((product, index) => (
-              <TableRow
-                key={product.id}
-                class="hover:bg-gray-50 transition-all duration-200 hover:shadow-sm"
-                style={`animation-delay: ${index * 50}ms`}
-              >
-                <TableCell>
-                  <div class="flex items-start">
-                    <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-lg font-bold mr-3 shadow-md">
-                      {getCategoryIcon(product.category)}
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div class="font-semibold text-gray-900 truncate">{product.name}</div>
-                      {product.description && (
-                        <div class="text-sm text-gray-600 truncate max-w-xs mt-1">{product.description}</div>
+            {products.map((product, index) => {
+              const productWithVariants = productsWithVariants[product.id]
+              const isConfigurable = product.variantType === 'configurable'
+              const isExpanded = expandedProductIds.has(product.id)
+              const variantCount = productWithVariants?.variantCount || 0
+
+              return (
+                <>
+                  <TableRow
+                    key={product.id}
+                    class="hover:bg-gray-50 transition-all duration-200 hover:shadow-sm"
+                    style={`animation-delay: ${index * 50}ms`}
+                  >
+                    <TableCell>
+                      <div class="flex items-start">
+                        <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-lg font-bold mr-3 shadow-md">
+                          {getCategoryIcon(product.category)}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-2">
+                            <span class="font-semibold text-gray-900 truncate">{product.name}</span>
+                            {isConfigurable && (
+                              <button
+                                onClick={() => handleToggleExpand(product.id)}
+                                class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 hover:bg-purple-200 transition-all flex items-center gap-1"
+                              >
+                                🏷️ {variantCount} {t('variants.variants')}
+                                <span class={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                              </button>
+                            )}
+                          </div>
+                          {product.description && (
+                            <div class="text-sm text-gray-600 truncate max-w-xs mt-1">{product.description}</div>
+                          )}
+                          {product.barcode && (
+                            <div class="text-xs text-gray-500 mt-1 font-mono bg-gray-100 px-2 py-1 rounded w-fit">
+                              📊 {product.barcode}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div class="inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-indigo-200 text-blue-800 border border-blue-300 shadow-sm">
+                        <span class="mr-1">{getCategoryIcon(product.category)}</span>
+                        {getCategoryLabel(product.category, t)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {productWithVariants?.minPrice !== undefined && productWithVariants?.maxPrice !== undefined ? (
+                        <div>
+                          <div class="text-lg font-bold text-emerald-600 drop-shadow-sm">
+                            {formatCurrency(productWithVariants.minPrice)}
+                          </div>
+                          {productWithVariants.minPrice !== productWithVariants.maxPrice && (
+                            <div class="text-xs text-gray-500">
+                              {t('variants.priceRange', {
+                                min: formatCurrency(productWithVariants.minPrice),
+                                max: formatCurrency(productWithVariants.maxPrice),
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div class="text-lg font-bold text-emerald-600 drop-shadow-sm">{formatCurrency(product.price)}</div>
                       )}
-                      {product.barcode && (
-                        <div class="text-xs text-gray-500 mt-1 font-mono bg-gray-100 px-2 py-1 rounded w-fit">
-                          📊 {product.barcode}
+                    </TableCell>
+                    <TableCell>
+                      <div class="text-gray-600 font-medium">{formatCurrency(product.cost)}</div>
+                      <div class="text-xs text-gray-500">
+                        {t('products.profitMargin')}: {(((product.price - product.cost) / product.cost) * 100).toFixed(1)}%
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {productWithVariants?.totalStock !== undefined ? (
+                        <div
+                          class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105 ${getStockColor(productWithVariants.totalStock)} shadow-sm`}
+                        >
+                          <span class="mr-1">{getStockIcon(productWithVariants.totalStock)}</span>
+                          {productWithVariants.totalStock} {t('common.quantity').toLowerCase()}
+                        </div>
+                      ) : (
+                        <div
+                          class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105 ${getStockColor(product.stock)} shadow-sm`}
+                        >
+                          <span class="mr-1">{getStockIcon(product.stock)}</span>
+                          {product.stock} {t('common.quantity').toLowerCase()}
                         </div>
                       )}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div class="inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-indigo-200 text-blue-800 border border-blue-300 shadow-sm">
-                    <span class="mr-1">{getCategoryIcon(product.category)}</span>
-                    {getCategoryLabel(product.category, t)}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div class="text-lg font-bold text-emerald-600 drop-shadow-sm">{formatCurrency(product.price)}</div>
-                </TableCell>
-                <TableCell>
-                  <div class="text-gray-600 font-medium">{formatCurrency(product.cost)}</div>
-                  <div class="text-xs text-gray-500">
-                    {t('products.profitMargin')}: {(((product.price - product.cost) / product.cost) * 100).toFixed(1)}%
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div
-                    class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105 ${getStockColor(product.stock)} shadow-sm`}
-                  >
-                    <span class="mr-1">{getStockIcon(product.stock)}</span>
-                    {product.stock} {t('common.quantity').toLowerCase()}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div
-                    class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide ${getStatusColor(product.isActive)} transition-all hover:scale-105`}
-                  >
-                    <span class="mr-1">{product.isActive ? '✅' : '⛔'}</span>
-                    {product.isActive ? t('members.active') : t('members.inactive')}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div class="flex space-x-2">
-                    {(hasPermission('products.edit') || hasRole('admin') || hasRole('manager')) && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditProduct(product)}
-                        class="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all hover:shadow-md mr-2"
+                    </TableCell>
+                    <TableCell>
+                      <div
+                        class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide ${getStatusColor(product.isActive)} transition-all hover:scale-105`}
                       >
-                        ✏️ {t('common.edit')}
-                      </Button>
-                    )}
-                    {(hasPermission('products.delete') || hasRole('admin') || hasRole('manager')) && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setDeleteConfirm(product.id)}
-                        class="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all hover:shadow-md"
-                      >
-                        🗑️ {t('common.delete')}
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                        <span class="mr-1">{product.isActive ? '✅' : '⛔'}</span>
+                        {product.isActive ? t('members.active') : t('members.inactive')}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div class="flex space-x-2 flex-wrap gap-y-2">
+                        {!isConfigurable && (hasPermission('products.edit') || hasRole('admin') || hasRole('manager')) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEnableVariants(product)}
+                            class="text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300 transition-all hover:shadow-md"
+                            title={t('variants.enableVariants')}
+                          >
+                            🏷️
+                          </Button>
+                        )}
+                        {isConfigurable && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleGenerateVariants(product.id)}
+                              class="text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300 transition-all hover:shadow-md"
+                              title={t('variants.generateVariants')}
+                            >
+                              🎲
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDisableVariants(product)}
+                              class="text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 transition-all hover:shadow-md"
+                              title={t('variants.disableVariants')}
+                            >
+                              ⛔
+                            </Button>
+                          </>
+                        )}
+                        {(hasPermission('products.edit') || hasRole('admin') || hasRole('manager')) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditProduct(product)}
+                            class="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all hover:shadow-md"
+                          >
+                            ✏️
+                          </Button>
+                        )}
+                        {(hasPermission('products.delete') || hasRole('admin') || hasRole('manager')) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setDeleteConfirm(product.id)}
+                            class="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all hover:shadow-md"
+                          >
+                            🗑️
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+
+                  {/* Expandable variants row */}
+                  {isExpanded && productWithVariants?.variants && (
+                    <TableRow key={`${product.id}-variants`} class="bg-gray-50">
+                      <TableCell colspan="7" class="p-4">
+                        <div class="space-y-2">
+                          <div class="flex items-center justify-between">
+                            <h4 class="font-semibold text-gray-900">{t('variants.variants')}</h4>
+                            <div class="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingVariant(null)
+                                  setIsVariantModalOpen(true)
+                                }}
+                              >
+                                ➕ {t('variants.addVariant')}
+                              </Button>
+                            </div>
+                          </div>
+                          {productWithVariants.variants.length === 0 ? (
+                            <div class="text-center py-8 bg-white rounded-lg">
+                              <div class="text-4xl mb-2">📦</div>
+                              <p class="text-gray-600">{t('variants.noVariants')}</p>
+                            </div>
+                          ) : (
+                            <div class="space-y-2">
+                              {productWithVariants.variants.map((variant) => (
+                                <ProductVariantRow
+                                  key={variant.id}
+                                  variant={variant}
+                                  onEdit={handleEditVariant}
+                                  onDelete={handleDeleteVariant}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              )
+            })}
           </TableBody>
         </Table>
       </div>
@@ -733,6 +986,41 @@ export default function Products() {
         confirmText={t('common.delete')}
         variant="danger"
       />
+
+      {/* Variant Modals */}
+      {editingProduct && (
+        <>
+          <EditVariantModal
+            variant={editingVariant}
+            productId={editingProduct.id}
+            isOpen={isVariantModalOpen}
+            onClose={() => {
+              setIsVariantModalOpen(false)
+              setEditingVariant(null)
+            }}
+            onSave={handleSaveVariant}
+          />
+          <VariantGenerator
+            productId={editingProduct.id}
+            isOpen={isGeneratorOpen}
+            onClose={() => setIsGeneratorOpen(false)}
+            onGenerated={handleVariantsGenerated}
+          />
+          <VariantSettingsModal
+            productId={editingProduct.id}
+            isOpen={isVariantSettingsOpen}
+            onClose={() => setIsVariantSettingsOpen(false)}
+            onSaved={async () => {
+              // Reload products
+              if (searchQuery.trim()) {
+                await handleSearch(searchQuery, currentPage)
+              } else {
+                await loadProducts(currentPage)
+              }
+            }}
+          />
+        </>
+      )}
     </div>
   )
 }
