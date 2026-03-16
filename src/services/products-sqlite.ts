@@ -214,8 +214,8 @@ export class ProductService {
       const result = await db.execute(
         `INSERT INTO products (
           name, description, price, cost, stock, category, barcode, image,
-          is_active, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          is_active, variant_type, default_variant_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           productData.name,
           productData.description,
@@ -226,6 +226,8 @@ export class ProductService {
           productData.barcode || null,
           productData.image || null,
           productData.isActive ? 1 : 0,
+          productData.variantType || 'simple',
+          productData.defaultVariantId ? parseInt(productData.defaultVariantId, 10) : null,
           now,
           now,
         ],
@@ -242,6 +244,8 @@ export class ProductService {
         barcode: productData.barcode,
         image: productData.image,
         isActive: productData.isActive,
+        variantType: productData.variantType || 'simple',
+        defaultVariantId: productData.defaultVariantId,
         createdAt: now,
         updatedAt: now,
       }

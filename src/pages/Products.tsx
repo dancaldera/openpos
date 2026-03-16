@@ -128,6 +128,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
           category: formData.category,
           barcode: formData.barcode || undefined,
           isActive: formData.isActive,
+          variantType: product.variantType,
         })
       } else {
         result = await productService.createProduct({
@@ -139,6 +140,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
           category: formData.category,
           barcode: formData.barcode || undefined,
           isActive: formData.isActive,
+          variantType: 'simple',
         })
       }
 
@@ -890,7 +892,7 @@ export default function Products() {
                   {/* Expandable variants row */}
                   {isExpanded && productWithVariants?.variants && (
                     <TableRow key={`${product.id}-variants`} class="bg-gray-50">
-                      <TableCell colspan="7" class="p-4">
+                      <TableCell colSpan={7} class="p-4">
                         <div class="space-y-2">
                           <div class="flex items-center justify-between">
                             <h4 class="font-semibold text-gray-900">{t('variants.variants')}</h4>
