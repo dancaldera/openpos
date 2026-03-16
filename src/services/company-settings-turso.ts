@@ -92,7 +92,7 @@ export class CompanySettingsService {
 
   async getSettings(): Promise<CompanySettings> {
     try {
-      const settings = await query<DatabaseCompanySettings[]>('SELECT * FROM company_settings WHERE id = 1 LIMIT 1')
+      const settings = await query<DatabaseCompanySettings>('SELECT * FROM company_settings WHERE id = 1 LIMIT 1')
 
       if (settings.length === 0) {
         throw new Error('Company settings not found')
@@ -197,7 +197,7 @@ export class CompanySettingsService {
         await execute(`UPDATE company_settings SET ${updateFields.join(', ')} WHERE id = ?`, updateValues)
       }
 
-      const updatedSettings = await query<DatabaseCompanySettings[]>(
+      const updatedSettings = await query<DatabaseCompanySettings>(
         'SELECT * FROM company_settings WHERE id = 1 LIMIT 1',
       )
 
@@ -238,9 +238,7 @@ export class CompanySettingsService {
         ],
       )
 
-      const resetSettings = await query<DatabaseCompanySettings[]>(
-        'SELECT * FROM company_settings WHERE id = 1 LIMIT 1',
-      )
+      const resetSettings = await query<DatabaseCompanySettings>('SELECT * FROM company_settings WHERE id = 1 LIMIT 1')
 
       return {
         success: true,

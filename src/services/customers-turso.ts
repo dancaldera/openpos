@@ -141,7 +141,7 @@ export class CustomerService {
 
   async getCustomers(): Promise<Customer[]> {
     try {
-      const customers = await query<DatabaseCustomer[]>(
+      const customers = await query<DatabaseCustomer>(
         'SELECT * FROM customers WHERE deleted_at IS NULL ORDER BY customer_number DESC',
       )
 
@@ -167,14 +167,14 @@ export class CustomerService {
       const offset = (page - 1) * limit
 
       // Get total count
-      const countResult = await query<{ count: number }[]>(
+      const countResult = await query<{ count: number }>(
         'SELECT COUNT(*) as count FROM customers WHERE deleted_at IS NULL',
       )
       const totalCount = countResult[0]?.count || 0
       const totalPages = Math.ceil(totalCount / limit)
 
       // Get paginated customers
-      const customers = await query<DatabaseCustomer[]>(
+      const customers = await query<DatabaseCustomer>(
         'SELECT * FROM customers WHERE deleted_at IS NULL ORDER BY customer_number DESC LIMIT ? OFFSET ?',
         [limit, offset],
       )
@@ -195,7 +195,7 @@ export class CustomerService {
 
   async getCustomer(id: string): Promise<Customer | null> {
     try {
-      const customers = await query<DatabaseCustomer[]>(
+      const customers = await query<DatabaseCustomer>(
         'SELECT * FROM customers WHERE id = ? AND deleted_at IS NULL LIMIT 1',
         [parseInt(id, 10)],
       )
@@ -214,7 +214,7 @@ export class CustomerService {
   async generateCustomerNumber(): Promise<string> {
     try {
       // Get the highest customer number
-      const result = await query<{ max_number: number }[]>(
+      const result = await query<{ max_number: number }>(
         "SELECT MAX(CAST(SUBSTR(customer_number, 6) AS INTEGER)) as max_number FROM customers WHERE customer_number LIKE 'CUST-%'",
       )
 
@@ -250,7 +250,7 @@ export class CustomerService {
     try {
       // Check for duplicate email
       if (customerData.email) {
-        const existingEmail = await query<DatabaseCustomer[]>(
+        const existingEmail = await query<DatabaseCustomer>(
           'SELECT id FROM customers WHERE email = ? AND deleted_at IS NULL LIMIT 1',
           [customerData.email],
         )
@@ -368,7 +368,7 @@ export class CustomerService {
     }
 
     try {
-      const existingCustomer = await query<DatabaseCustomer[]>(
+      const existingCustomer = await query<DatabaseCustomer>(
         'SELECT * FROM customers WHERE id = ? AND deleted_at IS NULL LIMIT 1',
         [parseInt(id, 10)],
       )
@@ -379,7 +379,7 @@ export class CustomerService {
 
       // Check for duplicate email
       if (updates.email) {
-        const existingEmail = await query<DatabaseCustomer[]>(
+        const existingEmail = await query<DatabaseCustomer>(
           'SELECT id FROM customers WHERE email = ? AND id != ? AND deleted_at IS NULL LIMIT 1',
           [updates.email, parseInt(id, 10)],
         )
@@ -538,7 +538,7 @@ export class CustomerService {
         await execute(`UPDATE customers SET ${updateFields.join(', ')} WHERE id = ?`, updateValues)
       }
 
-      const updatedCustomer = await query<DatabaseCustomer[]>('SELECT * FROM customers WHERE id = ? LIMIT 1', [
+      const updatedCustomer = await query<DatabaseCustomer>('SELECT * FROM customers WHERE id = ? LIMIT 1', [
         parseInt(id, 10),
       ])
 
@@ -575,7 +575,7 @@ export class CustomerService {
   async searchCustomers(queryStr: string): Promise<Customer[]> {
     try {
       const searchTerm = `%${queryStr.toLowerCase()}%`
-      const customers = await query<DatabaseCustomer[]>(
+      const customers = await query<DatabaseCustomer>(
         `SELECT * FROM customers
          WHERE deleted_at IS NULL
            AND (LOWER(first_name) LIKE ?
@@ -612,7 +612,7 @@ export class CustomerService {
       const searchTerm = `%${queryStr.toLowerCase()}%`
 
       // Get total count for search
-      const countResult = await query<{ count: number }[]>(
+      const countResult = await query<{ count: number }>(
         `SELECT COUNT(*) as count FROM customers
          WHERE deleted_at IS NULL
            AND (LOWER(first_name) LIKE ?
@@ -627,7 +627,7 @@ export class CustomerService {
       const totalPages = Math.ceil(totalCount / limit)
 
       // Get paginated search results
-      const customers = await query<DatabaseCustomer[]>(
+      const customers = await query<DatabaseCustomer>(
         `SELECT * FROM customers
          WHERE deleted_at IS NULL
            AND (LOWER(first_name) LIKE ?
@@ -674,7 +674,7 @@ export class CustomerService {
 
   async getTopCustomers(limit: number = 10): Promise<Customer[]> {
     try {
-      const customers = await query<DatabaseCustomer[]>(
+      const customers = await query<DatabaseCustomer>(
         'SELECT * FROM customers WHERE deleted_at IS NULL AND is_active = 1 ORDER BY total_purchases DESC, total_orders DESC LIMIT ?',
         [limit],
       )

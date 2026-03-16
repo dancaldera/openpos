@@ -252,9 +252,7 @@ export class AuthService {
       const offset = (page - 1) * limit
 
       // Get total count (active users only)
-      const countResult = await query<{ count: number }[]>(
-        'SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL',
-      )
+      const countResult = await query<{ count: number }>('SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL')
       const totalCount = countResult[0]?.count || 0
       const totalPages = Math.ceil(totalCount / limit)
 

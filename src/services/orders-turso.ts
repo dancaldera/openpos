@@ -91,7 +91,7 @@ export class OrderService {
 
   private async convertDbOrder(dbOrder: DatabaseOrder): Promise<Order> {
     // Get order items
-    const orderItems = await query<DatabaseOrderItem[]>('SELECT * FROM order_items WHERE order_id = ?', [dbOrder.id])
+    const orderItems = await query<DatabaseOrderItem>('SELECT * FROM order_items WHERE order_id = ?', [dbOrder.id])
 
     const items: OrderItem[] = []
     for (const item of orderItems) {
@@ -137,7 +137,7 @@ export class OrderService {
 
   async getOrders(): Promise<Order[]> {
     try {
-      const orders = await query<DatabaseOrder[]>('SELECT * FROM orders ORDER BY created_at DESC')
+      const orders = await query<DatabaseOrder>('SELECT * FROM orders ORDER BY created_at DESC')
 
       const convertedOrders = []
       for (const order of orders) {
@@ -166,12 +166,12 @@ export class OrderService {
       const offset = (page - 1) * limit
 
       // Get total count
-      const countResult = await query<{ count: number }[]>('SELECT COUNT(*) as count FROM orders')
+      const countResult = await query<{ count: number }>('SELECT COUNT(*) as count FROM orders')
       const totalCount = countResult[0]?.count || 0
       const totalPages = Math.ceil(totalCount / limit)
 
       // Get paginated orders
-      const orders = await query<DatabaseOrder[]>('SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?', [
+      const orders = await query<DatabaseOrder>('SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?', [
         limit,
         offset,
       ])
@@ -197,7 +197,7 @@ export class OrderService {
 
   async getOrder(id: string): Promise<Order | null> {
     try {
-      const orders = await query<DatabaseOrder[]>('SELECT * FROM orders WHERE id = ? LIMIT 1', [parseInt(id, 10)])
+      const orders = await query<DatabaseOrder>('SELECT * FROM orders WHERE id = ? LIMIT 1', [parseInt(id, 10)])
 
       if (orders.length === 0) {
         return null
@@ -608,7 +608,7 @@ export class OrderService {
 
   async getOrdersByStatus(status: Order['status']): Promise<Order[]> {
     try {
-      const orders = await query<DatabaseOrder[]>('SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC', [
+      const orders = await query<DatabaseOrder>('SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC', [
         status,
       ])
 
@@ -626,7 +626,7 @@ export class OrderService {
 
   async getTotalSales(): Promise<number> {
     try {
-      const result = await query<{ total_sales: number }[]>(
+      const result = await query<{ total_sales: number }>(
         `SELECT COALESCE(SUM(total), 0) as total_sales
          FROM orders
          WHERE status IN ('completed', 'paid')`,
@@ -641,7 +641,7 @@ export class OrderService {
 
   async getOrdersByDateRange(startDate: string, endDate: string): Promise<Order[]> {
     try {
-      const orders = await query<DatabaseOrder[]>(
+      const orders = await query<DatabaseOrder>(
         `SELECT * FROM orders
          WHERE created_at >= ? AND created_at <= ?
          ORDER BY created_at DESC`,
@@ -681,7 +681,7 @@ export class OrderService {
         endDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
       }
 
-      const orders = await query<DatabaseOrder[]>(
+      const orders = await query<DatabaseOrder>(
         `SELECT * FROM orders
          WHERE created_at >= ? AND created_at <= ?
          ORDER BY created_at DESC`,
@@ -735,7 +735,7 @@ export class OrderService {
       const offset = (page - 1) * limit
 
       // Get total count for the date filter
-      const countResult = await query<{ count: number }[]>(
+      const countResult = await query<{ count: number }>(
         'SELECT COUNT(*) as count FROM orders WHERE created_at >= ? AND created_at <= ?',
         [startDate, endDate],
       )
@@ -743,10 +743,11 @@ export class OrderService {
       const totalPages = Math.ceil(totalCount / limit)
 
       // Get paginated orders with date filter
-      const orders = await query<DatabaseOrder[]>(
+      const orders = await query<DatabaseOrder>(
         `SELECT * FROM orders
          WHERE created_at >= ? AND created_at <= ?
-         ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+         ORDER BY created_at DESC
+         LIMIT ? OFFSET ?`,
         [startDate, endDate, limit, offset],
       )
 
@@ -778,14 +779,12 @@ export class OrderService {
     }>
   > {
     try {
-      const results = await query<
-        {
-          product_id: number
-          product_name: string
-          total_sold: number
-          total_revenue: number
-        }[]
-      >(
+      const results = await query<{
+        product_id: number
+        product_name: string
+        total_sold: number
+        total_revenue: number
+      }>(
         `SELECT
            oi.product_id,
            oi.product_name,

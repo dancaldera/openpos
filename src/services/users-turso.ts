@@ -45,7 +45,7 @@ export class UserService {
 
   async getUser(id: string): Promise<User | null> {
     try {
-      const users = await query<DatabaseUser[]>('SELECT * FROM users WHERE id = ? LIMIT 1', [parseInt(id, 10)])
+      const users = await query<DatabaseUser>('SELECT * FROM users WHERE id = ? LIMIT 1', [parseInt(id, 10)])
 
       if (users.length === 0) {
         return null
@@ -60,7 +60,7 @@ export class UserService {
 
   async getUsers(): Promise<User[]> {
     try {
-      const users = await query<DatabaseUser[]>('SELECT * FROM users ORDER BY name')
+      const users = await query<DatabaseUser>('SELECT * FROM users ORDER BY name')
 
       return users.map((user) => this.convertDbUser(user))
     } catch (error) {
