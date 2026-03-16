@@ -1,4 +1,4 @@
-import { query, execute } from '../lib/db-adapter'
+import { execute, query } from '../lib/db-adapter'
 
 // Types
 export interface ProductAttribute {
@@ -442,10 +442,9 @@ export class ProductVariantsService {
 
   async getVariant(id: string): Promise<ProductVariant | null> {
     try {
-      const variants = await query<DatabaseProductVariant[]>(
-        'SELECT * FROM product_variants WHERE id = ? LIMIT 1',
-        [parseInt(id, 10)],
-      )
+      const variants = await query<DatabaseProductVariant[]>('SELECT * FROM product_variants WHERE id = ? LIMIT 1', [
+        parseInt(id, 10),
+      ])
 
       if (variants.length === 0) {
         return null
@@ -460,10 +459,9 @@ export class ProductVariantsService {
 
   async getVariantBySku(sku: string): Promise<ProductVariant | null> {
     try {
-      const variants = await query<DatabaseProductVariant[]>(
-        'SELECT * FROM product_variants WHERE sku = ? LIMIT 1',
-        [sku],
-      )
+      const variants = await query<DatabaseProductVariant[]>('SELECT * FROM product_variants WHERE sku = ? LIMIT 1', [
+        sku,
+      ])
 
       if (variants.length === 0) {
         return null

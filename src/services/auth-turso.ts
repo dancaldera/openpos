@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { query, execute } from '../lib/db-adapter'
+import { execute, query } from '../lib/db-adapter'
 
 // Helper functions for password hashing
 async function hashPassword(password: string): Promise<string> {
@@ -82,10 +82,9 @@ export class AuthService {
 
   async signIn(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
     try {
-      const users = await query<DatabaseUser>(
-        'SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1',
-        [email.toLowerCase()],
-      )
+      const users = await query<DatabaseUser>('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1', [
+        email.toLowerCase(),
+      ])
 
       if (users.length === 0) {
         return {
@@ -291,10 +290,9 @@ export class AuthService {
     }
 
     try {
-      const users = await query<DatabaseUser>(
-        'SELECT password, password_hashed FROM users WHERE id = ? LIMIT 1',
-        [parseInt(user.id, 10)],
-      )
+      const users = await query<DatabaseUser>('SELECT password, password_hashed FROM users WHERE id = ? LIMIT 1', [
+        parseInt(user.id, 10),
+      ])
 
       if (users.length === 0) {
         return { success: false, error: 'User not found' }
@@ -434,10 +432,10 @@ export class AuthService {
       }
 
       if (updates.email) {
-        const existingUsers = await query<DatabaseUser>(
-          'SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1',
-          [updates.email.toLowerCase(), parseInt(userId, 10)],
-        )
+        const existingUsers = await query<DatabaseUser>('SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1', [
+          updates.email.toLowerCase(),
+          parseInt(userId, 10),
+        ])
 
         if (existingUsers.length > 0) {
           return {
@@ -610,10 +608,9 @@ export class AuthService {
 
     try {
       // First verify user is already soft deleted
-      const users = await query<DatabaseUser>(
-        'SELECT * FROM users WHERE id = ? AND deleted_at IS NOT NULL LIMIT 1',
-        [parseInt(userId, 10)],
-      )
+      const users = await query<DatabaseUser>('SELECT * FROM users WHERE id = ? AND deleted_at IS NOT NULL LIMIT 1', [
+        parseInt(userId, 10),
+      ])
 
       if (users.length === 0) {
         return { success: false, error: 'User not found or not deleted' }

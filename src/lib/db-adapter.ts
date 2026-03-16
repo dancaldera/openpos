@@ -100,6 +100,20 @@ export async function reconnectToTurso(): Promise<boolean> {
 }
 
 /**
+ * Start background health-check polling against Turso (no-op if not configured).
+ */
+export function startHealthCheck(intervalMs = 15_000): void {
+  db.startHealthCheck(intervalMs)
+}
+
+/**
+ * Stop the background health-check polling.
+ */
+export function stopHealthCheck(): void {
+  db.stopHealthCheck()
+}
+
+/**
  * Reset database connections (useful for testing)
  */
 export function resetConnections(): void {

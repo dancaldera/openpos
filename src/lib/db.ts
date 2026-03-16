@@ -1,3 +1,4 @@
+import { signal } from '@preact/signals'
 import Database from '@tauri-apps/plugin-sql'
 import { connect, type Connection as TursoClient } from '@tursodatabase/serverless'
 
@@ -8,6 +9,15 @@ export interface DbClientResult {
   isRemote: boolean
 }
 
+export type ConnectionStatus = 'remote' | 'local' | 'syncing' | 'error'
+
+/**
+ * Reactive signal that always reflects the current DB connection state.
+ * Components can subscribe to this signal to re-render when the status changes.
+ */
+export const connectionStatus = signal<ConnectionStatus>('local')
+export const lastConnectionAttempt = signal<number>(0)
+
 class DbManager {
   private static instance: DbManager
   private tursoClient: TursoClient | null = null
@@ -16,6 +26,7 @@ class DbManager {
   private connectionTested: boolean = false
   private lastOnlineCheck: number = 0
   private readonly ONLINE_CHECK_INTERVAL = 30000 // 30 seconds
+  private healthCheckTimer: ReturnType<typeof setInterval> | null = null
 
   private constructor() {}
 
@@ -56,6 +67,8 @@ class DbManager {
           if (!this.connectionTested) {
             await this.tursoClient.execute('SELECT 1')
             this.connectionTested = true
+            lastConnectionAttempt.value = Date.now()
+            connectionStatus.value = 'remote'
             console.log('[DbManager] Connected to Turso (remote)')
           }
 
@@ -64,6 +77,8 @@ class DbManager {
           console.warn('[DbManager] Turso connection failed, falling back to local SQLite:', error)
           this.isOnline = false
           this.lastOnlineCheck = Date.now()
+          lastConnectionAttempt.value = Date.now()
+          connectionStatus.value = 'local'
         }
       }
     }
@@ -72,9 +87,12 @@ class DbManager {
     if (!this.localDb) {
       try {
         this.localDb = await Database.load('sqlite:postpos.db')
+        lastConnectionAttempt.value = Date.now()
+        connectionStatus.value = 'local'
         console.log('[DbManager] Connected to local SQLite (offline mode)')
       } catch (error) {
         console.error('[DbManager] Failed to load local database:', error)
+        connectionStatus.value = 'error'
         throw new Error('Failed to connect to any database')
       }
     }
@@ -93,15 +111,64 @@ class DbManager {
    * Force reconnection attempt to Turso
    */
   async reconnectToTurso(): Promise<boolean> {
+    connectionStatus.value = 'syncing'
     this.isOnline = true
     this.connectionTested = false
     this.lastOnlineCheck = 0
 
     try {
       const { isRemote } = await this.getClient()
+      // connectionStatus is updated inside getClient()
       return isRemote
     } catch {
+      connectionStatus.value = 'error'
       return false
+    }
+  }
+
+  /**
+   * Start a background health-check that pings Turso on a fixed interval.
+   * Updates connectionStatus signal automatically.
+   * No-op if Turso is not configured or a check is already running.
+   */
+  startHealthCheck(intervalMs = 15_000): void {
+    const tursoUrl = import.meta.env.VITE_TURSO_DATABASE_URL
+    const tursoToken = import.meta.env.VITE_TURSO_AUTH_TOKEN
+
+    // Nothing to check if Turso is not configured
+    if (!tursoUrl || !tursoToken) return
+    // Already running
+    if (this.healthCheckTimer !== null) return
+
+    this.healthCheckTimer = setInterval(async () => {
+      connectionStatus.value = 'syncing'
+      try {
+        // Always create a fresh client if needed and force a real probe
+        if (!this.tursoClient) {
+          this.tursoClient = connect({ url: tursoUrl, authToken: tursoToken })
+        }
+        await this.tursoClient.execute('SELECT 1')
+        this.isOnline = true
+        this.connectionTested = true
+        lastConnectionAttempt.value = Date.now()
+        connectionStatus.value = 'remote'
+      } catch {
+        this.isOnline = false
+        this.connectionTested = false
+        this.lastOnlineCheck = Date.now()
+        lastConnectionAttempt.value = Date.now()
+        connectionStatus.value = 'local'
+      }
+    }, intervalMs)
+  }
+
+  /**
+   * Stop the background health-check interval.
+   */
+  stopHealthCheck(): void {
+    if (this.healthCheckTimer !== null) {
+      clearInterval(this.healthCheckTimer)
+      this.healthCheckTimer = null
     }
   }
 

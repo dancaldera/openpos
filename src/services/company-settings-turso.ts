@@ -1,4 +1,4 @@
-import { query, execute } from '../lib/db-adapter'
+import { execute, query } from '../lib/db-adapter'
 
 export interface CompanySettings {
   id: string

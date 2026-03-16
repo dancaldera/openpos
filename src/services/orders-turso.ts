@@ -1,4 +1,4 @@
-import { query, execute } from '../lib/db-adapter'
+import { execute, query } from '../lib/db-adapter'
 import { companySettingsService } from './company-settings-turso'
 import { type ProductVariant, productVariantsService } from './product-variants-turso'
 import { productService } from './products-turso'
@@ -171,10 +171,10 @@ export class OrderService {
       const totalPages = Math.ceil(totalCount / limit)
 
       // Get paginated orders
-      const orders = await query<DatabaseOrder[]>(
-        'SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?',
-        [limit, offset],
-      )
+      const orders = await query<DatabaseOrder[]>('SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?', [
+        limit,
+        offset,
+      ])
 
       const convertedOrders = []
       for (const order of orders) {
@@ -608,10 +608,9 @@ export class OrderService {
 
   async getOrdersByStatus(status: Order['status']): Promise<Order[]> {
     try {
-      const orders = await query<DatabaseOrder[]>(
-        'SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC',
-        [status],
-      )
+      const orders = await query<DatabaseOrder[]>('SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC', [
+        status,
+      ])
 
       const convertedOrders = []
       for (const order of orders) {
