@@ -7,7 +7,7 @@ interface FormProps {
   class?: string
 }
 
-export default function Form({
+export function Form({
   children,
   onSubmit,
   spacing = 'md',

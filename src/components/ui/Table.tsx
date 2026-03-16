@@ -1,11 +1,7 @@
 import type { JSX } from 'preact'
-import { createContext } from 'preact'
-import { useContext, useState } from 'preact/hooks'
+import { createContext, useContext, useState } from 'preact/hooks'
+import { clsx } from '../../lib/utils'
 import { Link } from './Link'
-
-function clsx(...classes: (string | undefined | boolean)[]): string {
-  return classes.filter(Boolean).join(' ')
-}
 
 const TableContext = createContext<{
   bleed: boolean
@@ -19,6 +15,15 @@ const TableContext = createContext<{
   striped: false,
 })
 
+interface TableProps {
+  bleed?: boolean
+  dense?: boolean
+  grid?: boolean
+  striped?: boolean
+  class?: string
+  children?: preact.ComponentChildren
+}
+
 export function Table({
   bleed = false,
   dense = false,
@@ -27,17 +32,11 @@ export function Table({
   class: className = '',
   children,
   ...props
-}: {
-  bleed?: boolean
-  dense?: boolean
-  grid?: boolean
-  striped?: boolean
-} & JSX.HTMLAttributes<HTMLDivElement>) {
-  // @ts-expect-error JSX.HTMLAttributes is deprecated
+}: TableProps & JSX.HTMLAttributes<HTMLDivElement>) {
   return (
     <TableContext.Provider value={{ bleed, dense, grid, striped }}>
       <div class="flow-root">
-        <div {...props} class={clsx(className as string, '-mx-4 overflow-x-auto whitespace-nowrap')}>
+        <div {...props} class={clsx(className, '-mx-4 overflow-x-auto whitespace-nowrap')}>
           <div class={clsx('inline-block min-w-full align-middle', !bleed && 'sm:px-4')}>
             <table class="min-w-full text-left text-sm/6 text-gray-900 dark:text-white relative">{children}</table>
           </div>
@@ -47,18 +46,11 @@ export function Table({
   )
 }
 
-export function TableHead({
-  class: className = '',
-  ...props
-}: // @ts-ignore JSX.HTMLAttributes is deprecated
-JSX.HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead {...props} class={clsx(className as string, 'text-gray-500 dark:text-gray-400')} />
+export function TableHead({ class: className = '', ...props }: JSX.HTMLAttributes<HTMLTableSectionElement>) {
+  return <thead {...props} class={clsx(className, 'text-gray-500 dark:text-gray-400')} />
 }
 
-export function TableBody(
-  props: // @ts-ignore JSX.HTMLAttributes is deprecated
-  JSX.HTMLAttributes<HTMLTableSectionElement>,
-) {
+export function TableBody(props: JSX.HTMLAttributes<HTMLTableSectionElement>) {
   return <tbody {...props} />
 }
 
@@ -72,18 +64,20 @@ const TableRowContext = createContext<{
   title: undefined,
 })
 
+interface TableRowProps {
+  href?: string
+  target?: string
+  title?: string
+  class?: string
+}
+
 export function TableRow({
   href,
   target,
   title,
   class: className = '',
   ...props
-}: {
-  href?: string
-  target?: string
-  title?: string
-} & JSX.HTMLAttributes<HTMLTableRowElement>) {
-  // @ts-expect-error JSX.HTMLAttributes is deprecated
+}: TableRowProps & JSX.HTMLAttributes<HTMLTableRowElement>) {
   const { striped } = useContext(TableContext)
 
   return (
@@ -91,7 +85,7 @@ export function TableRow({
       <tr
         {...props}
         class={clsx(
-          className as string,
+          className,
           href &&
             'has-[[data-row-link][data-focus]]:outline-2 has-[[data-row-link][data-focus]]:-outline-offset-2 has-[[data-row-link][data-focus]]:outline-blue-500 dark:focus-within:bg-white/2.5',
           striped && 'even:bg-gray-100/50 dark:even:bg-white/5',
@@ -103,18 +97,14 @@ export function TableRow({
   )
 }
 
-export function TableHeader({
-  class: className = '',
-  ...props
-}: // @ts-ignore JSX.HTMLAttributes is deprecated
-JSX.HTMLAttributes<HTMLTableCellElement>) {
+export function TableHeader({ class: className = '', ...props }: JSX.HTMLAttributes<HTMLTableCellElement>) {
   const { bleed, grid } = useContext(TableContext)
 
   return (
     <th
       {...props}
       class={clsx(
-        className as string,
+        className,
         'border-b border-b-gray-200 px-4 py-2 font-medium text-gray-900 first:pl-4 last:pr-4 dark:border-b-gray-700',
         grid && 'border-l border-l-gray-200 first:border-l-0 dark:border-l-gray-700',
         !bleed && 'sm:first:pl-2 sm:last:pr-2',
@@ -123,12 +113,7 @@ JSX.HTMLAttributes<HTMLTableCellElement>) {
   )
 }
 
-export function TableCell({
-  class: className = '',
-  children,
-  ...props
-}: // @ts-ignore JSX.HTMLAttributes is deprecated
-JSX.HTMLAttributes<HTMLTableCellElement>) {
+export function TableCell({ class: className = '', children, ...props }: JSX.HTMLAttributes<HTMLTableCellElement>) {
   const { bleed, dense, grid, striped } = useContext(TableContext)
   const { href, target, title } = useContext(TableRowContext)
   const [cellRef, setCellRef] = useState<HTMLElement | null>(null)
@@ -138,7 +123,7 @@ JSX.HTMLAttributes<HTMLTableCellElement>) {
       ref={href ? setCellRef : undefined}
       {...props}
       class={clsx(
-        className as string,
+        className,
         'relative px-4 first:pl-4 last:pr-4 text-gray-900',
         !striped && 'border-b border-gray-100 dark:border-gray-800',
         grid && 'border-l border-l-gray-200 first:border-l-0 dark:border-l-gray-700',

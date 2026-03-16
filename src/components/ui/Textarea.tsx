@@ -1,4 +1,5 @@
 import type { JSX } from 'preact'
+import { clsx, generateId } from '../../lib/utils'
 
 interface TextareaProps {
   label?: string
@@ -18,11 +19,7 @@ interface TextareaProps {
   id?: string
 }
 
-function clsx(...classes: (string | undefined | boolean)[]): string {
-  return classes.filter(Boolean).join(' ')
-}
-
-export default function Textarea({
+export function Textarea({
   label,
   placeholder,
   value,
@@ -40,7 +37,7 @@ export default function Textarea({
   id,
   ...props
 }: TextareaProps & Omit<JSX.HTMLAttributes<HTMLTextAreaElement>, 'size'>) {
-  const textareaId = id || `textarea-${Math.random().toString(36).substring(2, 11)}`
+  const textareaId = id || generateId('textarea')
 
   const baseClasses = clsx(
     'w-full rounded-xl border transition-colors duration-150 resize-vertical',

@@ -1,4 +1,5 @@
 import type { JSX } from 'preact'
+import { clsx, generateId } from '../../lib/utils'
 
 interface InputProps {
   label?: string
@@ -27,11 +28,7 @@ interface InputProps {
   step?: string | number
 }
 
-function clsx(...classes: (string | undefined | boolean)[]): string {
-  return classes.filter(Boolean).join(' ')
-}
-
-export default function Input({
+export function Input({
   label,
   placeholder,
   type = 'text',
@@ -52,7 +49,7 @@ export default function Input({
   onRightIconClick,
   ...props
 }: InputProps & Omit<JSX.HTMLAttributes<HTMLInputElement>, 'size'>) {
-  const inputId = id || `input-${Math.random().toString(36).substring(2, 11)}`
+  const inputId = id || generateId('input')
 
   const baseClasses = clsx(
     'w-full rounded-xl border transition-colors duration-150',

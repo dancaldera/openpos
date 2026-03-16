@@ -1,5 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact'
 import { useState } from 'preact/hooks'
+import { clsx } from '../../lib/utils'
 
 interface SidebarItem {
   id: string
@@ -20,11 +21,7 @@ interface SidebarProps {
   class?: string
 }
 
-function clsx(...classes: (string | undefined | boolean)[]): string {
-  return classes.filter(Boolean).join(' ')
-}
-
-export default function Sidebar({
+export function Sidebar({
   items = [],
   title = 'Titanic POS',
   width = 'md',
