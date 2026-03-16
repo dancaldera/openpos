@@ -1,4 +1,4 @@
-import { companySettingsService } from '../../services/company-settings-sqlite'
+import { companySettingsService } from '../../services/company-settings-turso'
 import { translationService } from '../../services/translations'
 import { languageStore } from './languageStore'
 

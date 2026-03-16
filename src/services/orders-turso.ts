@@ -1,0 +1,969 @@
+import { query, execute } from '../lib/db-adapter'
+import { companySettingsService } from './company-settings-turso'
+import { type ProductVariant, productVariantsService } from './product-variants-turso'
+import { productService } from './products-turso'
+
+export interface OrderItem {
+  productId: string
+  productName: string
+  quantity: number
+  unitPrice: number
+  totalPrice: number
+  variantId?: string
+  variantAttributes?: Record<string, string>
+  variant?: string
+  subtotal?: number
+}
+
+export interface Order {
+  id: string
+  userId?: string
+  customerId?: string
+  items: OrderItem[]
+  subtotal: number
+  tax: number
+  total: number
+  status: 'pending' | 'paid' | 'cancelled' | 'completed'
+  paymentMethod?: 'cash' | 'card' | 'transfer'
+  notes?: string
+  createdAt: string
+  updatedAt: string
+  completedAt?: string
+}
+
+export interface CreateOrderRequest {
+  items: Array<{
+    productId: string
+    quantity: number
+    variantId?: string
+  }>
+  customerId?: string
+  paymentMethod?: 'cash' | 'card' | 'transfer'
+  notes?: string
+}
+
+export interface UpdateOrderRequest {
+  items: Array<{
+    productId: string
+    quantity: number
+    variantId?: string
+  }>
+  paymentMethod?: 'cash' | 'card' | 'transfer'
+  notes?: string
+}
+
+interface DatabaseOrder {
+  id: number
+  user_id?: number
+  customer_id?: number
+  subtotal: number
+  tax: number
+  total: number
+  status: 'pending' | 'paid' | 'cancelled' | 'completed'
+  payment_method?: 'cash' | 'card' | 'transfer'
+  notes?: string
+  created_at: string
+  updated_at: string
+  completed_at?: string
+}
+
+interface DatabaseOrderItem {
+  id: number
+  order_id: number
+  product_id: number
+  product_name: string
+  quantity: number
+  unit_price: number
+  total_price: number
+  variant_id?: number
+  variant_attributes?: string
+}
+
+export class OrderService {
+  private static instance: OrderService
+
+  static getInstance(): OrderService {
+    if (!OrderService.instance) {
+      OrderService.instance = new OrderService()
+    }
+    return OrderService.instance
+  }
+
+  private async convertDbOrder(dbOrder: DatabaseOrder): Promise<Order> {
+    // Get order items
+    const orderItems = await query<DatabaseOrderItem[]>('SELECT * FROM order_items WHERE order_id = ?', [dbOrder.id])
+
+    const items: OrderItem[] = []
+    for (const item of orderItems) {
+      const orderItem: OrderItem = {
+        productId: item.product_id.toString(),
+        productName: item.product_name,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        totalPrice: item.total_price,
+      }
+
+      // Load variant information if present
+      if (item.variant_id) {
+        orderItem.variantId = item.variant_id.toString()
+        if (item.variant_attributes) {
+          try {
+            orderItem.variantAttributes = JSON.parse(item.variant_attributes)
+          } catch (_e) {
+            // If JSON parsing fails, leave variantAttributes undefined
+          }
+        }
+      }
+
+      items.push(orderItem)
+    }
+
+    return {
+      id: dbOrder.id.toString(),
+      userId: dbOrder.user_id?.toString(),
+      customerId: dbOrder.customer_id?.toString(),
+      items,
+      subtotal: dbOrder.subtotal,
+      tax: dbOrder.tax,
+      total: dbOrder.total,
+      status: dbOrder.status,
+      paymentMethod: dbOrder.payment_method,
+      notes: dbOrder.notes,
+      createdAt: dbOrder.created_at,
+      updatedAt: dbOrder.updated_at,
+      completedAt: dbOrder.completed_at,
+    }
+  }
+
+  async getOrders(): Promise<Order[]> {
+    try {
+      const orders = await query<DatabaseOrder[]>('SELECT * FROM orders ORDER BY created_at DESC')
+
+      const convertedOrders = []
+      for (const order of orders) {
+        convertedOrders.push(await this.convertDbOrder(order))
+      }
+
+      return convertedOrders
+    } catch (error) {
+      console.error('Get orders error:', error)
+      throw new Error('Failed to fetch orders')
+    }
+  }
+
+  async getOrdersPaginated(
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{
+    orders: Order[]
+    totalCount: number
+    totalPages: number
+    currentPage: number
+    hasNextPage: boolean
+    hasPreviousPage: boolean
+  }> {
+    try {
+      const offset = (page - 1) * limit
+
+      // Get total count
+      const countResult = await query<{ count: number }[]>('SELECT COUNT(*) as count FROM orders')
+      const totalCount = countResult[0]?.count || 0
+      const totalPages = Math.ceil(totalCount / limit)
+
+      // Get paginated orders
+      const orders = await query<DatabaseOrder[]>(
+        'SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?',
+        [limit, offset],
+      )
+
+      const convertedOrders = []
+      for (const order of orders) {
+        convertedOrders.push(await this.convertDbOrder(order))
+      }
+
+      return {
+        orders: convertedOrders,
+        totalCount,
+        totalPages,
+        currentPage: page,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      }
+    } catch (error) {
+      console.error('Get paginated orders error:', error)
+      throw new Error('Failed to fetch paginated orders')
+    }
+  }
+
+  async getOrder(id: string): Promise<Order | null> {
+    try {
+      const orders = await query<DatabaseOrder[]>('SELECT * FROM orders WHERE id = ? LIMIT 1', [parseInt(id, 10)])
+
+      if (orders.length === 0) {
+        return null
+      }
+
+      return await this.convertDbOrder(orders[0])
+    } catch (error) {
+      console.error('Get order error:', error)
+      throw new Error('Failed to fetch order')
+    }
+  }
+
+  async createOrder(orderData: CreateOrderRequest): Promise<{ success: boolean; order?: Order; error?: string }> {
+    if (!orderData.items.length) {
+      return { success: false, error: 'Order must contain at least one item' }
+    }
+
+    try {
+      // Check stock availability first
+      const stockCheck = await this.checkStockAvailability(orderData.items)
+      if (!stockCheck.success) {
+        return { success: false, error: stockCheck.error }
+      }
+
+      // Build order items with product/variant details
+      const orderItems: OrderItem[] = []
+      let subtotal = 0
+
+      for (const item of orderData.items) {
+        const product = await productService.getProduct(item.productId)
+        if (!product) {
+          return {
+            success: false,
+            error: `Product ${item.productId} not found`,
+          }
+        }
+
+        let itemPrice = product.price
+        let variant: ProductVariant | undefined
+        let variantAttributes: Record<string, string> | undefined
+
+        // Handle variant selection
+        if (item.variantId) {
+          const fetchedVariant = await productVariantsService.getVariant(item.variantId)
+          variant = fetchedVariant ?? undefined
+          if (!variant || variant.parentProductId !== item.productId) {
+            return {
+              success: false,
+              error: `Variant ${item.variantId} not found for this product`,
+            }
+          }
+          if (!variant.isActive) {
+            return {
+              success: false,
+              error: `Variant is not active`,
+            }
+          }
+          itemPrice = variant.price
+          variantAttributes = variant.attributes
+        }
+
+        const itemTotal = itemPrice * item.quantity
+        orderItems.push({
+          productId: product.id,
+          productName: product.name,
+          quantity: item.quantity,
+          unitPrice: itemPrice,
+          totalPrice: itemTotal,
+          variantId: item.variantId,
+          variantAttributes,
+        })
+
+        subtotal += itemTotal
+      }
+
+      // Get tax rate from company settings
+      const { tax: taxAmount, total } = await companySettingsService.calculateTotalWithTax(subtotal)
+      const now = new Date().toISOString()
+
+      // Create order (with user_id and customer_id if columns exist, without if they don't)
+      let orderResult: { lastInsertId: number; rowsAffected: number }
+      try {
+        // Try with user_id and customer_id first (for new schema)
+        orderResult = await execute(
+          `INSERT INTO orders (
+            user_id, customer_id, subtotal, tax, total, status,
+            payment_method, notes, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            1, // Default to Admin User (id=1)
+            orderData.customerId ? parseInt(orderData.customerId, 10) : null,
+            subtotal,
+            taxAmount,
+            total,
+            'pending',
+            orderData.paymentMethod || null,
+            orderData.notes || null,
+            now,
+            now,
+          ],
+        )
+      } catch (error: unknown) {
+        // If user_id column doesn't exist, fall back to old schema
+        const message = error instanceof Error ? error.message : ''
+        if (message.includes('no column named user_id')) {
+          orderResult = await execute(
+            `INSERT INTO orders (
+              subtotal, tax, total, status,
+              payment_method, notes, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [subtotal, taxAmount, total, 'pending', orderData.paymentMethod || null, orderData.notes || null, now, now],
+          )
+        } else {
+          throw error
+        }
+      }
+
+      const orderId = orderResult.lastInsertId
+
+      // Create order items with variant support
+      for (const item of orderItems) {
+        // Check if variant_id column exists by trying to use it
+        let hasVariantSupport = false
+        try {
+          await query(`SELECT variant_id FROM order_items LIMIT 1`)
+          hasVariantSupport = true
+        } catch {
+          hasVariantSupport = false
+        }
+
+        if (hasVariantSupport) {
+          await execute(
+            `INSERT INTO order_items (
+              order_id, product_id, product_name, quantity, unit_price, total_price, variant_id, variant_attributes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              orderId,
+              parseInt(item.productId, 10),
+              item.productName,
+              item.quantity,
+              item.unitPrice,
+              item.totalPrice,
+              item.variantId ? parseInt(item.variantId, 10) : null,
+              item.variantAttributes ? JSON.stringify(item.variantAttributes) : null,
+            ],
+          )
+        } else {
+          // Fallback for old schema without variant support
+          await execute(
+            `INSERT INTO order_items (
+              order_id, product_id, product_name, quantity, unit_price, total_price
+            ) VALUES (?, ?, ?, ?, ?, ?)`,
+            [orderId, parseInt(item.productId, 10), item.productName, item.quantity, item.unitPrice, item.totalPrice],
+          )
+        }
+      }
+
+      const newOrder: Order = {
+        id: orderId.toString(),
+        userId: undefined, // Will be set by convertDbOrder if column exists
+        items: orderItems,
+        subtotal,
+        tax: taxAmount,
+        total,
+        status: 'pending',
+        paymentMethod: orderData.paymentMethod,
+        notes: orderData.notes,
+        createdAt: now,
+        updatedAt: now,
+      }
+
+      return { success: true, order: newOrder }
+    } catch (error) {
+      console.error('Create order error:', error)
+      return { success: false, error: 'Failed to create order' }
+    }
+  }
+
+  async updateOrderStatus(
+    id: string,
+    status: Order['status'],
+    paymentMethod?: Order['paymentMethod'],
+  ): Promise<{ success: boolean; order?: Order; error?: string }> {
+    try {
+      // Get current order
+      const currentOrder = await this.getOrder(id)
+      if (!currentOrder) {
+        return { success: false, error: 'Order not found' }
+      }
+
+      const oldStatus = currentOrder.status
+      const now = new Date().toISOString()
+      const completedAt = status === 'completed' || status === 'paid' ? now : null
+
+      // Handle stock management based on status change
+      if (status === 'completed' || status === 'paid') {
+        // Deduct stock when order is completed/paid
+        if (oldStatus !== 'completed' && oldStatus !== 'paid') {
+          const stockResult = await this.deductStockFromOrder(currentOrder)
+          if (!stockResult.success) {
+            return { success: false, error: stockResult.error }
+          }
+        }
+      } else if (
+        (status === 'cancelled' || status === 'pending') &&
+        (oldStatus === 'completed' || oldStatus === 'paid')
+      ) {
+        // Restore stock if order is cancelled or set back to pending after being completed/paid
+        await this.restoreStockFromOrder(currentOrder)
+      }
+
+      // Update order status
+      await execute(
+        `UPDATE orders SET
+         status = ?, payment_method = ?, updated_at = ?, completed_at = ?
+         WHERE id = ?`,
+        [status, paymentMethod || currentOrder.paymentMethod, now, completedAt, parseInt(id, 10)],
+      )
+
+      // Return updated order
+      const updatedOrder = await this.getOrder(id)
+      return { success: true, order: updatedOrder || undefined }
+    } catch (error) {
+      console.error('Update order status error:', error)
+      return { success: false, error: 'Failed to update order status' }
+    }
+  }
+
+  async deleteOrder(id: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get order before deleting to restore stock if needed
+      const order = await this.getOrder(id)
+      if (!order) {
+        return { success: false, error: 'Order not found' }
+      }
+
+      // Restore stock if order was completed/paid
+      if (order.status === 'completed' || order.status === 'paid') {
+        await this.restoreStockFromOrder(order)
+      }
+
+      // Delete order items first
+      await execute('DELETE FROM order_items WHERE order_id = ?', [parseInt(id, 10)])
+
+      // Delete order
+      const result = await execute('DELETE FROM orders WHERE id = ?', [parseInt(id, 10)])
+
+      if (result.rowsAffected === 0) {
+        return { success: false, error: 'Order not found' }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Delete order error:', error)
+      return { success: false, error: 'Failed to delete order' }
+    }
+  }
+
+  private async checkStockAvailability(
+    items: Array<{ productId: string; quantity: number; variantId?: string }>,
+  ): Promise<{ success: boolean; error?: string }> {
+    for (const item of items) {
+      const product = await productService.getProduct(item.productId)
+      if (!product) {
+        return { success: false, error: `Product ${item.productId} not found` }
+      }
+
+      if (!product.isActive) {
+        return {
+          success: false,
+          error: `Product ${product.name} is not active`,
+        }
+      }
+
+      // Check variant stock if variant is selected
+      if (item.variantId) {
+        const variant = await productVariantsService.getVariant(item.variantId)
+        if (!variant || variant.parentProductId !== item.productId) {
+          return {
+            success: false,
+            error: `Variant ${item.variantId} not found for this product`,
+          }
+        }
+
+        if (!variant.isActive) {
+          return {
+            success: false,
+            error: `Variant is not active`,
+          }
+        }
+
+        if (variant.stock < item.quantity) {
+          const variantName = Object.entries(variant.attributes)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(', ')
+          return {
+            success: false,
+            error: `Insufficient stock for ${product.name} (${variantName}). Available: ${variant.stock}, Requested: ${item.quantity}`,
+          }
+        }
+      } else {
+        // For simple products, check product stock
+        if (product.variantType === 'configurable') {
+          return {
+            success: false,
+            error: `Product ${product.name} has variants. Please select a variant.`,
+          }
+        }
+
+        if (product.stock < item.quantity) {
+          return {
+            success: false,
+            error: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
+          }
+        }
+      }
+    }
+    return { success: true }
+  }
+
+  private async deductStockFromOrder(order: Order): Promise<{ success: boolean; error?: string }> {
+    for (const item of order.items) {
+      // If variant is specified, deduct from variant stock
+      if (item.variantId) {
+        const variant = await productVariantsService.getVariant(item.variantId)
+        if (!variant) {
+          return { success: false, error: `Variant ${item.variantId} not found` }
+        }
+
+        if (variant.stock < item.quantity) {
+          return {
+            success: false,
+            error: `Insufficient stock for variant. Available: ${variant.stock}, Needed: ${item.quantity}`,
+          }
+        }
+
+        // Update variant stock
+        const updateResult = await productVariantsService.updateVariant(item.variantId, {
+          stock: variant.stock - item.quantity,
+        })
+
+        if (!updateResult.success) {
+          return {
+            success: false,
+            error: updateResult.error || 'Failed to update variant stock',
+          }
+        }
+      } else {
+        // For simple products, deduct from product stock
+        const product = await productService.getProduct(item.productId)
+        if (!product) {
+          return { success: false, error: `Product ${item.productId} not found` }
+        }
+
+        if (product.variantType === 'configurable') {
+          return {
+            success: false,
+            error: `Cannot deduct stock from configurable product ${product.name} without variant selection`,
+          }
+        }
+
+        if (product.stock < item.quantity) {
+          return {
+            success: false,
+            error: `Insufficient stock for ${product.name}. Available: ${product.stock}, Needed: ${item.quantity}`,
+          }
+        }
+
+        // Update product stock
+        const updateResult = await productService.updateProduct(product.id, {
+          stock: product.stock - item.quantity,
+          updatedAt: new Date().toISOString(),
+        })
+
+        if (!updateResult.success) {
+          return {
+            success: false,
+            error: updateResult.error || 'Failed to update product stock',
+          }
+        }
+      }
+    }
+    return { success: true }
+  }
+
+  private async restoreStockFromOrder(order: Order): Promise<void> {
+    for (const item of order.items) {
+      // If variant is specified, restore to variant stock
+      if (item.variantId) {
+        const variant = await productVariantsService.getVariant(item.variantId)
+        if (variant) {
+          await productVariantsService.updateVariant(item.variantId, {
+            stock: variant.stock + item.quantity,
+          })
+        }
+      } else {
+        // For simple products, restore to product stock
+        const product = await productService.getProduct(item.productId)
+        if (product && product.variantType === 'simple') {
+          await productService.updateProduct(product.id, {
+            stock: product.stock + item.quantity,
+            updatedAt: new Date().toISOString(),
+          })
+        }
+      }
+    }
+  }
+
+  async getOrdersByStatus(status: Order['status']): Promise<Order[]> {
+    try {
+      const orders = await query<DatabaseOrder[]>(
+        'SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC',
+        [status],
+      )
+
+      const convertedOrders = []
+      for (const order of orders) {
+        convertedOrders.push(await this.convertDbOrder(order))
+      }
+
+      return convertedOrders
+    } catch (error) {
+      console.error('Get orders by status error:', error)
+      throw new Error('Failed to fetch orders by status')
+    }
+  }
+
+  async getTotalSales(): Promise<number> {
+    try {
+      const result = await query<{ total_sales: number }[]>(
+        `SELECT COALESCE(SUM(total), 0) as total_sales
+         FROM orders
+         WHERE status IN ('completed', 'paid')`,
+      )
+
+      return result[0]?.total_sales || 0
+    } catch (error) {
+      console.error('Get total sales error:', error)
+      return 0
+    }
+  }
+
+  async getOrdersByDateRange(startDate: string, endDate: string): Promise<Order[]> {
+    try {
+      const orders = await query<DatabaseOrder[]>(
+        `SELECT * FROM orders
+         WHERE created_at >= ? AND created_at <= ?
+         ORDER BY created_at DESC`,
+        [startDate, endDate],
+      )
+
+      const convertedOrders = []
+      for (const order of orders) {
+        convertedOrders.push(await this.convertDbOrder(order))
+      }
+
+      return convertedOrders
+    } catch (error) {
+      console.error('Get orders by date range error:', error)
+      throw new Error('Failed to fetch orders by date range')
+    }
+  }
+
+  async getOrdersByDateFilter(dateFilter: 'today' | 'yesterday' | string): Promise<Order[]> {
+    try {
+      let startDate: string
+      let endDate: string
+      const now = new Date()
+
+      if (dateFilter === 'today') {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        startDate = today.toISOString()
+        endDate = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
+      } else if (dateFilter === 'yesterday') {
+        const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+        startDate = yesterday.toISOString()
+        endDate = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
+      } else {
+        // Handle specific date (YYYY-MM-DD format)
+        const targetDate = new Date(`${dateFilter}T00:00:00.000Z`)
+        startDate = targetDate.toISOString()
+        endDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
+      }
+
+      const orders = await query<DatabaseOrder[]>(
+        `SELECT * FROM orders
+         WHERE created_at >= ? AND created_at <= ?
+         ORDER BY created_at DESC`,
+        [startDate, endDate],
+      )
+
+      const convertedOrders = []
+      for (const order of orders) {
+        convertedOrders.push(await this.convertDbOrder(order))
+      }
+
+      return convertedOrders
+    } catch (error) {
+      console.error('Get orders by date filter error:', error)
+      throw new Error('Failed to fetch orders by date filter')
+    }
+  }
+
+  async getOrdersByDateFilterPaginated(
+    dateFilter: 'today' | 'yesterday' | string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{
+    orders: Order[]
+    totalCount: number
+    totalPages: number
+    currentPage: number
+    hasNextPage: boolean
+    hasPreviousPage: boolean
+  }> {
+    try {
+      let startDate: string
+      let endDate: string
+      const now = new Date()
+
+      if (dateFilter === 'today') {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        startDate = today.toISOString()
+        endDate = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
+      } else if (dateFilter === 'yesterday') {
+        const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+        startDate = yesterday.toISOString()
+        endDate = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
+      } else {
+        // Handle specific date (YYYY-MM-DD format)
+        const targetDate = new Date(`${dateFilter}T00:00:00.000Z`)
+        startDate = targetDate.toISOString()
+        endDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
+      }
+
+      const offset = (page - 1) * limit
+
+      // Get total count for the date filter
+      const countResult = await query<{ count: number }[]>(
+        'SELECT COUNT(*) as count FROM orders WHERE created_at >= ? AND created_at <= ?',
+        [startDate, endDate],
+      )
+      const totalCount = countResult[0]?.count || 0
+      const totalPages = Math.ceil(totalCount / limit)
+
+      // Get paginated orders with date filter
+      const orders = await query<DatabaseOrder[]>(
+        `SELECT * FROM orders
+         WHERE created_at >= ? AND created_at <= ?
+         ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+        [startDate, endDate, limit, offset],
+      )
+
+      const convertedOrders = []
+      for (const order of orders) {
+        convertedOrders.push(await this.convertDbOrder(order))
+      }
+
+      return {
+        orders: convertedOrders,
+        totalCount,
+        totalPages,
+        currentPage: page,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      }
+    } catch (error) {
+      console.error('Get orders by date filter paginated error:', error)
+      throw new Error('Failed to fetch paginated orders by date filter')
+    }
+  }
+
+  async getTopSellingProducts(limit: number = 10): Promise<
+    Array<{
+      productId: string
+      productName: string
+      totalSold: number
+      totalRevenue: number
+    }>
+  > {
+    try {
+      const results = await query<
+        {
+          product_id: number
+          product_name: string
+          total_sold: number
+          total_revenue: number
+        }[]
+      >(
+        `SELECT
+           oi.product_id,
+           oi.product_name,
+           SUM(oi.quantity) as total_sold,
+           SUM(oi.total_price) as total_revenue
+         FROM order_items oi
+         JOIN orders o ON oi.order_id = o.id
+         WHERE o.status IN ('completed', 'paid')
+         GROUP BY oi.product_id, oi.product_name
+         ORDER BY total_sold DESC
+         LIMIT ?`,
+        [limit],
+      )
+
+      return results.map((r) => ({
+        productId: r.product_id.toString(),
+        productName: r.product_name,
+        totalSold: r.total_sold,
+        totalRevenue: r.total_revenue,
+      }))
+    } catch (error) {
+      console.error('Get top selling products error:', error)
+      return []
+    }
+  }
+
+  async updateOrder(
+    orderId: string,
+    updateData: UpdateOrderRequest,
+  ): Promise<{ success: boolean; order?: Order; error?: string }> {
+    if (!updateData.items.length) {
+      return { success: false, error: 'Order must contain at least one item' }
+    }
+
+    try {
+      // Get current order
+      const currentOrder = await this.getOrder(orderId)
+      if (!currentOrder) {
+        return { success: false, error: 'Order not found' }
+      }
+
+      // Only allow editing pending orders
+      if (currentOrder.status !== 'pending') {
+        return { success: false, error: 'Can only update pending orders' }
+      }
+
+      // Check stock availability for the updated items
+      const stockCheck = await this.checkStockAvailability(updateData.items)
+      if (!stockCheck.success) {
+        return { success: false, error: stockCheck.error }
+      }
+
+      // Build new order items with product/variant details
+      const newOrderItems: OrderItem[] = []
+      let newSubtotal = 0
+
+      for (const item of updateData.items) {
+        const product = await productService.getProduct(item.productId)
+        if (!product) {
+          return {
+            success: false,
+            error: `Product ${item.productId} not found`,
+          }
+        }
+
+        let itemPrice = product.price
+        let variant: ProductVariant | undefined
+        let variantAttributes: Record<string, string> | undefined
+
+        // Handle variant selection
+        if (item.variantId) {
+          const fetchedVariant = await productVariantsService.getVariant(item.variantId)
+          variant = fetchedVariant ?? undefined
+          if (!variant || variant.parentProductId !== item.productId) {
+            return {
+              success: false,
+              error: `Variant ${item.variantId} not found for this product`,
+            }
+          }
+          if (!variant.isActive) {
+            return {
+              success: false,
+              error: `Variant is not active`,
+            }
+          }
+          itemPrice = variant.price
+          variantAttributes = variant.attributes
+        }
+
+        const itemTotal = itemPrice * item.quantity
+        newOrderItems.push({
+          productId: product.id,
+          productName: product.name,
+          quantity: item.quantity,
+          unitPrice: itemPrice,
+          totalPrice: itemTotal,
+          variantId: item.variantId,
+          variantAttributes,
+        })
+
+        newSubtotal += itemTotal
+      }
+
+      // Calculate new tax and total
+      const { tax: newTaxAmount, total: newTotal } = await companySettingsService.calculateTotalWithTax(newSubtotal)
+      const now = new Date().toISOString()
+
+      // Delete existing order items
+      await execute('DELETE FROM order_items WHERE order_id = ?', [parseInt(orderId, 10)])
+
+      // Insert new order items with variant support
+      for (const item of newOrderItems) {
+        // Check if variant_id column exists by trying to use it
+        let hasVariantSupport = false
+        try {
+          await query(`SELECT variant_id FROM order_items LIMIT 1`)
+          hasVariantSupport = true
+        } catch {
+          hasVariantSupport = false
+        }
+
+        if (hasVariantSupport) {
+          await execute(
+            `INSERT INTO order_items (
+              order_id, product_id, product_name, quantity, unit_price, total_price, variant_id, variant_attributes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              parseInt(orderId, 10),
+              parseInt(item.productId, 10),
+              item.productName,
+              item.quantity,
+              item.unitPrice,
+              item.totalPrice,
+              item.variantId ? parseInt(item.variantId, 10) : null,
+              item.variantAttributes ? JSON.stringify(item.variantAttributes) : null,
+            ],
+          )
+        } else {
+          // Fallback for old schema without variant support
+          await execute(
+            `INSERT INTO order_items (
+              order_id, product_id, product_name, quantity, unit_price, total_price
+            ) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              parseInt(orderId, 10),
+              parseInt(item.productId, 10),
+              item.productName,
+              item.quantity,
+              item.unitPrice,
+              item.totalPrice,
+            ],
+          )
+        }
+      }
+
+      // Update order totals and details
+      await execute(
+        'UPDATE orders SET subtotal = ?, tax = ?, total = ?, payment_method = ?, notes = ?, updated_at = ? WHERE id = ?',
+        [
+          newSubtotal,
+          newTaxAmount,
+          newTotal,
+          updateData.paymentMethod || currentOrder.paymentMethod,
+          updateData.notes !== undefined ? updateData.notes : currentOrder.notes,
+          now,
+          parseInt(orderId, 10),
+        ],
+      )
+
+      // Return updated order
+      const updatedOrder = await this.getOrder(orderId)
+      return { success: true, order: updatedOrder || undefined }
+    } catch (error) {
+      console.error('Update order error:', error)
+      return { success: false, error: 'Failed to update order' }
+    }
+  }
+}
+
+export const orderService = OrderService.getInstance()

@@ -16,7 +16,7 @@ import {
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
-import { type Customer, customerService } from '../services/customers-sqlite'
+import { type Customer, customerService } from '../services/customers-turso'
 
 interface EditCustomerModalProps {
   customer: Customer | null

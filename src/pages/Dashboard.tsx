@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import { useTranslation } from '../hooks/useTranslation'
-import { dashboardService } from '../services/dashboard-sqlite'
+import { dashboardService } from '../services/dashboard-turso'
 
 interface DashboardProps {
   onNavigate?: (page: string) => void

@@ -1,5 +1,5 @@
 import { computed, signal } from '@preact/signals'
-import type { User } from '../../services/auth-sqlite'
+import type { User } from '../../services/auth-turso'
 
 // Auth state signals
 export const user = signal<User | null>(null)

@@ -1,4 +1,4 @@
-import { authService, type User } from '../../services/auth-sqlite'
+import { authService, type User } from '../../services/auth-turso'
 import { error, isLoading, user } from './authStore'
 
 export const authActions = {

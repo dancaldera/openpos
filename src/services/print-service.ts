@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
-import type { CompanySettings } from './company-settings-sqlite'
-import type { Order, OrderItem } from './orders-sqlite'
+import type { CompanySettings } from './company-settings-turso'
+import type { Order, OrderItem } from './orders-turso'
 
 // Add a helper to safely check for Tauri environment
 const isTauriEnvironment = (): boolean => {

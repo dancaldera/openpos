@@ -5,7 +5,7 @@ import {
   type ProductVariant,
   type ProductVariantInput,
   productVariantsService,
-} from '../services/product-variants-sqlite'
+} from '../services/product-variants-turso'
 import { Button, Dialog, Input, Select } from './ui'
 
 interface ProductVariantRowProps {
@@ -638,7 +638,7 @@ export function VariantSettingsModal({ productId, isOpen, onClose, onSaved }: Va
     setError('')
 
     try {
-      const { productService } = await import('../services/products-sqlite')
+      const { productService } = await import('../services/products-turso')
       const result = await productService.convertToConfigurable(productId, selectedAttributeIds)
 
       if (result.success) {

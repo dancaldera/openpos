@@ -3,7 +3,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import { Button, Dialog, Input, LanguageSelector, Select } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
-import { type CompanySettings, companySettingsService, SUPPORTED_CURRENCIES } from '../services/company-settings-sqlite'
+import { type CompanySettings, companySettingsService, SUPPORTED_CURRENCIES } from '../services/company-settings-turso'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 export default function Settings() {
