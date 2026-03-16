@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 import { Button } from './ui'
-import Sidebar from './ui/Sidebar'
+import { Sidebar } from './ui/Sidebar'
 
 interface LayoutProps {
   children: ComponentChildren

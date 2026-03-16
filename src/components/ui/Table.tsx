@@ -1,5 +1,6 @@
 import type { JSX } from 'preact'
-import { createContext, useContext, useState } from 'preact/hooks'
+import { createContext } from 'preact'
+import { useContext, useState } from 'preact/hooks'
 import { clsx } from '../../lib/utils'
 import { Link } from './Link'
 
@@ -113,7 +114,12 @@ export function TableHeader({ class: className = '', ...props }: JSX.HTMLAttribu
   )
 }
 
-export function TableCell({ class: className = '', children, ...props }: JSX.HTMLAttributes<HTMLTableCellElement>) {
+export function TableCell({
+  class: className = '',
+  children,
+  colSpan,
+  ...props
+}: JSX.HTMLAttributes<HTMLTableCellElement> & { colSpan?: number }) {
   const { bleed, dense, grid, striped } = useContext(TableContext)
   const { href, target, title } = useContext(TableRowContext)
   const [cellRef, setCellRef] = useState<HTMLElement | null>(null)
@@ -121,6 +127,7 @@ export function TableCell({ class: className = '', children, ...props }: JSX.HTM
   return (
     <td
       ref={href ? setCellRef : undefined}
+      colSpan={colSpan}
       {...props}
       class={clsx(
         className,

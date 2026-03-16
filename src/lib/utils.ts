@@ -2,12 +2,26 @@
  * Utility functions shared across UI components
  */
 
+type SignalLike<T> = {
+  value: T
+  peek(): T
+}
+
 /**
  * Conditionally join class names together
  * Filters out falsy values (undefined, false, empty strings)
+ * Handles Preact signals by unwrapping them
  */
-export function clsx(...classes: (string | undefined | boolean)[]): string {
-  return classes.filter(Boolean).join(' ')
+export function clsx(...classes: (string | undefined | boolean | SignalLike<string | undefined>)[]): string {
+  return classes
+    .map((c) => {
+      if (c && typeof c === 'object' && 'value' in c) {
+        return c.value
+      }
+      return c
+    })
+    .filter(Boolean)
+    .join(' ')
 }
 
 /**

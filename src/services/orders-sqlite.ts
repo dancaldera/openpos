@@ -261,7 +261,8 @@ export class OrderService {
 
         // Handle variant selection
         if (item.variantId) {
-          variant = await productVariantsService.getVariant(item.variantId)
+          const fetchedVariant = await productVariantsService.getVariant(item.variantId)
+          variant = fetchedVariant ?? undefined
           if (!variant || variant.parentProductId !== item.productId) {
             return {
               success: false,
@@ -338,9 +339,14 @@ export class OrderService {
 
       // Create order items with variant support
       for (const item of orderItems) {
-        // Check if variant_id column exists
-        const columnsCheck = await db.execute(`SELECT variant_id FROM order_items LIMIT 1`)
-        const hasVariantSupport = !columnsCheck.error?.toString().includes('no column named variant_id')
+        // Check if variant_id column exists by trying to use it
+        let hasVariantSupport = false
+        try {
+          await db.execute(`SELECT variant_id FROM order_items LIMIT 1`)
+          hasVariantSupport = true
+        } catch {
+          hasVariantSupport = false
+        }
 
         if (hasVariantSupport) {
           await db.execute(
@@ -887,7 +893,8 @@ export class OrderService {
 
         // Handle variant selection
         if (item.variantId) {
-          variant = await productVariantsService.getVariant(item.variantId)
+          const fetchedVariant = await productVariantsService.getVariant(item.variantId)
+          variant = fetchedVariant ?? undefined
           if (!variant || variant.parentProductId !== item.productId) {
             return {
               success: false,
@@ -927,9 +934,14 @@ export class OrderService {
 
       // Insert new order items with variant support
       for (const item of newOrderItems) {
-        // Check if variant_id column exists
-        const columnsCheck = await db.execute(`SELECT variant_id FROM order_items LIMIT 1`)
-        const hasVariantSupport = !columnsCheck.error?.toString().includes('no column named variant_id')
+        // Check if variant_id column exists by trying to use it
+        let hasVariantSupport = false
+        try {
+          await db.execute(`SELECT variant_id FROM order_items LIMIT 1`)
+          hasVariantSupport = true
+        } catch {
+          hasVariantSupport = false
+        }
 
         if (hasVariantSupport) {
           await db.execute(
