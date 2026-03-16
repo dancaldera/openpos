@@ -1,4 +1,4 @@
-import { query, execute } from '../lib/db-adapter'
+import { execute, query } from '../lib/db-adapter'
 import { type ProductVariant, productVariantsService } from './product-variants-turso'
 
 export type ProductVariantType = 'simple' | 'configurable'
@@ -145,9 +145,7 @@ export class ProductService {
 
   async getProduct(id: string): Promise<Product | null> {
     try {
-      const products = await query<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
-        parseInt(id, 10),
-      ])
+      const products = await query<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [parseInt(id, 10)])
 
       if (products.length === 0) {
         return null
@@ -181,10 +179,9 @@ export class ProductService {
 
     try {
       if (productData.barcode) {
-        const existingBarcode = await query<DatabaseProduct[]>(
-          'SELECT id FROM products WHERE barcode = ? LIMIT 1',
-          [productData.barcode],
-        )
+        const existingBarcode = await query<DatabaseProduct[]>('SELECT id FROM products WHERE barcode = ? LIMIT 1', [
+          productData.barcode,
+        ])
 
         if (existingBarcode.length > 0) {
           return {
@@ -445,9 +442,7 @@ export class ProductService {
 
   async getCategories(): Promise<string[]> {
     try {
-      const categories = await query<{ category: string }[]>(
-        'SELECT DISTINCT category FROM products ORDER BY category',
-      )
+      const categories = await query<{ category: string }[]>('SELECT DISTINCT category FROM products ORDER BY category')
 
       return categories.map((c) => c.category)
     } catch (error) {
@@ -650,10 +645,9 @@ export class ProductService {
   async getDefaultVariant(productId: string): Promise<ProductVariant | null> {
     try {
       // First check if product has a default_variant_id set
-      const product = await query<DatabaseProduct[]>(
-        'SELECT default_variant_id FROM products WHERE id = ? LIMIT 1',
-        [parseInt(productId, 10)],
-      )
+      const product = await query<DatabaseProduct[]>('SELECT default_variant_id FROM products WHERE id = ? LIMIT 1', [
+        parseInt(productId, 10),
+      ])
 
       if (product.length === 0) {
         return null
