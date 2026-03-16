@@ -6,7 +6,7 @@ interface LanguageSelectorProps {
   class?: string
 }
 
-export default function LanguageSelector({ class: className }: LanguageSelectorProps) {
+export function LanguageSelector({ class: className }: LanguageSelectorProps) {
   const { getCurrentLocale, getSupportedLocales, t } = useTranslation()
 
   const handleLanguageChange = async (e: Event) => {

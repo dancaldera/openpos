@@ -1,4 +1,5 @@
 import type { ComponentChildren, JSX } from 'preact'
+import { clsx } from '../../lib/utils'
 
 interface ButtonProps {
   children: ComponentChildren
@@ -10,11 +11,7 @@ interface ButtonProps {
   class?: string
 }
 
-function clsx(...classes: (string | undefined | boolean)[]): string {
-  return classes.filter(Boolean).join(' ')
-}
-
-export default function Button({
+export function Button({
   children,
   variant = 'primary',
   size = 'md',

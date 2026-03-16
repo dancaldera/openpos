@@ -1,4 +1,5 @@
 import type { JSX } from 'preact'
+import { clsx, generateId } from '../../lib/utils'
 
 interface SelectOption {
   value: string
@@ -22,11 +23,7 @@ interface SelectProps {
   id?: string
 }
 
-function clsx(...classes: (string | undefined | boolean)[]): string {
-  return classes.filter(Boolean).join(' ')
-}
-
-export default function Select({
+export function Select({
   label,
   placeholder,
   value,
@@ -43,7 +40,7 @@ export default function Select({
   id,
   ...props
 }: SelectProps & Omit<JSX.HTMLAttributes<HTMLSelectElement>, 'size'>) {
-  const selectId = id || `select-${Math.random().toString(36).substring(2, 11)}`
+  const selectId = id || generateId('select')
 
   const baseClasses = clsx(
     'w-full appearance-none rounded-xl border transition-colors duration-150',

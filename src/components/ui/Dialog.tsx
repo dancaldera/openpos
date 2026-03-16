@@ -1,6 +1,7 @@
 import type { ComponentChildren } from 'preact'
 import { useEffect, useState } from 'preact/hooks'
-import Button from './Button'
+import { clsx } from '../../lib/utils'
+import { Button } from './Button'
 
 interface DialogProps {
   isOpen: boolean
@@ -21,11 +22,7 @@ interface DialogConfirmProps {
   variant?: 'danger' | 'primary'
 }
 
-function clsx(...classes: (string | undefined | boolean)[]): string {
-  return classes.filter(Boolean).join(' ')
-}
-
-export default function Dialog({ isOpen, onClose, title, children, size = 'md' }: DialogProps) {
+export function Dialog({ isOpen, onClose, title, children, size = 'md' }: DialogProps) {
   const [isAnimating, setIsAnimating] = useState(false)
 
   useEffect(() => {
@@ -133,9 +130,9 @@ export function DialogConfirm({
             {cancelText}
           </Button>
           <Button
-            variant={variant === 'danger' ? 'primary' : 'primary'}
+            variant={variant === 'danger' ? 'danger' : 'primary'}
             onClick={handleConfirm}
-            class={variant === 'danger' ? 'bg-red-600 hover:bg-red-700' : ''}
+            class={variant === 'danger' ? 'bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700' : ''}
           >
             {confirmText}
           </Button>
