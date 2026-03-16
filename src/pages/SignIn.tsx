@@ -121,13 +121,15 @@ export default function SignIn() {
 
   const loadUsers = async () => {
     try {
+      console.log('[SignIn] Loading users...')
       const result = await authService.getAllUsersForLogin()
+      console.log('[SignIn] Users loaded:', result)
       setUsers(result)
       if (result.length === 0) {
-        console.warn('No users found in database')
+        console.warn('[SignIn] No users found in database')
       }
     } catch (error) {
-      console.error('Failed to load users:', error)
+      console.error('[SignIn] Failed to load users:', error)
       toast.error(`Failed to load users: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
@@ -322,7 +324,7 @@ export default function SignIn() {
                           class="w-full px-4 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
                         >
                           {/* Avatar */}
-                          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                          <div class="w-10 h-10 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shrink-0">
                             {user.name.charAt(0).toUpperCase()}
                           </div>
 
@@ -334,7 +336,7 @@ export default function SignIn() {
 
                           {/* Role Badge */}
                           <div
-                            class={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ${
+                            class={`px-2 py-1 rounded text-xs font-medium shrink-0 ${
                               user.role === 'admin'
                                 ? 'bg-red-100 text-red-700'
                                 : user.role === 'manager'
@@ -369,7 +371,7 @@ export default function SignIn() {
                 {/* Header */}
                 <div class="flex items-center justify-between mb-6">
                   <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    <div class="w-12 h-12 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
                       {selectedUser.name.charAt(0).toUpperCase()}
                     </div>
                     <div>

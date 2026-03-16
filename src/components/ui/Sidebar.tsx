@@ -33,7 +33,7 @@ export default function Sidebar({
   footer,
   class: className = '',
   ...props
-}: SidebarProps & JSX.HTMLAttributes<HTMLDivElement>) {
+}: SidebarProps & Omit<JSX.DetailedHTMLProps<JSX.HTMLAttributes<HTMLDivElement>, HTMLDivElement>, 'class'>) {
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed)
 
   const widths = {
@@ -98,7 +98,7 @@ export default function Sidebar({
                   <>
                     <span class="flex-1 text-left font-medium">{item.label}</span>
                     {item.badge && (
-                      <span class="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                      <span class="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-5 text-center">
                         {item.badge}
                       </span>
                     )}

@@ -20,15 +20,7 @@ import { companySettingsService } from '../services/company-settings-sqlite'
 import { type Customer, customerService } from '../services/customers-sqlite'
 import { type Order, orderService } from '../services/orders-sqlite'
 import { formatReceiptData, printThermalReceipt } from '../services/print-service'
-import {
-  type Product,
-  type ProductWithVariants,
-  productService,
-} from '../services/products-sqlite'
-import {
-  productVariantsService,
-  type ProductVariant,
-} from '../services/product-variants-sqlite'
+import { type Product, type ProductWithVariants, productService } from '../services/products-sqlite'
 import { userService } from '../services/users-sqlite'
 
 export default function Orders() {
@@ -82,7 +74,9 @@ export default function Orders() {
     notes: '',
   })
 
-  const [editOrderItems, setEditOrderItems] = useState<Array<{ productId: string; quantity: number; variantId?: string }>>([])
+  const [editOrderItems, setEditOrderItems] = useState<
+    Array<{ productId: string; quantity: number; variantId?: string }>
+  >([])
   const [editPaymentMethod, setEditPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash')
   const [editNotes, setEditNotes] = useState('')
 
@@ -394,7 +388,9 @@ export default function Orders() {
         if (quantity > 0) {
           toast.success(
             t('orders.itemAdded', {
-              product: `${productName} (${Object.entries(variant.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')})`,
+              product: `${productName} (${Object.entries(variant.attributes)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(', ')})`,
               quantity: newQuantity,
             }),
           )
@@ -418,7 +414,9 @@ export default function Orders() {
 
         toast.success(
           t('orders.itemAdded', {
-            product: `${productName} (${Object.entries(variant.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')})`,
+            product: `${productName} (${Object.entries(variant.attributes)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join(', ')})`,
             quantity,
           }),
         )
@@ -463,9 +461,7 @@ export default function Orders() {
     toast.info(t('orders.itemRemoved', { product: productName }))
     setNewOrder({
       ...newOrder,
-      items: newOrder.items.filter(
-        (item) => !(item.productId === productId && item.variantId === variantId),
-      ),
+      items: newOrder.items.filter((item) => !(item.productId === productId && item.variantId === variantId)),
     })
   }
 
@@ -1099,7 +1095,9 @@ export default function Orders() {
                           <div class="flex flex-col h-full">
                             <div class="flex-1">
                               <div class="flex items-start justify-between mb-2">
-                                <div class="font-semibold text-gray-900 text-sm leading-tight flex-1">{product.name}</div>
+                                <div class="font-semibold text-gray-900 text-sm leading-tight flex-1">
+                                  {product.name}
+                                </div>
                                 {isConfigurable && (
                                   <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full ml-2">
                                     🏷️
@@ -1208,7 +1206,10 @@ export default function Orders() {
                           {variantAttributes && (
                             <div class="text-xs text-purple-700 mb-2">
                               {Object.entries(variantAttributes).map(([k, v]) => (
-                                <span key={k} class="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 mr-1 mb-1">
+                                <span
+                                  key={k}
+                                  class="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 mr-1 mb-1"
+                                >
                                   <span class="capitalize">{k}:</span> {v}
                                 </span>
                               ))}
@@ -1732,7 +1733,10 @@ export default function Orders() {
                         {item.variantAttributes && (
                           <div class="text-xs text-purple-700 mt-1">
                             {Object.entries(item.variantAttributes).map(([k, v]) => (
-                              <span key={k} class="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 mr-1 mb-1">
+                              <span
+                                key={k}
+                                class="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 mr-1 mb-1"
+                              >
                                 <span class="capitalize">{k}:</span> {v}
                               </span>
                             ))}

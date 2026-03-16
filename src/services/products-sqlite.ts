@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql'
-import { productVariantsService, ProductVariant } from './product-variants-sqlite'
+import { type ProductVariant, productVariantsService } from './product-variants-sqlite'
 
 export type ProductVariantType = 'simple' | 'configurable'
 
@@ -559,10 +559,9 @@ export class ProductService {
       const db = await this.getDatabase()
 
       // Check if product exists
-      const product = await db.select<DatabaseProduct[]>(
-        'SELECT * FROM products WHERE id = ? LIMIT 1',
-        [parseInt(productId, 10)],
-      )
+      const product = await db.select<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
+        parseInt(productId, 10),
+      ])
 
       if (product.length === 0) {
         return { success: false, error: 'Product not found' }
@@ -576,10 +575,11 @@ export class ProductService {
       }
 
       // Update product to configurable
-      await db.execute(
-        'UPDATE products SET variant_type = ?, updated_at = ? WHERE id = ?',
-        ['configurable', new Date().toISOString(), parseInt(productId, 10)],
-      )
+      await db.execute('UPDATE products SET variant_type = ?, updated_at = ? WHERE id = ?', [
+        'configurable',
+        new Date().toISOString(),
+        parseInt(productId, 10),
+      ])
 
       // Create variant settings
       await db.execute(
@@ -598,10 +598,9 @@ export class ProductService {
       )
 
       // Fetch updated product
-      const updatedProduct = await db.select<DatabaseProduct[]>(
-        'SELECT * FROM products WHERE id = ? LIMIT 1',
-        [parseInt(productId, 10)],
-      )
+      const updatedProduct = await db.select<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
+        parseInt(productId, 10),
+      ])
 
       return {
         success: true,
@@ -617,17 +616,14 @@ export class ProductService {
    * Convert a configurable product back to simple (disable variants)
    * This will delete all variants and variant settings
    */
-  async convertToSimple(
-    productId: string,
-  ): Promise<{ success: boolean; product?: Product; error?: string }> {
+  async convertToSimple(productId: string): Promise<{ success: boolean; product?: Product; error?: string }> {
     try {
       const db = await this.getDatabase()
 
       // Check if product exists
-      const product = await db.select<DatabaseProduct[]>(
-        'SELECT * FROM products WHERE id = ? LIMIT 1',
-        [parseInt(productId, 10)],
-      )
+      const product = await db.select<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
+        parseInt(productId, 10),
+      ])
 
       if (product.length === 0) {
         return { success: false, error: 'Product not found' }
@@ -654,22 +650,19 @@ export class ProductService {
       }
 
       // Delete variant settings
-      await db.execute(
-        'DELETE FROM product_variant_settings WHERE product_id = ?',
-        [parseInt(productId, 10)],
-      )
+      await db.execute('DELETE FROM product_variant_settings WHERE product_id = ?', [parseInt(productId, 10)])
 
       // Update product to simple
-      await db.execute(
-        'UPDATE products SET variant_type = ?, default_variant_id = NULL, updated_at = ? WHERE id = ?',
-        ['simple', new Date().toISOString(), parseInt(productId, 10)],
-      )
+      await db.execute('UPDATE products SET variant_type = ?, default_variant_id = NULL, updated_at = ? WHERE id = ?', [
+        'simple',
+        new Date().toISOString(),
+        parseInt(productId, 10),
+      ])
 
       // Fetch updated product
-      const updatedProduct = await db.select<DatabaseProduct[]>(
-        'SELECT * FROM products WHERE id = ? LIMIT 1',
-        [parseInt(productId, 10)],
-      )
+      const updatedProduct = await db.select<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
+        parseInt(productId, 10),
+      ])
 
       return {
         success: true,
@@ -700,9 +693,7 @@ export class ProductService {
 
       // If default_variant_id is set, get that variant
       if (product[0].default_variant_id) {
-        return await productVariantsService.getVariant(
-          product[0].default_variant_id.toString(),
-        )
+        return await productVariantsService.getVariant(product[0].default_variant_id.toString())
       }
 
       // Otherwise, get the first active variant
@@ -719,18 +710,14 @@ export class ProductService {
   /**
    * Set the default variant for a configurable product
    */
-  async setDefaultVariant(
-    productId: string,
-    variantId: string,
-  ): Promise<{ success: boolean; error?: string }> {
+  async setDefaultVariant(productId: string, variantId: string): Promise<{ success: boolean; error?: string }> {
     try {
       const db = await this.getDatabase()
 
       // Verify product exists
-      const product = await db.select<DatabaseProduct[]>(
-        'SELECT id FROM products WHERE id = ? LIMIT 1',
-        [parseInt(productId, 10)],
-      )
+      const product = await db.select<DatabaseProduct[]>('SELECT id FROM products WHERE id = ? LIMIT 1', [
+        parseInt(productId, 10),
+      ])
 
       if (product.length === 0) {
         return { success: false, error: 'Product not found' }
@@ -751,10 +738,11 @@ export class ProductService {
       }
 
       // Update default_variant_id
-      await db.execute(
-        'UPDATE products SET default_variant_id = ?, updated_at = ? WHERE id = ?',
-        [parseInt(variantId, 10), new Date().toISOString(), parseInt(productId, 10)],
-      )
+      await db.execute('UPDATE products SET default_variant_id = ?, updated_at = ? WHERE id = ?', [
+        parseInt(variantId, 10),
+        new Date().toISOString(),
+        parseInt(productId, 10),
+      ])
 
       return { success: true }
     } catch (error) {

@@ -11,14 +11,6 @@ pub struct OwnedMigration {
     pub version: i64,
     pub description: String,
     pub sql: String,
-    pub kind: MigrationKind,
-}
-
-/// Migration kind (Up or Down)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MigrationKind {
-    Up,
-    Down,
 }
 
 /// Metadata extracted from migration file comments
@@ -26,7 +18,6 @@ pub enum MigrationKind {
 struct MigrationMetadata {
     version: i64,
     description: String,
-    migration_type: String,
 }
 
 /// Parse migration metadata from SQL file comments
@@ -40,7 +31,7 @@ struct MigrationMetadata {
 fn parse_migration_metadata(content: &str) -> Option<MigrationMetadata> {
     let mut version = None;
     let mut description = None;
-    let mut migration_type = None;
+    let mut has_type = false;
 
     for line in content.lines().take(20) {
         let line = line.trim();
@@ -52,15 +43,14 @@ fn parse_migration_metadata(content: &str) -> Option<MigrationMetadata> {
         } else if line.starts_with("-- Description: ") {
             description = line.strip_prefix("-- Description: ").map(|s| s.to_string());
         } else if line.starts_with("-- Type: ") {
-            migration_type = line.strip_prefix("-- Type: ").map(|s| s.to_string());
+            has_type = true;
         }
     }
 
-    match (version, description, migration_type) {
-        (Some(v), Some(d), Some(t)) => Some(MigrationMetadata {
+    match (version, description, has_type) {
+        (Some(v), Some(d), true) => Some(MigrationMetadata {
             version: v,
             description: d,
-            migration_type: t,
         }),
         _ => None,
     }
@@ -125,7 +115,6 @@ fn load_migrations_from_dir(dir: &Path) -> Result<Vec<OwnedMigration>, String> {
             version: metadata.version,
             description: metadata.description,
             sql: sql_body,
-            kind: MigrationKind::Up,
         });
     }
 
@@ -213,7 +202,7 @@ CREATE TABLE users (id INTEGER PRIMARY KEY);
         let metadata = parse_migration_metadata(content).unwrap();
         assert_eq!(metadata.version, 1);
         assert_eq!(metadata.description, "Create users table");
-        assert_eq!(metadata.migration_type, "schema");
+        // The Type comment is required but not stored
     }
 
     #[test]

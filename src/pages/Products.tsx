@@ -14,24 +14,16 @@ import {
   TableRow,
   Textarea,
 } from '../components/ui'
-import { useAuth } from '../hooks/useAuth'
-import { useTranslation } from '../hooks/useTranslation'
 import {
-  PRODUCT_CATEGORIES,
-  type Product,
-  type ProductWithVariants,
-  productService,
-} from '../services/products-sqlite'
-import {
-  productVariantsService,
-  type ProductVariant,
-} from '../services/product-variants-sqlite'
-import {
-  ProductVariantRow,
   EditVariantModal,
+  ProductVariantRow,
   VariantGenerator,
   VariantSettingsModal,
 } from '../components/VariantManagement'
+import { useAuth } from '../hooks/useAuth'
+import { useTranslation } from '../hooks/useTranslation'
+import { type ProductVariant, productVariantsService } from '../services/product-variants-sqlite'
+import { PRODUCT_CATEGORIES, type Product, type ProductWithVariants, productService } from '../services/products-sqlite'
 
 type TranslateFunction = (key: string, params?: Record<string, string | number | boolean>) => string
 
@@ -521,7 +513,7 @@ export default function Products() {
         const updated = { ...productsWithVariants }
         for (const productId in updated) {
           if (updated[productId].variants) {
-            updated[productId].variants = updated[productId].variants!.filter((v) => v.id !== variantId)
+            updated[productId].variants = updated[productId].variants?.filter((v) => v.id !== variantId)
           }
         }
         setProductsWithVariants(updated)
@@ -551,7 +543,7 @@ export default function Products() {
     setEditingVariant(null)
   }
 
-  const handleGenerateVariants = (productId: string) => {
+  const handleGenerateVariants = (_productId: string) => {
     setIsGeneratorOpen(true)
   }
 
@@ -559,7 +551,7 @@ export default function Products() {
     // Reload the product with variants
     try {
       const productWithVariants = await productService.getProductWithVariants(variants[0]?.parentProductId || '')
-      if (productWithVariants && productWithVariants.variants) {
+      if (productWithVariants?.variants) {
         setProductsWithVariants((prev) => ({
           ...prev,
           [variants[0].parentProductId]: productWithVariants,
@@ -754,11 +746,14 @@ export default function Products() {
                             <span class="font-semibold text-gray-900 truncate">{product.name}</span>
                             {isConfigurable && (
                               <button
+                                type="button"
                                 onClick={() => handleToggleExpand(product.id)}
                                 class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 hover:bg-purple-200 transition-all flex items-center gap-1"
                               >
                                 🏷️ {variantCount} {t('variants.variants')}
-                                <span class={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                                <span class={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                                  ▼
+                                </span>
                               </button>
                             )}
                           </div>
@@ -795,13 +790,16 @@ export default function Products() {
                           )}
                         </div>
                       ) : (
-                        <div class="text-lg font-bold text-emerald-600 drop-shadow-sm">{formatCurrency(product.price)}</div>
+                        <div class="text-lg font-bold text-emerald-600 drop-shadow-sm">
+                          {formatCurrency(product.price)}
+                        </div>
                       )}
                     </TableCell>
                     <TableCell>
                       <div class="text-gray-600 font-medium">{formatCurrency(product.cost)}</div>
                       <div class="text-xs text-gray-500">
-                        {t('products.profitMargin')}: {(((product.price - product.cost) / product.cost) * 100).toFixed(1)}%
+                        {t('products.profitMargin')}:{' '}
+                        {(((product.price - product.cost) / product.cost) * 100).toFixed(1)}%
                       </div>
                     </TableCell>
                     <TableCell>
@@ -831,17 +829,18 @@ export default function Products() {
                     </TableCell>
                     <TableCell>
                       <div class="flex space-x-2 flex-wrap gap-y-2">
-                        {!isConfigurable && (hasPermission('products.edit') || hasRole('admin') || hasRole('manager')) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEnableVariants(product)}
-                            class="text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300 transition-all hover:shadow-md"
-                            title={t('variants.enableVariants')}
-                          >
-                            🏷️
-                          </Button>
-                        )}
+                        {!isConfigurable &&
+                          (hasPermission('products.edit') || hasRole('admin') || hasRole('manager')) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEnableVariants(product)}
+                              class="text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300 transition-all hover:shadow-md"
+                              title={t('variants.enableVariants')}
+                            >
+                              🏷️
+                            </Button>
+                          )}
                         {isConfigurable && (
                           <>
                             <Button
