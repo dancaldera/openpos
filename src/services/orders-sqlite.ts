@@ -1,7 +1,7 @@
 import Database from '@tauri-apps/plugin-sql'
 import { companySettingsService } from './company-settings-sqlite'
+import { type ProductVariant, productVariantsService } from './product-variants-sqlite'
 import { productService } from './products-sqlite'
-import { productVariantsService, type ProductVariant } from './product-variants-sqlite'
 
 export interface OrderItem {
   productId: string
@@ -339,9 +339,7 @@ export class OrderService {
       // Create order items with variant support
       for (const item of orderItems) {
         // Check if variant_id column exists
-        const columnsCheck = await db.execute(
-          `SELECT variant_id FROM order_items LIMIT 1`,
-        )
+        const columnsCheck = await db.execute(`SELECT variant_id FROM order_items LIMIT 1`)
         const hasVariantSupport = !columnsCheck.error?.toString().includes('no column named variant_id')
 
         if (hasVariantSupport) {
@@ -366,14 +364,7 @@ export class OrderService {
             `INSERT INTO order_items (
               order_id, product_id, product_name, quantity, unit_price, total_price
             ) VALUES (?, ?, ?, ?, ?, ?)`,
-            [
-              orderId,
-              parseInt(item.productId, 10),
-              item.productName,
-              item.quantity,
-              item.unitPrice,
-              item.totalPrice,
-            ],
+            [orderId, parseInt(item.productId, 10), item.productName, item.quantity, item.unitPrice, item.totalPrice],
           )
         }
       }
@@ -937,9 +928,7 @@ export class OrderService {
       // Insert new order items with variant support
       for (const item of newOrderItems) {
         // Check if variant_id column exists
-        const columnsCheck = await db.execute(
-          `SELECT variant_id FROM order_items LIMIT 1`,
-        )
+        const columnsCheck = await db.execute(`SELECT variant_id FROM order_items LIMIT 1`)
         const hasVariantSupport = !columnsCheck.error?.toString().includes('no column named variant_id')
 
         if (hasVariantSupport) {

@@ -1,10 +1,3 @@
-/**
- * Props for the Layout component
- * @interface LayoutProps
- * @property {any} children - The content to be rendered within the layout
- * @property {string} currentPage - The currently active page identifier
- * @property {(page: string) => void} onNavigate - Callback function for navigation events
- */
 import type { ComponentChildren } from 'preact'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
@@ -18,47 +11,11 @@ interface LayoutProps {
   onNavigate: (page: string) => void
 }
 
-/**
- * Main application layout component that provides the overall structure
- * including sidebar navigation, header with user controls, and content area.
- *
- * Features:
- * - Responsive sidebar with collapsible navigation
- * - Role-based menu item filtering (e.g., Members section for admins/managers only)
- * - User profile dropdown with settings and logout
- * - Notification bell with badge indicator
- * - Dynamic page title based on current route
- *
- * @component
- * @param {LayoutProps} props - Component properties
- * @returns {JSX.Element} The complete application layout structure
- */
 export default function Layout({ children, currentPage, onNavigate }: LayoutProps) {
-  /**
-   * State for controlling the user profile dropdown visibility
-   * @type {[boolean, function]} isDropdownOpen - Dropdown open state and setter
-   */
-
-  /**
-   * Authentication context providing user information and signOut function
-   * @type {object} auth - Authentication context object
-   * @property {object|null} user - Current authenticated user information
-   * @property {function} signOut - Function to sign out the current user
-   */
   const { user, signOut } = useAuth()
-
-  /**
-   * Translation hook providing translation function and language utilities
-   */
   const { t } = useTranslation()
-
   const { appName } = appSettingsStore
 
-  /**
-   * Navigation menu items configuration with role-based filtering
-   * Filters out 'Members' menu item for non-admin/non-manager users
-   * @type {Array<{id: string, label: string, icon: string}>}
-   */
   const menuItems = [
     {
       id: 'dashboard',
@@ -115,16 +72,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
   })
 
   return (
-    // Main layout container with sidebar and content area
-    // Uses flexbox for responsive sidebar + content layout
     <div class="flex h-screen bg-gray-100">
-      {/*
-        Sidebar component with dark theme and collapsible functionality
-        @param {string} width - Sidebar width (md: medium)
-        @param {string} backgroundColor - Background color theme
-        @param {boolean} collapsible - Whether sidebar can be collapsed
-        @param {boolean} defaultCollapsed - Initial collapsed state
-      */}
       <Sidebar
         title={appName.value}
         items={menuItems.map((item) => ({
@@ -136,12 +84,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
         }))}
       />
 
-      {/* Main content area with header and scrollable content */}
       <div class="flex-1 flex flex-col overflow-hidden">
-        {/*
-          Application header with page title, notifications, and user profile
-          Features white background with subtle shadow and border
-        */}
         <header class="bg-white shadow-sm border-b border-gray-200">
           <div class="flex items-center justify-between px-6 py-4">
             <div>
@@ -180,10 +123,6 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
           </div>
         </header>
 
-        {/*
-          Main content area with scrollable container
-          Uses container class for proper horizontal centering and padding
-        */}
         <main class="flex-1 overflow-x-hidden overflow-y-auto">
           <div class="container mx-auto px-6 py-8">{children}</div>
         </main>

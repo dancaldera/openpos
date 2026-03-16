@@ -211,12 +211,16 @@ export class AuthService {
     // Public method for login page - no authentication required
     // Only return active users (not deleted)
     try {
+      console.log('[AuthService] Loading database for user list...')
       const db = await this.getDatabase()
+      console.log('[AuthService] Database loaded, querying users...')
       const users = await db.select<DatabaseUser[]>('SELECT * FROM users WHERE deleted_at IS NULL ORDER BY name ASC')
-
-      return users.map((user) => this.convertDbUser(user))
+      console.log('[AuthService] Raw users from DB:', users)
+      const converted = users.map((user) => this.convertDbUser(user))
+      console.log('[AuthService] Converted users:', converted)
+      return converted
     } catch (error) {
-      console.error('Get users for login error:', error)
+      console.error('[AuthService] Get users for login error:', error)
       return []
     }
   }

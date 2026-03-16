@@ -81,7 +81,7 @@ export function Pagination({
                     variant={currentPage === page ? 'primary' : 'ghost'}
                     onClick={() => onPageChange(page as number)}
                     disabled={isLoading}
-                    class="px-3 py-1 min-w-[40px]"
+                    class="px-3 py-1 min-w-10"
                   >
                     {page}
                   </Button>

@@ -1,19 +1,12 @@
 import { useEffect, useState } from 'preact/hooks'
-import {
-  Button,
-  Dialog,
-  DialogConfirm,
-  Input,
-  Select,
-  Textarea,
-} from './ui'
 import { useTranslation } from '../hooks/useTranslation'
 import {
-  productVariantsService,
+  type ProductAttribute,
   type ProductVariant,
   type ProductVariantInput,
-  type ProductAttribute,
+  productVariantsService,
 } from '../services/product-variants-sqlite'
+import { Button, Dialog, Input, Select } from './ui'
 
 interface ProductVariantRowProps {
   variant: ProductVariant
@@ -145,7 +138,7 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
     setError('')
 
     try {
-      let result
+      let result: { success: boolean; variant?: ProductVariant; error?: string }
       if (variant) {
         result = await productVariantsService.updateVariant(variant.id, formData)
       } else {
@@ -168,7 +161,12 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title={variant ? t('variants.editVariant') : t('variants.addVariant')} size="md">
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={variant ? t('variants.editVariant') : t('variants.addVariant')}
+      size="md"
+    >
       <div>
         {error && (
           <div class="bg-red-500/10 backdrop-blur-sm border border-red-400/20 text-red-700 px-4 py-3 rounded-xl mb-6">
@@ -513,10 +511,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
               <Button variant="outline" onClick={onClose}>
                 {t('common.cancel')}
               </Button>
-              <Button
-                onClick={() => setCurrentStep(2)}
-                disabled={Object.keys(selectedAttributes).length === 0}
-              >
+              <Button onClick={() => setCurrentStep(2)} disabled={Object.keys(selectedAttributes).length === 0}>
                 {t('common.next')}
               </Button>
             </div>
@@ -699,9 +694,7 @@ export function VariantSettingsModal({ productId, isOpen, onClose, onSaved }: Va
                       }`}
                     >
                       <div class="font-semibold">{attr.name}</div>
-                      <div class={`text-sm ${isSelected ? 'text-indigo-100' : 'text-gray-500'}`}>
-                        {attr.slug}
-                      </div>
+                      <div class={`text-sm ${isSelected ? 'text-indigo-100' : 'text-gray-500'}`}>{attr.slug}</div>
                     </button>
                   )
                 })}

@@ -23,7 +23,7 @@ export default function Button({
   onClick,
   class: className = '',
   ...props
-}: ButtonProps & JSX.HTMLAttributes<HTMLButtonElement>) {
+}: ButtonProps & Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'class'>) {
   const baseClasses = clsx(
     // Base layout and interactions
     'inline-flex items-center justify-center rounded-xl font-medium',

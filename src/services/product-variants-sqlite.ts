@@ -138,9 +138,7 @@ export class ProductVariantsService {
     }
   }
 
-  private convertDbVariantSettings(
-    dbSettings: DatabaseProductVariantSettings,
-  ): ProductVariantSettings {
+  private convertDbVariantSettings(dbSettings: DatabaseProductVariantSettings): ProductVariantSettings {
     return {
       id: dbSettings.id.toString(),
       productId: dbSettings.product_id.toString(),
@@ -389,10 +387,7 @@ export class ProductVariantsService {
       updateValues.push(parseInt(id, 10))
 
       if (updateFields.length > 1) {
-        await db.execute(
-          `UPDATE product_attributes SET ${updateFields.join(', ')} WHERE id = ?`,
-          updateValues,
-        )
+        await db.execute(`UPDATE product_attributes SET ${updateFields.join(', ')} WHERE id = ?`, updateValues)
       }
 
       const updatedAttribute = await db.select<DatabaseProductAttribute[]>(
@@ -430,9 +425,7 @@ export class ProductVariantsService {
         }
       }
 
-      const result = await db.execute('DELETE FROM product_attributes WHERE id = ?', [
-        parseInt(id, 10),
-      ])
+      const result = await db.execute('DELETE FROM product_attributes WHERE id = ?', [parseInt(id, 10)])
 
       if (result.rowsAffected === 0) {
         return { success: false, error: 'Attribute not found' }
@@ -761,10 +754,11 @@ export class ProductVariantsService {
     try {
       const db = await this.getDatabase()
 
-      const result = await db.execute(
-        'UPDATE product_variants SET stock = stock + ?, updated_at = ? WHERE id = ?',
-        [quantity, new Date().toISOString(), parseInt(id, 10)],
-      )
+      const result = await db.execute('UPDATE product_variants SET stock = stock + ?, updated_at = ? WHERE id = ?', [
+        quantity,
+        new Date().toISOString(),
+        parseInt(id, 10),
+      ])
 
       if (result.rowsAffected === 0) {
         return { success: false, error: 'Variant not found' }
@@ -797,7 +791,7 @@ export class ProductVariantsService {
     }
 
     try {
-      const db = await this.getDatabase()
+      await this.getDatabase()
 
       // Get attribute details for building variant attributes
       const attributeIds = Object.keys(attributeCombinations)
@@ -818,7 +812,6 @@ export class ProductVariantsService {
       }
 
       const createdVariants: ProductVariant[] = []
-      const now = new Date().toISOString()
 
       for (const combination of combinations) {
         // Build attributes object
