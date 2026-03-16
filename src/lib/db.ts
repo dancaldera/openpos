@@ -18,6 +18,13 @@ export type ConnectionStatus = 'remote' | 'local' | 'syncing' | 'error'
 export const connectionStatus = signal<ConnectionStatus>('local')
 export const lastConnectionAttempt = signal<number>(0)
 
+/**
+ * Number of writes queued in pending_sync_queue that have not yet been
+ * replayed to Turso. Updated by the sync engine; components can read this
+ * to show "N pending" in the DB status badge.
+ */
+export const pendingCount = signal<number>(0)
+
 class DbManager {
   private static instance: DbManager
   private tursoClient: TursoClient | null = null
@@ -141,6 +148,7 @@ class DbManager {
     if (this.healthCheckTimer !== null) return
 
     this.healthCheckTimer = setInterval(async () => {
+      const wasOffline = connectionStatus.value === 'local' || connectionStatus.value === 'error'
       connectionStatus.value = 'syncing'
       try {
         // Always create a fresh client if needed and force a real probe
@@ -151,7 +159,16 @@ class DbManager {
         this.isOnline = true
         this.connectionTested = true
         lastConnectionAttempt.value = Date.now()
-        connectionStatus.value = 'remote'
+
+        if (wasOffline) {
+          // Reconnection detected — trigger sync engine asynchronously.
+          // Import is deferred to avoid a circular dependency at module load time.
+          import('./sync').then(({ syncOnReconnect }) => {
+            syncOnReconnect().catch((err: unknown) => console.error('[DbManager] syncOnReconnect failed:', err))
+          })
+        } else {
+          connectionStatus.value = 'remote'
+        }
       } catch {
         this.isOnline = false
         this.connectionTested = false

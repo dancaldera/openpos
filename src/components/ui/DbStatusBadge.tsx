@@ -1,6 +1,6 @@
 import { useSignal } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
-import { connectionStatus, lastConnectionAttempt } from '../../lib/db'
+import { connectionStatus, lastConnectionAttempt, pendingCount } from '../../lib/db'
 import { startHealthCheck, stopHealthCheck } from '../../lib/db-adapter'
 
 const STATUS_CONFIG = {
@@ -67,9 +67,13 @@ export function DbStatusBadge() {
 
   const status = connectionStatus.value
   const config = STATUS_CONFIG[status]
+  const pending = pendingCount.value
 
   const tursoUrl = import.meta.env.VITE_TURSO_DATABASE_URL as string | undefined
   const tursoConfigured = Boolean(tursoUrl && import.meta.env.VITE_TURSO_AUTH_TOKEN)
+
+  /** Badge text: shows pending count when local and queue is non-empty */
+  const badgeLabel = status === 'local' && pending > 0 ? `Local · ${pending} pending` : config.label
 
   // Close popover when clicking outside
   useEffect(() => {
@@ -157,6 +161,14 @@ export function DbStatusBadge() {
                 {tick.value >= 0 && formatRelativeTime(lastConnectionAttempt.value)}
               </span>
             </div>
+
+            {/* Pending writes */}
+            <div class="flex items-center justify-between">
+              <span class="text-gray-400">Pending writes</span>
+              <span class={pending > 0 ? 'text-yellow-400 font-medium' : 'text-gray-500'}>
+                {pending > 0 ? `${pending} queued` : 'None'}
+              </span>
+            </div>
           </div>
         </div>
       )}
@@ -184,7 +196,7 @@ export function DbStatusBadge() {
         ) : (
           <span class={`w-2 h-2 rounded-full ${config.dot} ${status === 'remote' ? 'animate-pulse' : ''}`} />
         )}
-        <span class={`text-xs font-medium ${config.textColor}`}>{config.label}</span>
+        <span class={`text-xs font-medium ${config.textColor}`}>{badgeLabel}</span>
       </button>
     </div>
   )
