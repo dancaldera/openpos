@@ -9,8 +9,8 @@ import {
   type RecentActivity,
   type SalesByMember,
   type TopProduct,
-} from '../services/analytics-sqlite'
-import { companySettingsService } from '../services/company-settings-sqlite'
+} from '../services/analytics-turso'
+import { companySettingsService } from '../services/company-settings-turso'
 
 export default function Analytics() {
   const { t } = useTranslation()

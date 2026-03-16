@@ -15,13 +15,13 @@ import {
   TableRow,
 } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
-import { authService } from '../services/auth-sqlite'
-import { companySettingsService } from '../services/company-settings-sqlite'
-import { type Customer, customerService } from '../services/customers-sqlite'
-import { type Order, orderService } from '../services/orders-sqlite'
+import { authService } from '../services/auth-turso'
+import { companySettingsService } from '../services/company-settings-turso'
+import { type Customer, customerService } from '../services/customers-turso'
+import { type Order, orderService } from '../services/orders-turso'
 import { formatReceiptData, printThermalReceipt } from '../services/print-service'
-import { type Product, type ProductWithVariants, productService } from '../services/products-sqlite'
-import { userService } from '../services/users-sqlite'
+import { type Product, type ProductWithVariants, productService } from '../services/products-turso'
+import { userService } from '../services/users-turso'
 
 export default function Orders() {
   const { t } = useTranslation()

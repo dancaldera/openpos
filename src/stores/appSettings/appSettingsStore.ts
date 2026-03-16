@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals'
-import { companySettingsService } from '../../services/company-settings-sqlite'
+import { companySettingsService } from '../../services/company-settings-turso'
 
 class AppSettingsStore {
   private static instance: AppSettingsStore

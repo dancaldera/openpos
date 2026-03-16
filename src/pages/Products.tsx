@@ -22,8 +22,8 @@ import {
 } from '../components/VariantManagement'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
-import { type ProductVariant, productVariantsService } from '../services/product-variants-sqlite'
-import { PRODUCT_CATEGORIES, type Product, type ProductWithVariants, productService } from '../services/products-sqlite'
+import { type ProductVariant, productVariantsService } from '../services/product-variants-turso'
+import { PRODUCT_CATEGORIES, type Product, type ProductWithVariants, productService } from '../services/products-turso'
 
 type TranslateFunction = (key: string, params?: Record<string, string | number | boolean>) => string
 

@@ -16,7 +16,7 @@ import {
 } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
-import { authService, type User } from '../services/auth-sqlite'
+import { authService, type User } from '../services/auth-turso'
 
 interface EditUserModalProps {
   user: User | null

@@ -4,7 +4,7 @@ import { Form } from '../components/ui'
 import { VirtualKeypad } from '../components/ui/VirtualKeypad'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
-import { authService, type User } from '../services/auth-sqlite'
+import { authService, type User } from '../services/auth-turso'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 export default function SignIn() {

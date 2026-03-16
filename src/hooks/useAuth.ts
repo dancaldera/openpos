@@ -1,4 +1,4 @@
-import type { User } from '../services/auth-sqlite'
+import type { User } from '../services/auth-turso'
 import { authActions } from '../stores/auth/authActions'
 import { error, isAdmin, isAuthenticated, isLoading, isManager, isUser, user } from '../stores/auth/authStore'
 
