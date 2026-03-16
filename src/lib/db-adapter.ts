@@ -1,6 +1,8 @@
-import type Database from '@tauri-apps/plugin-sql'
 import type { Connection as TursoClient } from '@tursodatabase/serverless'
-import { db, pendingCount } from './db'
+import { type DbClient, db, pendingCount } from './db'
+
+// Tauri database instance type (mirrors the interface in db.ts without a static import)
+type TauriDatabaseInstance = Exclude<DbClient, TursoClient>
 
 // Re-export db for convenience
 export { db } from './db'
@@ -78,7 +80,7 @@ async function enqueueWrite(info: WriteInfo, sql: string, params: unknown[]): Pr
   // Safety: only write to local SQLite
   if (isRemote) return
 
-  const tauriDb = client as Database
+  const tauriDb = client as TauriDatabaseInstance
 
   // Resolve record_id: for positional params, the id is often the last param
   // in UPDATE/DELETE statements. We store it as a string for the TEXT column.
@@ -119,7 +121,7 @@ export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]
   }
 
   // Tauri SQL: db.select returns the array directly
-  const tauriDb = client as Database
+  const tauriDb = client as TauriDatabaseInstance
   return tauriDb.select<T[]>(sql, params)
 }
 
@@ -147,7 +149,7 @@ export async function execute(
   }
 
   // Tauri SQL: db.execute returns { lastInsertId, rowsAffected }
-  const tauriDb = client as Database
+  const tauriDb = client as TauriDatabaseInstance
   const result = await tauriDb.execute(sql, params)
 
   // Queue this write for later sync — unless it IS a queue write (avoid recursion)
@@ -179,7 +181,7 @@ export async function transaction(statements: Array<{ sql: string; params?: unkn
     }
   } else {
     // Tauri SQL: use transaction
-    const tauriDb = client as Database
+    const tauriDb = client as TauriDatabaseInstance
     // Tauri SQL doesn't have explicit transaction method, so we execute sequentially
     // SQLite auto-commits each statement, but we can wrap in BEGIN/COMMIT
     await tauriDb.execute('BEGIN TRANSACTION')

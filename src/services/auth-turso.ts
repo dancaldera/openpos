@@ -1,13 +1,40 @@
-import { invoke } from '@tauri-apps/api/core'
 import { execute, query } from '../lib/db-adapter'
+import { isTauri } from '../lib/platform'
 
-// Helper functions for password hashing
+// ---------------------------------------------------------------------------
+// Password hashing helpers
+// On Tauri (desktop): delegate to the Rust backend via invoke() for bcrypt.
+// On web: call the API server which handles bcrypt server-side.
+// ---------------------------------------------------------------------------
+
 async function hashPassword(password: string): Promise<string> {
-  return await invoke('hash_password', { password })
+  if (isTauri) {
+    const { invoke } = await import('@tauri-apps/api/core')
+    return invoke<string>('hash_password', { password })
+  }
+  const res = await fetch('/api/auth/hash', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  })
+  if (!res.ok) throw new Error('hash_password API call failed')
+  const data = (await res.json()) as { hash: string }
+  return data.hash
 }
 
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return await invoke('verify_password', { password, hash })
+  if (isTauri) {
+    const { invoke } = await import('@tauri-apps/api/core')
+    return invoke<boolean>('verify_password', { password, hash })
+  }
+  const res = await fetch('/api/auth/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password, hash }),
+  })
+  if (!res.ok) throw new Error('verify_password API call failed')
+  const data = (await res.json()) as { valid: boolean }
+  return data.valid
 }
 
 export interface User {

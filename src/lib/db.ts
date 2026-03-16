@@ -1,8 +1,26 @@
 import { signal } from '@preact/signals'
-import Database from '@tauri-apps/plugin-sql'
 import { connect, type Connection as TursoClient } from '@tursodatabase/serverless'
+import { isTauri } from './platform'
 
-export type DbClient = TursoClient | Database
+// ---------------------------------------------------------------------------
+// Tauri SQL plugin types — loaded dynamically at runtime (Tauri only).
+// We never statically import @tauri-apps/plugin-sql so the web bundle
+// stays free of any Tauri-specific code.
+// ---------------------------------------------------------------------------
+interface TauriDatabaseInstance {
+  select: <T>(sql: string, params?: unknown[]) => Promise<T>
+  execute: (sql: string, params?: unknown[]) => Promise<{ lastInsertId: number; rowsAffected: number }>
+}
+
+/** Dynamically load the Tauri SQL plugin. Only call this inside Tauri. */
+async function loadTauriDatabase(path: string): Promise<TauriDatabaseInstance> {
+  // Dynamic import — tree-shaken away in the web build because VITE_PLATFORM=web
+  // means isTauri is always false and this branch is never reached.
+  const mod = await import('@tauri-apps/plugin-sql')
+  return mod.default.load(path) as Promise<TauriDatabaseInstance>
+}
+
+export type DbClient = TursoClient | TauriDatabaseInstance
 
 export interface DbClientResult {
   client: DbClient
@@ -28,7 +46,7 @@ export const pendingCount = signal<number>(0)
 class DbManager {
   private static instance: DbManager
   private tursoClient: TursoClient | null = null
-  private localDb: Database | null = null
+  private localDb: TauriDatabaseInstance | null = null
   private isOnline: boolean = true
   private connectionTested: boolean = false
   private lastOnlineCheck: number = 0
@@ -46,7 +64,8 @@ class DbManager {
 
   /**
    * Get the appropriate database client (Turso or local SQLite)
-   * Automatically falls back to local SQLite when Turso is unavailable
+   * Automatically falls back to local SQLite when Turso is unavailable.
+   * On the web platform, always uses Turso — no local SQLite fallback.
    */
   async getClient(): Promise<DbClientResult> {
     const tursoUrl = import.meta.env.VITE_TURSO_DATABASE_URL
@@ -90,10 +109,16 @@ class DbManager {
       }
     }
 
-    // Fallback to local SQLite
+    // Web platform: no local SQLite fallback — throw so the caller knows
+    if (!isTauri) {
+      connectionStatus.value = 'error'
+      throw new Error('[DbManager] No database connection: Turso is required in web mode')
+    }
+
+    // Fallback to local SQLite (Tauri only)
     if (!this.localDb) {
       try {
-        this.localDb = await Database.load('sqlite:postpos.db')
+        this.localDb = await loadTauriDatabase('sqlite:postpos.db')
         lastConnectionAttempt.value = Date.now()
         connectionStatus.value = 'local'
         console.log('[DbManager] Connected to local SQLite (offline mode)')
@@ -160,8 +185,8 @@ class DbManager {
         this.connectionTested = true
         lastConnectionAttempt.value = Date.now()
 
-        if (wasOffline) {
-          // Reconnection detected — trigger sync engine asynchronously.
+        if (wasOffline && isTauri) {
+          // Reconnection detected (desktop only) — trigger sync engine asynchronously.
           // Import is deferred to avoid a circular dependency at module load time.
           import('./sync').then(({ syncOnReconnect }) => {
             syncOnReconnect().catch((err: unknown) => console.error('[DbManager] syncOnReconnect failed:', err))
@@ -174,7 +199,7 @@ class DbManager {
         this.connectionTested = false
         this.lastOnlineCheck = Date.now()
         lastConnectionAttempt.value = Date.now()
-        connectionStatus.value = 'local'
+        connectionStatus.value = isTauri ? 'local' : 'error'
       }
     }, intervalMs)
   }
