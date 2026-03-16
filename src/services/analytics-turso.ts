@@ -64,15 +64,13 @@ export class AnalyticsService {
       }
 
       const [metricsResult, avgOrderResult, profitResult] = await Promise.all([
-        query<
-          {
-            total_orders: number
-            completed_orders: number
-            pending_orders: number
-            cancelled_orders: number
-            total_revenue: number
-          }[]
-        >(
+        query<{
+          total_orders: number
+          completed_orders: number
+          pending_orders: number
+          cancelled_orders: number
+          total_revenue: number
+        }>(
           `
           SELECT
             COUNT(*) as total_orders,
@@ -85,7 +83,7 @@ export class AnalyticsService {
           params,
         ),
 
-        query<{ avg_order_value: number }[]>(
+        query<{ avg_order_value: number }>(
           `
           SELECT
             COALESCE(AVG(total), 0) as avg_order_value
@@ -95,7 +93,7 @@ export class AnalyticsService {
           startDate && endDate ? params : [],
         ),
 
-        query<{ total_profit: number }[]>(
+        query<{ total_profit: number }>(
           `
           SELECT
             COALESCE(SUM((oi.unit_price - COALESCE(p.cost, 0)) * oi.quantity), 0) as total_profit
@@ -147,15 +145,13 @@ export class AnalyticsService {
         params.push(startDate, endDate)
       }
 
-      const results = await query<
-        {
-          user_id: number
-          user_name: string
-          total_sales: number
-          total_orders: number
-          total_revenue: number
-        }[]
-      >(
+      const results = await query<{
+        user_id: number
+        user_name: string
+        total_sales: number
+        total_orders: number
+        total_revenue: number
+      }>(
         `
         SELECT
           COALESCE(o.user_id, 1) as user_id,
@@ -197,15 +193,13 @@ export class AnalyticsService {
 
       params.push(limit)
 
-      const results = await query<
-        {
-          product_id: number
-          product_name: string
-          total_sold: number
-          total_revenue: number
-          avg_price: number
-        }[]
-      >(
+      const results = await query<{
+        product_id: number
+        product_name: string
+        total_sold: number
+        total_revenue: number
+        avg_price: number
+      }>(
         `
         SELECT
           oi.product_id,
@@ -263,14 +257,12 @@ export class AnalyticsService {
         params.push(startDate, endDate)
       }
 
-      const results = await query<
-        {
-          period: string
-          sales: number
-          orders: number
-          revenue: number
-        }[]
-      >(
+      const results = await query<{
+        period: string
+        sales: number
+        orders: number
+        revenue: number
+      }>(
         `
         SELECT
           ${dateFormat} as period,
@@ -299,17 +291,15 @@ export class AnalyticsService {
 
   async getRecentActivity(limit: number = 10): Promise<RecentActivity[]> {
     try {
-      const results = await query<
-        {
-          id: number
-          status: string
-          total: number
-          created_at: string
-          completed_at: string
-          user_id: number
-          user_name: string
-        }[]
-      >(
+      const results = await query<{
+        id: number
+        status: string
+        total: number
+        created_at: string
+        completed_at: string
+        user_id: number
+        user_name: string
+      }>(
         `
         SELECT
           o.id,
