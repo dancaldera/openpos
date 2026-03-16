@@ -1,0 +1,19 @@
+{
+  "buildCommand": "npm run build:web",
+  "devCommand": "npm run dev:web",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/index.ts": {
+      "runtime": "@vercel/node"
+    }
+  }
+}
