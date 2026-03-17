@@ -47,7 +47,7 @@ export default app
 // ---------------------------------------------------------------------------
 // Standalone Node.js server (local development via `bun dev`)
 // ---------------------------------------------------------------------------
-if (process.env.NODE_ENV !== 'production' || process.env.STANDALONE === '1') {
+if (!process.env.VERCEL && (process.env.NODE_ENV !== 'production' || process.env.STANDALONE === '1')) {
   const { serve } = await import('@hono/node-server')
   const port = Number(process.env.PORT ?? 3001)
   serve({ fetch: app.fetch, port }, (info) => {
