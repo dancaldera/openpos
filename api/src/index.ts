@@ -80,9 +80,9 @@ app.onError((err, c) => {
 export default app
 
 // ---------------------------------------------------------------------------
-// Standalone Node.js server (local development via `bun dev`)
+// Standalone Node.js server (Railway, local dev, etc.)
 // ---------------------------------------------------------------------------
-if (!process.env.VERCEL && (process.env.NODE_ENV !== 'production' || process.env.STANDALONE === '1')) {
+if (!process.env.VERCEL) {
   const { serve } = await import('@hono/node-server')
   const port = Number(process.env.PORT ?? 3001)
   serve({ fetch: app.fetch, port }, (info) => {
