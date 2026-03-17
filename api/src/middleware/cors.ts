@@ -18,24 +18,34 @@ function getAllowedOrigins(): string[] {
   return configuredOrigin ? [configuredOrigin, ...DEV_ORIGINS] : DEV_ORIGINS
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Credentials': 'true',
+  'Access-Control-Max-Age': '86400',
+}
+
 export const corsMiddleware: MiddlewareHandler = async (c, next) => {
   const origin = c.req.header('Origin') ?? ''
   const allowedOrigins = getAllowedOrigins()
-
   const isAllowed = allowedOrigins.some((o) => origin === o) || origin === ''
+  const allowOrigin = isAllowed ? (origin || '*') : null
 
-  if (isAllowed) {
-    c.header('Access-Control-Allow-Origin', origin || '*')
+  if (c.req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        ...CORS_HEADERS,
+        'Access-Control-Allow-Origin': allowOrigin || '',
+      },
+    })
   }
 
-  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  c.header('Access-Control-Allow-Credentials', 'true')
-  c.header('Access-Control-Max-Age', '86400')
-
-  // Handle preflight
-  if (c.req.method === 'OPTIONS') {
-    return new Response(null, { status: 204 })
+  if (allowOrigin) {
+    c.header('Access-Control-Allow-Origin', allowOrigin)
+  }
+  for (const [key, value] of Object.entries(CORS_HEADERS)) {
+    c.header(key, value)
   }
 
   await next()
