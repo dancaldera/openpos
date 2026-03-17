@@ -2,9 +2,6 @@
   "name": "openpos-landing",
   "type": "module",
   "version": "1.0.0",
-  "engines": {
-    "node": ">=22.12.0"
-  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
