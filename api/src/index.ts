@@ -26,6 +26,12 @@ app.use('/*', corsMiddleware)
 // Health check (unauthenticated)
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
+// Debug endpoint (remove after troubleshooting)
+app.get('/api/debug/env', (c) => c.json({
+  ALLOWED_ORIGIN: process.env.ALLOWED_ORIGIN,
+  NODE_ENV: process.env.NODE_ENV,
+}))
+
 // Direct SQL endpoints (protected by JWT)
 app.post('/api/query', authMiddleware, async (c) => {
   const { sql, params }: { sql: string; params: unknown[] } = await c.req.json()
