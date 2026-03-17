@@ -2,6 +2,7 @@ import { useSignal } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
 import { connectionStatus, lastConnectionAttempt, pendingCount } from '../../lib/db'
 import { startHealthCheck, stopHealthCheck } from '../../lib/db-adapter'
+import { isTauri } from '../../lib/platform'
 
 const STATUS_CONFIG = {
   remote: {
@@ -65,9 +66,13 @@ export function DbStatusBadge() {
   const popoverOpen = useSignal(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
-  const status = connectionStatus.value
+  // In web mode, always show "remote" since data goes through API server
+  const status = isTauri ? connectionStatus.value : 'remote'
   const config = STATUS_CONFIG[status]
   const pending = pendingCount.value
+
+  // Web mode uses API server, Tauri uses direct connection
+  const modeDescription = isTauri ? config.sublabel : 'Via API server'
 
   const tursoUrl = import.meta.env.VITE_TURSO_DATABASE_URL as string | undefined
   const tursoConfigured = Boolean(tursoUrl && import.meta.env.VITE_TURSO_AUTH_TOKEN)
@@ -86,8 +91,9 @@ export function DbStatusBadge() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Start background health-check on mount; stop on unmount
+  // Start background health-check on mount; stop on unmount (Tauri only)
   useEffect(() => {
+    if (!isTauri) return
     startHealthCheck(15_000)
     return () => stopHealthCheck()
   }, [])
@@ -134,7 +140,7 @@ export function DbStatusBadge() {
             {/* Mode description */}
             <div class="flex items-center justify-between">
               <span class="text-gray-400">Mode</span>
-              <span class="text-gray-200">{config.sublabel}</span>
+              <span class="text-gray-200">{modeDescription}</span>
             </div>
 
             {/* Turso configured */}
@@ -153,22 +159,26 @@ export function DbStatusBadge() {
               </div>
             )}
 
-            {/* Last check */}
-            <div class="flex items-center justify-between">
-              <span class="text-gray-400">Last check</span>
-              <span class="text-gray-200">
-                {/* tick.value accessed to trigger re-render */}
-                {tick.value >= 0 && formatRelativeTime(lastConnectionAttempt.value)}
-              </span>
-            </div>
+            {/* Last check (Tauri only) */}
+            {isTauri && (
+              <div class="flex items-center justify-between">
+                <span class="text-gray-400">Last check</span>
+                <span class="text-gray-200">
+                  {/* tick.value accessed to trigger re-render */}
+                  {tick.value >= 0 && formatRelativeTime(lastConnectionAttempt.value)}
+                </span>
+              </div>
+            )}
 
-            {/* Pending writes */}
-            <div class="flex items-center justify-between">
-              <span class="text-gray-400">Pending writes</span>
-              <span class={pending > 0 ? 'text-yellow-400 font-medium' : 'text-gray-500'}>
-                {pending > 0 ? `${pending} queued` : 'None'}
-              </span>
-            </div>
+            {/* Pending writes (Tauri only) */}
+            {isTauri && (
+              <div class="flex items-center justify-between">
+                <span class="text-gray-400">Pending writes</span>
+                <span class={pending > 0 ? 'text-yellow-400 font-medium' : 'text-gray-500'}>
+                  {pending > 0 ? `${pending} queued` : 'None'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
