@@ -27,6 +27,16 @@ export default defineConfig(async () => ({
     VITE_PLATFORM: JSON.stringify('web'),
   },
 
+  // Dev server proxy — routes /api/* to the Hono backend on port 3001
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
+
   // Output to dist-web/ to avoid colliding with desktop build
   build: {
     outDir: 'dist-web',

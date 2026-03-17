@@ -1,14 +1,10 @@
+import { getApiUrl } from './api-config'
 import { isTauri } from './platform'
 
-// JWT stored in localStorage after login
 function getAuthToken(): string | null {
   return localStorage.getItem('auth_token')
 }
 
-/**
- * HTTP adapter that mirrors the db-adapter API but sends requests to /api endpoints.
- * Used only in web mode; Tauri mode uses the original Turso/SQLite adapter.
- */
 export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
   if (isTauri) {
     throw new Error('query() should not be called from api-adapter in Tauri mode')
@@ -19,7 +15,7 @@ export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]
     throw new Error('No auth token available for API call')
   }
 
-  const response = await fetch('/api/query', {
+  const response = await fetch(getApiUrl('/api/query'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -50,7 +46,7 @@ export async function execute(
     throw new Error('No auth token available for API call')
   }
 
-  const response = await fetch('/api/execute', {
+  const response = await fetch(getApiUrl('/api/execute'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
