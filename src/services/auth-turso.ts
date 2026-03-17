@@ -1,13 +1,40 @@
-import { invoke } from '@tauri-apps/api/core'
 import { execute, query } from '../lib/db-adapter'
+import { isTauri } from '../lib/platform'
 
-// Helper functions for password hashing
+// ---------------------------------------------------------------------------
+// Password hashing helpers
+// On Tauri (desktop): delegate to the Rust backend via invoke() for bcrypt.
+// On web: call the API server which handles bcrypt server-side.
+// ---------------------------------------------------------------------------
+
 async function hashPassword(password: string): Promise<string> {
-  return await invoke('hash_password', { password })
+  if (isTauri) {
+    const { invoke } = await import('@tauri-apps/api/core')
+    return invoke<string>('hash_password', { password })
+  }
+  const res = await fetch('/api/auth/hash', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  })
+  if (!res.ok) throw new Error('hash_password API call failed')
+  const data = (await res.json()) as { hash: string }
+  return data.hash
 }
 
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return await invoke('verify_password', { password, hash })
+  if (isTauri) {
+    const { invoke } = await import('@tauri-apps/api/core')
+    return invoke<boolean>('verify_password', { password, hash })
+  }
+  const res = await fetch('/api/auth/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password, hash }),
+  })
+  if (!res.ok) throw new Error('verify_password API call failed')
+  const data = (await res.json()) as { valid: boolean }
+  return data.valid
 }
 
 export interface User {
@@ -82,6 +109,34 @@ export class AuthService {
 
   async signIn(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
     try {
+      if (!isTauri) {
+        // Web mode: authenticate via API server
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.toLowerCase(), password }),
+        })
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ error: 'Login failed' }))
+          return { success: false, error: error.error || 'Login failed' }
+        }
+
+        const data = (await res.json()) as { user: User; token: string }
+
+        // Store JWT token for subsequent API calls
+        localStorage.setItem('auth_token', data.token)
+
+        this.currentUser = data.user
+        localStorage.setItem('pos_user', JSON.stringify(data.user))
+
+        return {
+          success: true,
+          user: data.user,
+        }
+      }
+
+      // Desktop mode: direct database access
       const users = await query<DatabaseUser>('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1', [
         email.toLowerCase(),
       ])
@@ -137,6 +192,7 @@ export class AuthService {
   signOut(): void {
     this.currentUser = null
     localStorage.removeItem('pos_user')
+    localStorage.removeItem('auth_token') // Clear JWT token
   }
 
   getCurrentUser(): User | null {
@@ -225,9 +281,7 @@ export class AuthService {
       const offset = (page - 1) * limit
 
       // Get total count (active users only)
-      const countResult = await query<{ count: number }[]>(
-        'SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL',
-      )
+      const countResult = await query<{ count: number }>('SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL')
       const totalCount = countResult[0]?.count || 0
       const totalPages = Math.ceil(totalCount / limit)
 
