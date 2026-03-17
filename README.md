@@ -1,4 +1,4 @@
-# OpenPOS - Point of Sale Application
+# OpenPOS - Point of Sale App
 
 A modern cross-platform POS desktop application with real-time analytics, inventory management, and customer relationship management.
 
