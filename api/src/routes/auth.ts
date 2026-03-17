@@ -27,7 +27,29 @@ interface DatabaseUser {
   password_hashed?: number
 }
 
+// ---------------------------------------------------------------------------
 export const authRouter = new Hono()
+
+// ---------------------------------------------------------------------------
+// GET /api/auth/users  (public - for login screen user list)
+// ---------------------------------------------------------------------------
+authRouter.get('/users', async (c) => {
+  // Public endpoint - no auth required
+  // Returns only safe fields: id, name, email, role (no passwords, no sensitive data)
+  const users = await query<DatabaseUser>(
+    'SELECT id, email, name, role FROM users WHERE deleted_at IS NULL ORDER BY name ASC',
+  )
+
+  // Convert to frontend format
+  const safeUsers = users.map(user => ({
+    id: user.id.toString(),
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  }))
+
+  return c.json({ users: safeUsers })
+})
 
 // ---------------------------------------------------------------------------
 // POST /api/auth/login
