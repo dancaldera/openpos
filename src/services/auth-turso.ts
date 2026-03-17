@@ -1,3 +1,4 @@
+import { getApiUrl } from '../lib/api-config'
 import { execute, query } from '../lib/db-adapter'
 import { isTauri } from '../lib/platform'
 
@@ -12,7 +13,7 @@ async function hashPassword(password: string): Promise<string> {
     const { invoke } = await import('@tauri-apps/api/core')
     return invoke<string>('hash_password', { password })
   }
-  const res = await fetch('/api/auth/hash', {
+  const res = await fetch(getApiUrl('/api/auth/hash'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password }),
@@ -27,7 +28,7 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
     const { invoke } = await import('@tauri-apps/api/core')
     return invoke<boolean>('verify_password', { password, hash })
   }
-  const res = await fetch('/api/auth/verify', {
+  const res = await fetch(getApiUrl('/api/auth/verify'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password, hash }),
@@ -111,7 +112,7 @@ export class AuthService {
     try {
       if (!isTauri) {
         // Web mode: authenticate via API server
-        const res = await fetch('/api/auth/login', {
+        const res = await fetch(getApiUrl('/api/auth/login'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: email.toLowerCase(), password }),
@@ -252,7 +253,7 @@ export class AuthService {
     if (!isTauri) {
       // Web mode: fetch from public API endpoint
       try {
-        const res = await fetch('/api/auth/users')
+        const res = await fetch(getApiUrl('/api/auth/users'))
         if (!res.ok) throw new Error('Failed to fetch users')
         const data = (await res.json()) as {
           users: Array<{ id: string; email: string; name: string; role: User['role'] }>
