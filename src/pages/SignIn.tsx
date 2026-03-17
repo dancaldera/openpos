@@ -77,7 +77,7 @@ export default function SignIn() {
       window.removeEventListener('resize', resize)
       cancelAnimationFrame(animationRef.current)
     }
-  })
+  }, [])
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault()
