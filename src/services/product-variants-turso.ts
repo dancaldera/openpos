@@ -160,7 +160,7 @@ export class ProductVariantsService {
         return this.attributesCache
       }
 
-      const attributes = await query<DatabaseProductAttribute[]>(
+      const attributes = await query<DatabaseProductAttribute>(
         'SELECT * FROM product_attributes WHERE is_active = 1 ORDER BY name',
       )
 
@@ -181,7 +181,7 @@ export class ProductVariantsService {
 
   async getAttribute(id: string): Promise<ProductAttribute | null> {
     try {
-      const attributes = await query<DatabaseProductAttribute[]>(
+      const attributes = await query<DatabaseProductAttribute>(
         'SELECT * FROM product_attributes WHERE id = ? LIMIT 1',
         [parseInt(id, 10)],
       )
@@ -199,7 +199,7 @@ export class ProductVariantsService {
 
   async getAttributeBySlug(slug: string): Promise<ProductAttribute | null> {
     try {
-      const attributes = await query<DatabaseProductAttribute[]>(
+      const attributes = await query<DatabaseProductAttribute>(
         'SELECT * FROM product_attributes WHERE slug = ? LIMIT 1',
         [slug],
       )
@@ -237,7 +237,7 @@ export class ProductVariantsService {
 
     try {
       // Check for duplicate name
-      const existingName = await query<DatabaseProductAttribute[]>(
+      const existingName = await query<DatabaseProductAttribute>(
         'SELECT id FROM product_attributes WHERE name = ? LIMIT 1',
         [attributeData.name],
       )
@@ -247,7 +247,7 @@ export class ProductVariantsService {
       }
 
       // Check for duplicate slug
-      const existingSlug = await query<DatabaseProductAttribute[]>(
+      const existingSlug = await query<DatabaseProductAttribute>(
         'SELECT id FROM product_attributes WHERE slug = ? LIMIT 1',
         [attributeData.slug],
       )
@@ -311,7 +311,7 @@ export class ProductVariantsService {
     }
 
     try {
-      const existingAttribute = await query<DatabaseProductAttribute[]>(
+      const existingAttribute = await query<DatabaseProductAttribute>(
         'SELECT * FROM product_attributes WHERE id = ? LIMIT 1',
         [parseInt(id, 10)],
       )
@@ -322,7 +322,7 @@ export class ProductVariantsService {
 
       // Check for duplicate name
       if (updates.name !== undefined) {
-        const existingName = await query<DatabaseProductAttribute[]>(
+        const existingName = await query<DatabaseProductAttribute>(
           'SELECT id FROM product_attributes WHERE name = ? AND id != ? LIMIT 1',
           [updates.name, parseInt(id, 10)],
         )
@@ -334,7 +334,7 @@ export class ProductVariantsService {
 
       // Check for duplicate slug
       if (updates.slug !== undefined) {
-        const existingSlug = await query<DatabaseProductAttribute[]>(
+        const existingSlug = await query<DatabaseProductAttribute>(
           'SELECT id FROM product_attributes WHERE slug = ? AND id != ? LIMIT 1',
           [updates.slug, parseInt(id, 10)],
         )
@@ -375,7 +375,7 @@ export class ProductVariantsService {
         await execute(`UPDATE product_attributes SET ${updateFields.join(', ')} WHERE id = ?`, updateValues)
       }
 
-      const updatedAttribute = await query<DatabaseProductAttribute[]>(
+      const updatedAttribute = await query<DatabaseProductAttribute>(
         'SELECT * FROM product_attributes WHERE id = ? LIMIT 1',
         [parseInt(id, 10)],
       )
@@ -396,7 +396,7 @@ export class ProductVariantsService {
   async deleteAttribute(id: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if attribute is used in any variant settings
-      const settings = await query<DatabaseProductVariantSettings[]>(
+      const settings = await query<DatabaseProductVariantSettings>(
         "SELECT * FROM product_variant_settings WHERE attribute_ids LIKE '%\"' || ? || '\"%'",
         [id],
       )
@@ -428,7 +428,7 @@ export class ProductVariantsService {
 
   async getVariants(parentProductId: string): Promise<ProductVariant[]> {
     try {
-      const variants = await query<DatabaseProductVariant[]>(
+      const variants = await query<DatabaseProductVariant>(
         'SELECT * FROM product_variants WHERE parent_product_id = ? ORDER BY position, id',
         [parseInt(parentProductId, 10)],
       )
@@ -442,7 +442,7 @@ export class ProductVariantsService {
 
   async getVariant(id: string): Promise<ProductVariant | null> {
     try {
-      const variants = await query<DatabaseProductVariant[]>('SELECT * FROM product_variants WHERE id = ? LIMIT 1', [
+      const variants = await query<DatabaseProductVariant>('SELECT * FROM product_variants WHERE id = ? LIMIT 1', [
         parseInt(id, 10),
       ])
 
@@ -459,7 +459,7 @@ export class ProductVariantsService {
 
   async getVariantBySku(sku: string): Promise<ProductVariant | null> {
     try {
-      const variants = await query<DatabaseProductVariant[]>('SELECT * FROM product_variants WHERE sku = ? LIMIT 1', [
+      const variants = await query<DatabaseProductVariant>('SELECT * FROM product_variants WHERE sku = ? LIMIT 1', [
         sku,
       ])
 
@@ -476,7 +476,7 @@ export class ProductVariantsService {
 
   async getVariantByBarcode(barcode: string): Promise<ProductVariant | null> {
     try {
-      const variants = await query<DatabaseProductVariant[]>(
+      const variants = await query<DatabaseProductVariant>(
         'SELECT * FROM product_variants WHERE barcode = ? LIMIT 1',
         [barcode],
       )
@@ -518,7 +518,7 @@ export class ProductVariantsService {
     try {
       // Check for duplicate SKU
       if (variantData.sku) {
-        const existingSku = await query<DatabaseProductVariant[]>(
+        const existingSku = await query<DatabaseProductVariant>(
           'SELECT id FROM product_variants WHERE sku = ? LIMIT 1',
           [variantData.sku],
         )
@@ -530,7 +530,7 @@ export class ProductVariantsService {
 
       // Check for duplicate barcode
       if (variantData.barcode) {
-        const existingBarcode = await query<DatabaseProductVariant[]>(
+        const existingBarcode = await query<DatabaseProductVariant>(
           'SELECT id FROM product_variants WHERE barcode = ? LIMIT 1',
           [variantData.barcode],
         )
@@ -597,7 +597,7 @@ export class ProductVariantsService {
     }
 
     try {
-      const existingVariant = await query<DatabaseProductVariant[]>(
+      const existingVariant = await query<DatabaseProductVariant>(
         'SELECT * FROM product_variants WHERE id = ? LIMIT 1',
         [parseInt(id, 10)],
       )
@@ -608,7 +608,7 @@ export class ProductVariantsService {
 
       // Check for duplicate SKU
       if (updates.sku !== undefined) {
-        const existingSku = await query<DatabaseProductVariant[]>(
+        const existingSku = await query<DatabaseProductVariant>(
           'SELECT id FROM product_variants WHERE sku = ? AND id != ? LIMIT 1',
           [updates.sku, parseInt(id, 10)],
         )
@@ -620,7 +620,7 @@ export class ProductVariantsService {
 
       // Check for duplicate barcode
       if (updates.barcode !== undefined) {
-        const existingBarcode = await query<DatabaseProductVariant[]>(
+        const existingBarcode = await query<DatabaseProductVariant>(
           'SELECT id FROM product_variants WHERE barcode = ? AND id != ? LIMIT 1',
           [updates.barcode, parseInt(id, 10)],
         )
@@ -691,7 +691,7 @@ export class ProductVariantsService {
         await execute(`UPDATE product_variants SET ${updateFields.join(', ')} WHERE id = ?`, updateValues)
       }
 
-      const updatedVariant = await query<DatabaseProductVariant[]>(
+      const updatedVariant = await query<DatabaseProductVariant>(
         'SELECT * FROM product_variants WHERE id = ? LIMIT 1',
         [parseInt(id, 10)],
       )
@@ -858,7 +858,7 @@ export class ProductVariantsService {
 
   async getVariantSettings(productId: string): Promise<ProductVariantSettings | null> {
     try {
-      const settings = await query<DatabaseProductVariantSettings[]>(
+      const settings = await query<DatabaseProductVariantSettings>(
         'SELECT * FROM product_variant_settings WHERE product_id = ? LIMIT 1',
         [parseInt(productId, 10)],
       )
@@ -887,7 +887,7 @@ export class ProductVariantsService {
 
     try {
       // Check if settings already exist
-      const existing = await query<DatabaseProductVariantSettings[]>(
+      const existing = await query<DatabaseProductVariantSettings>(
         'SELECT id FROM product_variant_settings WHERE product_id = ? LIMIT 1',
         [parseInt(settingsData.productId, 10)],
       )
@@ -934,7 +934,7 @@ export class ProductVariantsService {
     updates: Partial<Omit<ProductVariantSettingsInput, 'productId'>>,
   ): Promise<{ success: boolean; settings?: ProductVariantSettings; error?: string }> {
     try {
-      const existingSettings = await query<DatabaseProductVariantSettings[]>(
+      const existingSettings = await query<DatabaseProductVariantSettings>(
         'SELECT * FROM product_variant_settings WHERE product_id = ? LIMIT 1',
         [parseInt(productId, 10)],
       )
@@ -987,7 +987,7 @@ export class ProductVariantsService {
         )
       }
 
-      const updatedSettings = await query<DatabaseProductVariantSettings[]>(
+      const updatedSettings = await query<DatabaseProductVariantSettings>(
         'SELECT * FROM product_variant_settings WHERE product_id = ? LIMIT 1',
         [parseInt(productId, 10)],
       )

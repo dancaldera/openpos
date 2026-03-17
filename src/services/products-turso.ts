@@ -95,7 +95,7 @@ export class ProductService {
 
   async getProducts(): Promise<Product[]> {
     try {
-      const products = await query<DatabaseProduct[]>('SELECT * FROM products ORDER BY name')
+      const products = await query<DatabaseProduct>('SELECT * FROM products ORDER BY name')
 
       return products.map((product) => this.convertDbProduct(product))
     } catch (error) {
@@ -119,12 +119,12 @@ export class ProductService {
       const offset = (page - 1) * limit
 
       // Get total count
-      const countResult = await query<{ count: number }[]>('SELECT COUNT(*) as count FROM products')
+      const countResult = await query<{ count: number }>('SELECT COUNT(*) as count FROM products')
       const totalCount = countResult[0]?.count || 0
       const totalPages = Math.ceil(totalCount / limit)
 
       // Get paginated products
-      const products = await query<DatabaseProduct[]>('SELECT * FROM products ORDER BY name LIMIT ? OFFSET ?', [
+      const products = await query<DatabaseProduct>('SELECT * FROM products ORDER BY name LIMIT ? OFFSET ?', [
         limit,
         offset,
       ])
@@ -145,7 +145,7 @@ export class ProductService {
 
   async getProduct(id: string): Promise<Product | null> {
     try {
-      const products = await query<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [parseInt(id, 10)])
+      const products = await query<DatabaseProduct>('SELECT * FROM products WHERE id = ? LIMIT 1', [parseInt(id, 10)])
 
       if (products.length === 0) {
         return null
@@ -179,7 +179,7 @@ export class ProductService {
 
     try {
       if (productData.barcode) {
-        const existingBarcode = await query<DatabaseProduct[]>('SELECT id FROM products WHERE barcode = ? LIMIT 1', [
+        const existingBarcode = await query<DatabaseProduct>('SELECT id FROM products WHERE barcode = ? LIMIT 1', [
           productData.barcode,
         ])
 
@@ -259,7 +259,7 @@ export class ProductService {
     }
 
     try {
-      const existingProduct = await query<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
+      const existingProduct = await query<DatabaseProduct>('SELECT * FROM products WHERE id = ? LIMIT 1', [
         parseInt(id, 10),
       ])
 
@@ -268,7 +268,7 @@ export class ProductService {
       }
 
       if (updates.barcode) {
-        const existingBarcode = await query<DatabaseProduct[]>(
+        const existingBarcode = await query<DatabaseProduct>(
           'SELECT id FROM products WHERE barcode = ? AND id != ? LIMIT 1',
           [updates.barcode, parseInt(id, 10)],
         )
@@ -338,7 +338,7 @@ export class ProductService {
         await execute(`UPDATE products SET ${updateFields.join(', ')} WHERE id = ?`, updateValues)
       }
 
-      const updatedProduct = await query<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
+      const updatedProduct = await query<DatabaseProduct>('SELECT * FROM products WHERE id = ? LIMIT 1', [
         parseInt(id, 10),
       ])
 
@@ -367,17 +367,17 @@ export class ProductService {
     }
   }
 
-  async searchProducts(query: string): Promise<Product[]> {
+  async searchProducts(searchQuery: string): Promise<Product[]> {
     try {
-      const searchTerm = `%${query.toLowerCase()}%`
-      const products = await query<DatabaseProduct[]>(
+      const searchTerm = `%${searchQuery.toLowerCase()}%`
+      const products = await query<DatabaseProduct>(
         `SELECT * FROM products
          WHERE LOWER(name) LIKE ?
             OR LOWER(description) LIKE ?
             OR LOWER(category) LIKE ?
             OR (barcode IS NOT NULL AND barcode LIKE ?)
          ORDER BY name`,
-        [searchTerm, searchTerm, searchTerm, `%${query}%`],
+        [searchTerm, searchTerm, searchTerm, `%${searchQuery}%`],
       )
 
       return products.map((product) => this.convertDbProduct(product))
@@ -404,7 +404,7 @@ export class ProductService {
       const searchTerm = `%${queryStr.toLowerCase()}%`
 
       // Get total count for search
-      const countResult = await query<{ count: number }[]>(
+      const countResult = await query<{ count: number }>(
         `SELECT COUNT(*) as count FROM products
          WHERE LOWER(name) LIKE ?
             OR LOWER(description) LIKE ?
@@ -416,7 +416,7 @@ export class ProductService {
       const totalPages = Math.ceil(totalCount / limit)
 
       // Get paginated search results
-      const products = await query<DatabaseProduct[]>(
+      const products = await query<DatabaseProduct>(
         `SELECT * FROM products
          WHERE LOWER(name) LIKE ?
             OR LOWER(description) LIKE ?
@@ -442,7 +442,7 @@ export class ProductService {
 
   async getCategories(): Promise<string[]> {
     try {
-      const categories = await query<{ category: string }[]>('SELECT DISTINCT category FROM products ORDER BY category')
+      const categories = await query<{ category: string }>('SELECT DISTINCT category FROM products ORDER BY category')
 
       return categories.map((c) => c.category)
     } catch (error) {
@@ -454,7 +454,7 @@ export class ProductService {
 
   async getProductsByCategory(category: string): Promise<Product[]> {
     try {
-      const products = await query<DatabaseProduct[]>('SELECT * FROM products WHERE category = ? ORDER BY name', [
+      const products = await query<DatabaseProduct>('SELECT * FROM products WHERE category = ? ORDER BY name', [
         category,
       ])
 
@@ -467,7 +467,7 @@ export class ProductService {
 
   async getLowStockProducts(threshold: number = 10): Promise<Product[]> {
     try {
-      const products = await query<DatabaseProduct[]>(
+      const products = await query<DatabaseProduct>(
         'SELECT * FROM products WHERE stock <= ? AND is_active = 1 ORDER BY stock ASC, name',
         [threshold],
       )
@@ -526,7 +526,7 @@ export class ProductService {
   ): Promise<{ success: boolean; product?: Product; error?: string }> {
     try {
       // Check if product exists
-      const product = await query<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
+      const product = await query<DatabaseProduct>('SELECT * FROM products WHERE id = ? LIMIT 1', [
         parseInt(productId, 10),
       ])
 
@@ -565,7 +565,7 @@ export class ProductService {
       )
 
       // Fetch updated product
-      const updatedProduct = await query<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
+      const updatedProduct = await query<DatabaseProduct>('SELECT * FROM products WHERE id = ? LIMIT 1', [
         parseInt(productId, 10),
       ])
 
@@ -586,7 +586,7 @@ export class ProductService {
   async convertToSimple(productId: string): Promise<{ success: boolean; product?: Product; error?: string }> {
     try {
       // Check if product exists
-      const product = await query<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
+      const product = await query<DatabaseProduct>('SELECT * FROM products WHERE id = ? LIMIT 1', [
         parseInt(productId, 10),
       ])
 
@@ -602,7 +602,7 @@ export class ProductService {
       }
 
       // Check if product has variants
-      const variants = await query<{ count: number }[]>(
+      const variants = await query<{ count: number }>(
         'SELECT COUNT(*) as count FROM product_variants WHERE parent_product_id = ?',
         [parseInt(productId, 10)],
       )
@@ -625,7 +625,7 @@ export class ProductService {
       ])
 
       // Fetch updated product
-      const updatedProduct = await query<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
+      const updatedProduct = await query<DatabaseProduct>('SELECT * FROM products WHERE id = ? LIMIT 1', [
         parseInt(productId, 10),
       ])
 
@@ -645,7 +645,7 @@ export class ProductService {
   async getDefaultVariant(productId: string): Promise<ProductVariant | null> {
     try {
       // First check if product has a default_variant_id set
-      const product = await query<DatabaseProduct[]>('SELECT default_variant_id FROM products WHERE id = ? LIMIT 1', [
+      const product = await query<DatabaseProduct>('SELECT default_variant_id FROM products WHERE id = ? LIMIT 1', [
         parseInt(productId, 10),
       ])
 
@@ -675,7 +675,7 @@ export class ProductService {
   async setDefaultVariant(productId: string, variantId: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Verify product exists
-      const product = await query<DatabaseProduct[]>('SELECT id FROM products WHERE id = ? LIMIT 1', [
+      const product = await query<DatabaseProduct>('SELECT id FROM products WHERE id = ? LIMIT 1', [
         parseInt(productId, 10),
       ])
 
@@ -684,7 +684,7 @@ export class ProductService {
       }
 
       // Verify variant exists and belongs to this product
-      const variant = await query<{ id: number; parent_product_id: number }[]>(
+      const variant = await query<{ id: number; parent_product_id: number }>(
         'SELECT id, parent_product_id FROM product_variants WHERE id = ? LIMIT 1',
         [parseInt(variantId, 10)],
       )
