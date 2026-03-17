@@ -1,3 +1,4 @@
+import { getApiUrl } from '../lib/api-config'
 import { execute, query } from '../lib/db-adapter'
 import { isTauri } from '../lib/platform'
 
@@ -95,7 +96,7 @@ export class CompanySettingsService {
     if (!isTauri && !localStorage.getItem('auth_token')) {
       // Web mode, pre-login: fetch from public API endpoint (only safe fields)
       try {
-        const res = await fetch('/api/settings/public')
+        const res = await fetch(getApiUrl('/api/settings/public'))
         if (!res.ok) throw new Error('Failed to fetch public settings')
         const data = await res.json()
 

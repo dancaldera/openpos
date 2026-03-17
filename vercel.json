@@ -1,6 +1,5 @@
 {
   "buildCommand": "npm run build:web",
-  "devCommand": "npm run dev:web",
   "outputDirectory": "dist-web",
   "rewrites": [
     {
