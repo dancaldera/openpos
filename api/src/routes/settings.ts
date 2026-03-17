@@ -30,6 +30,25 @@ interface DatabaseCompanySettings {
 
 export const settingsRouter = new Hono()
 
+// ---------------------------------------------------------------------------
+// GET /api/settings/public  (public - for pre-login UI initialization)
+// ---------------------------------------------------------------------------
+settingsRouter.get('/public', async (c) => {
+  // Public endpoint - no auth required
+  // Returns only display-safe fields: name, app_name, language, currency_symbol, logo_url
+  const rows = await query<DatabaseCompanySettings>('SELECT name, app_name, language, currency_symbol, logo_url FROM company_settings LIMIT 1')
+  if (rows.length === 0) return c.json({ error: 'Settings not found' }, 404)
+
+  const s = rows[0]
+  return c.json({
+    name: s.name,
+    appName: s.app_name,
+    language: s.language,
+    currencySymbol: s.currency_symbol,
+    logoUrl: s.logo_url,
+  })
+})
+
 settingsRouter.use('/*', authMiddleware)
 
 // GET /api/settings

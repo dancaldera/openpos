@@ -1,4 +1,5 @@
 import { execute, query } from '../lib/db-adapter'
+import { isTauri } from '../lib/platform'
 
 export interface CompanySettings {
   id: string
@@ -91,6 +92,39 @@ export class CompanySettingsService {
   }
 
   async getSettings(): Promise<CompanySettings> {
+    if (!isTauri && !localStorage.getItem('auth_token')) {
+      // Web mode, pre-login: fetch from public API endpoint (only safe fields)
+      try {
+        const res = await fetch('/api/settings/public')
+        if (!res.ok) throw new Error('Failed to fetch public settings')
+        const data = await res.json()
+
+        // Return partial settings with defaults for missing fields
+        return {
+          id: '1', // Default ID
+          name: data.name || 'My Store',
+          appName: data.appName || 'OpenPOS',
+          description: data.description || '', // Not in public response
+          taxEnabled: false, // Not in public response
+          taxPercentage: 0, // Not in public response
+          currencySymbol: data.currencySymbol || '$',
+          language: data.language || 'en',
+          logoUrl: data.logoUrl || undefined,
+          address: undefined, // Not in public response
+          phone: undefined, // Not in public response
+          email: undefined, // Not in public response
+          website: undefined, // Not in public response
+          receiptFooter: undefined, // Not in public response
+          createdAt: '', // Not needed
+          updatedAt: '', // Not needed
+        }
+      } catch (error) {
+        console.error('Get company settings error:', error)
+        throw new Error('Failed to fetch company settings')
+      }
+    }
+
+    // Desktop mode or post-login web mode: use normal database access
     try {
       const settings = await query<DatabaseCompanySettings>('SELECT * FROM company_settings WHERE id = 1 LIMIT 1')
 
