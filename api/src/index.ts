@@ -8,6 +8,8 @@
 
 import { Hono } from 'hono'
 import { corsMiddleware } from './middleware/cors.js'
+import { authMiddleware } from './middleware/auth.js'
+import { query, execute } from './lib/turso.js'
 import { authRouter } from './routes/auth.js'
 import { productsRouter } from './routes/products.js'
 import { ordersRouter } from './routes/orders.js'
@@ -23,6 +25,39 @@ app.use('/*', corsMiddleware)
 
 // Health check (unauthenticated)
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
+
+// Direct SQL endpoints (protected by JWT)
+app.post('/query', authMiddleware, async (c) => {
+  const { sql, params }: { sql: string; params: unknown[] } = await c.req.json()
+
+  if (!sql || typeof sql !== 'string') {
+    return c.json({ error: 'sql parameter is required and must be a string' }, 400)
+  }
+
+  try {
+    const rows = await query(sql, params || [])
+    return c.json({ rows })
+  } catch (error) {
+    console.error('[API] Query error:', error)
+    return c.json({ error: error instanceof Error ? error.message : 'Query failed' }, 500)
+  }
+})
+
+app.post('/execute', authMiddleware, async (c) => {
+  const { sql, params }: { sql: string; params: unknown[] } = await c.req.json()
+
+  if (!sql || typeof sql !== 'string') {
+    return c.json({ error: 'sql parameter is required and must be a string' }, 400)
+  }
+
+  try {
+    const result = await execute(sql, params || [])
+    return c.json(result)
+  } catch (error) {
+    console.error('[API] Execute error:', error)
+    return c.json({ error: error instanceof Error ? error.message : 'Execute failed' }, 500)
+  }
+})
 
 // Route groups
 app.route('/auth', authRouter)

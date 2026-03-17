@@ -1,5 +1,6 @@
 import type { Connection as TursoClient } from '@tursodatabase/serverless'
 import { type DbClient, db, pendingCount } from './db'
+import { isTauri } from './platform'
 
 // Tauri database instance type (mirrors the interface in db.ts without a static import)
 type TauriDatabaseInstance = Exclude<DbClient, TursoClient>
@@ -107,9 +108,16 @@ async function enqueueWrite(info: WriteInfo, sql: string, params: unknown[]): Pr
 
 /**
  * Execute a SELECT query and return results
- * Normalizes the API between Turso and Tauri SQL
+ * Normalizes the API between Turso and Tauri SQL (desktop) or API calls (web)
  */
 export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
+  if (!isTauri) {
+    // Web mode: delegate to API adapter
+    const { query: apiQuery } = await import('./api-adapter')
+    return apiQuery<T>(sql, params)
+  }
+
+  // Desktop mode: use Turso/SQLite directly
   const { client, isRemote } = await db.getClient()
 
   if (isRemote) {
@@ -136,6 +144,13 @@ export async function execute(
   sql: string,
   params: unknown[] = [],
 ): Promise<{ lastInsertId: number; rowsAffected: number }> {
+  if (!isTauri) {
+    // Web mode: delegate to API adapter
+    const { execute: apiExecute } = await import('./api-adapter')
+    return apiExecute(sql, params)
+  }
+
+  // Desktop mode: use Turso/SQLite directly
   const { client, isRemote } = await db.getClient()
 
   if (isRemote) {
@@ -171,6 +186,16 @@ export async function execute(
  * Useful for batch operations
  */
 export async function transaction(statements: Array<{ sql: string; params?: unknown[] }>): Promise<void> {
+  if (!isTauri) {
+    // Web mode: delegate to API adapter (transaction handled server-side)
+    const { execute: apiExecute } = await import('./api-adapter')
+    for (const { sql, params = [] } of statements) {
+      await apiExecute(sql, params)
+    }
+    return
+  }
+
+  // Desktop mode: use Turso/SQLite directly
   const { client, isRemote } = await db.getClient()
 
   if (isRemote) {
