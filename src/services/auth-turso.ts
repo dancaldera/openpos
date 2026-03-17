@@ -109,6 +109,34 @@ export class AuthService {
 
   async signIn(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
     try {
+      if (!isTauri) {
+        // Web mode: authenticate via API server
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.toLowerCase(), password }),
+        })
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ error: 'Login failed' }))
+          return { success: false, error: error.error || 'Login failed' }
+        }
+
+        const data = (await res.json()) as { user: User; token: string }
+
+        // Store JWT token for subsequent API calls
+        localStorage.setItem('auth_token', data.token)
+
+        this.currentUser = data.user
+        localStorage.setItem('pos_user', JSON.stringify(data.user))
+
+        return {
+          success: true,
+          user: data.user,
+        }
+      }
+
+      // Desktop mode: direct database access
       const users = await query<DatabaseUser>('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1', [
         email.toLowerCase(),
       ])
@@ -164,6 +192,7 @@ export class AuthService {
   signOut(): void {
     this.currentUser = null
     localStorage.removeItem('pos_user')
+    localStorage.removeItem('auth_token') // Clear JWT token
   }
 
   getCurrentUser(): User | null {
