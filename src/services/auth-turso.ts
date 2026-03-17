@@ -249,6 +249,29 @@ export class AuthService {
   async getAllUsersForLogin(): Promise<User[]> {
     // Public method for login page - no authentication required
     // Only return active users (not deleted)
+    if (!isTauri) {
+      // Web mode: fetch from public API endpoint
+      try {
+        const res = await fetch('/api/auth/users')
+        if (!res.ok) throw new Error('Failed to fetch users')
+        const data = (await res.json()) as {
+          users: Array<{ id: string; email: string; name: string; role: User['role'] }>
+        }
+        return data.users.map((u) => ({
+          id: u.id,
+          email: u.email,
+          name: u.name,
+          role: u.role,
+          permissions: DEFAULT_PERMISSIONS[u.role], // Derive permissions from role
+          createdAt: '', // Not needed for login screen
+        }))
+      } catch (error) {
+        console.error('[AuthService] Failed to fetch users from API:', error)
+        return []
+      }
+    }
+
+    // Desktop mode: direct database access
     try {
       console.log('[AuthService] Loading database for user list...')
       const users = await query<DatabaseUser>('SELECT * FROM users WHERE deleted_at IS NULL ORDER BY name ASC')

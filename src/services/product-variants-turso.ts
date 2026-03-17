@@ -476,10 +476,9 @@ export class ProductVariantsService {
 
   async getVariantByBarcode(barcode: string): Promise<ProductVariant | null> {
     try {
-      const variants = await query<DatabaseProductVariant>(
-        'SELECT * FROM product_variants WHERE barcode = ? LIMIT 1',
-        [barcode],
-      )
+      const variants = await query<DatabaseProductVariant>('SELECT * FROM product_variants WHERE barcode = ? LIMIT 1', [
+        barcode,
+      ])
 
       if (variants.length === 0) {
         return null
