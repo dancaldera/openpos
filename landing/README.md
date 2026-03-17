@@ -13,4 +13,4 @@ Landing page for [openpos.xyz](https://openpos.xyz) - redirects to [demo.openpos
 
 ## Deployment
 
-Built for Vercel static deployment. Just connect the repo and deploy.
+Built for Vercel static deployment. Just connect the repo and deploy
