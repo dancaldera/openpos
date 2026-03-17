@@ -18,16 +18,16 @@ import { usersRouter } from './routes/users.js'
 import { analyticsRouter } from './routes/analytics.js'
 import { settingsRouter } from './routes/settings.js'
 
-const app = new Hono().basePath('/api')
+const app = new Hono()
 
 // Global middleware
 app.use('/*', corsMiddleware)
 
 // Health check (unauthenticated)
-app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
+app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
 // Direct SQL endpoints (protected by JWT)
-app.post('/query', authMiddleware, async (c) => {
+app.post('/api/query', authMiddleware, async (c) => {
   const { sql, params }: { sql: string; params: unknown[] } = await c.req.json()
 
   if (!sql || typeof sql !== 'string') {
@@ -43,7 +43,7 @@ app.post('/query', authMiddleware, async (c) => {
   }
 })
 
-app.post('/execute', authMiddleware, async (c) => {
+app.post('/api/execute', authMiddleware, async (c) => {
   const { sql, params }: { sql: string; params: unknown[] } = await c.req.json()
 
   if (!sql || typeof sql !== 'string') {
@@ -60,13 +60,13 @@ app.post('/execute', authMiddleware, async (c) => {
 })
 
 // Route groups
-app.route('/auth', authRouter)
-app.route('/products', productsRouter)
-app.route('/orders', ordersRouter)
-app.route('/customers', customersRouter)
-app.route('/users', usersRouter)
-app.route('/analytics', analyticsRouter)
-app.route('/settings', settingsRouter)
+app.route('/api/auth', authRouter)
+app.route('/api/products', productsRouter)
+app.route('/api/orders', ordersRouter)
+app.route('/api/customers', customersRouter)
+app.route('/api/users', usersRouter)
+app.route('/api/analytics', analyticsRouter)
+app.route('/api/settings', settingsRouter)
 
 // 404 catch-all
 app.notFound((c) => c.json({ error: `Route ${c.req.url} not found` }, 404))
