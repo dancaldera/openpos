@@ -26,11 +26,20 @@ export function getTursoClient(): Connection {
   return _client
 }
 
-/** Run a SELECT query and return typed rows. */
+/** Run a SELECT query and return typed rows as objects with column names. */
 export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
   const client = getTursoClient()
   const result = await client.execute(sql, params)
-  return result.rows as T[]
+  
+  // Convert array rows to objects with column names
+  const columns = result.columns
+  return result.rows.map((row: unknown[]) => {
+    const obj: Record<string, unknown> = {}
+    columns.forEach((col: string, i: number) => {
+      obj[col] = row[i]
+    })
+    return obj as T
+  })
 }
 
 /** Run an INSERT/UPDATE/DELETE and return metadata. */
