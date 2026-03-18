@@ -19,9 +19,11 @@
   "dependencies": {
     "@preact/signals": "^2.5.1",
     "@tailwindcss/vite": "^4.1.18",
-    "@tauri-apps/api": "^2.9.0",
+    "@tauri-apps/api": "2.10",
     "@tauri-apps/plugin-opener": "^2.5.3",
+    "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-sql": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.10.0",
     "@tursodatabase/serverless": "^0.2.4",
     "bcryptjs": "^3.0.3",
     "preact": "^10.28.1",
