@@ -6,6 +6,7 @@ on:
       - 'v*'
 
 env:
+  APP_VERSION: 0.2.5
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -47,8 +48,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: ${{ github.ref_name }} - Linux Release
-          releaseBody: 'See CHANGELOG.md for details.'
+          releaseName: OpenPOS v${{ env.APP_VERSION }} - Linux Release
+          releaseBody: 'OpenPOS v${{ env.APP_VERSION }}. See CHANGELOG.md for details.'
           releaseDraft: false
           prerelease: false
           args: --target x86_64-unknown-linux-gnu
