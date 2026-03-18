@@ -1,6 +1,6 @@
 [package]
 name = "openpos"
-version = "0.1.0"
+version = "0.2.0"
 description = "OpenPOS - Modern Point of Sale System"
 authors = ["Daniel Caldera"]
 edition = "2021"
