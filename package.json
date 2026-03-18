@@ -1,7 +1,7 @@
 {
   "name": "dan-pos",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,8 @@
     "format": "biome format src --write",
     "check": "biome check src --write",
     "db:migrate": "bun run scripts/migrate-turso.ts",
-    "db:create-admin": "bun run scripts/create-admin.ts"
+    "db:create-admin": "bun run scripts/create-admin.ts",
+    "version:bump": "bun run scripts/bump-version.ts"
   },
   "dependencies": {
     "@preact/signals": "^2.5.1",
