@@ -78,7 +78,7 @@ chmod +x /usr/local/bin/openpos
 mkdir -p ~/.config/com.openpos.app
 ```
 
-Then create `~/.config/com.openpos.app/config.json`:
+Then create the runtime config file at `~/.config/com.openpos.app/config.json`:
 
 ```json
 {
@@ -87,7 +87,7 @@ Then create `~/.config/com.openpos.app/config.json`:
 }
 ```
 
-`src/lib/db.ts` reads build-time env vars first and falls back to this file when they are not set.
+OpenPOS reads build-time env vars first and then falls back to `~/.config/com.openpos.app/config.json`.
 
 ## Available Scripts
 
