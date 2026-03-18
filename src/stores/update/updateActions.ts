@@ -1,5 +1,3 @@
-import { relaunch } from '@tauri-apps/plugin-process'
-import { check } from '@tauri-apps/plugin-updater'
 import { isTauri } from '../../lib/platform'
 import {
   downloadError,
@@ -11,6 +9,51 @@ import {
   updateReadyToInstall,
   updateVersion,
 } from './updateStore'
+
+// ---------------------------------------------------------------------------
+// Tauri updater plugin types — loaded dynamically at runtime (Tauri only).
+// We never statically import @tauri-apps/plugin-updater so the web bundle
+// stays free of any Tauri-specific code.
+// ---------------------------------------------------------------------------
+
+/** Tauri Update type interface */
+interface TauriUpdate {
+  version: string
+  downloadAndInstall: (
+    onEvent?: (progress: TauriDownloadEvent) => void,
+    options?: { headers?: HeadersInit; timeout?: number }
+  ) => Promise<void>
+}
+
+/** Tauri download event type */
+type TauriDownloadEvent =
+  | {
+      event: 'Started'
+      data: {
+        contentLength?: number
+      }
+    }
+  | {
+      event: 'Progress'
+      data: {
+        chunkLength: number
+      }
+    }
+  | {
+      event: 'Finished'
+    }
+
+/** Dynamically load the Tauri updater check function. Only call this inside Tauri. */
+async function checkForUpdateTauri(): Promise<TauriUpdate | null> {
+  const mod = await import('@tauri-apps/plugin-updater')
+  return mod.check()
+}
+
+/** Dynamically load the Tauri process relaunch function. Only call this inside Tauri. */
+async function relaunchTauri(): Promise<void> {
+  const mod = await import('@tauri-apps/plugin-process')
+  return mod.relaunch()
+}
 
 /**
  * Update actions for the auto-update system.
@@ -32,7 +75,7 @@ export const updateActions = {
     downloadError.value = null
 
     try {
-      const update = await check()
+      const update = await checkForUpdateTauri()
 
       lastCheckTime.value = Date.now()
 
@@ -73,7 +116,7 @@ export const updateActions = {
     updateDownloadProgress.value = 0
 
     try {
-      const update = await check()
+      const update = await checkForUpdateTauri()
 
       if (!update) {
         downloadError.value = 'No update available'
@@ -126,7 +169,7 @@ export const updateActions = {
 
     try {
       console.log('[UpdateActions] Restarting app to apply update...')
-      await relaunch()
+      await relaunchTauri()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to restart app'
       downloadError.value = errorMessage

@@ -88,7 +88,9 @@ export function UpdateNotification() {
           {/* Header */}
           <div class="px-4 py-3 border-b border-white/10">
             <p class="font-semibold text-white">{t('update.title')}</p>
-            <p class="text-gray-400 mt-0.5 text-xs">{t('update.newVersionAvailable', { version: updateVersion ?? 'unknown' })}</p>
+            <p class="text-gray-400 mt-0.5 text-xs">
+              {t('update.newVersionAvailable', { version: updateVersion ?? 'unknown' })}
+            </p>
           </div>
 
           {/* Content */}
