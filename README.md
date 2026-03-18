@@ -18,6 +18,7 @@ A modern cross-platform POS desktop application with real-time analytics, invent
 - Modern glass morphism UI with Tailwind CSS v4
 - Fully responsive across all screen sizes
 - Multi-language support (8 languages)
+- **Auto-update system** with signed updates and background checking
 
 ## Tech Stack
 
@@ -94,6 +95,43 @@ OpenPOS/
 ├── TRANSLATIONS.md              # i18n implementation guide
 └── README.md                    # This file
 ```
+
+## Auto-Update System
+
+OpenPOS includes an integrated auto-update system that automatically checks for new versions and allows one-click updates.
+
+**Features:**
+- Automatic background checking (every 24 hours)
+- Non-intrusive badge notification when updates are available
+- Download progress tracking with visual feedback
+- One-click install and restart
+
+**How It Works:**
+1. The app checks for updates on startup (after 30 seconds)
+2. When an update is found, a blue badge appears in the bottom-left corner
+3. Click the badge to open the update dialog
+4. Download the update and restart to apply
+
+**For Developers - Creating a Release:**
+
+```bash
+# 1. Bump version in src-tauri/tauri.conf.json
+# 2. Build the application
+bun tauri build
+
+# 3. Create the release JSON file (darwin-aarch64.json) with signature
+# 4. Create GitHub release
+gh release create v0.X.X \
+  src-tauri/target/release/bundle/macos/OpenPOS.app.tar.gz \
+  src-tauri/target/release/bundle/macos/darwin-aarch64.json \
+  src-tauri/target/release/bundle/dmg/OpenPOS_0.X.X_aarch64.dmg \
+  --title "v0.X.X - Your Title" \
+  --notes "Release notes here"
+```
+
+**Required GitHub Secrets:**
+- `TAURI_SIGNING_PRIVATE_KEY` - Private signing key content
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` - Key password (if set)
 
 ## Internationalization
 
