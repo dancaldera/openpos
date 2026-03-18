@@ -15,6 +15,7 @@
 
 import { connect, type Connection as TursoClient } from '@tursodatabase/serverless'
 import { connectionStatus, pendingCount } from './db'
+import { loadDesktopDbConnectionConfig } from './desktop-db-config'
 import { isTauri } from './platform'
 
 // ---------------------------------------------------------------------------
@@ -59,9 +60,8 @@ async function getLocalClient(): Promise<LocalDb> {
 }
 
 /** Get a Turso client. Throws if Turso is not configured. */
-function getTursoClient(): TursoClient {
-  const url = import.meta.env.VITE_TURSO_DATABASE_URL
-  const token = import.meta.env.VITE_TURSO_AUTH_TOKEN
+async function getTursoClient(): Promise<TursoClient> {
+  const { url, authToken: token } = await loadDesktopDbConnectionConfig()
   if (!url || !token) throw new Error('[sync] Turso not configured')
   return connect({ url, authToken: token })
 }
@@ -90,7 +90,7 @@ async function refreshPendingCount(local: LocalDb): Promise<void> {
  */
 export async function drainQueue(): Promise<void> {
   const local = await getLocalClient()
-  const turso = getTursoClient()
+  const turso = await getTursoClient()
 
   const rows = await local.select<PendingSyncRow[]>(
     `SELECT id, operation, table_name, record_id, payload, sql_statement, created_at
@@ -285,7 +285,7 @@ const TABLES_WITH_UPDATED_AT = [
  */
 export async function pullRemoteChanges(): Promise<void> {
   const local = await getLocalClient()
-  const turso = getTursoClient()
+  const turso = await getTursoClient()
 
   console.log('[sync] pullRemoteChanges: pulling newer rows from Turso')
 

@@ -9,13 +9,29 @@ import { connect, type Connection } from '@tursodatabase/serverless'
 
 let _client: Connection | null = null
 
-export function getTursoClient(): Connection {
-  if (_client) return _client
+export interface TursoConfig {
+  url?: string
+  authToken?: string
+  configured: boolean
+}
 
+export function getTursoConfig(): TursoConfig {
   const url = process.env.TURSO_DATABASE_URL
   const authToken = process.env.TURSO_AUTH_TOKEN
 
-  if (!url || !authToken) {
+  return {
+    url: url || undefined,
+    authToken: authToken || undefined,
+    configured: Boolean(url && authToken),
+  }
+}
+
+export function getTursoClient(): Connection {
+  if (_client) return _client
+
+  const { url, authToken, configured } = getTursoConfig()
+
+  if (!configured || !url || !authToken) {
     throw new Error(
       'Missing TURSO_DATABASE_URL or TURSO_AUTH_TOKEN environment variables. ' +
         'Set these in your Vercel project settings or local .env file.',
@@ -52,5 +68,17 @@ export async function execute(
   return {
     lastInsertId: result.lastInsertRowid ?? 0,
     rowsAffected: result.rowsAffected ?? 0,
+  }
+}
+
+export async function probeTursoConnection(): Promise<boolean> {
+  const { configured } = getTursoConfig()
+  if (!configured) return false
+
+  try {
+    await getTursoClient().execute('SELECT 1')
+    return true
+  } catch {
+    return false
   }
 }
