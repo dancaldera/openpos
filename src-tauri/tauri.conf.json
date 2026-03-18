@@ -41,7 +41,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkxMUEzNTkyRTE0QTk5MTIKUldRU21VcmhralVha1NydHdtc2RrOE9WaHdyOXpMWXV4dHJxZExEd1JFanEvQU1wbkRmWWZvWXIK",
       "endpoints": [
-        "https://github.com/dancaldera/openpos/releases/latest/download/{{target}}-{{arch}}.json"
+        "https://github.com/dancaldera/OpenPOS/releases/latest/download/{{target}}-{{arch}}.json"
       ]
     }
   }
