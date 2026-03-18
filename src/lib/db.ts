@@ -1,6 +1,7 @@
 import { signal } from '@preact/signals'
 import { connect, type Connection as TursoClient } from '@tursodatabase/serverless'
 import { isTauri } from './platform'
+import { loadRuntimeConfig } from './runtime-config'
 
 // ---------------------------------------------------------------------------
 // Tauri SQL plugin types — loaded dynamically at runtime (Tauri only).
@@ -66,10 +67,22 @@ class DbManager {
    * Get the appropriate database client (Turso or local SQLite)
    * Automatically falls back to local SQLite when Turso is unavailable.
    * On the web platform, always uses Turso — no local SQLite fallback.
+   *
+   * Priority for Turso credentials:
+   * 1. Build-time env vars (VITE_TURSO_DATABASE_URL, VITE_TURSO_AUTH_TOKEN)
+   * 2. Runtime config file (~/.config/openpos/config.json)
    */
   async getClient(): Promise<DbClientResult> {
-    const tursoUrl = import.meta.env.VITE_TURSO_DATABASE_URL
-    const tursoToken = import.meta.env.VITE_TURSO_AUTH_TOKEN
+    // Priority: build-time env > runtime config file
+    let tursoUrl = import.meta.env.VITE_TURSO_DATABASE_URL
+    let tursoToken = import.meta.env.VITE_TURSO_AUTH_TOKEN
+
+    // Try runtime config if build-time env not set
+    if ((!tursoUrl || !tursoToken) && isTauri) {
+      const config = await loadRuntimeConfig()
+      tursoUrl = tursoUrl || config?.tursoDatabaseUrl
+      tursoToken = tursoToken || config?.tursoAuthToken
+    }
 
     // If Turso is configured, try to use it
     if (tursoUrl && tursoToken) {
@@ -164,15 +177,22 @@ class DbManager {
    * No-op if Turso is not configured or a check is already running.
    */
   startHealthCheck(intervalMs = 15_000): void {
-    const tursoUrl = import.meta.env.VITE_TURSO_DATABASE_URL
-    const tursoToken = import.meta.env.VITE_TURSO_AUTH_TOKEN
+    // Use cached credentials from getClient() or load them
+    // Note: We don't await here since this is a sync method that sets up an interval
+    const checkHealth = async (): Promise<void> => {
+      let tursoUrl = import.meta.env.VITE_TURSO_DATABASE_URL
+      let tursoToken = import.meta.env.VITE_TURSO_AUTH_TOKEN
 
-    // Nothing to check if Turso is not configured
-    if (!tursoUrl || !tursoToken) return
-    // Already running
-    if (this.healthCheckTimer !== null) return
+      // Try runtime config if build-time env not set
+      if ((!tursoUrl || !tursoToken) && isTauri) {
+        const config = await loadRuntimeConfig()
+        tursoUrl = tursoUrl || config?.tursoDatabaseUrl
+        tursoToken = tursoToken || config?.tursoAuthToken
+      }
 
-    this.healthCheckTimer = setInterval(async () => {
+      // Nothing to check if Turso is not configured
+      if (!tursoUrl || !tursoToken) return
+
       const wasOffline = connectionStatus.value === 'local' || connectionStatus.value === 'error'
       connectionStatus.value = 'syncing'
       try {
@@ -201,6 +221,16 @@ class DbManager {
         lastConnectionAttempt.value = Date.now()
         connectionStatus.value = isTauri ? 'local' : 'error'
       }
+    }
+
+    // Initial check to determine if we should start the interval
+    checkHealth().catch((err) => console.error('[DbManager] Initial health check failed:', err))
+
+    // Already running
+    if (this.healthCheckTimer !== null) return
+
+    this.healthCheckTimer = setInterval(() => {
+      checkHealth().catch((err) => console.error('[DbManager] Health check failed:', err))
     }, intervalMs)
   }
 

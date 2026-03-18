@@ -14,14 +14,14 @@ const FILES_TO_UPDATE = [
     replacement: (version: string) => `"version": "${version}"`,
   },
   {
+    path: 'src-tauri/tauri.conf.json',
+    pattern: /"version":\s*"[\d.]+"/,
+    replacement: (version: string) => `"version": "${version}"`,
+  },
+  {
     path: 'src-tauri/Cargo.toml',
     pattern: /^version\s*=\s*"[\d.]+"/m,
     replacement: (version: string) => `version = "${version}"`,
-  },
-  {
-    path: 'src/pages/SignIn.tsx',
-    pattern: /v[\d.]+\s*•\s*©/,
-    replacement: (version: string) => `v${version} • ©`,
   },
 ]
 
