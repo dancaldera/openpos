@@ -2,7 +2,7 @@
  * runtime-config.ts — Load Turso credentials from a user config file
  *
  * Allows users to configure Turso credentials at runtime via a config file
- * (~/.config/openpos/config.json) after installing the pre-built AppImage.
+ * in the app-specific config directory after installing the pre-built AppImage.
  * This eliminates the need to rebuild the app for each deployment.
  *
  * Priority: build-time env vars > runtime config file
@@ -19,16 +19,16 @@ let cachedConfig: RuntimeConfig | null | undefined
 
 /**
  * Get the config file path for the current platform.
- * Returns ~/.config/openpos/config.json on all platforms.
+ * Returns the app-specific config path ending in config.json.
  */
 async function getConfigPath(): Promise<string | null> {
   if (!isTauri) return null
 
   try {
     // Dynamic import — only loaded in Tauri context
-    const { homeDir, join } = await import('@tauri-apps/api/path')
-    const home = await homeDir()
-    return await join(home, '.config', 'openpos', 'config.json')
+    const { appConfigDir, join } = await import('@tauri-apps/api/path')
+    const configDir = await appConfigDir()
+    return await join(configDir, 'config.json')
   } catch (error) {
     console.warn('[RuntimeConfig] Failed to get config path:', error)
     return null
@@ -54,15 +54,24 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig | null> {
 
   const configPath = await getConfigPath()
   if (!configPath) {
+    console.warn('[RuntimeConfig] AppConfig path is unavailable')
     cachedConfig = null
     return null
   }
 
   try {
     // Dynamic import — only loaded in Tauri context
-    const { readTextFile } = await import('@tauri-apps/plugin-fs')
-    const content = await readTextFile(configPath)
-    const config = JSON.parse(content) as RuntimeConfig
+    const { BaseDirectory, readTextFile } = await import('@tauri-apps/plugin-fs')
+    const content = await readTextFile('config.json', { baseDir: BaseDirectory.AppConfig })
+
+    let config: RuntimeConfig
+    try {
+      config = JSON.parse(content) as RuntimeConfig
+    } catch (error) {
+      console.warn('[RuntimeConfig] Config file contains invalid JSON:', configPath, error)
+      cachedConfig = null
+      return null
+    }
 
     // Validate the config has at least one Turso field
     if (config.tursoDatabaseUrl || config.tursoAuthToken) {
@@ -71,14 +80,22 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig | null> {
       return config
     }
 
-    console.warn('[RuntimeConfig] Config file missing Turso fields')
+    console.warn('[RuntimeConfig] Config file is missing Turso fields:', configPath)
     cachedConfig = null
     return null
   } catch (error) {
-    // File doesn't exist or can't be parsed — this is expected on fresh installs
+    // File doesn't exist or can't be read — missing files are expected on fresh installs
     const errorMessage = error instanceof Error ? error.message : String(error)
-    if (!errorMessage.includes('not found') && !errorMessage.includes('No such file')) {
-      console.warn('[RuntimeConfig] Failed to load config:', error)
+    if (errorMessage.includes('not found') || errorMessage.includes('No such file')) {
+      console.warn('[RuntimeConfig] Config file not found:', configPath)
+    } else if (
+      errorMessage.includes('denied') ||
+      errorMessage.includes('forbidden') ||
+      errorMessage.includes('scope')
+    ) {
+      console.warn('[RuntimeConfig] Config file cannot be read due to filesystem permissions:', configPath, error)
+    } else {
+      console.warn('[RuntimeConfig] Failed to read config file:', configPath, error)
     }
     cachedConfig = null
     return null
