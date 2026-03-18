@@ -185,7 +185,7 @@ export default function SignIn() {
 
           <div class="mt-8 pt-6 border-t border-gray-200 text-center">
             <span class="text-xs text-gray-500">
-              v0.2.1 • © 2025 OSS, by{' '}
+              v0.2.2 • © 2025 OSS, by{' '}
               <a
                 href="https://github.com/dancaldera"
                 target="_blank"
