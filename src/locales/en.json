@@ -711,5 +711,18 @@
     "personalCare": "Personal Care",
     "electronics": "Electronics",
     "other": "Other"
+  },
+  "update": {
+    "title": "Update Available",
+    "available": "Update",
+    "newVersionAvailable": "Version {{version}} is available",
+    "downloading": "Downloading...",
+    "downloadNow": "Download Now",
+    "installAndRestart": "Install & Restart",
+    "readyToInstall": "Ready to install! Click to restart.",
+    "remindLater": "Remind Me Later",
+    "upToDate": "You're up to date",
+    "checking": "Checking for updates...",
+    "checkFailed": "Failed to check for updates"
   }
 }

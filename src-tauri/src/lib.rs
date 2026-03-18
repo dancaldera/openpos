@@ -128,6 +128,15 @@ pub fn run() {
                 .add_migrations("sqlite:postpos.db", migrations)
                 .build()
         )
+        .setup(|app| {
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_process::init())?;
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![greet, print_thermal_receipt, hash_password, verify_password])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
