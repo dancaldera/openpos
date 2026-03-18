@@ -2,6 +2,7 @@ import { useSignal } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
 import { connectionStatus, lastConnectionAttempt, pendingCount } from '../../lib/db'
 import { startHealthCheck, stopHealthCheck } from '../../lib/db-adapter'
+import { getDbStatusSnapshot, getInitialDbStatusSnapshot } from '../../lib/db-status'
 import { isTauri } from '../../lib/platform'
 
 const STATUS_CONFIG = {
@@ -39,43 +40,40 @@ const STATUS_CONFIG = {
   },
 } as const
 
-function formatRelativeTime(timestamp: number): string {
-  if (timestamp === 0) return 'not yet'
-  const diff = Math.floor((Date.now() - timestamp) / 1000)
+function formatRelativeTime(timestamp?: string): string {
+  if (!timestamp) return 'not yet'
+
+  const parsed = Date.parse(timestamp)
+  if (Number.isNaN(parsed)) return 'not yet'
+
+  const diff = Math.floor((Date.now() - parsed) / 1000)
   if (diff < 5) return 'just now'
   if (diff < 60) return `${diff}s ago`
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   return `${Math.floor(diff / 3600)}h ago`
 }
 
-function maskUrl(url: string): string {
-  try {
-    const u = new URL(url)
-    const host = u.hostname
-    // Show first segment and last 6 chars: "openpos-demo-…cdera"
-    if (host.length > 20) {
-      return `${host.slice(0, 14)}…${host.slice(-6)}`
-    }
-    return host
-  } catch {
-    return `${url.slice(0, 20)}…`
-  }
-}
-
 export function DbStatusBadge() {
   const popoverOpen = useSignal(false)
+  const snapshot = useSignal(getInitialDbStatusSnapshot())
   const wrapperRef = useRef<HTMLDivElement>(null)
 
-  // In web mode, always show "remote" since data goes through API server
-  const status = isTauri ? connectionStatus.value : 'remote'
+  const status = isTauri ? connectionStatus.value : snapshot.value.status
   const config = STATUS_CONFIG[status]
-  const pending = pendingCount.value
+  const pending = isTauri ? pendingCount.value : (snapshot.value.pendingWrites ?? 0)
+  const remoteConfigured = snapshot.value.remoteConfigured
+  const lastCheckedAt = isTauri
+    ? lastConnectionAttempt.value > 0
+      ? new Date(lastConnectionAttempt.value).toISOString()
+      : snapshot.value.lastCheckedAt
+    : snapshot.value.lastCheckedAt
 
-  // Web mode uses API server, Tauri uses direct connection
-  const modeDescription = isTauri ? config.sublabel : 'Via API server'
-
-  const tursoUrl = import.meta.env.VITE_TURSO_DATABASE_URL as string | undefined
-  const tursoConfigured = Boolean(tursoUrl && import.meta.env.VITE_TURSO_AUTH_TOKEN)
+  const modeDescription =
+    snapshot.value.mode === 'api'
+      ? 'Via API server'
+      : snapshot.value.mode === 'sqlite'
+        ? 'SQLite (offline mode)'
+        : 'Direct remote sync'
 
   /** Badge text: shows pending count when local and queue is non-empty */
   const badgeLabel = status === 'local' && pending > 0 ? `Local · ${pending} pending` : config.label
@@ -96,6 +94,28 @@ export function DbStatusBadge() {
     if (!isTauri) return
     startHealthCheck(15_000)
     return () => stopHealthCheck()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadSnapshot = async () => {
+      const nextSnapshot = await getDbStatusSnapshot()
+      if (!cancelled) {
+        snapshot.value = nextSnapshot
+      }
+    }
+
+    loadSnapshot()
+
+    const intervalId = window.setInterval(() => {
+      void loadSnapshot()
+    }, 15_000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
   }, [])
 
   // Relative time ticker — re-renders every 5s while popover is open
@@ -146,26 +166,18 @@ export function DbStatusBadge() {
             {/* Turso configured */}
             <div class="flex items-center justify-between">
               <span class="text-gray-400">Remote DB configured</span>
-              <span class={tursoConfigured ? 'text-green-400' : 'text-gray-500'}>{tursoConfigured ? 'Yes' : 'No'}</span>
+              <span class={remoteConfigured ? 'text-green-400' : 'text-gray-500'}>
+                {remoteConfigured ? 'Yes' : 'No'}
+              </span>
             </div>
 
-            {/* URL (only when configured) */}
-            {tursoConfigured && tursoUrl && (
-              <div class="flex items-center justify-between">
-                <span class="text-gray-400">URL</span>
-                <span class="text-gray-200 font-mono" title={tursoUrl}>
-                  {maskUrl(tursoUrl)}
-                </span>
-              </div>
-            )}
-
-            {/* Last check (Tauri only) */}
-            {isTauri && (
+            {/* Last check */}
+            {lastCheckedAt && (
               <div class="flex items-center justify-between">
                 <span class="text-gray-400">Last check</span>
                 <span class="text-gray-200">
                   {/* tick.value accessed to trigger re-render */}
-                  {tick.value >= 0 && formatRelativeTime(lastConnectionAttempt.value)}
+                  {tick.value >= 0 && formatRelativeTime(lastCheckedAt)}
                 </span>
               </div>
             )}

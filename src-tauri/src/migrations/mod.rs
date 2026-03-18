@@ -58,8 +58,7 @@ fn parse_migration_metadata(content: &str) -> Option<MigrationMetadata> {
 
 /// Load SQL content from a single migration file
 fn load_migration_sql(path: &Path) -> Result<String, String> {
-    fs::read_to_string(path)
-        .map_err(|e| format!("Failed to read migration file {:?}: {}", path, e))
+    fs::read_to_string(path).map_err(|e| format!("Failed to read migration file {:?}: {}", path, e))
 }
 
 /// Load all migrations from a directory
@@ -77,9 +76,7 @@ fn load_migrations_from_dir(dir: &Path) -> Result<Vec<OwnedMigration>, String> {
 
     let mut files: Vec<_> = entries
         .filter_map(|entry| entry.ok())
-        .filter(|entry| {
-            entry.path().extension().map_or(false, |ext| ext == "sql")
-        })
+        .filter(|entry| entry.path().extension().map_or(false, |ext| ext == "sql"))
         .collect();
 
     // Sort by filename to ensure version order (V001, V002, etc.)
@@ -90,14 +87,13 @@ fn load_migrations_from_dir(dir: &Path) -> Result<Vec<OwnedMigration>, String> {
         let sql_content = load_migration_sql(&path)?;
 
         // Parse metadata from comments
-        let metadata = parse_migration_metadata(&sql_content)
-            .ok_or_else(|| {
-                format!(
-                    "Invalid metadata in migration file {:?}. \
+        let metadata = parse_migration_metadata(&sql_content).ok_or_else(|| {
+            format!(
+                "Invalid metadata in migration file {:?}. \
                     Expected comments: -- Migration: V###, -- Description: ..., -- Type: ...",
-                    path
-                )
-            })?;
+                path
+            )
+        })?;
 
         // Extract the actual SQL (skip metadata comments at the top)
         let sql_body: String = sql_content
