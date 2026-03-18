@@ -19,6 +19,8 @@ export default defineConfig(async () => ({
       '@tauri-apps/api': '/src/stubs/tauri-api.ts',
       '@tauri-apps/plugin-sql': '/src/stubs/tauri-plugin-sql.ts',
       '@tauri-apps/plugin-opener': '/src/stubs/tauri-plugin-opener.ts',
+      '@tauri-apps/plugin-updater': '/src/stubs/tauri-plugin-updater.ts',
+      '@tauri-apps/plugin-process': '/src/stubs/tauri-plugin-process.ts',
     },
   },
 

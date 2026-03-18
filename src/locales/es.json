@@ -711,5 +711,18 @@
     "personalCare": "Cuidado Personal",
     "electronics": "Electrónica",
     "other": "Otros"
+  },
+  "update": {
+    "title": "Actualización Disponible",
+    "available": "Actualizar",
+    "newVersionAvailable": "La versión {{version}} está disponible",
+    "downloading": "Descargando...",
+    "downloadNow": "Descargar Ahora",
+    "installAndRestart": "Instalar y Reiniciar",
+    "readyToInstall": "¡Listo para instalar! Haz clic para reiniciar.",
+    "remindLater": "Recordarme Después",
+    "upToDate": "Estás actualizado",
+    "checking": "Buscando actualizaciones...",
+    "checkFailed": "Error al buscar actualizaciones"
   }
 }
