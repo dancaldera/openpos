@@ -10,8 +10,8 @@
  *   bun run db:migrate
  *
  * Requires .env.local with:
- *   VITE_TURSO_DATABASE_URL=libsql://your-database.turso.io
- *   VITE_TURSO_AUTH_TOKEN=your-auth-token-here
+ *   TURSO_DATABASE_URL=libsql://your-database.turso.io
+ *   TURSO_AUTH_TOKEN=your-auth-token-here
  */
 
 import { connect } from '@tursodatabase/serverless'
@@ -157,16 +157,16 @@ async function main() {
 
   // 1. Load credentials
   const env = loadEnv()
-  const url = env.VITE_TURSO_DATABASE_URL
-  const token = env.VITE_TURSO_AUTH_TOKEN
+  const url = env.TURSO_DATABASE_URL
+  const token = env.TURSO_AUTH_TOKEN
 
   if (!url || url === 'libsql://your-database.turso.io') {
-    console.error('Error: VITE_TURSO_DATABASE_URL is not set in .env.local')
+    console.error('Error: TURSO_DATABASE_URL is not set in .env.local')
     console.error('  Edit .env.local and add your real Turso database URL.')
     process.exit(1)
   }
   if (!token || token === 'your-auth-token-here') {
-    console.error('Error: VITE_TURSO_AUTH_TOKEN is not set in .env.local')
+    console.error('Error: TURSO_AUTH_TOKEN is not set in .env.local')
     console.error('  Edit .env.local and add your real Turso auth token.')
     process.exit(1)
   }

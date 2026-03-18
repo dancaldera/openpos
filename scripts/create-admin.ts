@@ -38,9 +38,9 @@ async function main() {
   const finalName = name.trim() || 'Admin User'
   const finalPassword = password.trim() || 'admin123'
 
-  const { VITE_TURSO_DATABASE_URL: url, VITE_TURSO_AUTH_TOKEN: token } = loadEnv()
+  const { TURSO_DATABASE_URL: url, TURSO_AUTH_TOKEN: token } = loadEnv()
   if (!url || !token) {
-    console.error('Error: VITE_TURSO_DATABASE_URL and VITE_TURSO_AUTH_TOKEN required in .env.local')
+    console.error('Error: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN required in .env.local')
     process.exit(1)
   }
 
