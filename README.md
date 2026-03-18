@@ -70,12 +70,20 @@ The application will open as a desktop app on `http://localhost:1420`.
 
 ### Runtime Turso Config
 
-For desktop builds, you can provide Turso credentials at runtime in `~/.config/openpos/config.json`:
+For AppImage installs:
+
+```bash
+sudo mv openpos.AppImage /usr/local/bin/openpos
+chmod +x /usr/local/bin/openpos
+mkdir -p ~/.config/openpos
+```
+
+Then create `~/.config/openpos/config.json`:
 
 ```json
 {
   "tursoDatabaseUrl": "libsql://your-db.turso.io",
-  "tursoAuthToken": "your-token"
+  "tursoAuthToken": "your-token-here"
 }
 ```
 
