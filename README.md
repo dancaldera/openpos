@@ -29,6 +29,16 @@ A modern cross-platform POS desktop application with real-time analytics, invent
 - **Build Tool**: Vite
 - **Package Manager**: bun
 
+## Platform Support
+
+| Platform | Status | Distribution |
+|----------|--------|--------------|
+| **Linux** | ✅ Full Support | Official releases (AppImage, .deb) |
+| **macOS** | ⚠️ Development Only | Build from source |
+| **Windows** | ⚠️ Development Only | Build from source |
+
+> **Note**: macOS and Windows builds require code signing certificates for proper distribution. Official releases are provided for Linux only. macOS and Windows users can build from source for local development.
+
 ## Quick Start
 
 ### Prerequisites
@@ -37,6 +47,14 @@ A modern cross-platform POS desktop application with real-time analytics, invent
 - [Rust](https://rustup.rs/)
 
 ### Installation
+
+#### Linux (Recommended)
+
+Download the latest release from [GitHub Releases](https://github.com/dancaldera/OpenPOS/releases/latest):
+- **AppImage**: Universal Linux package (recommended)
+- **.deb**: Debian/Ubuntu package
+
+#### Build from Source (All Platforms)
 
 ```bash
 # Clone and install
@@ -98,7 +116,7 @@ OpenPOS/
 
 ## Auto-Update System
 
-OpenPOS includes an integrated auto-update system that automatically checks for new versions and allows one-click updates.
+OpenPOS includes an integrated auto-update system for Linux that automatically checks for new versions and allows one-click updates.
 
 **Features:**
 - Automatic background checking (every 24 hours)
@@ -116,15 +134,14 @@ OpenPOS includes an integrated auto-update system that automatically checks for 
 
 ```bash
 # 1. Bump version in src-tauri/tauri.conf.json
-# 2. Build the application
+# 2. Build the application (Linux only)
 bun tauri build
 
-# 3. Create the release JSON file (darwin-aarch64.json) with signature
-# 4. Create GitHub release
+# 3. Create GitHub release with Linux artifacts
 gh release create v0.X.X \
-  src-tauri/target/release/bundle/macos/OpenPOS.app.tar.gz \
-  src-tauri/target/release/bundle/macos/darwin-aarch64.json \
-  src-tauri/target/release/bundle/dmg/OpenPOS_0.X.X_aarch64.dmg \
+  src-tauri/target/release/bundle/deb/openpos_0.X.X_amd64.deb \
+  src-tauri/target/release/bundle/appimage/openpos_0.X.X_amd64.AppImage \
+  src-tauri/target/release/bundle/appimage/linux-x86_64.json \
   --title "v0.X.X - Your Title" \
   --notes "Release notes here"
 ```
