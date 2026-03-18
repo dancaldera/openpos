@@ -28,7 +28,7 @@ export class Channel<T = unknown> {
   async post(_data: T): Promise<void> {
     throw new Error('[stub] Channel.post() called in web context — this should never happen')
   }
-  async *[Symbol.asyncIterator](): AsyncIterator<T> {
+  [Symbol.asyncIterator](): AsyncIterator<T> {
     throw new Error('[stub] Channel.iterator called in web context — this should never happen')
   }
 }

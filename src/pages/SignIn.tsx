@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { toast } from 'sonner'
+import { DbStatusBadge } from '../components/ui/DbStatusBadge'
+import { UpdateNotification } from '../components/ui/UpdateNotification'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
+import { APP_VERSION } from '../lib/app-version'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 export default function SignIn() {
@@ -185,7 +188,7 @@ export default function SignIn() {
 
           <div class="mt-8 pt-6 border-t border-gray-200 text-center">
             <span class="text-xs text-gray-500">
-              v0.2.2 • © 2025 OSS, by{' '}
+              v{APP_VERSION} • © 2025 OSS, by{' '}
               <a
                 href="https://github.com/dancaldera"
                 target="_blank"
@@ -198,6 +201,9 @@ export default function SignIn() {
           </div>
         </div>
       </div>
+
+      <DbStatusBadge />
+      <UpdateNotification />
     </div>
   )
 }

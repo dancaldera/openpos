@@ -68,6 +68,19 @@ bun tauri dev
 
 The application will open as a desktop app on `http://localhost:1420`.
 
+### Runtime Turso Config
+
+For desktop builds, you can provide Turso credentials at runtime in `~/.config/openpos/config.json`:
+
+```json
+{
+  "tursoDatabaseUrl": "libsql://your-db.turso.io",
+  "tursoAuthToken": "your-token"
+}
+```
+
+`src/lib/db.ts` reads build-time env vars first and falls back to this file when they are not set.
+
 ## Available Scripts
 
 | Command | Description |
