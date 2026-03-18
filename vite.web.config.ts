@@ -15,8 +15,10 @@ export default defineConfig(async () => ({
   // Aliases for Tauri packages that don't exist in browser
   resolve: {
     alias: {
+      '@tauri-apps/api/path': '/src/stubs/tauri-api-path.ts',
       '@tauri-apps/api/core': '/src/stubs/tauri-core.ts',
       '@tauri-apps/api': '/src/stubs/tauri-api.ts',
+      '@tauri-apps/plugin-fs': '/src/stubs/tauri-plugin-fs.ts',
       '@tauri-apps/plugin-sql': '/src/stubs/tauri-plugin-sql.ts',
       '@tauri-apps/plugin-opener': '/src/stubs/tauri-plugin-opener.ts',
       '@tauri-apps/plugin-updater': '/src/stubs/tauri-plugin-updater.ts',

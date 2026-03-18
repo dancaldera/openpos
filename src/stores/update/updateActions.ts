@@ -21,7 +21,7 @@ interface TauriUpdate {
   version: string
   downloadAndInstall: (
     onEvent?: (progress: TauriDownloadEvent) => void,
-    options?: { headers?: HeadersInit; timeout?: number }
+    options?: { headers?: HeadersInit; timeout?: number },
   ) => Promise<void>
 }
 
