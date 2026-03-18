@@ -75,10 +75,10 @@ For AppImage installs:
 ```bash
 sudo mv openpos.AppImage /usr/local/bin/openpos
 chmod +x /usr/local/bin/openpos
-mkdir -p ~/.config/openpos
+mkdir -p ~/.config/com.openpos.app
 ```
 
-Then create `~/.config/openpos/config.json`:
+Then create `~/.config/com.openpos.app/config.json`:
 
 ```json
 {
