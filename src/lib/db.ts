@@ -1,7 +1,7 @@
 import { signal } from '@preact/signals'
 import { connect, type Connection as TursoClient } from '@tursodatabase/serverless'
+import { loadDesktopDbConnectionConfig } from './desktop-db-config'
 import { isTauri } from './platform'
-import { loadRuntimeConfig } from './runtime-config'
 
 // ---------------------------------------------------------------------------
 // Tauri SQL plugin types — loaded dynamically at runtime (Tauri only).
@@ -68,20 +68,17 @@ class DbManager {
    * Automatically falls back to local SQLite when Turso is unavailable.
    * On the web platform, always uses Turso — no local SQLite fallback.
    *
-   * Priority for Turso credentials:
-   * 1. Build-time env vars (VITE_TURSO_DATABASE_URL, VITE_TURSO_AUTH_TOKEN)
-   * 2. Runtime config file (~/.config/openpos/config.json)
+   * Desktop Turso credentials are resolved through the Tauri backend so they
+   * never need to be exposed through the Vite web bundle.
    */
   async getClient(): Promise<DbClientResult> {
-    // Priority: build-time env > runtime config file
-    let tursoUrl = import.meta.env.VITE_TURSO_DATABASE_URL
-    let tursoToken = import.meta.env.VITE_TURSO_AUTH_TOKEN
+    let tursoUrl: string | undefined
+    let tursoToken: string | undefined
 
-    // Try runtime config if build-time env not set
-    if ((!tursoUrl || !tursoToken) && isTauri) {
-      const config = await loadRuntimeConfig()
-      tursoUrl = tursoUrl || config?.tursoDatabaseUrl
-      tursoToken = tursoToken || config?.tursoAuthToken
+    if (isTauri) {
+      const config = await loadDesktopDbConnectionConfig()
+      tursoUrl = config.url
+      tursoToken = config.authToken
     }
 
     // If Turso is configured, try to use it
@@ -180,15 +177,9 @@ class DbManager {
     // Use cached credentials from getClient() or load them
     // Note: We don't await here since this is a sync method that sets up an interval
     const checkHealth = async (): Promise<void> => {
-      let tursoUrl = import.meta.env.VITE_TURSO_DATABASE_URL
-      let tursoToken = import.meta.env.VITE_TURSO_AUTH_TOKEN
-
-      // Try runtime config if build-time env not set
-      if ((!tursoUrl || !tursoToken) && isTauri) {
-        const config = await loadRuntimeConfig()
-        tursoUrl = tursoUrl || config?.tursoDatabaseUrl
-        tursoToken = tursoToken || config?.tursoAuthToken
-      }
+      const config = await loadDesktopDbConnectionConfig(true)
+      const tursoUrl = config.url
+      const tursoToken = config.authToken
 
       // Nothing to check if Turso is not configured
       if (!tursoUrl || !tursoToken) return

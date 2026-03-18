@@ -9,7 +9,7 @@
 import { Hono } from 'hono'
 import { corsMiddleware } from './middleware/cors.js'
 import { authMiddleware } from './middleware/auth.js'
-import { query, execute } from './lib/turso.js'
+import { execute, getTursoConfig, probeTursoConnection, query } from './lib/turso.js'
 import { authRouter } from './routes/auth.js'
 import { productsRouter } from './routes/products.js'
 import { ordersRouter } from './routes/orders.js'
@@ -25,6 +25,19 @@ app.use('/*', corsMiddleware)
 
 // Health check (unauthenticated)
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
+
+// Safe DB status check for the web client badge (unauthenticated)
+app.get('/api/db-status', async (c) => {
+  const { configured } = getTursoConfig()
+  const reachable = configured ? await probeTursoConnection() : false
+
+  return c.json({
+    status: reachable ? 'remote' : 'error',
+    mode: 'api',
+    remoteConfigured: configured,
+    lastCheckedAt: new Date().toISOString(),
+  })
+})
 
 // Debug endpoint (remove after troubleshooting)
 app.get('/api/debug/env', (c) => c.json({
