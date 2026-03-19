@@ -3,6 +3,7 @@ import {
   Button,
   Dialog,
   DialogConfirm,
+  Dropdown,
   Input,
   Pagination,
   Select,
@@ -726,16 +727,16 @@ export default function Products() {
       )}
 
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <Table>
+        <Table dense>
           <TableHead>
             <TableRow class="bg-gray-50">
-              <TableHeader class="font-semibold text-gray-900">{t('common.name')}</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">{t('products.category')}</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">{t('common.price')}</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">{t('products.costPrice')}</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">{t('products.stock')}</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">{t('common.status')}</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">{t('common.actions')}</TableHeader>
+              <TableHeader class="py-2 font-semibold text-gray-900">{t('common.name')}</TableHeader>
+              <TableHeader class="py-2 font-semibold text-gray-900">{t('products.category')}</TableHeader>
+              <TableHeader class="py-2 font-semibold text-gray-900">{t('common.price')}</TableHeader>
+              <TableHeader class="py-2 font-semibold text-gray-900">{t('products.costPrice')}</TableHeader>
+              <TableHeader class="py-2 font-semibold text-gray-900">{t('products.stock')}</TableHeader>
+              <TableHeader class="py-2 font-semibold text-gray-900">{t('common.status')}</TableHeader>
+              <TableHeader class="py-2 font-semibold text-gray-900">{t('common.actions')}</TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -744,27 +745,68 @@ export default function Products() {
               const isConfigurable = product.variantType === 'configurable'
               const isExpanded = expandedProductIds.has(product.id)
               const variantCount = productWithVariants?.variantCount || 0
+              const canManageProduct = hasPermission('products.edit') || hasRole('admin') || hasRole('manager')
+              const canDeleteProduct = hasPermission('products.delete') || hasRole('admin') || hasRole('manager')
+              const actionItems = []
+
+              if (canManageProduct) {
+                actionItems.push({
+                  id: `${product.id}-edit`,
+                  label: t('common.edit'),
+                  onClick: () => handleEditProduct(product),
+                })
+              }
+
+              if (!isConfigurable && canManageProduct) {
+                actionItems.push({
+                  id: `${product.id}-enable-variants`,
+                  label: t('variants.enableVariants'),
+                  onClick: () => handleEnableVariants(product),
+                })
+              }
+
+              if (isConfigurable) {
+                actionItems.push({
+                  id: `${product.id}-generate-variants`,
+                  label: t('variants.generateVariants'),
+                  onClick: () => handleGenerateVariants(product.id),
+                })
+                actionItems.push({
+                  id: `${product.id}-disable-variants`,
+                  label: t('variants.disableVariants'),
+                  onClick: () => handleDisableVariants(product),
+                })
+              }
+
+              if (canDeleteProduct) {
+                actionItems.push({
+                  id: `${product.id}-delete`,
+                  label: t('common.delete'),
+                  onClick: () => setDeleteConfirm(product.id),
+                  variant: 'danger' as const,
+                })
+              }
 
               return (
                 <>
                   <TableRow
                     key={product.id}
-                    class="hover:bg-gray-50 transition-all duration-200 hover:shadow-sm"
+                    class="hover:bg-gray-50 transition-colors duration-200"
                     style={`animation-delay: ${index * 50}ms`}
                   >
                     <TableCell>
-                      <div class="flex items-start">
-                        <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-lg font-bold mr-3 shadow-md">
+                      <div class="flex items-start gap-2.5">
+                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-sm text-white shadow-sm">
                           {getCategoryIcon(product.category)}
                         </div>
                         <div class="min-w-0 flex-1">
-                          <div class="flex items-center gap-2">
+                          <div class="flex items-center gap-1.5">
                             <span class="font-semibold text-gray-900 truncate">{product.name}</span>
                             {isConfigurable && (
                               <button
                                 type="button"
                                 onClick={() => handleToggleExpand(product.id)}
-                                class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 hover:bg-purple-200 transition-all flex items-center gap-1"
+                                class="inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-800 transition-colors hover:bg-purple-200"
                               >
                                 🏷️ {variantCount} {t('variants.variants')}
                                 <span class={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
@@ -774,10 +816,10 @@ export default function Products() {
                             )}
                           </div>
                           {product.description && (
-                            <div class="text-sm text-gray-600 truncate max-w-xs mt-1">{product.description}</div>
+                            <div class="mt-0.5 max-w-xs truncate text-xs text-gray-600">{product.description}</div>
                           )}
                           {product.barcode && (
-                            <div class="text-xs text-gray-500 mt-1 font-mono bg-gray-100 px-2 py-1 rounded w-fit">
+                            <div class="mt-1 inline-flex w-fit items-center rounded-md bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-500">
                               📊 {product.barcode}
                             </div>
                           )}
@@ -785,19 +827,19 @@ export default function Products() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div class="inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-indigo-200 text-blue-800 border border-blue-300 shadow-sm">
+                      <div class="inline-flex items-center rounded-full border border-blue-300 bg-gradient-to-r from-blue-100 to-indigo-200 px-2 py-1 text-[11px] font-semibold text-blue-800">
                         <span class="mr-1">{getCategoryIcon(product.category)}</span>
                         {getCategoryLabel(product.category, t)}
                       </div>
                     </TableCell>
                     <TableCell>
                       {productWithVariants?.minPrice !== undefined && productWithVariants?.maxPrice !== undefined ? (
-                        <div>
-                          <div class="text-lg font-bold text-emerald-600 drop-shadow-sm">
+                        <div class="space-y-0.5">
+                          <div class="text-base font-bold text-emerald-600">
                             {formatCurrency(productWithVariants.minPrice)}
                           </div>
                           {productWithVariants.minPrice !== productWithVariants.maxPrice && (
-                            <div class="text-xs text-gray-500">
+                            <div class="text-[11px] leading-tight text-gray-500">
                               {t('variants.priceRange', {
                                 min: formatCurrency(productWithVariants.minPrice),
                                 max: formatCurrency(productWithVariants.maxPrice),
@@ -806,14 +848,12 @@ export default function Products() {
                           )}
                         </div>
                       ) : (
-                        <div class="text-lg font-bold text-emerald-600 drop-shadow-sm">
-                          {formatCurrency(product.price)}
-                        </div>
+                        <div class="text-base font-bold text-emerald-600">{formatCurrency(product.price)}</div>
                       )}
                     </TableCell>
                     <TableCell>
-                      <div class="text-gray-600 font-medium">{formatCurrency(product.cost)}</div>
-                      <div class="text-xs text-gray-500">
+                      <div class="text-sm font-medium text-gray-700">{formatCurrency(product.cost)}</div>
+                      <div class="mt-0.5 text-[11px] leading-tight text-gray-500">
                         {t('products.profitMargin')}:{' '}
                         {(((product.price - product.cost) / product.cost) * 100).toFixed(1)}%
                       </div>
@@ -821,14 +861,14 @@ export default function Products() {
                     <TableCell>
                       {productWithVariants?.totalStock !== undefined ? (
                         <div
-                          class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105 ${getStockColor(productWithVariants.totalStock)} shadow-sm`}
+                          class={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold ${getStockColor(productWithVariants.totalStock)}`}
                         >
                           <span class="mr-1">{getStockIcon(productWithVariants.totalStock)}</span>
                           {productWithVariants.totalStock} {t('common.quantity').toLowerCase()}
                         </div>
                       ) : (
                         <div
-                          class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105 ${getStockColor(product.stock)} shadow-sm`}
+                          class={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold ${getStockColor(product.stock)}`}
                         >
                           <span class="mr-1">{getStockIcon(product.stock)}</span>
                           {product.stock} {t('common.quantity').toLowerCase()}
@@ -837,76 +877,40 @@ export default function Products() {
                     </TableCell>
                     <TableCell>
                       <div
-                        class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide ${getStatusColor(product.isActive)} transition-all hover:scale-105`}
+                        class={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${getStatusColor(product.isActive)}`}
                       >
                         <span class="mr-1">{product.isActive ? '✅' : '⛔'}</span>
                         {product.isActive ? t('members.active') : t('members.inactive')}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div class="flex space-x-2 flex-wrap gap-y-2">
-                        {!isConfigurable &&
-                          (hasPermission('products.edit') || hasRole('admin') || hasRole('manager')) && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEnableVariants(product)}
-                              class="text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300 transition-all hover:shadow-md"
-                              title={t('variants.enableVariants')}
-                            >
-                              🏷️
-                            </Button>
-                          )}
-                        {isConfigurable && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleGenerateVariants(product.id)}
-                              class="text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300 transition-all hover:shadow-md"
-                              title={t('variants.generateVariants')}
-                            >
-                              🎲
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDisableVariants(product)}
-                              class="text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 transition-all hover:shadow-md"
-                              title={t('variants.disableVariants')}
-                            >
-                              ⛔
-                            </Button>
-                          </>
-                        )}
-                        {(hasPermission('products.edit') || hasRole('admin') || hasRole('manager')) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditProduct(product)}
-                            class="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all hover:shadow-md"
-                          >
-                            ✏️
-                          </Button>
-                        )}
-                        {(hasPermission('products.delete') || hasRole('admin') || hasRole('manager')) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setDeleteConfirm(product.id)}
-                            class="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all hover:shadow-md"
-                          >
-                            🗑️
-                          </Button>
-                        )}
-                      </div>
+                      {actionItems.length > 0 && (
+                        <div class="flex justify-center">
+                          <Dropdown
+                            align="right"
+                            items={actionItems}
+                            trigger={
+                              <>
+                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700">
+                                  <svg aria-hidden="true" viewBox="0 0 16 16" class="h-4 w-4 fill-current">
+                                    <circle cx="3" cy="8" r="1.25" />
+                                    <circle cx="8" cy="8" r="1.25" />
+                                    <circle cx="13" cy="8" r="1.25" />
+                                  </svg>
+                                </span>
+                                <span class="sr-only">{t('common.actions')}</span>
+                              </>
+                            }
+                          />
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
 
                   {/* Expandable variants row */}
                   {isExpanded && productWithVariants?.variants && (
                     <TableRow key={`${product.id}-variants`} class="bg-gray-50">
-                      <TableCell colSpan={7} class="p-4">
+                      <TableCell colSpan={7} class="px-4 py-3">
                         <div class="space-y-2">
                           <div class="flex items-center justify-between">
                             <h4 class="font-semibold text-gray-900">{t('variants.variants')}</h4>
