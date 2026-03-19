@@ -1,9 +1,6 @@
 import { useSignal } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
-import { connectionStatus, lastConnectionAttempt, pendingCount } from '../../lib/db'
-import { startHealthCheck, stopHealthCheck } from '../../lib/db-adapter'
-import { getDbStatusSnapshot, getInitialDbStatusSnapshot } from '../../lib/db-status'
-import { isTauri } from '../../lib/platform'
+import { connectionMode, connectionStatus, lastConnectionAttempt, pendingCount, remoteConfigured } from '../../lib/db'
 
 const STATUS_CONFIG = {
   remote: {
@@ -55,23 +52,19 @@ function formatRelativeTime(timestamp?: string): string {
 
 export function DbStatusBadge() {
   const popoverOpen = useSignal(false)
-  const snapshot = useSignal(getInitialDbStatusSnapshot())
   const wrapperRef = useRef<HTMLDivElement>(null)
 
-  const status = isTauri ? connectionStatus.value : snapshot.value.status
+  const status = connectionStatus.value
   const config = STATUS_CONFIG[status]
-  const pending = isTauri ? pendingCount.value : (snapshot.value.pendingWrites ?? 0)
-  const remoteConfigured = snapshot.value.remoteConfigured
-  const lastCheckedAt = isTauri
-    ? lastConnectionAttempt.value > 0
-      ? new Date(lastConnectionAttempt.value).toISOString()
-      : snapshot.value.lastCheckedAt
-    : snapshot.value.lastCheckedAt
+  const pending = pendingCount.value
+  const isRemoteConfigured = remoteConfigured.value
+  const lastCheckedAt =
+    lastConnectionAttempt.value > 0 ? new Date(lastConnectionAttempt.value).toISOString() : undefined
 
   const modeDescription =
-    snapshot.value.mode === 'api'
+    connectionMode.value === 'api'
       ? 'Via API server'
-      : snapshot.value.mode === 'sqlite'
+      : connectionMode.value === 'sqlite'
         ? 'SQLite (offline mode)'
         : 'Direct remote sync'
 
@@ -87,35 +80,6 @@ export function DbStatusBadge() {
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Start background health-check on mount; stop on unmount (Tauri only)
-  useEffect(() => {
-    if (!isTauri) return
-    startHealthCheck(15_000)
-    return () => stopHealthCheck()
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-
-    const loadSnapshot = async () => {
-      const nextSnapshot = await getDbStatusSnapshot()
-      if (!cancelled) {
-        snapshot.value = nextSnapshot
-      }
-    }
-
-    loadSnapshot()
-
-    const intervalId = window.setInterval(() => {
-      void loadSnapshot()
-    }, 15_000)
-
-    return () => {
-      cancelled = true
-      window.clearInterval(intervalId)
-    }
   }, [])
 
   // Relative time ticker — re-renders every 5s while popover is open
@@ -166,8 +130,8 @@ export function DbStatusBadge() {
             {/* Turso configured */}
             <div class="flex items-center justify-between">
               <span class="text-gray-400">Remote DB configured</span>
-              <span class={remoteConfigured ? 'text-green-400' : 'text-gray-500'}>
-                {remoteConfigured ? 'Yes' : 'No'}
+              <span class={isRemoteConfigured ? 'text-green-400' : 'text-gray-500'}>
+                {isRemoteConfigured ? 'Yes' : 'No'}
               </span>
             </div>
 
@@ -183,14 +147,12 @@ export function DbStatusBadge() {
             )}
 
             {/* Pending writes (Tauri only) */}
-            {isTauri && (
-              <div class="flex items-center justify-between">
-                <span class="text-gray-400">Pending writes</span>
-                <span class={pending > 0 ? 'text-yellow-400 font-medium' : 'text-gray-500'}>
-                  {pending > 0 ? `${pending} queued` : 'None'}
-                </span>
-              </div>
-            )}
+            <div class="flex items-center justify-between">
+              <span class="text-gray-400">Pending writes</span>
+              <span class={pending > 0 ? 'text-yellow-400 font-medium' : 'text-gray-500'}>
+                {pending > 0 ? `${pending} queued` : 'None'}
+              </span>
+            </div>
           </div>
         </div>
       )}
