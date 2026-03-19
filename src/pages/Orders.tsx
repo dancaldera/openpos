@@ -15,6 +15,7 @@ import {
   TableRow,
 } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
+import { normalizeBarcode } from '../lib/barcodes'
 import { authService } from '../services/auth-turso'
 import { companySettingsService } from '../services/company-settings-turso'
 import { type Customer, customerService } from '../services/customers-turso'
@@ -44,6 +45,7 @@ export default function Orders() {
   const [taxEnabled, setTaxEnabled] = useState<boolean>(true)
   const [currencySymbol, setCurrencySymbol] = useState<string>('$')
   const [productSearch, setProductSearch] = useState('')
+  const [barcodeEntry, setBarcodeEntry] = useState('')
   const [editProductSearch, setEditProductSearch] = useState('')
   const [users, setUsers] = useState<{ [key: string]: string }>({}) // userId -> userName mapping
   const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'user' | null>(null)
@@ -248,7 +250,8 @@ export default function Orders() {
       (product) =>
         product.name.toLowerCase().includes(query) ||
         product.category.toLowerCase().includes(query) ||
-        product.price.toString().includes(query),
+        product.price.toString().includes(query) ||
+        (product.barcode || '').toLowerCase().includes(query),
     )
   })()
 
@@ -262,9 +265,112 @@ export default function Orders() {
       (product) =>
         product.name.toLowerCase().includes(query) ||
         product.category.toLowerCase().includes(query) ||
-        product.price.toString().includes(query),
+        product.price.toString().includes(query) ||
+        (product.barcode || '').toLowerCase().includes(query),
     )
   })()
+
+  const addResolvedItemToOrder = (
+    resolved: {
+      productId: string
+      productName: string
+      stock: number
+      variantId?: string
+      variantAttributes?: Record<string, string>
+    },
+    quantity: number = 1,
+  ) => {
+    const existingItem = newOrder.items.find(
+      (item) => item.productId === resolved.productId && item.variantId === resolved.variantId,
+    )
+
+    if (existingItem) {
+      const newQuantity = existingItem.quantity + quantity
+      if (newQuantity > resolved.stock) {
+        toast.error(`Insufficient stock. Available: ${resolved.stock}`)
+        return
+      }
+
+      if (newQuantity <= 0) {
+        removeItemFromOrder(resolved.productId, resolved.variantId)
+        return
+      }
+
+      setNewOrder({
+        ...newOrder,
+        items: newOrder.items.map((item) =>
+          item.productId === resolved.productId && item.variantId === resolved.variantId
+            ? { ...item, quantity: newQuantity }
+            : item,
+        ),
+      })
+
+      if (quantity > 0) {
+        const label = resolved.variantAttributes
+          ? `${resolved.productName} (${Object.entries(resolved.variantAttributes)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join(', ')})`
+          : resolved.productName
+        toast.success(t('orders.itemAdded', { product: label, quantity: newQuantity }))
+      } else {
+        toast.info(t('orders.quantityUpdated', { product: resolved.productName, quantity: newQuantity }))
+      }
+      return
+    }
+
+    if (quantity > resolved.stock) {
+      toast.error(`Insufficient stock. Available: ${resolved.stock}`)
+      return
+    }
+
+    const label = resolved.variantAttributes
+      ? `${resolved.productName} (${Object.entries(resolved.variantAttributes)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(', ')})`
+      : resolved.productName
+
+    setNewOrder({
+      ...newOrder,
+      items: [...newOrder.items, { productId: resolved.productId, quantity, variantId: resolved.variantId }],
+    })
+    toast.success(t('orders.itemAdded', { product: label, quantity }))
+  }
+
+  const handleBarcodeSubmit = async () => {
+    const normalized = normalizeBarcode(barcodeEntry)
+    if (!normalized) {
+      return
+    }
+
+    try {
+      const resolved = await productService.findSellableByBarcode(normalized)
+      if (!resolved) {
+        toast.error(t('orders.barcodeNotFound'))
+        return
+      }
+
+      if (!resolved.isActive) {
+        toast.error(t('orders.barcodeInactive'))
+        return
+      }
+
+      if (resolved.stock <= 0) {
+        toast.error(t('orders.barcodeOutOfStock'))
+        return
+      }
+
+      addResolvedItemToOrder({
+        productId: resolved.productId,
+        productName: resolved.productName,
+        stock: resolved.stock,
+        variantId: resolved.variantId,
+        variantAttributes: resolved.variantAttributes,
+      })
+      setBarcodeEntry('')
+    } catch (_error) {
+      toast.error(t('orders.barcodeLookupFailed'))
+    }
+  }
 
   const handleCreateOrder = async () => {
     if (newOrder.items.length === 0) {
@@ -282,6 +388,7 @@ export default function Orders() {
         setAllOrders(newOrdersList)
         setOrders(newOrdersList)
         setIsCreateModalOpen(false)
+        setBarcodeEntry('')
         setNewOrder({
           items: [],
           customerId: '',
@@ -350,7 +457,7 @@ export default function Orders() {
     }
   }
 
-  const addItemToOrder = (productId: string, quantity: number = 1) => {
+  const addItemToOrder = (productId: string, quantity: number = 1, forcedVariantId?: string) => {
     const product = products.find((p) => p.id === productId)
     if (!product) return
 
@@ -359,7 +466,7 @@ export default function Orders() {
 
     // Check if product is configurable and needs variant selection
     if (product.variantType === 'configurable') {
-      const selectedVariantId = selectedVariantForProduct[productId]
+      const selectedVariantId = forcedVariantId || selectedVariantForProduct[productId]
 
       if (!selectedVariantId) {
         toast.error(`Please select a variant for ${productName}`)
@@ -373,84 +480,18 @@ export default function Orders() {
         return
       }
 
-      // Check stock
-      const existingItem = newOrder.items.find(
-        (item) => item.productId === productId && item.variantId === selectedVariantId,
+      addResolvedItemToOrder(
+        {
+          productId,
+          productName,
+          stock: variant.stock,
+          variantId: selectedVariantId,
+          variantAttributes: variant.attributes,
+        },
+        quantity,
       )
-
-      if (existingItem) {
-        const newQuantity = existingItem.quantity + quantity
-        if (newQuantity > variant.stock) {
-          toast.error(`Insufficient stock. Available: ${variant.stock}`)
-          return
-        }
-
-        if (quantity > 0) {
-          toast.success(
-            t('orders.itemAdded', {
-              product: `${productName} (${Object.entries(variant.attributes)
-                .map(([k, v]) => `${k}: ${v}`)
-                .join(', ')})`,
-              quantity: newQuantity,
-            }),
-          )
-        } else {
-          toast.info(t('orders.quantityUpdated', { product: productName, quantity: newQuantity }))
-        }
-
-        setNewOrder({
-          ...newOrder,
-          items: newOrder.items.map((item) =>
-            item.productId === productId && item.variantId === selectedVariantId
-              ? { ...item, quantity: item.quantity + quantity }
-              : item,
-          ),
-        })
-      } else {
-        if (quantity > variant.stock) {
-          toast.error(`Insufficient stock. Available: ${variant.stock}`)
-          return
-        }
-
-        toast.success(
-          t('orders.itemAdded', {
-            product: `${productName} (${Object.entries(variant.attributes)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join(', ')})`,
-            quantity,
-          }),
-        )
-
-        setNewOrder({
-          ...newOrder,
-          items: [...newOrder.items, { productId, quantity, variantId: selectedVariantId }],
-        })
-      }
     } else {
-      // Simple product (no variants)
-      const existingItem = newOrder.items.find((item) => item.productId === productId)
-
-      if (existingItem) {
-        const newQuantity = existingItem.quantity + quantity
-        if (quantity > 0) {
-          toast.success(t('orders.itemAdded', { product: productName, quantity: newQuantity }))
-        } else {
-          toast.info(t('orders.quantityUpdated', { product: productName, quantity: newQuantity }))
-        }
-
-        setNewOrder({
-          ...newOrder,
-          items: newOrder.items.map((item) =>
-            item.productId === productId ? { ...item, quantity: item.quantity + quantity } : item,
-          ),
-        })
-      } else {
-        toast.success(t('orders.itemAdded', { product: productName, quantity }))
-        setNewOrder({
-          ...newOrder,
-          items: [...newOrder.items, { productId, quantity }],
-        })
-      }
+      addResolvedItemToOrder({ productId, productName, stock: product.stock }, quantity)
     }
   }
 
@@ -991,7 +1032,10 @@ export default function Orders() {
       {/*  Create Order Modal */}
       <Dialog
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false)
+          setBarcodeEntry('')
+        }}
         title={t('orders.createNewOrder')}
         size="full"
       >
@@ -1005,6 +1049,22 @@ export default function Orders() {
                   <p class="text-sm text-gray-600 mt-1">{t('orders.clickToAdd')}</p>
                 </div>
                 <div class="flex items-center gap-3">
+                  <div class="w-72">
+                    <Input
+                      value={barcodeEntry}
+                      onInput={(e) => setBarcodeEntry((e.target as HTMLInputElement).value)}
+                      onKeyDown={(e) => {
+                        if ((e as KeyboardEvent).key === 'Enter') {
+                          e.preventDefault()
+                          void handleBarcodeSubmit()
+                        }
+                      }}
+                      label={t('orders.scanBarcode')}
+                      placeholder={t('orders.scanBarcodePlaceholder')}
+                      helperText={t('orders.scanBarcodeHelp')}
+                      class="text-sm"
+                    />
+                  </div>
                   <div class="w-64">
                     <Input
                       type="search"
@@ -1107,6 +1167,9 @@ export default function Orders() {
                               <div class="text-xs text-gray-600 mb-3 font-medium bg-gray-100 px-2 py-1 rounded-full inline-block">
                                 {product.category}
                               </div>
+                              {product.barcode && (
+                                <div class="text-[11px] text-gray-500 mb-2 font-mono">{product.barcode}</div>
+                              )}
 
                               {/* Variant selector for configurable products */}
                               {isConfigurable && productVariants?.variants && productVariants.variants.length > 0 && (
@@ -1226,7 +1289,7 @@ export default function Orders() {
                             variant="outline"
                             onClick={() => {
                               if (item.quantity > 1) {
-                                addItemToOrder(item.productId, -1)
+                                addItemToOrder(item.productId, -1, item.variantId)
                               } else {
                                 removeItemFromOrder(item.productId, item.variantId)
                               }
@@ -1241,7 +1304,7 @@ export default function Orders() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => addItemToOrder(item.productId, 1)}
+                            onClick={() => addItemToOrder(item.productId, 1, item.variantId)}
                             disabled={item.quantity >= availableStock}
                             class="w-8 h-8 p-0 flex items-center justify-center"
                           >
@@ -1265,7 +1328,11 @@ export default function Orders() {
                     {(() => {
                       const subtotal = newOrder.items.reduce((total, item) => {
                         const product = products.find((p) => p.id === item.productId)
-                        return total + (product ? product.price * item.quantity : 0)
+                        const variant = item.variantId
+                          ? productsWithVariants[item.productId]?.variants?.find((v) => v.id === item.variantId)
+                          : undefined
+                        const itemPrice = variant?.price || product?.price || 0
+                        return total + itemPrice * item.quantity
                       }, 0)
                       const tax = taxEnabled ? subtotal * taxRate : 0
                       const total = subtotal + tax
