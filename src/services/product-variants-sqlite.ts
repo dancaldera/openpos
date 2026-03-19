@@ -1,4 +1,5 @@
 import Database from '@tauri-apps/plugin-sql'
+import { formatBarcodeForStorage, normalizeBarcode } from '../lib/barcodes'
 
 // Types
 export interface ProductAttribute {
@@ -61,6 +62,7 @@ interface DatabaseProductVariant {
   parent_product_id: number
   sku: string | null
   barcode: string | null
+  barcode_normalized?: string | null
   price: number
   cost: number
   stock: number
@@ -136,6 +138,40 @@ export class ProductVariantsService {
       createdAt: dbVariant.created_at,
       updatedAt: dbVariant.updated_at,
     }
+  }
+
+  private async isBarcodeInUse(
+    normalizedBarcode: string,
+    options: {
+      excludeVariantId?: string
+      excludeProductId?: string
+    } = {},
+  ): Promise<boolean> {
+    const db = await this.getDatabase()
+    const excludeVariantId = options.excludeVariantId ? parseInt(options.excludeVariantId, 10) : null
+    const excludeProductId = options.excludeProductId ? parseInt(options.excludeProductId, 10) : null
+
+    const variantConflicts = await db.select<{ id: number }[]>(
+      `SELECT id FROM product_variants
+       WHERE barcode_normalized = ?
+         AND (? IS NULL OR id != ?)
+       LIMIT 1`,
+      [normalizedBarcode, excludeVariantId, excludeVariantId],
+    )
+
+    if (variantConflicts.length > 0) {
+      return true
+    }
+
+    const productConflicts = await db.select<{ id: number }[]>(
+      `SELECT id FROM products
+       WHERE barcode_normalized = ?
+         AND (? IS NULL OR id != ?)
+       LIMIT 1`,
+      [normalizedBarcode, excludeProductId, excludeProductId],
+    )
+
+    return productConflicts.length > 0
   }
 
   private convertDbVariantSettings(dbSettings: DatabaseProductVariantSettings): ProductVariantSettings {
@@ -499,9 +535,13 @@ export class ProductVariantsService {
   async getVariantByBarcode(barcode: string): Promise<ProductVariant | null> {
     try {
       const db = await this.getDatabase()
+      const normalizedBarcode = normalizeBarcode(barcode)
+      if (!normalizedBarcode) {
+        return null
+      }
       const variants = await db.select<DatabaseProductVariant[]>(
-        'SELECT * FROM product_variants WHERE barcode = ? LIMIT 1',
-        [barcode],
+        'SELECT * FROM product_variants WHERE barcode_normalized = ? LIMIT 1',
+        [normalizedBarcode],
       )
 
       if (variants.length === 0) {
@@ -540,6 +580,8 @@ export class ProductVariantsService {
 
     try {
       const db = await this.getDatabase()
+      const barcode = formatBarcodeForStorage(variantData.barcode)
+      const normalizedBarcode = normalizeBarcode(barcode)
 
       // Check for duplicate SKU
       if (variantData.sku) {
@@ -554,27 +596,21 @@ export class ProductVariantsService {
       }
 
       // Check for duplicate barcode
-      if (variantData.barcode) {
-        const existingBarcode = await db.select<DatabaseProductVariant[]>(
-          'SELECT id FROM product_variants WHERE barcode = ? LIMIT 1',
-          [variantData.barcode],
-        )
-
-        if (existingBarcode.length > 0) {
-          return { success: false, error: 'Variant with this barcode already exists' }
-        }
+      if (normalizedBarcode && (await this.isBarcodeInUse(normalizedBarcode))) {
+        return { success: false, error: 'Barcode is already assigned to another product or variant' }
       }
 
       const now = new Date().toISOString()
       const result = await db.execute(
         `INSERT INTO product_variants (
-          parent_product_id, sku, barcode, price, cost, stock, attributes,
+          parent_product_id, sku, barcode, barcode_normalized, price, cost, stock, attributes,
           image, is_active, position, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           parseInt(variantData.parentProductId, 10),
           variantData.sku || null,
-          variantData.barcode || null,
+          barcode || null,
+          normalizedBarcode || null,
           variantData.price,
           variantData.cost,
           variantData.stock,
@@ -590,6 +626,7 @@ export class ProductVariantsService {
       const newVariant: ProductVariant = {
         id: (result.lastInsertId ?? 0).toString(),
         ...variantData,
+        barcode,
         createdAt: now,
         updatedAt: now,
       }
@@ -623,6 +660,8 @@ export class ProductVariantsService {
 
     try {
       const db = await this.getDatabase()
+      const barcode = updates.barcode !== undefined ? formatBarcodeForStorage(updates.barcode) : undefined
+      const normalizedBarcode = updates.barcode !== undefined ? normalizeBarcode(barcode) : undefined
 
       const existingVariant = await db.select<DatabaseProductVariant[]>(
         'SELECT * FROM product_variants WHERE id = ? LIMIT 1',
@@ -646,15 +685,12 @@ export class ProductVariantsService {
       }
 
       // Check for duplicate barcode
-      if (updates.barcode !== undefined) {
-        const existingBarcode = await db.select<DatabaseProductVariant[]>(
-          'SELECT id FROM product_variants WHERE barcode = ? AND id != ? LIMIT 1',
-          [updates.barcode, parseInt(id, 10)],
-        )
-
-        if (existingBarcode.length > 0) {
-          return { success: false, error: 'Variant with this barcode already exists' }
-        }
+      if (
+        updates.barcode !== undefined &&
+        normalizedBarcode &&
+        (await this.isBarcodeInUse(normalizedBarcode, { excludeVariantId: id }))
+      ) {
+        return { success: false, error: 'Barcode is already assigned to another product or variant' }
       }
 
       const updateFields = []
@@ -672,7 +708,9 @@ export class ProductVariantsService {
 
       if (updates.barcode !== undefined) {
         updateFields.push('barcode = ?')
-        updateValues.push(updates.barcode || null)
+        updateValues.push(barcode || null)
+        updateFields.push('barcode_normalized = ?')
+        updateValues.push(normalizedBarcode || null)
       }
 
       if (updates.price !== undefined) {
