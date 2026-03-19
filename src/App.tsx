@@ -3,6 +3,7 @@ import { Toaster } from 'sonner'
 import Layout from './components/Layout'
 import { UpdateNotification } from './components/ui/UpdateNotification'
 import { useAuth } from './hooks/useAuth'
+import { startDbStatusMonitor, stopDbStatusMonitor } from './lib/db-status'
 import Analytics from './pages/Analytics'
 import Customers from './pages/Customers'
 import Dashboard from './pages/Dashboard'
@@ -25,6 +26,11 @@ function App() {
     authActions.initializeAuth()
     languageActions.initializeLanguage()
     appSettingsStore.initialize()
+    startDbStatusMonitor()
+
+    return () => {
+      stopDbStatusMonitor()
+    }
   }, [])
 
   const handleNavigate = (page: string) => {

@@ -14,7 +14,7 @@
  */
 
 import { connect, type Connection as TursoClient } from '@tursodatabase/serverless'
-import { connectionStatus, pendingCount } from './db'
+import { pendingCount, setConnectionState } from './db'
 import { loadDesktopDbConnectionConfig } from './desktop-db-config'
 import { isTauri } from './platform'
 
@@ -406,18 +406,18 @@ export async function pullRemoteChanges(): Promise<void> {
  */
 export async function syncOnReconnect(): Promise<void> {
   console.log('[sync] syncOnReconnect: starting')
-  connectionStatus.value = 'syncing'
+  setConnectionState('syncing')
 
   try {
     await drainQueue()
     await pullRemoteChanges()
-    connectionStatus.value = 'remote'
+    setConnectionState('remote')
     console.log('[sync] syncOnReconnect: complete')
   } catch (err: unknown) {
     console.error('[sync] syncOnReconnect: unexpected error:', err)
     // Don't leave the status as 'syncing' forever — fall back to remote since
     // we know the connection is up (the health-check just confirmed it)
-    connectionStatus.value = 'remote'
+    setConnectionState('remote')
   } finally {
     // Always refresh the pending count so the badge reflects reality
     try {
