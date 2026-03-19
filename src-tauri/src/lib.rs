@@ -22,16 +22,6 @@ struct DbConnectionConfig {
     configured: bool,
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct DbStatusSnapshot {
-    status: String,
-    mode: String,
-    remote_configured: bool,
-    pending_writes: Option<i64>,
-    last_checked_at: Option<String>,
-}
-
 fn load_runtime_config(app: &AppHandle) -> RuntimeConfig {
     let config_path = match app.path().app_config_dir() {
         Ok(dir) => dir.join("config.json"),
@@ -79,24 +69,6 @@ async fn verify_password(password: String, hash: String) -> Result<bool, String>
 #[tauri::command]
 async fn get_db_connection_config(app: AppHandle) -> Result<DbConnectionConfig, String> {
     Ok(resolve_db_connection_config(&app))
-}
-
-#[tauri::command]
-async fn get_db_status(app: AppHandle) -> Result<DbStatusSnapshot, String> {
-    let config = resolve_db_connection_config(&app);
-    let (status, mode) = if config.configured {
-        ("syncing".to_string(), "turso".to_string())
-    } else {
-        ("local".to_string(), "sqlite".to_string())
-    };
-
-    Ok(DbStatusSnapshot {
-        status,
-        mode,
-        remote_configured: config.configured,
-        pending_writes: None,
-        last_checked_at: None,
-    })
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -245,8 +217,7 @@ pub fn run() {
             print_thermal_receipt,
             hash_password,
             verify_password,
-            get_db_connection_config,
-            get_db_status
+            get_db_connection_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

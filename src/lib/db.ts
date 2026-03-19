@@ -15,8 +15,6 @@ interface TauriDatabaseInstance {
 
 /** Dynamically load the Tauri SQL plugin. Only call this inside Tauri. */
 async function loadTauriDatabase(path: string): Promise<TauriDatabaseInstance> {
-  // Dynamic import — tree-shaken away in the web build because VITE_PLATFORM=web
-  // means isTauri is always false and this branch is never reached.
   const mod = await import('@tauri-apps/plugin-sql')
   return mod.default.load(path) as Promise<TauriDatabaseInstance>
 }
@@ -29,12 +27,11 @@ export interface DbClientResult {
 }
 
 export type ConnectionStatus = 'remote' | 'local' | 'syncing' | 'error'
+export type DbStatusMode = 'api' | 'sqlite' | 'turso'
 
-/**
- * Reactive signal that always reflects the current DB connection state.
- * Components can subscribe to this signal to re-render when the status changes.
- */
-export const connectionStatus = signal<ConnectionStatus>('local')
+export const connectionStatus = signal<ConnectionStatus>(isTauri ? 'local' : 'syncing')
+export const connectionMode = signal<DbStatusMode>(isTauri ? 'sqlite' : 'api')
+export const remoteConfigured = signal<boolean>(false)
 export const lastConnectionAttempt = signal<number>(0)
 
 /**
@@ -44,15 +41,48 @@ export const lastConnectionAttempt = signal<number>(0)
  */
 export const pendingCount = signal<number>(0)
 
+interface SetConnectionStateOptions {
+  mode?: DbStatusMode
+  remoteConfigured?: boolean
+  lastCheckedAt?: number | null
+  pendingWrites?: number
+}
+
+function resolveConnectionMode(status: ConnectionStatus, override?: DbStatusMode): DbStatusMode {
+  if (override) return override
+  if (!isTauri) return 'api'
+  return status === 'remote' || status === 'syncing' ? 'turso' : 'sqlite'
+}
+
+export function setConnectionState(status: ConnectionStatus, options: SetConnectionStateOptions = {}): void {
+  connectionStatus.value = status
+  connectionMode.value = resolveConnectionMode(status, options.mode)
+
+  if (typeof options.remoteConfigured === 'boolean') {
+    remoteConfigured.value = options.remoteConfigured
+  }
+
+  if (typeof options.pendingWrites === 'number') {
+    pendingCount.value = options.pendingWrites
+  }
+
+  if (options.lastCheckedAt !== undefined) {
+    lastConnectionAttempt.value = options.lastCheckedAt ?? 0
+  }
+}
+
 class DbManager {
   private static instance: DbManager
   private tursoClient: TursoClient | null = null
   private localDb: TauriDatabaseInstance | null = null
-  private isOnline: boolean = true
-  private connectionTested: boolean = false
-  private lastOnlineCheck: number = 0
-  private readonly ONLINE_CHECK_INTERVAL = 30000 // 30 seconds
+  private isOnline = true
+  private connectionResolved = false
   private healthCheckTimer: ReturnType<typeof setInterval> | null = null
+  private healthCheckPromise: Promise<boolean> | null = null
+  private consecutiveFailures = 0
+  private nextRetryAt = 0
+  private readonly BASE_HEALTH_CHECK_INTERVAL = 30_000
+  private readonly MAX_RETRY_DELAY = 5 * 60_000
 
   private constructor() {}
 
@@ -63,171 +93,205 @@ class DbManager {
     return DbManager.instance
   }
 
+  private async loadRemoteConfig(forceRefresh = false) {
+    if (!isTauri) {
+      remoteConfigured.value = false
+      return { configured: false } as const
+    }
+
+    const config = await loadDesktopDbConnectionConfig(forceRefresh)
+    remoteConfigured.value = config.configured
+    return config
+  }
+
+  private async getLocalDb(): Promise<TauriDatabaseInstance> {
+    if (!this.localDb) {
+      this.localDb = await loadTauriDatabase('sqlite:postpos.db')
+      console.log('[DbManager] Connected to local SQLite (offline mode)')
+    }
+
+    return this.localDb
+  }
+
+  async refreshPendingCount(): Promise<void> {
+    if (!isTauri) return
+
+    try {
+      const localDb = await this.getLocalDb()
+      const rows = await localDb.select<Array<{ cnt: number }>>(
+        'SELECT COUNT(*) AS cnt FROM pending_sync_queue WHERE synced_at IS NULL',
+      )
+      pendingCount.value = rows[0]?.cnt ?? 0
+    } catch {
+      pendingCount.value = 0
+    }
+  }
+
+  private getRetryDelay(): number {
+    const exponent = Math.max(this.consecutiveFailures - 1, 0)
+    return Math.min(this.BASE_HEALTH_CHECK_INTERVAL * 2 ** exponent, this.MAX_RETRY_DELAY)
+  }
+
+  private async probeRemoteConnection(forceRefresh = false): Promise<boolean> {
+    if (!isTauri) return false
+
+    if (this.healthCheckPromise) {
+      return this.healthCheckPromise
+    }
+
+    this.healthCheckPromise = (async () => {
+      const config = await this.loadRemoteConfig(forceRefresh)
+      if (!config.configured || !config.url || !config.authToken) {
+        this.isOnline = false
+        this.connectionResolved = true
+        this.consecutiveFailures = 0
+        this.nextRetryAt = 0
+        setConnectionState('local', { remoteConfigured: false })
+        return false
+      }
+
+      const previousStatus = connectionStatus.peek()
+      const shouldWaitForRetry =
+        this.connectionResolved && !this.isOnline && Date.now() < this.nextRetryAt && !forceRefresh
+      if (shouldWaitForRetry) {
+        return false
+      }
+
+      const shouldShowInitialSync = !this.connectionResolved
+      if (shouldShowInitialSync) {
+        setConnectionState('syncing', { remoteConfigured: true })
+      }
+
+      try {
+        if (!this.tursoClient) {
+          this.tursoClient = connect({
+            url: config.url,
+            authToken: config.authToken,
+          })
+        }
+
+        await this.tursoClient.execute('SELECT 1')
+        this.isOnline = true
+        this.connectionResolved = true
+        this.consecutiveFailures = 0
+        this.nextRetryAt = 0
+        const shouldSyncOnReconnect =
+          previousStatus !== 'remote' &&
+          previousStatus !== 'syncing' &&
+          this.connectionResolved &&
+          !shouldShowInitialSync
+        const checkedAt = Date.now()
+
+        setConnectionState(shouldSyncOnReconnect ? 'syncing' : 'remote', {
+          remoteConfigured: true,
+          lastCheckedAt: checkedAt,
+        })
+
+        if (shouldSyncOnReconnect) {
+          const { syncOnReconnect } = await import('./sync')
+          await syncOnReconnect()
+        }
+
+        return true
+      } catch (error) {
+        console.warn('[DbManager] Turso health check failed, falling back to local SQLite:', error)
+        this.isOnline = false
+        this.connectionResolved = true
+        this.consecutiveFailures += 1
+        this.nextRetryAt = Date.now() + this.getRetryDelay()
+        setConnectionState('local', {
+          remoteConfigured: true,
+          lastCheckedAt: Date.now(),
+        })
+        return false
+      } finally {
+        this.healthCheckPromise = null
+      }
+    })()
+
+    return this.healthCheckPromise
+  }
+
   /**
    * Get the appropriate database client (Turso or local SQLite)
    * Automatically falls back to local SQLite when Turso is unavailable.
    * On the web platform, always uses Turso — no local SQLite fallback.
-   *
-   * Desktop Turso credentials are resolved through the Tauri backend so they
-   * never need to be exposed through the Vite web bundle.
    */
   async getClient(): Promise<DbClientResult> {
-    let tursoUrl: string | undefined
-    let tursoToken: string | undefined
+    let config:
+      | Awaited<ReturnType<DbManager['loadRemoteConfig']>>
+      | {
+          configured: false
+        }
 
     if (isTauri) {
-      const config = await loadDesktopDbConnectionConfig()
-      tursoUrl = config.url
-      tursoToken = config.authToken
-    }
+      config = await this.loadRemoteConfig()
 
-    // If Turso is configured, try to use it
-    if (tursoUrl && tursoToken) {
-      // Check if we should retry online connection
-      const now = Date.now()
-      if (!this.isOnline && now - this.lastOnlineCheck > this.ONLINE_CHECK_INTERVAL) {
-        this.isOnline = true
-        this.connectionTested = false
+      if (config.configured && !this.connectionResolved) {
+        await this.probeRemoteConnection()
       }
 
-      if (this.isOnline) {
-        try {
-          if (!this.tursoClient) {
-            this.tursoClient = connect({
-              url: tursoUrl,
-              authToken: tursoToken,
-            })
-          }
+      if (config.configured && this.isOnline) {
+        if (!this.tursoClient && config.url && config.authToken) {
+          this.tursoClient = connect({
+            url: config.url,
+            authToken: config.authToken,
+          })
+        }
 
-          // Test connection if not tested yet
-          if (!this.connectionTested) {
-            await this.tursoClient.execute('SELECT 1')
-            this.connectionTested = true
-            lastConnectionAttempt.value = Date.now()
-            connectionStatus.value = 'remote'
-            console.log('[DbManager] Connected to Turso (remote)')
-          }
-
+        if (this.tursoClient) {
           return { client: this.tursoClient, isRemote: true }
-        } catch (error) {
-          console.warn('[DbManager] Turso connection failed, falling back to local SQLite:', error)
-          this.isOnline = false
-          this.lastOnlineCheck = Date.now()
-          lastConnectionAttempt.value = Date.now()
-          connectionStatus.value = 'local'
         }
       }
     }
 
-    // Web platform: no local SQLite fallback — throw so the caller knows
     if (!isTauri) {
-      connectionStatus.value = 'error'
+      setConnectionState('error', { mode: 'api' })
       throw new Error('[DbManager] No database connection: Turso is required in web mode')
     }
 
-    // Fallback to local SQLite (Tauri only)
-    if (!this.localDb) {
-      try {
-        this.localDb = await loadTauriDatabase('sqlite:postpos.db')
-        lastConnectionAttempt.value = Date.now()
-        connectionStatus.value = 'local'
-        console.log('[DbManager] Connected to local SQLite (offline mode)')
-      } catch (error) {
-        console.error('[DbManager] Failed to load local database:', error)
-        connectionStatus.value = 'error'
-        throw new Error('Failed to connect to any database')
-      }
-    }
-
-    return { client: this.localDb, isRemote: false }
-  }
-
-  /**
-   * Check if currently using remote Turso connection
-   */
-  isUsingRemote(): boolean {
-    return this.isOnline && this.tursoClient !== null
-  }
-
-  /**
-   * Force reconnection attempt to Turso
-   */
-  async reconnectToTurso(): Promise<boolean> {
-    connectionStatus.value = 'syncing'
-    this.isOnline = true
-    this.connectionTested = false
-    this.lastOnlineCheck = 0
-
     try {
-      const { isRemote } = await this.getClient()
-      // connectionStatus is updated inside getClient()
-      return isRemote
-    } catch {
-      connectionStatus.value = 'error'
-      return false
+      const localDb = await this.getLocalDb()
+      if (connectionStatus.peek() !== 'error') {
+        setConnectionState('local', { remoteConfigured: remoteConfigured.peek() })
+      }
+      return { client: localDb, isRemote: false }
+    } catch (error) {
+      console.error('[DbManager] Failed to load local database:', error)
+      setConnectionState('error', { remoteConfigured: remoteConfigured.peek() })
+      throw new Error('Failed to connect to any database')
     }
   }
 
-  /**
-   * Start a background health-check that pings Turso on a fixed interval.
-   * Updates connectionStatus signal automatically.
-   * No-op if Turso is not configured or a check is already running.
-   */
-  startHealthCheck(intervalMs = 15_000): void {
-    // Use cached credentials from getClient() or load them
-    // Note: We don't await here since this is a sync method that sets up an interval
-    const checkHealth = async (): Promise<void> => {
-      const config = await loadDesktopDbConnectionConfig(true)
-      const tursoUrl = config.url
-      const tursoToken = config.authToken
+  isUsingRemote(): boolean {
+    return this.isOnline && this.tursoClient !== null && connectionStatus.peek() === 'remote'
+  }
 
-      // Nothing to check if Turso is not configured
-      if (!tursoUrl || !tursoToken) return
+  async reconnectToTurso(): Promise<boolean> {
+    this.connectionResolved = false
+    this.isOnline = true
+    this.consecutiveFailures = 0
+    this.nextRetryAt = 0
+    return this.probeRemoteConnection(true)
+  }
 
-      const wasOffline = connectionStatus.value === 'local' || connectionStatus.value === 'error'
-      connectionStatus.value = 'syncing'
-      try {
-        // Always create a fresh client if needed and force a real probe
-        if (!this.tursoClient) {
-          this.tursoClient = connect({ url: tursoUrl, authToken: tursoToken })
-        }
-        await this.tursoClient.execute('SELECT 1')
-        this.isOnline = true
-        this.connectionTested = true
-        lastConnectionAttempt.value = Date.now()
+  startHealthCheck(intervalMs = this.BASE_HEALTH_CHECK_INTERVAL): void {
+    if (!isTauri) return
 
-        if (wasOffline && isTauri) {
-          // Reconnection detected (desktop only) — trigger sync engine asynchronously.
-          // Import is deferred to avoid a circular dependency at module load time.
-          import('./sync').then(({ syncOnReconnect }) => {
-            syncOnReconnect().catch((err: unknown) => console.error('[DbManager] syncOnReconnect failed:', err))
-          })
-        } else {
-          connectionStatus.value = 'remote'
-        }
-      } catch {
-        this.isOnline = false
-        this.connectionTested = false
-        this.lastOnlineCheck = Date.now()
-        lastConnectionAttempt.value = Date.now()
-        connectionStatus.value = isTauri ? 'local' : 'error'
-      }
-    }
+    void this.refreshPendingCount()
+    void this.probeRemoteConnection().catch((error) => {
+      console.error('[DbManager] Initial health check failed:', error)
+    })
 
-    // Initial check to determine if we should start the interval
-    checkHealth().catch((err) => console.error('[DbManager] Initial health check failed:', err))
-
-    // Already running
     if (this.healthCheckTimer !== null) return
 
     this.healthCheckTimer = setInterval(() => {
-      checkHealth().catch((err) => console.error('[DbManager] Health check failed:', err))
+      void this.probeRemoteConnection().catch((error) => {
+        console.error('[DbManager] Health check failed:', error)
+      })
     }, intervalMs)
   }
 
-  /**
-   * Stop the background health-check interval.
-   */
   stopHealthCheck(): void {
     if (this.healthCheckTimer !== null) {
       clearInterval(this.healthCheckTimer)
@@ -235,30 +299,30 @@ class DbManager {
     }
   }
 
-  /**
-   * Reset the manager (useful for testing or forced reconnection)
-   */
   reset(): void {
     this.tursoClient = null
     this.localDb = null
     this.isOnline = true
-    this.connectionTested = false
-    this.lastOnlineCheck = 0
+    this.connectionResolved = false
+    this.healthCheckPromise = null
+    this.consecutiveFailures = 0
+    this.nextRetryAt = 0
+    remoteConfigured.value = false
+    pendingCount.value = 0
+    setConnectionState(isTauri ? 'local' : 'syncing', {
+      mode: isTauri ? 'sqlite' : 'api',
+      lastCheckedAt: null,
+    })
   }
 
-  /**
-   * Close all connections
-   */
   async close(): Promise<void> {
     if (this.tursoClient) {
-      // Turso client doesn't have a close method, it's stateless
       this.tursoClient = null
     }
     if (this.localDb) {
-      // Tauri SQL plugin doesn't expose close, handled by the app lifecycle
       this.localDb = null
     }
-    this.connectionTested = false
+    this.connectionResolved = false
   }
 }
 
