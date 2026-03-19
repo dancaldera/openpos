@@ -1,4 +1,5 @@
 import Database from '@tauri-apps/plugin-sql'
+import { formatBarcodeForStorage, normalizeBarcode } from '../lib/barcodes'
 import { type ProductVariant, productVariantsService } from './product-variants-sqlite'
 
 export type ProductVariantType = 'simple' | 'configurable'
@@ -56,12 +57,26 @@ interface DatabaseProduct {
   stock: number
   category: string
   barcode?: string
+  barcode_normalized?: string
   image?: string
   is_active: number
   variant_type?: string
   default_variant_id?: number
   created_at: string
   updated_at: string
+}
+
+export interface BarcodeLookupResult {
+  type: 'product' | 'variant'
+  productId: string
+  productName: string
+  productBarcode?: string
+  variantId?: string
+  variantBarcode?: string
+  variantAttributes?: Record<string, string>
+  price: number
+  stock: number
+  isActive: boolean
 }
 
 export class ProductService {
@@ -99,6 +114,40 @@ export class ProductService {
       createdAt: dbProduct.created_at,
       updatedAt: dbProduct.updated_at,
     }
+  }
+
+  private async isBarcodeInUse(
+    normalizedBarcode: string,
+    options: {
+      excludeProductId?: string
+      excludeVariantId?: string
+    } = {},
+  ): Promise<boolean> {
+    const db = await this.getDatabase()
+    const excludeProductId = options.excludeProductId ? parseInt(options.excludeProductId, 10) : null
+    const excludeVariantId = options.excludeVariantId ? parseInt(options.excludeVariantId, 10) : null
+
+    const productConflicts = await db.select<{ id: number }[]>(
+      `SELECT id FROM products
+       WHERE barcode_normalized = ?
+         AND (? IS NULL OR id != ?)
+       LIMIT 1`,
+      [normalizedBarcode, excludeProductId, excludeProductId],
+    )
+
+    if (productConflicts.length > 0) {
+      return true
+    }
+
+    const variantConflicts = await db.select<{ id: number }[]>(
+      `SELECT id FROM product_variants
+       WHERE barcode_normalized = ?
+         AND (? IS NULL OR id != ?)
+       LIMIT 1`,
+      [normalizedBarcode, excludeVariantId, excludeVariantId],
+    )
+
+    return variantConflicts.length > 0
   }
 
   async getProducts(): Promise<Product[]> {
@@ -195,18 +244,13 @@ export class ProductService {
 
     try {
       const db = await this.getDatabase()
+      const barcode = formatBarcodeForStorage(productData.barcode)
+      const normalizedBarcode = normalizeBarcode(barcode)
 
-      if (productData.barcode) {
-        const existingBarcode = await db.select<DatabaseProduct[]>(
-          'SELECT id FROM products WHERE barcode = ? LIMIT 1',
-          [productData.barcode],
-        )
-
-        if (existingBarcode.length > 0) {
-          return {
-            success: false,
-            error: 'Product with this barcode already exists',
-          }
+      if (normalizedBarcode && (await this.isBarcodeInUse(normalizedBarcode))) {
+        return {
+          success: false,
+          error: 'Barcode is already assigned to another product or variant',
         }
       }
 
@@ -214,8 +258,8 @@ export class ProductService {
       const result = await db.execute(
         `INSERT INTO products (
           name, description, price, cost, stock, category, barcode, image,
-          is_active, variant_type, default_variant_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          barcode_normalized, is_active, variant_type, default_variant_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           productData.name,
           productData.description,
@@ -223,8 +267,9 @@ export class ProductService {
           productData.cost,
           productData.stock,
           productData.category,
-          productData.barcode || null,
+          barcode || null,
           productData.image || null,
+          normalizedBarcode || null,
           productData.isActive ? 1 : 0,
           productData.variantType || 'simple',
           productData.defaultVariantId ? parseInt(productData.defaultVariantId, 10) : null,
@@ -241,7 +286,7 @@ export class ProductService {
         cost: productData.cost,
         stock: productData.stock,
         category: productData.category,
-        barcode: productData.barcode,
+        barcode,
         image: productData.image,
         isActive: productData.isActive,
         variantType: productData.variantType || 'simple',
@@ -279,6 +324,8 @@ export class ProductService {
 
     try {
       const db = await this.getDatabase()
+      const barcode = updates.barcode !== undefined ? formatBarcodeForStorage(updates.barcode) : undefined
+      const normalizedBarcode = updates.barcode !== undefined ? normalizeBarcode(barcode) : undefined
 
       const existingProduct = await db.select<DatabaseProduct[]>('SELECT * FROM products WHERE id = ? LIMIT 1', [
         parseInt(id, 10),
@@ -288,17 +335,14 @@ export class ProductService {
         return { success: false, error: 'Product not found' }
       }
 
-      if (updates.barcode) {
-        const existingBarcode = await db.select<DatabaseProduct[]>(
-          'SELECT id FROM products WHERE barcode = ? AND id != ? LIMIT 1',
-          [updates.barcode, parseInt(id, 10)],
-        )
-
-        if (existingBarcode.length > 0) {
-          return {
-            success: false,
-            error: 'Product with this barcode already exists',
-          }
+      if (
+        updates.barcode !== undefined &&
+        normalizedBarcode &&
+        (await this.isBarcodeInUse(normalizedBarcode, { excludeProductId: id }))
+      ) {
+        return {
+          success: false,
+          error: 'Barcode is already assigned to another product or variant',
         }
       }
 
@@ -337,7 +381,9 @@ export class ProductService {
 
       if (updates.barcode !== undefined) {
         updateFields.push('barcode = ?')
-        updateValues.push(updates.barcode || null)
+        updateValues.push(barcode || null)
+        updateFields.push('barcode_normalized = ?')
+        updateValues.push(normalizedBarcode || null)
       }
 
       if (updates.image !== undefined) {
@@ -395,14 +441,16 @@ export class ProductService {
       const db = await this.getDatabase()
 
       const searchTerm = `%${query.toLowerCase()}%`
+      const normalizedBarcode = normalizeBarcode(query)
       const products = await db.select<DatabaseProduct[]>(
         `SELECT * FROM products 
          WHERE LOWER(name) LIKE ? 
             OR LOWER(description) LIKE ? 
             OR LOWER(category) LIKE ?
             OR (barcode IS NOT NULL AND barcode LIKE ?)
+            OR (? IS NOT NULL AND barcode_normalized = ?)
          ORDER BY name`,
-        [searchTerm, searchTerm, searchTerm, `%${query}%`],
+        [searchTerm, searchTerm, searchTerm, `%${query}%`, normalizedBarcode || null, normalizedBarcode || null],
       )
 
       return products.map((product) => this.convertDbProduct(product))
@@ -429,6 +477,7 @@ export class ProductService {
 
       const offset = (page - 1) * limit
       const searchTerm = `%${query.toLowerCase()}%`
+      const normalizedBarcode = normalizeBarcode(query)
 
       // Get total count for search
       const countResult = await db.select<{ count: number }[]>(
@@ -436,8 +485,9 @@ export class ProductService {
          WHERE LOWER(name) LIKE ? 
             OR LOWER(description) LIKE ? 
             OR LOWER(category) LIKE ?
-            OR (barcode IS NOT NULL AND barcode LIKE ?)`,
-        [searchTerm, searchTerm, searchTerm, `%${query}%`],
+            OR (barcode IS NOT NULL AND barcode LIKE ?)
+            OR (? IS NOT NULL AND barcode_normalized = ?)`,
+        [searchTerm, searchTerm, searchTerm, `%${query}%`, normalizedBarcode || null, normalizedBarcode || null],
       )
       const totalCount = countResult[0]?.count || 0
       const totalPages = Math.ceil(totalCount / limit)
@@ -449,8 +499,18 @@ export class ProductService {
             OR LOWER(description) LIKE ? 
             OR LOWER(category) LIKE ?
             OR (barcode IS NOT NULL AND barcode LIKE ?)
+            OR (? IS NOT NULL AND barcode_normalized = ?)
          ORDER BY name LIMIT ? OFFSET ?`,
-        [searchTerm, searchTerm, searchTerm, `%${query}%`, limit, offset],
+        [
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          `%${query}%`,
+          normalizedBarcode || null,
+          normalizedBarcode || null,
+          limit,
+          offset,
+        ],
       )
 
       return {
@@ -549,6 +609,59 @@ export class ProductService {
     } catch (error) {
       console.error('Get product with variants error:', error)
       throw new Error('Failed to fetch product with variants')
+    }
+  }
+
+  async findSellableByBarcode(barcode: string): Promise<BarcodeLookupResult | null> {
+    const normalizedBarcode = normalizeBarcode(barcode)
+    if (!normalizedBarcode) {
+      return null
+    }
+
+    const variant = await productVariantsService.getVariantByBarcode(normalizedBarcode)
+    if (variant) {
+      const product = await this.getProduct(variant.parentProductId)
+      if (!product || !product.isActive) {
+        return null
+      }
+
+      return {
+        type: 'variant',
+        productId: product.id,
+        productName: product.name,
+        productBarcode: product.barcode,
+        variantId: variant.id,
+        variantBarcode: variant.barcode,
+        variantAttributes: variant.attributes,
+        price: variant.price,
+        stock: variant.stock,
+        isActive: variant.isActive,
+      }
+    }
+
+    const db = await this.getDatabase()
+    const products = await db.select<DatabaseProduct[]>(
+      `SELECT * FROM products
+       WHERE barcode_normalized = ?
+         AND variant_type = 'simple'
+         AND is_active = 1
+       LIMIT 1`,
+      [normalizedBarcode],
+    )
+
+    if (products.length === 0) {
+      return null
+    }
+
+    const product = this.convertDbProduct(products[0])
+    return {
+      type: 'product',
+      productId: product.id,
+      productName: product.name,
+      productBarcode: product.barcode,
+      price: product.price,
+      stock: product.stock,
+      isActive: product.isActive,
     }
   }
 

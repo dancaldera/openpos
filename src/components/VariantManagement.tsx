@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { useTranslation } from '../hooks/useTranslation'
+import { normalizeBarcode } from '../lib/barcodes'
 import {
   type ProductAttribute,
   type ProductVariant,
@@ -206,6 +207,13 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
                 }
                 class="bg-white/80 text-gray-900"
                 placeholder="1234567890"
+                helperText={
+                  normalizeBarcode(formData.barcode)
+                    ? t('variants.barcodeNormalizedHelp', {
+                        normalized: normalizeBarcode(formData.barcode) || '',
+                      })
+                    : t('variants.barcodeHelp')
+                }
               />
             </div>
           </div>

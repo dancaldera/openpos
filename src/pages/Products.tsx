@@ -22,6 +22,7 @@ import {
 } from '../components/VariantManagement'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
+import { normalizeBarcode } from '../lib/barcodes'
 import { type ProductVariant, productVariantsService } from '../services/product-variants-turso'
 import { PRODUCT_CATEGORIES, type Product, type ProductWithVariants, productService } from '../services/products-turso'
 
@@ -293,6 +294,19 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
                   }
                   placeholder={t('products.enterBarcode')}
                   class="bg-white/80 text-gray-900"
+                  helperText={
+                    normalizeBarcode(formData.barcode)
+                      ? product?.variantType === 'configurable'
+                        ? t('products.parentBarcodeHelpConfigurable', {
+                            normalized: normalizeBarcode(formData.barcode) || '',
+                          })
+                        : t('products.barcodeNormalizedHelp', {
+                            normalized: normalizeBarcode(formData.barcode) || '',
+                          })
+                      : product?.variantType === 'configurable'
+                        ? t('products.parentBarcodeHintConfigurable')
+                        : t('products.barcodeHelp')
+                  }
                 />
               </div>
 
