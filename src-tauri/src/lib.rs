@@ -41,12 +41,14 @@ fn load_runtime_config(app: &AppHandle) -> RuntimeConfig {
 
 fn resolve_db_connection_config(app: &AppHandle) -> DbConnectionConfig {
     let runtime_config = load_runtime_config(app);
-    let url = env::var("TURSO_DATABASE_URL")
-        .ok()
-        .or(runtime_config.turso_database_url);
-    let auth_token = env::var("TURSO_AUTH_TOKEN")
-        .ok()
-        .or(runtime_config.turso_auth_token);
+    // Public desktop releases should prefer post-install runtime config.
+    // Environment variables remain available for local development and CI.
+    let url = runtime_config
+        .turso_database_url
+        .or_else(|| env::var("TURSO_DATABASE_URL").ok());
+    let auth_token = runtime_config
+        .turso_auth_token
+        .or_else(|| env::var("TURSO_AUTH_TOKEN").ok());
 
     DbConnectionConfig {
         configured: url.is_some() && auth_token.is_some(),
