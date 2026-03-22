@@ -15,6 +15,7 @@ import {
   remoteConfigured,
   setApiState,
   setConnectionState,
+  syncInProgress,
 } from './db'
 import { requireDesktopApi } from './desktop'
 import { isDesktop } from './platform'
@@ -22,6 +23,7 @@ import { isDesktop } from './platform'
 export interface DbStatusSnapshot {
   status: typeof connectionStatus.value | 'remote' | 'local'
   mode: typeof connectionMode.value | 'sqlite' | 'turso'
+  isSyncing?: boolean
   remoteConfigured: boolean
   apiConfigured?: boolean
   apiReachable?: boolean
@@ -38,6 +40,7 @@ export interface DbStatusSnapshot {
 export interface NormalizedDbStatusSnapshot {
   status: typeof connectionStatus.value
   mode: typeof connectionMode.value
+  isSyncing: boolean
   remoteConfigured: boolean
   apiConfigured: boolean
   apiReachable: boolean
@@ -80,6 +83,7 @@ export function normalizeDbStatusSnapshot(snapshot: DbStatusSnapshot): Normalize
   return {
     status,
     mode,
+    isSyncing: snapshot.isSyncing ?? status === 'syncing',
     remoteConfigured: snapshot.remoteConfigured,
     apiConfigured: snapshot.apiConfigured ?? mode === 'api',
     apiReachable: snapshot.apiReachable ?? (mode === 'api' ? status !== 'error' : false),
@@ -99,6 +103,7 @@ function applyDbStatusSnapshot(snapshot: DbStatusSnapshot): void {
 
   setConnectionState(normalized.status, {
     mode: normalized.mode,
+    isSyncing: normalized.isSyncing,
     remoteConfigured: normalized.remoteConfigured,
     pendingWrites: normalized.pendingWrites,
     erroredWrites: normalized.erroredWrites,
@@ -159,6 +164,7 @@ export function getDbStatusSnapshot(): DbStatusSnapshot {
   return {
     status: connectionStatus.value,
     mode: connectionMode.value,
+    isSyncing: syncInProgress.value,
     remoteConfigured: remoteConfigured.value,
     apiConfigured: apiConfigured.value,
     apiReachable: apiReachable.value,

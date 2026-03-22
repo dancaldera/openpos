@@ -5,6 +5,7 @@ export interface DesktopDatabaseStatement {
 
 export interface DesktopSyncStatusSnapshot {
   status: 'online' | 'offline' | 'syncing' | 'error'
+  isSyncing: boolean
   mode: 'mirror'
   remoteConfigured: boolean
   pendingWrites: number

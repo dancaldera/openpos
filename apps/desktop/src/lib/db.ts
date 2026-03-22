@@ -5,6 +5,7 @@ export type ConnectionStatus = 'online' | 'offline' | 'syncing' | 'error'
 export type DbStatusMode = 'api' | 'mirror'
 
 export const connectionStatus = signal<ConnectionStatus>(isDesktop ? 'offline' : 'syncing')
+export const syncInProgress = signal<boolean>(false)
 export const connectionMode = signal<DbStatusMode>(isDesktop ? 'mirror' : 'api')
 export const remoteConfigured = signal<boolean>(false)
 export const apiConfigured = signal<boolean>(!isDesktop)
@@ -20,6 +21,7 @@ export const conflictedCount = signal<number>(0)
 
 interface SetConnectionStateOptions {
   mode?: DbStatusMode
+  isSyncing?: boolean
   remoteConfigured?: boolean
   lastCheckedAt?: number | null
   lastSyncedAt?: number | null
@@ -37,6 +39,10 @@ function resolveConnectionMode(override?: DbStatusMode): DbStatusMode {
 export function setConnectionState(status: ConnectionStatus, options: SetConnectionStateOptions = {}): void {
   connectionStatus.value = status
   connectionMode.value = resolveConnectionMode(options.mode)
+
+  if (typeof options.isSyncing === 'boolean') {
+    syncInProgress.value = options.isSyncing
+  }
 
   if (typeof options.remoteConfigured === 'boolean') {
     remoteConfigured.value = options.remoteConfigured

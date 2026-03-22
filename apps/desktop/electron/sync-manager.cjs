@@ -27,6 +27,7 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
   const remoteSchemaCache = new Map()
   const status = {
     status: 'offline',
+    isSyncing: false,
     mode: 'mirror',
     remoteConfigured: false,
     pendingWrites: 0,
@@ -86,6 +87,25 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
       lastError: status.lastError,
       lastCheckedAt: status.lastCheckedAt,
     })
+  }
+
+  function beginSync({ foreground = false } = {}) {
+    status.isSyncing = true
+
+    if (foreground) {
+      setStatus('syncing')
+      return
+    }
+
+    status.lastCheckedAt = new Date().toISOString()
+    logSync('background sync started', {
+      status: status.status,
+      lastCheckedAt: status.lastCheckedAt,
+    })
+  }
+
+  function endSync() {
+    status.isSyncing = false
   }
 
   function rowFromRemoteResult(result, index) {
@@ -195,11 +215,11 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
 
     const sql = assignments
       ? `INSERT INTO ${quoteIdentifier(config.tableName)} (${quoteColumns(writeColumns)})
-       VALUES (${placeholders})
-       ON CONFLICT(${quoteIdentifier(config.primaryKey)}) DO UPDATE SET ${assignments}`,
+         VALUES (${placeholders})
+         ON CONFLICT(${quoteIdentifier(config.primaryKey)}) DO UPDATE SET ${assignments}`
       : `INSERT INTO ${quoteIdentifier(config.tableName)} (${quoteColumns(writeColumns)})
-       VALUES (${placeholders})
-       ON CONFLICT(${quoteIdentifier(config.primaryKey)}) DO NOTHING`
+         VALUES (${placeholders})
+         ON CONFLICT(${quoteIdentifier(config.primaryKey)}) DO NOTHING`
 
     logSync('writing remote row', {
       table: config.tableName,
@@ -519,7 +539,7 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     }
   }
 
-  async function performSync() {
+  async function performSync({ foreground = false } = {}) {
     const database = getDatabase()
     logSync('perform sync started')
     const client = await getTursoClient()
@@ -531,11 +551,12 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     })
 
     if (!client) {
+      endSync()
       setStatus('offline')
       return getStatusSnapshot(database)
     }
 
-    setStatus('syncing')
+    beginSync({ foreground })
     logSync('probing Turso connectivity')
     await client.execute('SELECT 1')
     logSync('Turso connectivity probe succeeded')
@@ -550,6 +571,7 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     logSync('affected rows refresh completed')
 
     status.status = 'online'
+    status.isSyncing = false
     status.lastError = null
     status.lastCheckedAt = new Date().toISOString()
     status.lastSyncedAt = status.lastCheckedAt
@@ -560,18 +582,19 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     return getStatusSnapshot(database)
   }
 
-  async function triggerSync() {
+  async function triggerSync(options = {}) {
     if (syncPromise) {
       logSync('reusing in-flight sync promise')
       return syncPromise
     }
 
     logSync('trigger sync requested')
-    syncPromise = performSync()
+    syncPromise = performSync(options)
       .catch((error) => {
         logSync('sync failed', {
           error: error instanceof Error ? error.message : String(error),
         })
+        endSync()
         setStatus('offline', error)
         return getStatusSnapshot(getDatabase())
       })
@@ -605,7 +628,7 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     }
 
     if (runSync) {
-      return triggerSync()
+      return triggerSync({ foreground: false })
     }
 
     status.status = 'online'

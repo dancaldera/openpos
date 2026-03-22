@@ -209,8 +209,12 @@ async function probeApiConnection() {
 }
 
 async function getConnectivitySnapshot(options = {}) {
-  const syncSnapshot = options.refresh ? await syncManager.triggerSync() : syncManager.getStatusSnapshot()
+  if (options.refresh) {
+    await syncManager.triggerSync({ foreground: true })
+  }
+
   const apiSnapshot = await probeApiConnection()
+  const syncSnapshot = syncManager.getStatusSnapshot()
 
   return {
     ...syncSnapshot,
@@ -323,7 +327,7 @@ async function initializeFirstRun() {
         remoteConfigured: getDbConnectionConfig().configured,
         activeUserCountBefore: getActiveUserCount(),
       })
-      const syncSnapshot = await syncManager.triggerSync()
+      const syncSnapshot = await syncManager.triggerSync({ foreground: true })
       logStartup('initial sync finished', syncSnapshot)
 
       if (getActiveUserCount() > 0) {
@@ -564,7 +568,7 @@ function registerIpcHandlers() {
   ipcMain.handle('desktop:db-transaction', (_event, statements) => runTransaction(statements))
   ipcMain.handle('desktop:print-thermal-receipt', (_event, receiptData) => printThermalReceipt(receiptData))
   ipcMain.handle('desktop:sync-status', () => syncManager.getStatusSnapshot())
-  ipcMain.handle('desktop:sync-trigger', () => syncManager.triggerSync())
+  ipcMain.handle('desktop:sync-trigger', () => syncManager.triggerSync({ foreground: true }))
   ipcMain.handle('desktop:sync-conflicts', () => syncManager.getConflictSummary())
   ipcMain.handle('desktop:connectivity-status', () => getConnectivitySnapshot())
   ipcMain.handle('desktop:connectivity-refresh', () => getConnectivitySnapshot({ refresh: true }))
