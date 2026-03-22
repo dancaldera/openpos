@@ -56,6 +56,9 @@
     "mac": {
       "icon": "electron/build/icons/icon.icns"
     },
+    "win": {
+      "icon": "electron/build/icons/icon.ico"
+    },
     "linux": {
       "target": [
         "AppImage",
