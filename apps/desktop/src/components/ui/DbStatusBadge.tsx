@@ -1,9 +1,13 @@
 import { useSignal } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
 import {
+  apiConfigured,
+  apiReachable,
   conflictedCount,
   connectionMode,
   connectionStatus,
+  lastApiCheck,
+  lastApiError,
   lastConnectionAttempt,
   lastSuccessfulSync,
   lastSyncError,
@@ -68,12 +72,25 @@ export function DbStatusBadge() {
   const pending = pendingCount.value
   const conflicts = conflictedCount.value
   const isRemoteConfigured = remoteConfigured.value
+  const isApiConfigured = apiConfigured.value
+  const isApiReachable = apiReachable.value
   const lastCheckedAt =
     lastConnectionAttempt.value > 0 ? new Date(lastConnectionAttempt.value).toISOString() : undefined
   const lastSyncedAt = lastSuccessfulSync.value > 0 ? new Date(lastSuccessfulSync.value).toISOString() : undefined
+  const lastApiCheckedAt = lastApiCheck.value > 0 ? new Date(lastApiCheck.value).toISOString() : undefined
   const lastError = lastSyncError.value
+  const lastApiFailure = lastApiError.value
 
-  const modeDescription = connectionMode.value === 'api' ? 'Via API server' : 'Local SQLite mirror'
+  const modeDescription = connectionMode.value === 'api' ? 'API server' : 'Local SQLite mirror'
+  const panelTitle = connectionMode.value === 'api' ? 'API Connection' : 'Data Connectivity'
+  const panelSubtitle =
+    connectionMode.value === 'api' ? 'Web client API status' : 'Desktop local-first sync and API health'
+  const apiStatusLabel = !isApiConfigured ? 'Not configured' : isApiReachable ? 'Reachable' : 'Unavailable'
+  const apiStatusClass = !isApiConfigured
+    ? 'text-gray-500'
+    : isApiReachable
+      ? 'text-green-400'
+      : 'text-rose-400 font-medium'
 
   const badgeLabel =
     status === 'offline' && pending > 0
@@ -111,8 +128,8 @@ export function DbStatusBadge() {
           class={`mb-1 w-64 rounded-lg border ${config.border} bg-gray-900/95 backdrop-blur-sm shadow-xl text-xs text-gray-300 overflow-hidden`}
         >
           <div class="px-4 py-3 border-b border-white/10">
-            <p class="font-semibold text-white text-sm">Database Mirror</p>
-            <p class="text-gray-400 mt-0.5">Desktop local-first sync state</p>
+            <p class="font-semibold text-white text-sm">{panelTitle}</p>
+            <p class="text-gray-400 mt-0.5">{panelSubtitle}</p>
           </div>
 
           <div class="px-4 py-3 space-y-2.5">
@@ -137,6 +154,11 @@ export function DbStatusBadge() {
             </div>
 
             <div class="flex items-center justify-between">
+              <span class="text-gray-400">API</span>
+              <span class={apiStatusClass}>{apiStatusLabel}</span>
+            </div>
+
+            <div class="flex items-center justify-between">
               <span class="text-gray-400">Remote configured</span>
               <span class={isRemoteConfigured ? 'text-green-400' : 'text-gray-500'}>
                 {isRemoteConfigured ? 'Yes' : 'No'}
@@ -147,6 +169,13 @@ export function DbStatusBadge() {
               <div class="flex items-center justify-between">
                 <span class="text-gray-400">Last check</span>
                 <span class="text-gray-200">{tick.value >= 0 && formatRelativeTime(lastCheckedAt)}</span>
+              </div>
+            )}
+
+            {lastApiCheckedAt && (
+              <div class="flex items-center justify-between">
+                <span class="text-gray-400">API check</span>
+                <span class="text-gray-200">{tick.value >= 0 && formatRelativeTime(lastApiCheckedAt)}</span>
               </div>
             )}
 
@@ -175,6 +204,13 @@ export function DbStatusBadge() {
               <div class="space-y-1">
                 <span class="text-gray-400">Last error</span>
                 <p class="text-rose-300 leading-relaxed">{lastError}</p>
+              </div>
+            )}
+
+            {lastApiFailure && lastApiFailure !== lastError && (
+              <div class="space-y-1">
+                <span class="text-gray-400">API error</span>
+                <p class="text-rose-300 leading-relaxed">{lastApiFailure}</p>
               </div>
             )}
           </div>

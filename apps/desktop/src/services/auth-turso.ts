@@ -1,4 +1,4 @@
-import { getApiUrl } from '../lib/api-config'
+import { requestApiJson } from '../lib/api-client'
 import { execute, query } from '../lib/db-adapter'
 import { requireDesktopApi } from '../lib/desktop'
 import { isDesktop } from '../lib/platform'
@@ -13,13 +13,10 @@ async function hashPassword(password: string): Promise<string> {
   if (isDesktop) {
     return requireDesktopApi().hashPassword(password)
   }
-  const res = await fetch(getApiUrl('/api/auth/hash'), {
+  const data = await requestApiJson<{ hash: string }>('/api/auth/hash', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password }),
+    body: { password },
   })
-  if (!res.ok) throw new Error('hash_password API call failed')
-  const data = (await res.json()) as { hash: string }
   return data.hash
 }
 
@@ -27,13 +24,10 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
   if (isDesktop) {
     return requireDesktopApi().verifyPassword(password, hash)
   }
-  const res = await fetch(getApiUrl('/api/auth/verify'), {
+  const data = await requestApiJson<{ valid: boolean }>('/api/auth/verify', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password, hash }),
+    body: { password, hash },
   })
-  if (!res.ok) throw new Error('verify_password API call failed')
-  const data = (await res.json()) as { valid: boolean }
   return data.valid
 }
 
@@ -110,19 +104,10 @@ export class AuthService {
   async signIn(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
     try {
       if (!isDesktop) {
-        // Web mode: authenticate via API server
-        const res = await fetch(getApiUrl('/api/auth/login'), {
+        const data = await requestApiJson<{ user: User; token: string }>('/api/auth/login', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.toLowerCase(), password }),
+          body: { email: email.toLowerCase(), password },
         })
-
-        if (!res.ok) {
-          const error = await res.json().catch(() => ({ error: 'Login failed' }))
-          return { success: false, error: error.error || 'Login failed' }
-        }
-
-        const data = (await res.json()) as { user: User; token: string }
 
         // Store JWT token for subsequent API calls
         localStorage.setItem('auth_token', data.token)
@@ -252,11 +237,9 @@ export class AuthService {
     if (!isDesktop) {
       // Web mode: fetch from public API endpoint
       try {
-        const res = await fetch(getApiUrl('/api/auth/users'))
-        if (!res.ok) throw new Error('Failed to fetch users')
-        const data = (await res.json()) as {
+        const data = await requestApiJson<{
           users: Array<{ id: string; email: string; name: string; role: User['role'] }>
-        }
+        }>('/api/auth/users')
         return data.users.map((u) => ({
           id: u.id,
           email: u.email,
@@ -273,12 +256,8 @@ export class AuthService {
 
     // Desktop mode: direct database access
     try {
-      console.log('[AuthService] Loading database for user list...')
       const users = await query<DatabaseUser>('SELECT * FROM users WHERE deleted_at IS NULL ORDER BY name ASC')
-      console.log('[AuthService] Raw users from DB:', users)
-      const converted = users.map((user) => this.convertDbUser(user))
-      console.log('[AuthService] Converted users:', converted)
-      return converted
+      return users.map((user) => this.convertDbUser(user))
     } catch (error) {
       console.error('[AuthService] Get users for login error:', error)
       return []

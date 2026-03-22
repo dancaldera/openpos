@@ -15,13 +15,11 @@
     "build:desktop:linux": "bun run prepare:bootstrap && bun run prepare:native && bun run build && electron-builder --linux",
     "build:web": "tsc && vite build --config vite.web.config.ts",
     "preview": "vite preview",
-    "lint": "biome lint src scripts",
-    "format": "biome format src scripts --write",
-    "check": "biome check src scripts && tsc -p tsconfig.json && tsc -p tsconfig.scripts.json && tsc -p tsconfig.test.json",
+    "lint": "biome lint src",
+    "format": "biome format src --write",
+    "check": "biome check src && tsc -p tsconfig.json && tsc -p tsconfig.test.json",
     "test": "bun test",
-    "db:migrate": "bun run --cwd ../../packages/data migrate:remote",
-    "db:create-admin": "bun run scripts/create-admin.ts",
-    "version:bump": "bun run scripts/bump-version.ts"
+    "db:migrate": "bun run --cwd ../../packages/data migrate:remote"
   },
   "dependencies": {
     "@openpos/data": "workspace:*",

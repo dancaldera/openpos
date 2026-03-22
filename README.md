@@ -133,10 +133,10 @@ openpos/
 ├── apps/
 │   ├── desktop/                 # Electron + Preact POS app
 │   │   ├── electron/            # Main/preload process and migrations
-│   │   ├── scripts/             # Desktop operational scripts
 │   │   └── src/                 # Renderer source
 │   ├── api/                     # Hono API
 │   └── landing/                 # Astro marketing site
+├── scripts/                     # Repository operational scripts
 ├── docs/                        # Project documentation
 ├── AGENTS.md                    # Repository guidance
 └── README.md
@@ -162,7 +162,7 @@ OpenPOS includes an integrated auto-update system for Linux that automatically c
 
 ```bash
 # 1. Bump the desktop version
-bun run --cwd apps/desktop version:bump 0.X.X
+bun run version:bump 0.X.X
 
 # 2. Build the Linux desktop bundle
 bun run build:desktop

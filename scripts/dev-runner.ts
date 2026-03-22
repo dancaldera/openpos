@@ -5,13 +5,15 @@ import { Socket } from 'node:net'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn, type ChildProcess } from 'node:child_process'
+import {
+  PORT_WAIT_TIMEOUT_MS,
+  VITE_PORT,
+  runDesktopMode as runDesktopModeWithApi,
+} from './dev-runner-lib'
 
 type DevMode = 'dev' | 'dev:desktop' | 'dev:desktop:web' | 'dev:api' | 'dev:landing'
 
 const DEV_MODES: DevMode[] = ['dev', 'dev:desktop', 'dev:desktop:web', 'dev:api', 'dev:landing']
-const VITE_PORT = 1420
-const VITE_URL = `http://localhost:${VITE_PORT}`
-const PORT_WAIT_TIMEOUT_MS = 30_000
 const SHUTDOWN_TIMEOUT_MS = 5_000
 const LOOPBACK_HOSTS = ['127.0.0.1', '::1', 'localhost']
 
@@ -208,42 +210,6 @@ function installSignalHandlers(): void {
   }
 }
 
-async function runDesktopMode(): Promise<void> {
-  await runCommand('bun', ['run', 'prepare:native'], desktopDir)
-  await ensureElectronBinaryInstalled(desktopDir)
-
-  const viteProcess = spawnLongRunning('bun', ['run', 'dev'], desktopDir)
-  const viteExit = waitForChildExit(viteProcess).then((exitCode) => ({
-    name: 'vite' as const,
-    exitCode,
-  }))
-
-  try {
-    await waitForPort(VITE_PORT, PORT_WAIT_TIMEOUT_MS)
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error))
-    await shutdown(1)
-  }
-
-  console.log(`Launching Electron against ${VITE_URL}`)
-  const electronProcess = spawnLongRunning(resolveWorkspaceBinary(desktopDir, 'electron'), ['.'], desktopDir, {
-    ...process.env,
-    VITE_DEV_SERVER_URL: VITE_URL,
-  })
-  const electronExit = waitForChildExit(electronProcess).then((exitCode) => ({
-    name: 'electron' as const,
-    exitCode,
-  }))
-
-  const firstExit = await Promise.race([viteExit, electronExit])
-  if (firstExit.name === 'vite' && firstExit.exitCode === 0) {
-    console.error('Vite exited before Electron was closed')
-    await shutdown(1)
-  }
-
-  await shutdown(firstExit.exitCode)
-}
-
 async function runSingleProcessMode(command: string, args: string[], cwd: string): Promise<void> {
   const child = spawnLongRunning(command, args, cwd)
   const exitCode = await waitForChildExit(child)
@@ -261,7 +227,22 @@ async function main(): Promise<void> {
   switch (mode) {
     case 'dev':
     case 'dev:desktop':
-      await runDesktopMode()
+      await runDesktopModeWithApi(
+        {
+          desktopDir,
+          apiDir,
+          env: process.env,
+        },
+        {
+          runCommand,
+          ensureElectronBinaryInstalled,
+          spawnLongRunning,
+          waitForChildExit,
+          waitForPort,
+          shutdown,
+          resolveWorkspaceBinary,
+        },
+      )
       return
     case 'dev:desktop:web':
       await runSingleProcessMode('bun', ['run', 'dev:web'], desktopDir)
