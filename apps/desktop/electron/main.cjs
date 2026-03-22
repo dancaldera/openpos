@@ -448,7 +448,7 @@ function ensureLegacyCompatibility(database) {
     );
   `)
 
-  database.prepare(`DELETE FROM sync_outbox WHERE table_name = 'order_items'`).run()
+  database.prepare(`DELETE FROM sync_outbox WHERE table_name IN ('orders', 'order_items')`).run()
 
   if (!tableHasColumn(database, 'users', 'updated_at')) {
     database.exec(`
