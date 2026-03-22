@@ -7,14 +7,21 @@
  *   bun run scripts/bump-version.ts 0.3.0
  */
 
+import { readFile, writeFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const scriptDir = dirname(fileURLToPath(import.meta.url))
+const repoRoot = resolve(scriptDir, '../../..')
+
 const FILES_TO_UPDATE = [
   {
-    path: 'package.json',
+    path: resolve(repoRoot, 'apps/desktop/package.json'),
     pattern: /"version":\s*"[\d.]+"/,
     replacement: (version: string) => `"version": "${version}"`,
   },
   {
-    path: '.github/workflows/release.yml',
+    path: resolve(repoRoot, '.github/workflows/release.yml'),
     pattern: /^(\s*APP_VERSION:\s*)[\d.]+$/m,
     replacement: (version: string) => `$1${version}`,
   },
@@ -34,7 +41,7 @@ async function bumpVersion(newVersion: string) {
     const filePath = file.path
 
     try {
-      const content = await Bun.file(filePath).text()
+      const content = await readFile(filePath, 'utf8')
       const updated = content.replace(file.pattern, file.replacement(newVersion))
 
       if (content === updated) {
@@ -42,7 +49,7 @@ async function bumpVersion(newVersion: string) {
         continue
       }
 
-      await Bun.write(filePath, updated)
+      await writeFile(filePath, updated)
       console.log(`✓ Updated ${filePath}`)
     } catch (error) {
       console.error(`✗ Failed to update ${filePath}:`, error)
@@ -52,10 +59,12 @@ async function bumpVersion(newVersion: string) {
 
   console.log(`\n✅ Successfully bumped version to ${newVersion}`)
   console.log('\nFiles updated:')
-  FILES_TO_UPDATE.forEach((f) => console.log(`  - ${f.path}`))
+  for (const file of FILES_TO_UPDATE) {
+    console.log(`  - ${file.path}`)
+  }
   console.log('\nNext steps:')
   console.log('  1. Review the changes')
-  console.log('  2. Commit: git add . && git commit -m "chore: bump version to v' + newVersion + '"')
+  console.log(`  2. Commit: git add . && git commit -m "chore: bump version to v${newVersion}"`)
   console.log(`  3. Tag and release: git tag v${newVersion} && git push origin v${newVersion}`)
 }
 

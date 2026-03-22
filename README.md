@@ -1,6 +1,10 @@
-# OpenPOS - Point of Sale App
+# OpenPOS
 
-A modern cross-platform POS desktop application with real-time analytics, inventory management, and customer relationship management.
+OpenPOS is organized as a Bun workspace monorepo with three runnable applications:
+
+- `apps/desktop`: Electron + Preact POS client
+- `apps/api`: Hono API for remote sync and auth flows
+- `apps/landing`: Astro marketing site
 
 ## Features
 
@@ -22,12 +26,11 @@ A modern cross-platform POS desktop application with real-time analytics, invent
 
 ## Tech Stack
 
-- **Frontend**: Preact + TypeScript with Preact Signals
-- **Backend**: Tauri v2.8 (Rust)
-- **Database**: SQLite with `@tauri-apps/plugin-sql` v2.3
-- **Styling**: Tailwind CSS v4
-- **Build Tool**: Vite
-- **Package Manager**: bun
+- **Desktop app**: Electron, Preact, TypeScript, Vite
+- **API**: Hono, TypeScript
+- **Landing**: Astro, Tailwind CSS
+- **Database**: SQLite locally, Turso remotely
+- **Package manager**: Bun workspaces
 
 ## Platform Support
 
@@ -42,9 +45,8 @@ A modern cross-platform POS desktop application with real-time analytics, invent
 ## Quick Start
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v16+)
+- [Node.js](https://nodejs.org/) (v20+ recommended)
 - [bun](https://bun.io/)
-- [Rust](https://rustup.rs/)
 
 ### Installation
 
@@ -57,16 +59,21 @@ Download the latest release from [GitHub Releases](https://github.com/dancaldera
 #### Build from Source (All Platforms)
 
 ```bash
-# Clone and install
 git clone <repository-url>
-cd OpenPOS
+cd openpos
 bun install
 
-# Start development
-bun tauri dev
+# Desktop app + Electron shell
+bun run dev
+
+# API only
+bun run dev:api
+
+# Landing site only
+bun run dev:landing
 ```
 
-The application will open as a desktop app on `http://localhost:1420`.
+The desktop renderer runs on `http://localhost:1420` during development.
 
 ### Desktop Runtime Config
 
@@ -94,16 +101,19 @@ Desktop config precedence is:
 
 Public GitHub releases must not embed `TURSO_AUTH_TOKEN`, `JWT_SECRET`, or other backend secrets.
 
-## Available Scripts
+## Workspace Scripts
 
 | Command | Description |
 |---------|-------------|
-| `bun tauri dev` | Start full development environment |
-| `bun dev` | Start Vite dev server (frontend only) |
-| `bun build` | Build frontend for production |
-| `bun tauri build` | Build complete application |
-| `bun tauri bundle` | Generate platform-specific installers |
-| `bun check` | Run linting, formatting, and type checks |
+| `bun run dev` | Start the desktop app in Electron |
+| `bun run dev:desktop:web` | Start the desktop renderer in a browser |
+| `bun run dev:api` | Start the API server |
+| `bun run dev:landing` | Start the landing site |
+| `bun run build:desktop` | Build the desktop app bundle |
+| `bun run build:desktop:web` | Build the desktop web target |
+| `bun run build:api` | Build the API |
+| `bun run build:landing` | Build the landing site |
+| `bun run check` | Run desktop and API checks |
 
 ## Default Credentials
 
@@ -115,29 +125,18 @@ Public GitHub releases must not embed `TURSO_AUTH_TOKEN`, `JWT_SECRET`, or other
 
 ## Project Structure
 
-```
-OpenPOS/
-├── src/                          # Frontend source
-│   ├── components/               # UI components
-│   │   ├── Layout.tsx           # Main layout
-│   │   └── ui/                  # Reusable components
-│   ├── pages/                   # Application pages
-│   ├── services/                # Business logic (SQLite)
-│   ├── stores/                  # State management
-│   ├── hooks/                   # Custom hooks
-│   ├── locales/                 # Translation files
-│   └── main.tsx                 # Entry point
-├── src-tauri/                   # Rust backend
-│   ├── src/
-│   │   ├── main.rs              # Entry point
-│   │   └── lib.rs               # Tauri commands & migrations
-│   ├── capabilities/            # Tauri v2 permissions
-│   │   └── default.json         # Core, opener, SQL permissions
-│   └── tauri.conf.json          # Tauri v2 configuration
-├── AGENTS.md                    # Agent-focused documentation
-├── CLAUDE.md                    # Claude Code instructions
-├── TRANSLATIONS.md              # i18n implementation guide
-└── README.md                    # This file
+```text
+openpos/
+├── apps/
+│   ├── desktop/                 # Electron + Preact POS app
+│   │   ├── electron/            # Main/preload process and migrations
+│   │   ├── scripts/             # Desktop operational scripts
+│   │   └── src/                 # Renderer source
+│   ├── api/                     # Hono API
+│   └── landing/                 # Astro marketing site
+├── docs/                        # Project documentation
+├── AGENTS.md                    # Repository guidance
+└── README.md
 ```
 
 ## Auto-Update System
@@ -159,15 +158,16 @@ OpenPOS includes an integrated auto-update system for Linux that automatically c
 **For Developers - Creating a Release:**
 
 ```bash
-# 1. Bump version in src-tauri/tauri.conf.json
-# 2. Build the application (Linux only)
-bun tauri build
+# 1. Bump the desktop version
+bun run --cwd apps/desktop version:bump 0.X.X
+
+# 2. Build the Linux desktop bundle
+bun run build:desktop
 
 # 3. Create GitHub release with Linux artifacts
 gh release create v0.X.X \
-  src-tauri/target/release/bundle/deb/openpos_0.X.X_amd64.deb \
-  src-tauri/target/release/bundle/appimage/openpos_0.X.X_amd64.AppImage \
-  src-tauri/target/release/bundle/appimage/linux-x86_64.json \
+  apps/desktop/dist-electron/*.deb \
+  apps/desktop/dist-electron/*.AppImage \
   --title "v0.X.X - Your Title" \
   --notes "Release notes here"
 ```
@@ -201,7 +201,7 @@ OpenPOS supports 8 languages with dynamic switching and persistent preferences. 
 5. Push and open a Pull Request
 
 **Development Guidelines**
-- Use existing UI components from `src/components/ui/`
+- Use existing UI components from `apps/desktop/src/components/ui/`
 - Add translation keys for all user-facing text
 - Use SQLite services for data persistence
 - Test role-based features with different accounts
@@ -213,11 +213,7 @@ MIT License - see [LICENSE](./LICENSE) for details.
 
 ## Resources
 
-- [Tauri Documentation](https://tauri.app/v1/guides/)
+- [Electron Documentation](https://www.electronjs.org/docs/latest/)
 - [Preact Documentation](https://preactjs.com/)
 - [TRANSLATIONS.md](./TRANSLATIONS.md) - i18n implementation
 - [AGENTS.md](./AGENTS.md) - Project architecture for contributors
-
----
-
-Built with ❤️ using modern web technologies and Rust

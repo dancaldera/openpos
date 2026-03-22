@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * Turso Database Migration Script
  *
@@ -14,15 +15,19 @@
  *   TURSO_AUTH_TOKEN=your-auth-token-here
  */
 
-import { connect } from '@tursodatabase/serverless'
 import { readdirSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { connect } from '@tursodatabase/serverless'
+
+const scriptDir = dirname(fileURLToPath(import.meta.url))
+const repoRoot = resolve(scriptDir, '../../..')
 
 // ---------------------------------------------------------------------------
 // Load environment variables from .env.local
 // ---------------------------------------------------------------------------
 function loadEnv(): Record<string, string> {
-  const envPath = resolve(process.cwd(), '.env.local')
+  const envPath = resolve(repoRoot, '.env.local')
   try {
     const content = readFileSync(envPath, 'utf-8')
     const env: Record<string, string> = {}
@@ -187,23 +192,20 @@ async function main() {
 
   // 4. Load already-applied versions
   const applied = await client.execute('SELECT version FROM _migrations ORDER BY version')
-  const appliedVersions = new Set<number>(
-    (applied.rows as Array<{ version: number }>).map((r) => r.version),
-  )
+  const appliedVersions = new Set<number>((applied.rows as Array<{ version: number }>).map((r) => r.version))
 
   if (appliedVersions.size > 0) {
     console.log(`Already applied: ${[...appliedVersions].sort((a, b) => a - b).join(', ')}\n`)
   }
 
   // 5. Collect all migrations from schema/ and seeds/
-  const migrationsDir = resolve(process.cwd(), 'electron', 'migrations')
+  const migrationsDir = resolve(scriptDir, '../electron/migrations')
   const schemaDir = join(migrationsDir, 'schema')
   const seedsDir = join(migrationsDir, 'seeds')
 
-  const allMigrations = [
-    ...loadMigrationsFromDir(schemaDir),
-    ...loadMigrationsFromDir(seedsDir),
-  ].sort((a, b) => a.version - b.version)
+  const allMigrations = [...loadMigrationsFromDir(schemaDir), ...loadMigrationsFromDir(seedsDir)].sort(
+    (a, b) => a.version - b.version,
+  )
 
   console.log(`Found ${allMigrations.length} total migrations.\n`)
 
@@ -232,10 +234,10 @@ async function main() {
       }
 
       // Record migration as applied
-      await client.execute(
-        `INSERT INTO _migrations (version, description) VALUES (?, ?)`,
-        [migration.version, migration.description],
-      )
+      await client.execute(`INSERT INTO _migrations (version, description) VALUES (?, ?)`, [
+        migration.version,
+        migration.description,
+      ])
 
       console.log('done')
       applied_count++

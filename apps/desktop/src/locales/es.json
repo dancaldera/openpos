@@ -71,7 +71,7 @@
     "incorrectPassword": "Contraseña incorrecta. Inténtalo de nuevo.",
     "emailNotFound": "No pudimos encontrar una cuenta con ese correo.",
     "accountLocked": "Esta cuenta está bloqueada. Comunícate con un administrador.",
-    "environmentError": "Las funciones de escritorio requieren la aplicación Titanic POS. Ejecuta la versión de escritorio de Tauri.",
+    "environmentError": "Las funciones de escritorio requieren la aplicación de OpenPOS. Ejecuta la versión de escritorio de Electron.",
     "showPassword": "Mostrar contraseña",
     "hidePassword": "Ocultar contraseña",
     "enter6digitPin": "Ingrese su PIN de 6 dígitos",
