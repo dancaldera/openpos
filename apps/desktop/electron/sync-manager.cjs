@@ -311,37 +311,6 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
         .map((row) => String(row.record_id)),
     )
 
-    if (config.tableName === 'order_items') {
-      const protectedOrderIds = database
-        .prepare(
-          `SELECT order_id
-             FROM order_sync_queue
-            WHERE operation = 'UPSERT'`,
-        )
-        .all()
-        .map((row) => String(row.order_id))
-
-      if (protectedOrderIds.length > 0) {
-        const protectedItemIds = database
-          .prepare(
-            `SELECT ${quoteIdentifier(config.primaryKey)} AS id
-               FROM ${quoteIdentifier(config.tableName)}
-              WHERE order_id IN (${protectedOrderIds.map(() => '?').join(', ')})`,
-          )
-          .all(...protectedOrderIds)
-          .map((row) => String(row.id))
-
-        for (const protectedItemId of protectedItemIds) {
-          protectedIds.add(protectedItemId)
-        }
-
-        logSync('protected local order_items pending aggregate push', {
-          orderIds: protectedOrderIds,
-          itemCount: protectedItemIds.length,
-        })
-      }
-    }
-
     const deleteStatement = database.prepare(
       `DELETE FROM ${quoteIdentifier(config.tableName)} WHERE ${quoteIdentifier(config.primaryKey)} = ?`,
     )
@@ -351,17 +320,23 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
         continue
       }
 
-      if (config.tableName === 'order_items') {
-        logSync('reconciling local order_item hard delete', {
-          recordId: localId,
-        })
-      }
       deleteStatement.run(coerceRecordId(localId))
     }
   }
 
   async function pullRemoteChanges(database, client) {
     const orderedTables = [...replicatedTables].sort((left, right) => left.pullOrder - right.pullOrder)
+    const changedOrderIds = new Set()
+    const queuedOrderIds = new Set(
+      database
+        .prepare(
+          `SELECT order_id
+             FROM order_sync_queue
+            WHERE operation = 'UPSERT'`,
+        )
+        .all()
+        .map((row) => String(row.order_id)),
+    )
 
     for (const config of orderedTables) {
       const remoteColumns = await getRemoteTableColumns(client, config.tableName)
@@ -394,11 +369,39 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
         count: remoteRows.length,
       })
 
+      if (config.tableName === 'orders' && remoteRows.length > 0) {
+        for (const row of remoteRows) {
+          changedOrderIds.add(String(row.id))
+        }
+
+        logSync('tracked remote order changes', {
+          orderIds: [...changedOrderIds],
+        })
+      }
+
+      if (config.tableName === 'order_items' && changedOrderIds.size > 0) {
+        const deleteByOrderStatement = database.prepare('DELETE FROM order_items WHERE order_id = ?')
+
+        for (const orderId of changedOrderIds) {
+          if (queuedOrderIds.has(orderId)) {
+            logSync('skipping local order_items rebuild because order is pending local aggregate push', {
+              orderId,
+            })
+            continue
+          }
+
+          deleteByOrderStatement.run(coerceRecordId(orderId))
+          logSync('rebuilding local order_items for remote order', {
+            orderId,
+          })
+        }
+      }
+
       for (const row of remoteRows) {
         upsertLocalRow(database, config, row)
       }
 
-      if (config.deleteStrategy === 'hard') {
+      if (config.deleteStrategy === 'hard' && config.tableName !== 'order_items') {
         await reconcileHardDeletes(database, client, config)
       }
 
