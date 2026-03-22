@@ -15,7 +15,8 @@ OpenPOS is a Bun workspace monorepo. The main product is a cross-platform deskto
 - `bun run build:desktop` - Build the desktop app bundle
 - `bun run build:api` - Build the API
 - `bun run build:landing` - Build the landing site
-- `bun check` - Run linting, formatting, and type checks
+- `bun run check` - Run read-only linting and type checks
+- `bun run test` - Run the initial automated test suites
 
 ## Architecture
 
@@ -77,7 +78,7 @@ apps/
 ## Internationalization (i18n)
 
 ### Key Files
-- `apps/desktop/src/locales/*.json` - Translation files (en, es, fr, de, it, pt, zh, ja)
+- `apps/desktop/src/locales/*.json` - Translation files currently implemented in-repo (`en`, `es`)
 - `apps/desktop/src/services/translations.ts` - Translation service
 - `apps/desktop/src/hooks/useTranslation.ts` - Translation hook
 - `apps/desktop/src/stores/language/` - Language state management
@@ -118,19 +119,13 @@ return <span>{t(key, { count })}</span>
 export const SUPPORTED_LOCALES = [
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
   { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸' },
-  { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪' },
-  { code: 'it', name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹' },
-  { code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇵🇹' },
-  { code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳' },
-  { code: 'ja', name: 'Japanese', nativeName: '日本語', flag: '🇯🇵' },
 ]
 ```
 
 ### Best Practices
 - Use nested structure: `page.section.element`
 - Add translation keys for all user-facing text
-- Test with different languages (especially longer ones like German)
+- Test with the currently implemented locales and update docs when new ones are added
 - Use interpolation for dynamic content
 - Follow camelCase key naming conventions
 
