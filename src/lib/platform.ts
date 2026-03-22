@@ -1,25 +1,14 @@
 /**
- * platform.ts — Runtime Tauri/browser detector
+ * platform.ts — Runtime Electron/browser detector
  *
- * Use this instead of checking for Tauri APIs directly in business logic.
- * The `isTauri` flag is set at runtime by detecting the Tauri internals object
- * that Tauri injects into the window before any user code runs.
- *
- * For the web build, the VITE_PLATFORM env var is also checked so that
- * tree-shaking can eliminate dead code at build time.
+ * Use this instead of checking for desktop APIs directly in business logic.
+ * The Electron preload exposes a marker on `window` before the renderer app
+ * starts, and the web build still hard-codes `VITE_PLATFORM=web` for tree-shaking.
  */
-
-/**
- * True when running inside a Tauri desktop window.
- * False when running as a plain web app in a browser.
- */
-export const isTauri: boolean =
+export const isElectron: boolean =
   import.meta.env.VITE_PLATFORM !== 'web' &&
   typeof window !== 'undefined' &&
-  // Tauri v2 sets __TAURI_INTERNALS__ on the window object
-  !!(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__
+  Boolean(window.__OPENPOS_DESKTOP__?.isElectron)
 
-/**
- * True when running as a plain web app (browser, Vercel, etc.)
- */
-export const isWeb: boolean = !isTauri
+export const isDesktop: boolean = isElectron
+export const isWeb: boolean = !isDesktop

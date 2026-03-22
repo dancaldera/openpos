@@ -1,8 +1,8 @@
-import { invoke } from '@tauri-apps/api/core'
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import { Button, Dialog, Input, LanguageSelector, Select } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
+import { requireDesktopApi } from '../lib/desktop'
 import { type CompanySettings, companySettingsService, SUPPORTED_CURRENCIES } from '../services/company-settings-turso'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
@@ -98,8 +98,8 @@ export default function Settings() {
 
   async function greet() {
     try {
-      const message = await invoke('greet', { name })
-      setGreetMsg(message as string)
+      const message = await requireDesktopApi().greet(name)
+      setGreetMsg(message)
       toast.success(t('settings.greetingSuccess'))
     } catch (err: unknown) {
       toast.error((err as Error)?.message || t('errors.generic'))

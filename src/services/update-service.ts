@@ -1,4 +1,3 @@
-import { isTauri } from '../lib/platform'
 import { updateActions } from '../stores/update/updateActions'
 
 /**
@@ -44,13 +43,6 @@ class UpdateService {
    * Performs an initial check after startup delay, then periodically.
    */
   start(customConfig?: Partial<UpdateServiceConfig>): void {
-    // Skip in web mode
-    if (!isTauri) {
-      console.log('[UpdateService] Skipping in web mode')
-      return
-    }
-
-    // Already running
     if (this.isRunning) {
       console.log('[UpdateService] Already running')
       return
@@ -103,12 +95,6 @@ class UpdateService {
    * Force an immediate update check, bypassing the interval.
    */
   async forceCheck(): Promise<boolean> {
-    // Skip in web mode
-    if (!isTauri) {
-      console.log('[UpdateService] Skipping force check in web mode')
-      return false
-    }
-
     return updateActions.checkForUpdate()
   }
 

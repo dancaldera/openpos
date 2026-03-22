@@ -1,13 +1,13 @@
 import { getApiUrl } from './api-config'
-import { isTauri } from './platform'
+import { isDesktop } from './platform'
 
 function getAuthToken(): string | null {
   return localStorage.getItem('auth_token')
 }
 
 export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
-  if (isTauri) {
-    throw new Error('query() should not be called from api-adapter in Tauri mode')
+  if (isDesktop) {
+    throw new Error('query() should not be called from api-adapter in desktop mode')
   }
 
   const token = getAuthToken()
@@ -37,8 +37,8 @@ export async function execute(
   sql: string,
   params: unknown[] = [],
 ): Promise<{ lastInsertId: number; rowsAffected: number }> {
-  if (isTauri) {
-    throw new Error('execute() should not be called from api-adapter in Tauri mode')
+  if (isDesktop) {
+    throw new Error('execute() should not be called from api-adapter in desktop mode')
   }
 
   const token = getAuthToken()

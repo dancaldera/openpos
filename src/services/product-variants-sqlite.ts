@@ -1,5 +1,5 @@
-import Database from '@tauri-apps/plugin-sql'
 import { formatBarcodeForStorage, normalizeBarcode } from '../lib/barcodes'
+import Database from '../lib/local-database'
 
 // Types
 export interface ProductAttribute {
