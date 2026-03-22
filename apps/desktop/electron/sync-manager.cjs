@@ -21,6 +21,42 @@ function quoteColumns(columns) {
   return columns.map((column) => quoteIdentifier(column)).join(', ')
 }
 
+function normalizeComparableValue(value) {
+  if (value === undefined || value === null) {
+    return null
+  }
+
+  if (typeof value === 'string') {
+    try {
+      return normalizeComparableValue(JSON.parse(value))
+    } catch {
+      return value
+    }
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeComparableValue(item))
+  }
+
+  if (typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entryValue]) => [key, normalizeComparableValue(entryValue)]),
+    )
+  }
+
+  return value
+}
+
+function rowsMateriallyEqual(config, left, right) {
+  return config.columns.every((column) => {
+    const leftValue = normalizeComparableValue(left?.[column])
+    const rightValue = normalizeComparableValue(right?.[column])
+    return JSON.stringify(leftValue) === JSON.stringify(rightValue)
+  })
+}
+
 function createSyncManager({ getDatabase, getRemoteConfig }) {
   let pollTimer = null
   let syncPromise = null
@@ -452,11 +488,30 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
       }
 
       if (row.operation === 'INSERT' && remoteRow) {
+        if (localPayload && rowsMateriallyEqual(config, localPayload, remoteRow)) {
+          logSync('auto-resolved duplicate insert', {
+            table: config.tableName,
+            recordId: String(row.record_id),
+          })
+          await restoreAuthoritativeLocalState(database, client, config, row.record_id)
+          markOutboxRow(database, row.id, {
+            status: 'synced',
+            attempts: Number(row.attempts ?? 0),
+            lastError: null,
+            syncedAt: new Date().toISOString(),
+          })
+          continue
+        }
+
+        logSync('insert conflict kept for review', {
+          table: config.tableName,
+          recordId: String(row.record_id),
+        })
         await restoreAuthoritativeLocalState(database, client, config, row.record_id)
         markOutboxRow(database, row.id, {
           status: 'conflict',
           attempts: Number(row.attempts ?? 0) + 1,
-          lastError: 'Remote row already exists with the same primary key',
+          lastError: 'Remote row already exists with the same primary key and differs from local payload',
         })
         continue
       }
