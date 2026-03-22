@@ -1,4 +1,6 @@
-import { execute, query } from '../lib/db-adapter'
+import { execute, query, transaction } from '../lib/db-adapter'
+import { requireDesktopApi } from '../lib/desktop'
+import { isDesktop } from '../lib/platform'
 import { companySettingsService } from './company-settings-turso'
 import { type ProductVariant, productVariantsService } from './product-variants-turso'
 import { productService } from './products-turso'
@@ -135,6 +137,24 @@ export class OrderService {
       updatedAt: dbOrder.updated_at,
       completedAt: dbOrder.completed_at,
     }
+  }
+
+  private async tableHasColumn(tableName: string, columnName: string): Promise<boolean> {
+    const columns = await query<{ name: string }>(`PRAGMA table_info(${tableName})`)
+    return columns.some((column) => column.name === columnName)
+  }
+
+  private async getNextOrderId(): Promise<number> {
+    const rows = await query<{ next_id: number }>('SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM orders')
+    return Number(rows[0]?.next_id ?? 1)
+  }
+
+  private async syncDesktopOrderAggregate(orderId: string, operation: 'UPSERT' | 'DELETE'): Promise<void> {
+    if (!isDesktop) {
+      return
+    }
+
+    await requireDesktopApi().orders.syncAggregate(orderId, operation)
   }
 
   async getOrders(): Promise<Order[]> {
@@ -278,18 +298,22 @@ export class OrderService {
       // Get tax rate from company settings
       const { tax: taxAmount, total } = await companySettingsService.calculateTotalWithTax(subtotal)
       const now = new Date().toISOString()
+      const orderId = await this.getNextOrderId()
+      const hasUserId = await this.tableHasColumn('orders', 'user_id')
+      const hasCustomerId = await this.tableHasColumn('orders', 'customer_id')
+      const hasVariantSupport = await this.tableHasColumn('order_items', 'variant_id')
 
-      // Create order (with user_id and customer_id if columns exist, without if they don't)
-      let orderResult: { lastInsertId: number; rowsAffected: number }
-      try {
-        // Try with user_id and customer_id first (for new schema)
-        orderResult = await execute(
-          `INSERT INTO orders (
-            user_id, customer_id, subtotal, tax, total, status,
+      const statements: Array<{ sql: string; params?: unknown[] }> = []
+
+      if (hasUserId && hasCustomerId) {
+        statements.push({
+          sql: `INSERT INTO orders (
+            id, user_id, customer_id, subtotal, tax, total, status,
             payment_method, notes, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            1, // Default to Admin User (id=1)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          params: [
+            orderId,
+            1,
             orderData.customerId ? parseInt(orderData.customerId, 10) : null,
             subtotal,
             taxAmount,
@@ -300,43 +324,35 @@ export class OrderService {
             now,
             now,
           ],
-        )
-      } catch (error: unknown) {
-        // If user_id column doesn't exist, fall back to old schema
-        const message = error instanceof Error ? error.message : ''
-        if (message.includes('no column named user_id')) {
-          orderResult = await execute(
-            `INSERT INTO orders (
-              subtotal, tax, total, status,
-              payment_method, notes, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [subtotal, taxAmount, total, 'pending', orderData.paymentMethod || null, orderData.notes || null, now, now],
-          )
-        } else {
-          throw error
-        }
+        })
+      } else {
+        statements.push({
+          sql: `INSERT INTO orders (
+            id, subtotal, tax, total, status,
+            payment_method, notes, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          params: [
+            orderId,
+            subtotal,
+            taxAmount,
+            total,
+            'pending',
+            orderData.paymentMethod || null,
+            orderData.notes || null,
+            now,
+            now,
+          ],
+        })
       }
 
-      const orderId = orderResult.lastInsertId
-
-      // Create order items with variant support
       for (const item of orderItems) {
-        // Check if variant_id column exists by trying to use it
-        let hasVariantSupport = false
-        try {
-          await query(`SELECT variant_id FROM order_items LIMIT 1`)
-          hasVariantSupport = true
-        } catch {
-          hasVariantSupport = false
-        }
-
         if (hasVariantSupport) {
-          await execute(
-            `INSERT INTO order_items (
+          statements.push({
+            sql: `INSERT INTO order_items (
               order_id, product_id, product_name, quantity, unit_price, total_price,
               variant_id, variant_attributes, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
+            params: [
               orderId,
               parseInt(item.productId, 10),
               item.productName,
@@ -348,14 +364,13 @@ export class OrderService {
               now,
               now,
             ],
-          )
+          })
         } else {
-          // Fallback for old schema without variant support
-          await execute(
-            `INSERT INTO order_items (
+          statements.push({
+            sql: `INSERT INTO order_items (
               order_id, product_id, product_name, quantity, unit_price, total_price, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
+            params: [
               orderId,
               parseInt(item.productId, 10),
               item.productName,
@@ -365,9 +380,12 @@ export class OrderService {
               now,
               now,
             ],
-          )
+          })
         }
       }
+
+      await transaction(statements)
+      await this.syncDesktopOrderAggregate(orderId.toString(), 'UPSERT')
 
       const newOrder: Order = {
         id: orderId.toString(),
@@ -453,15 +471,17 @@ export class OrderService {
         await this.restoreStockFromOrder(order)
       }
 
-      // Delete order items first
-      await execute('DELETE FROM order_items WHERE order_id = ?', [parseInt(id, 10)])
-
-      // Delete order
-      const result = await execute('DELETE FROM orders WHERE id = ?', [parseInt(id, 10)])
-
-      if (result.rowsAffected === 0) {
-        return { success: false, error: 'Order not found' }
-      }
+      await transaction([
+        {
+          sql: 'DELETE FROM order_items WHERE order_id = ?',
+          params: [parseInt(id, 10)],
+        },
+        {
+          sql: 'DELETE FROM orders WHERE id = ?',
+          params: [parseInt(id, 10)],
+        },
+      ])
+      await this.syncDesktopOrderAggregate(id, 'DELETE')
 
       return { success: true }
     } catch (error) {
@@ -905,28 +925,22 @@ export class OrderService {
       // Calculate new tax and total
       const { tax: newTaxAmount, total: newTotal } = await companySettingsService.calculateTotalWithTax(newSubtotal)
       const now = new Date().toISOString()
+      const hasVariantSupport = await this.tableHasColumn('order_items', 'variant_id')
+      const statements: Array<{ sql: string; params?: unknown[] }> = [
+        {
+          sql: 'DELETE FROM order_items WHERE order_id = ?',
+          params: [parseInt(orderId, 10)],
+        },
+      ]
 
-      // Delete existing order items
-      await execute('DELETE FROM order_items WHERE order_id = ?', [parseInt(orderId, 10)])
-
-      // Insert new order items with variant support
       for (const item of newOrderItems) {
-        // Check if variant_id column exists by trying to use it
-        let hasVariantSupport = false
-        try {
-          await query(`SELECT variant_id FROM order_items LIMIT 1`)
-          hasVariantSupport = true
-        } catch {
-          hasVariantSupport = false
-        }
-
         if (hasVariantSupport) {
-          await execute(
-            `INSERT INTO order_items (
+          statements.push({
+            sql: `INSERT INTO order_items (
               order_id, product_id, product_name, quantity, unit_price, total_price,
               variant_id, variant_attributes, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
+            params: [
               parseInt(orderId, 10),
               parseInt(item.productId, 10),
               item.productName,
@@ -938,14 +952,13 @@ export class OrderService {
               now,
               now,
             ],
-          )
+          })
         } else {
-          // Fallback for old schema without variant support
-          await execute(
-            `INSERT INTO order_items (
+          statements.push({
+            sql: `INSERT INTO order_items (
               order_id, product_id, product_name, quantity, unit_price, total_price, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
+            params: [
               parseInt(orderId, 10),
               parseInt(item.productId, 10),
               item.productName,
@@ -955,14 +968,13 @@ export class OrderService {
               now,
               now,
             ],
-          )
+          })
         }
       }
 
-      // Update order totals and details
-      await execute(
-        'UPDATE orders SET subtotal = ?, tax = ?, total = ?, payment_method = ?, notes = ?, updated_at = ? WHERE id = ?',
-        [
+      statements.push({
+        sql: 'UPDATE orders SET subtotal = ?, tax = ?, total = ?, payment_method = ?, notes = ?, updated_at = ? WHERE id = ?',
+        params: [
           newSubtotal,
           newTaxAmount,
           newTotal,
@@ -971,7 +983,10 @@ export class OrderService {
           now,
           parseInt(orderId, 10),
         ],
-      )
+      })
+
+      await transaction(statements)
+      await this.syncDesktopOrderAggregate(orderId, 'UPSERT')
 
       // Return updated order
       const updatedOrder = await this.getOrder(orderId)

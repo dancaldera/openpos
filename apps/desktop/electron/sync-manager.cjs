@@ -311,6 +311,37 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
         .map((row) => String(row.record_id)),
     )
 
+    if (config.tableName === 'order_items') {
+      const protectedOrderIds = database
+        .prepare(
+          `SELECT order_id
+             FROM order_sync_queue
+            WHERE operation = 'UPSERT'`,
+        )
+        .all()
+        .map((row) => String(row.order_id))
+
+      if (protectedOrderIds.length > 0) {
+        const protectedItemIds = database
+          .prepare(
+            `SELECT ${quoteIdentifier(config.primaryKey)} AS id
+               FROM ${quoteIdentifier(config.tableName)}
+              WHERE order_id IN (${protectedOrderIds.map(() => '?').join(', ')})`,
+          )
+          .all(...protectedOrderIds)
+          .map((row) => String(row.id))
+
+        for (const protectedItemId of protectedItemIds) {
+          protectedIds.add(protectedItemId)
+        }
+
+        logSync('protected local order_items pending aggregate push', {
+          orderIds: protectedOrderIds,
+          itemCount: protectedItemIds.length,
+        })
+      }
+    }
+
     const deleteStatement = database.prepare(
       `DELETE FROM ${quoteIdentifier(config.tableName)} WHERE ${quoteIdentifier(config.primaryKey)} = ?`,
     )
@@ -320,6 +351,11 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
         continue
       }
 
+      if (config.tableName === 'order_items') {
+        logSync('reconciling local order_item hard delete', {
+          recordId: localId,
+        })
+      }
       deleteStatement.run(coerceRecordId(localId))
     }
   }
@@ -858,7 +894,12 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     }
 
     const config = replicatedTablesByName[parsed.tableName]
-    if (!config || config.tableName === 'sync_outbox' || config.tableName === 'sync_state') {
+    if (
+      !config ||
+      config.tableName === 'sync_outbox' ||
+      config.tableName === 'sync_state' ||
+      config.tableName === 'order_items'
+    ) {
       return null
     }
 

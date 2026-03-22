@@ -14,6 +14,37 @@ let db = null
 let syncManager = null
 let initialSyncPromise = null
 let initialSyncError = null
+let orderSyncTimer = null
+let orderSyncPromise = null
+
+const ORDER_SYNC_INTERVAL_MS = 15_000
+const ORDER_COLUMNS = [
+  'id',
+  'subtotal',
+  'tax',
+  'total',
+  'status',
+  'payment_method',
+  'notes',
+  'created_at',
+  'updated_at',
+  'completed_at',
+  'user_id',
+  'customer_id',
+]
+const ORDER_ITEM_COLUMNS = [
+  'id',
+  'order_id',
+  'product_id',
+  'product_name',
+  'quantity',
+  'unit_price',
+  'total_price',
+  'variant_id',
+  'variant_attributes',
+  'created_at',
+  'updated_at',
+]
 
 function logStartup(message, details) {
   if (details === undefined) {
@@ -22,6 +53,23 @@ function logStartup(message, details) {
   }
 
   console.log(`[startup] ${message}`, details)
+}
+
+function logOrderSync(message, details) {
+  if (details === undefined) {
+    console.log(`[order-sync] ${message}`)
+    return
+  }
+
+  console.log(`[order-sync] ${message}`, details)
+}
+
+function quoteIdentifier(identifier) {
+  return `"${String(identifier).replaceAll('"', '""')}"`
+}
+
+function quoteColumns(columns) {
+  return columns.map((column) => quoteIdentifier(column)).join(', ')
 }
 
 function isDev() {
@@ -389,7 +437,18 @@ function ensureLegacyCompatibility(database) {
       last_sync_at DATETIME,
       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS order_sync_queue (
+      order_id TEXT PRIMARY KEY,
+      operation TEXT NOT NULL CHECK (operation IN ('UPSERT', 'DELETE')),
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `)
+
+  database.prepare(`DELETE FROM sync_outbox WHERE table_name = 'order_items'`).run()
 
   if (!tableHasColumn(database, 'users', 'updated_at')) {
     database.exec(`
@@ -410,6 +469,214 @@ function ensureLegacyCompatibility(database) {
       ALTER TABLE order_items ADD COLUMN updated_at DATETIME;
       UPDATE order_items SET updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP);
     `)
+  }
+}
+
+async function getRemoteDbClient() {
+  const config = getDbConnectionConfig()
+
+  if (!config.configured || !config.url || !config.authToken) {
+    return null
+  }
+
+  const { connect } = await import('@tursodatabase/serverless')
+  return connect({
+    url: config.url,
+    authToken: config.authToken,
+  })
+}
+
+function upsertOrderSyncQueue(database, orderId, operation, lastError = null) {
+  const now = new Date().toISOString()
+
+  database
+    .prepare(
+      `INSERT INTO order_sync_queue (order_id, operation, attempts, last_error, created_at, updated_at)
+       VALUES (?, ?, 1, ?, ?, ?)
+       ON CONFLICT(order_id) DO UPDATE SET
+         operation = excluded.operation,
+         attempts = order_sync_queue.attempts + 1,
+         last_error = excluded.last_error,
+         updated_at = excluded.updated_at`,
+    )
+    .run(String(orderId), operation, lastError, now, now)
+}
+
+function ensureOrderSyncQueue(database, orderId, operation) {
+  const now = new Date().toISOString()
+
+  database
+    .prepare(
+      `INSERT INTO order_sync_queue (order_id, operation, attempts, last_error, created_at, updated_at)
+       VALUES (?, ?, 0, NULL, ?, ?)
+       ON CONFLICT(order_id) DO UPDATE SET
+         operation = excluded.operation,
+         updated_at = excluded.updated_at`,
+    )
+    .run(String(orderId), operation, now, now)
+}
+
+function clearOrderSyncQueue(database, orderId) {
+  database.prepare('DELETE FROM order_sync_queue WHERE order_id = ?').run(String(orderId))
+}
+
+function getLocalOrderAggregate(database, orderId) {
+  const order = database
+    .prepare(`SELECT ${quoteColumns(ORDER_COLUMNS)} FROM orders WHERE id = ? LIMIT 1`)
+    .get(Number(orderId))
+
+  const items = database
+    .prepare(
+      `SELECT ${quoteColumns(ORDER_ITEM_COLUMNS)}
+         FROM order_items
+        WHERE order_id = ?
+        ORDER BY id ASC`,
+    )
+    .all(Number(orderId))
+
+  return { order, items }
+}
+
+async function applyRemoteOrderAggregate(client, database, orderId, operation) {
+  const numericOrderId = Number(orderId)
+
+  if (operation === 'DELETE') {
+    await client.execute('DELETE FROM order_items WHERE order_id = ?', [numericOrderId])
+    await client.execute('DELETE FROM orders WHERE id = ?', [numericOrderId])
+    return
+  }
+
+  const { order, items } = getLocalOrderAggregate(database, orderId)
+
+  if (!order) {
+    throw new Error(`Local order ${orderId} not found for remote aggregate sync`)
+  }
+
+  const orderAssignments = ORDER_COLUMNS.filter((column) => column !== 'id')
+    .map((column) => `${quoteIdentifier(column)} = excluded.${quoteIdentifier(column)}`)
+    .join(', ')
+  const orderPlaceholders = ORDER_COLUMNS.map(() => '?').join(', ')
+
+  await client.execute(
+    `INSERT INTO orders (${quoteColumns(ORDER_COLUMNS)})
+     VALUES (${orderPlaceholders})
+     ON CONFLICT(${quoteIdentifier('id')}) DO UPDATE SET ${orderAssignments}`,
+    ORDER_COLUMNS.map((column) => order[column] ?? null),
+  )
+
+  await client.execute('DELETE FROM order_items WHERE order_id = ?', [numericOrderId])
+
+  const itemPlaceholders = ORDER_ITEM_COLUMNS.map(() => '?').join(', ')
+  for (const item of items) {
+    await client.execute(
+      `INSERT INTO order_items (${quoteColumns(ORDER_ITEM_COLUMNS)})
+       VALUES (${itemPlaceholders})`,
+      ORDER_ITEM_COLUMNS.map((column) => item[column] ?? null),
+    )
+  }
+}
+
+async function syncOrderAggregate(orderId, operation, options = {}) {
+  const queueOnError = options.queueOnError !== false
+  const database = ensureDatabase()
+
+  if (queueOnError) {
+    ensureOrderSyncQueue(database, orderId, operation)
+    logOrderSync('aggregate protected locally pending remote push', {
+      orderId: String(orderId),
+      operation,
+    })
+  }
+
+  const client = await getRemoteDbClient()
+
+  if (!client) {
+    const error = new Error('Remote database is not configured')
+    if (queueOnError) {
+      upsertOrderSyncQueue(database, orderId, operation, error.message)
+    }
+    throw error
+  }
+
+  try {
+    await client.execute('SELECT 1')
+    await applyRemoteOrderAggregate(client, database, orderId, operation)
+    clearOrderSyncQueue(database, orderId)
+    logOrderSync('aggregate synced', {
+      orderId: String(orderId),
+      operation,
+    })
+    return { queued: false }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (queueOnError) {
+      upsertOrderSyncQueue(database, orderId, operation, message)
+      logOrderSync('aggregate sync queued for retry', {
+        orderId: String(orderId),
+        operation,
+        error: message,
+      })
+      return { queued: true }
+    }
+
+    throw error
+  }
+}
+
+async function flushOrderSyncQueue() {
+  if (orderSyncPromise) {
+    return orderSyncPromise
+  }
+
+  orderSyncPromise = (async () => {
+    const database = ensureDatabase()
+    const queuedOrders = database
+      .prepare('SELECT order_id, operation FROM order_sync_queue ORDER BY updated_at ASC')
+      .all()
+
+    for (const row of queuedOrders) {
+      try {
+        await syncOrderAggregate(row.order_id, row.operation, { queueOnError: false })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        database
+          .prepare(
+            `UPDATE order_sync_queue
+                SET attempts = attempts + 1,
+                    last_error = ?,
+                    updated_at = ?
+              WHERE order_id = ?`,
+          )
+          .run(message, new Date().toISOString(), String(row.order_id))
+        logOrderSync('aggregate retry failed', {
+          orderId: String(row.order_id),
+          operation: row.operation,
+          error: message,
+        })
+      }
+    }
+  })().finally(() => {
+    orderSyncPromise = null
+  })
+
+  return orderSyncPromise
+}
+
+function startOrderSyncQueue() {
+  if (orderSyncTimer) {
+    return
+  }
+
+  void flushOrderSyncQueue()
+  orderSyncTimer = setInterval(() => {
+    void flushOrderSyncQueue()
+  }, ORDER_SYNC_INTERVAL_MS)
+}
+
+function stopOrderSyncQueue() {
+  if (orderSyncTimer) {
+    clearInterval(orderSyncTimer)
+    orderSyncTimer = null
   }
 }
 
@@ -575,6 +842,9 @@ function registerIpcHandlers() {
   ipcMain.handle('desktop:startup-status', () => getFirstRunStatus())
   ipcMain.handle('desktop:startup-initialize', () => initializeFirstRun())
   ipcMain.handle('desktop:startup-retry', () => initializeFirstRun())
+  ipcMain.handle('desktop:orders-sync-aggregate', (_event, payload) =>
+    syncOrderAggregate(payload.orderId, payload.operation),
+  )
 }
 
 app.whenReady().then(() => {
@@ -587,6 +857,7 @@ app.whenReady().then(() => {
   registerIpcHandlers()
   createWindow()
   syncManager.start()
+  startOrderSyncQueue()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -605,6 +876,8 @@ app.on('before-quit', () => {
   if (syncManager) {
     syncManager.stop()
   }
+
+  stopOrderSyncQueue()
 
   if (db) {
     db.close()

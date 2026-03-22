@@ -24,6 +24,13 @@ contextBridge.exposeInMainWorld('openposDesktop', {
     initialize: () => ipcRenderer.invoke('desktop:startup-initialize'),
     retry: () => ipcRenderer.invoke('desktop:startup-retry'),
   },
+  orders: {
+    syncAggregate: (orderId, operation) =>
+      ipcRenderer.invoke('desktop:orders-sync-aggregate', {
+        orderId,
+        operation,
+      }),
+  },
   db: {
     query: (sql, params) => ipcRenderer.invoke('desktop:db-query', sql, params),
     execute: (sql, params) => ipcRenderer.invoke('desktop:db-execute', sql, params),
