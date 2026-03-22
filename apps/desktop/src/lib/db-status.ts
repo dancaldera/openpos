@@ -1,37 +1,62 @@
 import { getApiUrl } from './api-config'
 import {
+  conflictedCount,
   connectionMode,
   connectionStatus,
   lastConnectionAttempt,
+  lastSuccessfulSync,
+  lastSyncError,
   pendingCount,
   remoteConfigured,
   setConnectionState,
 } from './db'
-import { reconnectToTurso, startHealthCheck, stopHealthCheck } from './db-adapter'
+import { requireDesktopApi } from './desktop'
 import { isDesktop } from './platform'
 
 export interface DbStatusSnapshot {
-  status: typeof connectionStatus.value
-  mode: typeof connectionMode.value
+  status: typeof connectionStatus.value | 'remote' | 'local'
+  mode: typeof connectionMode.value | 'sqlite' | 'turso'
   remoteConfigured: boolean
   pendingWrites?: number
-  lastCheckedAt?: string
+  conflictedWrites?: number
+  lastCheckedAt?: string | null
+  lastSyncedAt?: string | null
+  lastError?: string | null
 }
 
 let webStatusTimer: ReturnType<typeof setInterval> | null = null
 let webStatusRequest: Promise<void> | null = null
+let desktopStatusTimer: ReturnType<typeof setInterval> | null = null
 
 function getLastCheckedAt(): string | undefined {
   return lastConnectionAttempt.value > 0 ? new Date(lastConnectionAttempt.value).toISOString() : undefined
 }
 
+function normalizeStatus(status: DbStatusSnapshot['status']): typeof connectionStatus.value {
+  if (status === 'remote') return 'online'
+  if (status === 'local') return 'offline'
+  return status
+}
+
+function normalizeMode(mode: DbStatusSnapshot['mode']): typeof connectionMode.value {
+  if (mode === 'api') return 'api'
+  return 'mirror'
+}
+
 function applyDbStatusSnapshot(snapshot: DbStatusSnapshot): void {
-  setConnectionState(snapshot.status, {
-    mode: snapshot.mode,
+  setConnectionState(normalizeStatus(snapshot.status), {
+    mode: normalizeMode(snapshot.mode),
     remoteConfigured: snapshot.remoteConfigured,
     pendingWrites: snapshot.pendingWrites,
+    conflictedWrites: snapshot.conflictedWrites,
     lastCheckedAt: snapshot.lastCheckedAt ? Date.parse(snapshot.lastCheckedAt) : null,
+    lastSyncedAt: snapshot.lastSyncedAt ? Date.parse(snapshot.lastSyncedAt) : null,
+    error: snapshot.lastError ?? null,
   })
+}
+
+async function refreshDesktopDbStatus(): Promise<void> {
+  applyDbStatusSnapshot(await requireDesktopApi().sync.getStatus())
 }
 
 async function refreshWebDbStatus(): Promise<void> {
@@ -53,6 +78,7 @@ async function refreshWebDbStatus(): Promise<void> {
         mode: 'api',
         remoteConfigured: false,
         lastCheckedAt: null,
+        error: error instanceof Error ? error.message : String(error),
       })
     } finally {
       webStatusRequest = null
@@ -68,13 +94,22 @@ export function getDbStatusSnapshot(): DbStatusSnapshot {
     mode: connectionMode.value,
     remoteConfigured: remoteConfigured.value,
     pendingWrites: pendingCount.value,
+    conflictedWrites: conflictedCount.value,
     lastCheckedAt: getLastCheckedAt(),
+    lastSyncedAt: lastSuccessfulSync.value > 0 ? new Date(lastSuccessfulSync.value).toISOString() : undefined,
+    lastError: lastSyncError.value,
   }
 }
 
 export function startDbStatusMonitor(intervalMs = 30_000): void {
   if (isDesktop) {
-    startHealthCheck(intervalMs)
+    void refreshDesktopDbStatus()
+
+    if (desktopStatusTimer !== null) return
+
+    desktopStatusTimer = setInterval(() => {
+      void refreshDesktopDbStatus()
+    }, intervalMs)
     return
   }
 
@@ -89,7 +124,10 @@ export function startDbStatusMonitor(intervalMs = 30_000): void {
 
 export function stopDbStatusMonitor(): void {
   if (isDesktop) {
-    stopHealthCheck()
+    if (desktopStatusTimer !== null) {
+      clearInterval(desktopStatusTimer)
+      desktopStatusTimer = null
+    }
     return
   }
 
@@ -101,9 +139,10 @@ export function stopDbStatusMonitor(): void {
 
 export async function refreshConnectionStatus(): Promise<boolean> {
   if (isDesktop) {
-    return reconnectToTurso()
+    applyDbStatusSnapshot(await requireDesktopApi().sync.trigger())
+    return connectionStatus.value === 'online'
   }
 
   await refreshWebDbStatus()
-  return connectionStatus.value === 'remote'
+  return connectionStatus.value === 'online'
 }

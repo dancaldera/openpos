@@ -32,6 +32,7 @@
       "name": "@openpos/desktop",
       "version": "0.2.5",
       "dependencies": {
+        "@openpos/data": "workspace:*",
         "@preact/signals": "^2.5.1",
         "@tailwindcss/vite": "^4.1.18",
         "@tursodatabase/serverless": "^0.2.4",
@@ -59,6 +60,13 @@
         "@tailwindcss/vite": "^4.2.1",
         "astro": "^6.0.5",
         "tailwindcss": "^4.2.1",
+      },
+    },
+    "packages/data": {
+      "name": "@openpos/data",
+      "version": "0.1.0",
+      "dependencies": {
+        "@tursodatabase/serverless": "^0.2.4",
       },
     },
   },
@@ -288,6 +296,8 @@
     "@npmcli/fs": ["@npmcli/fs@4.0.0", "", { "dependencies": { "semver": "^7.3.5" } }, "sha512-/xGlezI6xfGO9NwuJlnwz/K14qD1kCSAGtacBHnGzeAIuJGazcp45KP5NuyARXoKb7cwulAGWVsbeSxdG/cb0Q=="],
 
     "@openpos/api": ["@openpos/api@workspace:apps/api"],
+
+    "@openpos/data": ["@openpos/data@workspace:packages/data"],
 
     "@openpos/desktop": ["@openpos/desktop@workspace:apps/desktop"],
 

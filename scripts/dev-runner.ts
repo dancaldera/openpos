@@ -97,6 +97,37 @@ function resolveWorkspaceBinary(workspaceDir: string, binaryName: string): strin
   return match
 }
 
+function getWorkspacePackagePath(workspaceDir: string, packageName: string): string {
+  const candidates = [
+    join(workspaceDir, 'node_modules', packageName),
+    join(rootDir, 'node_modules', packageName),
+  ]
+
+  const match = candidates.find((candidate) => existsSync(candidate))
+  if (!match) {
+    throw new Error(`Unable to resolve package "${packageName}" from ${workspaceDir}`)
+  }
+
+  return match
+}
+
+async function ensureElectronBinaryInstalled(workspaceDir: string): Promise<void> {
+  const electronDir = getWorkspacePackagePath(workspaceDir, 'electron')
+  const pathFile = join(electronDir, 'path.txt')
+  const distDir = join(electronDir, 'dist')
+
+  if (existsSync(pathFile) && existsSync(distDir)) {
+    return
+  }
+
+  console.log('Electron runtime missing, downloading Electron dist payload')
+  await runCommand('node', [join(electronDir, 'install.js')], workspaceDir, {
+    ...process.env,
+    npm_config_platform: process.platform,
+    npm_config_arch: process.arch,
+  })
+}
+
 async function canConnectToPort(port: number, host: string): Promise<boolean> {
   return new Promise<boolean>((resolvePort) => {
     const socket = new Socket()
@@ -179,6 +210,7 @@ function installSignalHandlers(): void {
 
 async function runDesktopMode(): Promise<void> {
   await runCommand('bun', ['run', 'prepare:native'], desktopDir)
+  await ensureElectronBinaryInstalled(desktopDir)
 
   const viteProcess = spawnLongRunning('bun', ['run', 'dev'], desktopDir)
   const viteExit = waitForChildExit(viteProcess).then((exitCode) => ({

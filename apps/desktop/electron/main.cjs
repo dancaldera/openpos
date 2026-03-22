@@ -4,11 +4,13 @@ const Database = require('better-sqlite3')
 const fs = require('node:fs')
 const path = require('node:path')
 const { spawn } = require('node:child_process')
+const { createSyncManager } = require('./sync-manager.cjs')
 
 const pkg = require('../package.json')
 
 let mainWindow = null
 let db = null
+let syncManager = null
 
 function isDev() {
   return !app.isPackaged
@@ -67,6 +69,11 @@ function getDbPath() {
   return path.join(app.getPath('userData'), 'postpos.db')
 }
 
+function getBootstrapDbPath() {
+  const packageRoot = path.dirname(require.resolve('@openpos/data/package.json'))
+  return path.join(packageRoot, 'assets', 'openpos-bootstrap.sqlite')
+}
+
 function parseJsonFile(filePath) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'))
@@ -75,19 +82,128 @@ function parseJsonFile(filePath) {
   }
 }
 
+function parseEnvFile(filePath) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8')
+    const values = {}
+
+    for (const rawLine of content.split('\n')) {
+      const line = rawLine.trim()
+      if (!line || line.startsWith('#')) {
+        continue
+      }
+
+      const separatorIndex = line.indexOf('=')
+      if (separatorIndex === -1) {
+        continue
+      }
+
+      const key = line.slice(0, separatorIndex).trim()
+      const value = line.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, '')
+      values[key] = value
+    }
+
+    return values
+  } catch {
+    return {}
+  }
+}
+
+function getDotEnvConfig() {
+  const candidates = [
+    path.join(process.cwd(), '.env'),
+    path.join(process.cwd(), '.env.local'),
+    path.join(process.cwd(), '..', '.env'),
+    path.join(process.cwd(), '..', '.env.local'),
+    path.join(process.cwd(), '..', '..', '.env'),
+    path.join(process.cwd(), '..', '..', '.env.local'),
+    path.join(__dirname, '..', '.env'),
+    path.join(__dirname, '..', '..', '..', '.env.local'),
+    path.join(__dirname, '..', '..', '..', '.env'),
+  ]
+
+  const mergedConfig = {}
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      Object.assign(mergedConfig, parseEnvFile(candidate))
+    }
+  }
+
+  return mergedConfig
+}
+
 function getRuntimeConfig() {
   return parseJsonFile(getConfigPath())
 }
 
 function getDbConnectionConfig() {
   const config = getRuntimeConfig()
-  const url = config.tursoDatabaseUrl || process.env.TURSO_DATABASE_URL || undefined
-  const authToken = config.tursoAuthToken || process.env.TURSO_AUTH_TOKEN || undefined
+  const envConfig = getDotEnvConfig()
+  const url = config.tursoDatabaseUrl || process.env.TURSO_DATABASE_URL || envConfig.TURSO_DATABASE_URL || undefined
+  const authToken =
+    config.tursoAuthToken || process.env.TURSO_AUTH_TOKEN || envConfig.TURSO_AUTH_TOKEN || undefined
 
   return {
     url,
     authToken,
     configured: Boolean(url && authToken),
+  }
+}
+
+function tableHasColumn(database, tableName, columnName) {
+  return database.prepare(`PRAGMA table_info(${tableName})`).all().some((column) => column.name === columnName)
+}
+
+function ensureLegacyCompatibility(database) {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS sync_outbox (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      table_name TEXT NOT NULL,
+      record_id TEXT NOT NULL,
+      operation TEXT NOT NULL CHECK (operation IN ('INSERT', 'UPDATE', 'DELETE')),
+      row_payload TEXT,
+      local_updated_at DATETIME,
+      base_remote_updated_at DATETIME,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'synced', 'conflict', 'error')),
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      synced_at DATETIME,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(table_name, record_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sync_outbox_status ON sync_outbox(status);
+    CREATE INDEX IF NOT EXISTS idx_sync_outbox_updated_at ON sync_outbox(updated_at);
+
+    CREATE TABLE IF NOT EXISTS sync_state (
+      table_name TEXT PRIMARY KEY,
+      last_pulled_at DATETIME,
+      last_sync_at DATETIME,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `)
+
+  if (!tableHasColumn(database, 'users', 'updated_at')) {
+    database.exec(`
+      ALTER TABLE users ADD COLUMN updated_at DATETIME;
+      UPDATE users SET updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP);
+    `)
+  }
+
+  if (!tableHasColumn(database, 'order_items', 'created_at')) {
+    database.exec(`
+      ALTER TABLE order_items ADD COLUMN created_at DATETIME;
+      UPDATE order_items SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP);
+    `)
+  }
+
+  if (!tableHasColumn(database, 'order_items', 'updated_at')) {
+    database.exec(`
+      ALTER TABLE order_items ADD COLUMN updated_at DATETIME;
+      UPDATE order_items SET updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP);
+    `)
   }
 }
 
@@ -98,49 +214,21 @@ function ensureDatabase() {
 
   fs.mkdirSync(app.getPath('userData'), { recursive: true })
 
-  db = new Database(getDbPath())
-  db.pragma('journal_mode = WAL')
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS __desktop_migrations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      filename TEXT NOT NULL UNIQUE,
-      applied_at TEXT NOT NULL
-    )
-  `)
-
-  applyMigrations(db, path.join(__dirname, 'migrations', 'schema'), 'schema')
-  applyMigrations(db, path.join(__dirname, 'migrations', 'seeds'), 'seeds')
-
-  return db
-}
-
-function applyMigrations(database, dirPath, kind) {
-  if (!fs.existsSync(dirPath)) {
-    return
-  }
-
-  const applied = new Set(
-    database.prepare('SELECT filename FROM __desktop_migrations').all().map((row) => row.filename),
-  )
-
-  const files = fs
-    .readdirSync(dirPath)
-    .filter((file) => file.endsWith('.sql'))
-    .sort((a, b) => a.localeCompare(b))
-
-  for (const file of files) {
-    const key = `${kind}/${file}`
-    if (applied.has(key)) {
-      continue
+  const dbPath = getDbPath()
+  if (!fs.existsSync(dbPath)) {
+    const bootstrapDbPath = getBootstrapDbPath()
+    if (!fs.existsSync(bootstrapDbPath)) {
+      throw new Error(`Bootstrap database not found at ${bootstrapDbPath}`)
     }
 
-    const sql = fs.readFileSync(path.join(dirPath, file), 'utf8')
-    database.exec(sql)
-    database
-      .prepare('INSERT INTO __desktop_migrations (filename, applied_at) VALUES (?, ?)')
-      .run(key, new Date().toISOString())
+    fs.copyFileSync(bootstrapDbPath, dbPath)
   }
+
+  db = new Database(dbPath)
+  db.pragma('journal_mode = WAL')
+  ensureLegacyCompatibility(db)
+
+  return db
 }
 
 function runSelect(sql, params = []) {
@@ -150,7 +238,9 @@ function runSelect(sql, params = []) {
 
 function runExecute(sql, params = []) {
   const database = ensureDatabase()
+  const capturedWrite = syncManager.captureWrite(database, sql, params)
   const result = database.prepare(sql).run(...params)
+  syncManager.trackWrite(database, capturedWrite, result)
 
   return {
     lastInsertId: Number(result.lastInsertRowid ?? 0),
@@ -160,13 +250,23 @@ function runExecute(sql, params = []) {
 
 function runTransaction(statements) {
   const database = ensureDatabase()
+  const trackedWrites = []
   const executeMany = database.transaction((items) => {
     for (const statement of items) {
-      database.prepare(statement.sql).run(...(statement.params || []))
+      const capturedWrite = syncManager.captureWrite(database, statement.sql, statement.params || [])
+      const result = database.prepare(statement.sql).run(...(statement.params || []))
+      trackedWrites.push({
+        capturedWrite,
+        result,
+      })
     }
   })
 
   executeMany(statements)
+
+  for (const write of trackedWrites) {
+    syncManager.trackWrite(database, write.capturedWrite, write.result)
+  }
 }
 
 function resolvePrinterConfig() {
@@ -255,19 +355,26 @@ function registerIpcHandlers() {
   ipcMain.handle('desktop:greet', (_event, name) => `Hello, ${name}!!`)
   ipcMain.handle('desktop:hash-password', (_event, password) => bcrypt.hash(password, 12))
   ipcMain.handle('desktop:verify-password', (_event, password, hash) => bcrypt.compare(password, hash))
-  ipcMain.handle('desktop:get-db-connection-config', () => getDbConnectionConfig())
   ipcMain.handle('desktop:get-runtime-config', () => getRuntimeConfig())
   ipcMain.handle('desktop:db-query', (_event, sql, params) => runSelect(sql, params))
   ipcMain.handle('desktop:db-execute', (_event, sql, params) => runExecute(sql, params))
   ipcMain.handle('desktop:db-transaction', (_event, statements) => runTransaction(statements))
   ipcMain.handle('desktop:print-thermal-receipt', (_event, receiptData) => printThermalReceipt(receiptData))
+  ipcMain.handle('desktop:sync-status', () => syncManager.getStatusSnapshot())
+  ipcMain.handle('desktop:sync-trigger', () => syncManager.triggerSync())
+  ipcMain.handle('desktop:sync-conflicts', () => syncManager.getConflictSummary())
 }
 
 app.whenReady().then(() => {
   setAppIcon()
   ensureDatabase()
+  syncManager = createSyncManager({
+    getDatabase: ensureDatabase,
+    getRemoteConfig: getDbConnectionConfig,
+  })
   registerIpcHandlers()
   createWindow()
+  syncManager.start()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -283,6 +390,10 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  if (syncManager) {
+    syncManager.stop()
+  }
+
   if (db) {
     db.close()
     db = null

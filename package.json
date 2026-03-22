@@ -2,7 +2,8 @@
   "name": "openpos",
   "private": true,
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "dev": "bun scripts/dev-runner.ts dev",
@@ -15,6 +16,8 @@
     "build:desktop:web": "bun run --cwd apps/desktop build:web",
     "build:api": "bun run --cwd apps/api build",
     "build:landing": "bun run --cwd apps/landing build",
+    "db:migrate:remote": "bun run --cwd packages/data migrate:remote",
+    "db:build-bootstrap": "bun run --cwd packages/data build:bootstrap",
     "check": "tsc -p scripts/tsconfig.json && bun run --cwd apps/desktop check && bun run --cwd apps/api check",
     "test": "bun run test:desktop && bun run test:api",
     "test:desktop": "bun run --cwd apps/desktop test",

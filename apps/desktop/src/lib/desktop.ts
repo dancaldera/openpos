@@ -1,9 +1,3 @@
-export interface DesktopDbConnectionConfig {
-  url?: string
-  authToken?: string
-  configured: boolean
-}
-
 export interface RuntimeConfig {
   tursoDatabaseUrl?: string
   tursoAuthToken?: string
@@ -16,14 +10,37 @@ export interface DesktopDatabaseStatement {
   params?: unknown[]
 }
 
+export interface DesktopSyncStatusSnapshot {
+  status: 'online' | 'offline' | 'syncing' | 'error'
+  mode: 'mirror'
+  remoteConfigured: boolean
+  pendingWrites: number
+  conflictedWrites: number
+  lastCheckedAt?: string | null
+  lastSyncedAt?: string | null
+  lastError?: string | null
+}
+
+export interface DesktopSyncConflict {
+  tableName: string
+  recordId: string
+  reason: string
+  localUpdatedAt?: string | null
+  remoteUpdatedAt?: string | null
+}
+
 export interface DesktopApi {
   getInfo(): Promise<{ isDesktop: boolean; isElectron: boolean; version: string }>
   greet(name: string): Promise<string>
   hashPassword(password: string): Promise<string>
   verifyPassword(password: string, hash: string): Promise<boolean>
-  getDbConnectionConfig(): Promise<DesktopDbConnectionConfig>
   getRuntimeConfig(): Promise<RuntimeConfig>
   printThermalReceipt(receiptData: string): Promise<string>
+  sync: {
+    getStatus(): Promise<DesktopSyncStatusSnapshot>
+    trigger(): Promise<DesktopSyncStatusSnapshot>
+    getConflicts(): Promise<DesktopSyncConflict[]>
+  }
   db: {
     query<T>(sql: string, params?: unknown[]): Promise<T[]>
     execute(sql: string, params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }>
