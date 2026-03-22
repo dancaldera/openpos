@@ -1,6 +1,6 @@
 {
-  "buildCommand": "npm run build:web",
-  "outputDirectory": "dist-web",
+  "buildCommand": "bun run build:landing",
+  "outputDirectory": "apps/landing/dist",
   "rewrites": [
     {
       "source": "/(.*)",
