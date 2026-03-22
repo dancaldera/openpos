@@ -2,14 +2,18 @@
   "name": "dan-pos",
   "private": true,
   "version": "0.2.5",
+  "description": "OpenPOS desktop application powered by Electron and Preact",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
+    "dev:desktop": "concurrently -k \"vite\" \"wait-on tcp:1420 && VITE_DEV_SERVER_URL=http://localhost:1420 electron .\"",
     "dev:web": "vite --config vite.web.config.ts",
     "build": "tsc && vite build",
+    "build:desktop": "bun run build && electron-builder --dir",
+    "build:desktop:linux": "bun run build && electron-builder --linux",
     "build:web": "tsc && vite build --config vite.web.config.ts",
     "preview": "vite preview",
-    "tauri": "tauri",
     "lint": "biome lint src --write",
     "format": "biome format src --write",
     "check": "biome check src --write",
@@ -20,14 +24,9 @@
   "dependencies": {
     "@preact/signals": "^2.5.1",
     "@tailwindcss/vite": "^4.1.18",
-    "@tauri-apps/api": "2.10",
-    "@tauri-apps/plugin-opener": "^2.5.3",
-    "@tauri-apps/plugin-process": "^2.3.1",
-    "@tauri-apps/plugin-sql": "^2.3.1",
-    "@tauri-apps/plugin-fs": "^2.3.0",
-    "@tauri-apps/plugin-updater": "^2.10.0",
     "@tursodatabase/serverless": "^0.2.4",
     "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.2.0",
     "preact": "^10.28.1",
     "sonner": "^2.0.7",
     "tailwindcss": "^4.1.18"
@@ -35,10 +34,36 @@
   "devDependencies": {
     "@biomejs/biome": "2.3.12",
     "@preact/preset-vite": "^2.9.3",
-    "@tauri-apps/cli": "^2.9.0",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^25.5.0",
+    "concurrently": "^9.2.1",
+    "electron": "^37.3.1",
+    "electron-builder": "^26.0.12",
     "typescript": "~5.9.3",
-    "vite": "^7.3.0"
+    "vite": "^7.3.0",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "com.openpos.desktop",
+    "productName": "OpenPOS",
+    "directories": {
+      "buildResources": "electron/build",
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "icon": "electron/build/icons/icon.icns"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "electron/build/icons/icon.png"
+    }
   }
 }

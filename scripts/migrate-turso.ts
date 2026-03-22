@@ -2,7 +2,7 @@
 /**
  * Turso Database Migration Script
  *
- * Reads all SQL migration files from src-tauri/src/migrations/ (schema + seeds),
+ * Reads all SQL migration files from electron/migrations/ (schema + seeds),
  * applies them in version order to the Turso remote database, and tracks
  * applied migrations in a _migrations table so it's safe to re-run.
  *
@@ -196,7 +196,7 @@ async function main() {
   }
 
   // 5. Collect all migrations from schema/ and seeds/
-  const migrationsDir = resolve(process.cwd(), 'src-tauri', 'src', 'migrations')
+  const migrationsDir = resolve(process.cwd(), 'electron', 'migrations')
   const schemaDir = join(migrationsDir, 'schema')
   const seedsDir = join(migrationsDir, 'seeds')
 

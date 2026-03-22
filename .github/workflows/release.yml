@@ -40,6 +40,29 @@ jobs:
       - name: Install frontend dependencies
         run: bun install
 
+      - name: Validate public release environment
+        run: |
+          forbidden_vars=(
+            TURSO_DATABASE_URL
+            TURSO_AUTH_TOKEN
+            JWT_SECRET
+            ALLOWED_ORIGIN
+            VITE_API_URL
+          )
+
+          found=0
+          for var_name in "${forbidden_vars[@]}"; do
+            if printenv "$var_name" >/dev/null; then
+              echo "Forbidden environment variable set for public desktop release: $var_name"
+              found=1
+            fi
+          done
+
+          if [ "$found" -ne 0 ]; then
+            echo "Public desktop releases must not embed runtime or backend configuration."
+            exit 1
+          fi
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
