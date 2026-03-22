@@ -35,7 +35,7 @@ export const authActions = {
     isLoading.value = true
 
     try {
-      const currentUser = authService.getCurrentUser()
+      const currentUser = await authService.restoreCurrentUser()
       user.value = currentUser
       error.value = null
     } catch (err) {

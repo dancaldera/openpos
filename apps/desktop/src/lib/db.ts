@@ -15,6 +15,7 @@ export const lastSyncError = signal<string | null>(null)
 export const lastApiCheck = signal<number>(0)
 export const lastApiError = signal<string | null>(null)
 export const pendingCount = signal<number>(0)
+export const erroredCount = signal<number>(0)
 export const conflictedCount = signal<number>(0)
 
 interface SetConnectionStateOptions {
@@ -23,6 +24,7 @@ interface SetConnectionStateOptions {
   lastCheckedAt?: number | null
   lastSyncedAt?: number | null
   pendingWrites?: number
+  erroredWrites?: number
   conflictedWrites?: number
   error?: string | null
 }
@@ -42,6 +44,10 @@ export function setConnectionState(status: ConnectionStatus, options: SetConnect
 
   if (typeof options.pendingWrites === 'number') {
     pendingCount.value = options.pendingWrites
+  }
+
+  if (typeof options.erroredWrites === 'number') {
+    erroredCount.value = options.erroredWrites
   }
 
   if (typeof options.conflictedWrites === 'number') {

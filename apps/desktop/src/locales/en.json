@@ -725,6 +725,20 @@
     "electronics": "Electronics",
     "other": "Other"
   },
+  "startup": {
+    "subtitle": "Initial desktop setup",
+    "needsRemoteConfigTitle": "Remote setup required",
+    "needsRemoteConfigDescription": "This desktop must connect to Turso before the first sign-in.",
+    "syncingTitle": "Syncing initial data",
+    "syncingDescription": "Downloading users and settings from Turso into the local desktop database.",
+    "initialSyncFailedTitle": "Initial sync failed",
+    "initialSyncFailedDescription": "The local database is still empty. Retry after restoring Turso connectivity.",
+    "remoteConfigured": "Remote configured: {{value}}",
+    "activeUsers": "Active users mirrored locally: {{count}}",
+    "configureRemoteHint": "Add Turso credentials to the desktop runtime configuration or environment, then restart the app.",
+    "retry": "Retry initial sync",
+    "firstRunRequired": "First run requires a successful Turso sync"
+  },
   "update": {
     "title": "Update Available",
     "available": "Update",

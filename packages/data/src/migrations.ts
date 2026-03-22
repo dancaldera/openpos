@@ -150,8 +150,7 @@ export function loadRemoteMigrations(options: { includeDevSeeds?: boolean } = {}
 export function loadBootstrapMigrations(): LoadedSqlFile[] {
   const migrationsRoot = getMigrationsRoot()
   const schema = loadSqlDirectory(join(migrationsRoot, 'schema'))
-  const requiredSeeds = loadSqlDirectory(join(migrationsRoot, 'seeds', 'required'))
   const localRuntime = loadSqlDirectory(join(migrationsRoot, 'local'))
 
-  return [...schema, ...requiredSeeds, ...localRuntime].sort((left, right) => left.version - right.version)
+  return [...schema, ...localRuntime].sort((left, right) => left.version - right.version)
 }

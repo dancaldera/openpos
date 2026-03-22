@@ -4,6 +4,15 @@ const DEFAULT_WATERMARK = '1970-01-01T00:00:00.000Z'
 const OUTBOX_ACTIVE_STATUSES = ['pending', 'error']
 const OUTBOX_OPEN_STATUSES = ['pending', 'error', 'conflict']
 
+function logSync(message, details) {
+  if (details === undefined) {
+    console.log(`[sync] ${message}`)
+    return
+  }
+
+  console.log(`[sync] ${message}`, details)
+}
+
 function quoteIdentifier(identifier) {
   return `"${String(identifier).replaceAll('"', '""')}"`
 }
@@ -15,11 +24,13 @@ function quoteColumns(columns) {
 function createSyncManager({ getDatabase, getRemoteConfig }) {
   let pollTimer = null
   let syncPromise = null
+  const remoteSchemaCache = new Map()
   const status = {
     status: 'offline',
     mode: 'mirror',
     remoteConfigured: false,
     pendingWrites: 0,
+    erroredWrites: 0,
     conflictedWrites: 0,
     lastCheckedAt: null,
     lastSyncedAt: null,
@@ -27,16 +38,12 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
   }
 
   function refreshCounts(database = getDatabase()) {
-    const pendingRow = database
-      .prepare(
-        `SELECT COUNT(*) AS count
-           FROM sync_outbox
-          WHERE status IN (${OUTBOX_ACTIVE_STATUSES.map(() => '?').join(', ')})`,
-      )
-      .get(...OUTBOX_ACTIVE_STATUSES)
+    const pendingRow = database.prepare(`SELECT COUNT(*) AS count FROM sync_outbox WHERE status = 'pending'`).get()
+    const errorRow = database.prepare(`SELECT COUNT(*) AS count FROM sync_outbox WHERE status = 'error'`).get()
     const conflictRow = database.prepare(`SELECT COUNT(*) AS count FROM sync_outbox WHERE status = 'conflict'`).get()
 
     status.pendingWrites = Number(pendingRow?.count ?? 0)
+    status.erroredWrites = Number(errorRow?.count ?? 0)
     status.conflictedWrites = Number(conflictRow?.count ?? 0)
   }
 
@@ -50,12 +57,20 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
   async function getTursoClient() {
     const config = getRemoteConfig()
     status.remoteConfigured = Boolean(config.configured)
+    logSync('resolve remote config', {
+      configured: Boolean(config.configured),
+      hasUrl: Boolean(config.url),
+      hasAuthToken: Boolean(config.authToken),
+      url: config.url ?? null,
+    })
 
     if (!config.configured || !config.url || !config.authToken) {
+      logSync('remote client unavailable because config is incomplete')
       return null
     }
 
     const { connect } = await import('@tursodatabase/serverless')
+    logSync('creating Turso client')
     return connect({
       url: config.url,
       authToken: config.authToken,
@@ -66,6 +81,11 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     status.status = nextStatus
     status.lastError = error instanceof Error ? error.message : error
     status.lastCheckedAt = new Date().toISOString()
+    logSync('status changed', {
+      status: nextStatus,
+      lastError: status.lastError,
+      lastCheckedAt: status.lastCheckedAt,
+    })
   }
 
   function rowFromRemoteResult(result, index) {
@@ -83,10 +103,55 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     return result.rows.map((_, index) => rowFromRemoteResult(result, index))
   }
 
+  async function getRemoteTableColumns(client, tableName) {
+    if (remoteSchemaCache.has(tableName)) {
+      return remoteSchemaCache.get(tableName)
+    }
+
+    const rows = await fetchRemoteRows(client, `PRAGMA table_info(${quoteIdentifier(tableName)})`)
+    const columns = new Set(rows.map((row) => String(row.name)))
+    remoteSchemaCache.set(tableName, columns)
+    logSync('loaded remote table columns', {
+      table: tableName,
+      columns: [...columns],
+    })
+    return columns
+  }
+
+  function resolveCompatibleWatermarkColumn(config, remoteColumns) {
+    if (remoteColumns.has(config.watermarkColumn)) {
+      return config.watermarkColumn
+    }
+
+    if (config.watermarkColumn === 'updated_at' && remoteColumns.has('created_at')) {
+      return 'created_at'
+    }
+
+    return null
+  }
+
+  function buildRemoteSelectColumns(config, remoteColumns, effectiveWatermarkColumn) {
+    return config.columns
+      .map((column) => {
+        if (remoteColumns.has(column)) {
+          return quoteIdentifier(column)
+        }
+
+        if (column === config.watermarkColumn && effectiveWatermarkColumn && remoteColumns.has(effectiveWatermarkColumn)) {
+          return `${quoteIdentifier(effectiveWatermarkColumn)} AS ${quoteIdentifier(column)}`
+        }
+
+        return `NULL AS ${quoteIdentifier(column)}`
+      })
+      .join(', ')
+  }
+
   async function fetchRemoteRow(client, config, recordId) {
+    const remoteColumns = await getRemoteTableColumns(client, config.tableName)
+    const effectiveWatermarkColumn = resolveCompatibleWatermarkColumn(config, remoteColumns)
     const rows = await fetchRemoteRows(
       client,
-      `SELECT ${quoteColumns(config.columns)}
+      `SELECT ${buildRemoteSelectColumns(config, remoteColumns, effectiveWatermarkColumn)}
          FROM ${quoteIdentifier(config.tableName)}
         WHERE ${quoteIdentifier(config.primaryKey)} = ?
         LIMIT 1`,
@@ -114,19 +179,34 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
   }
 
   async function upsertRemoteRow(client, config, row) {
-    const placeholders = config.columns.map(() => '?').join(', ')
-    const assignments = config.columns
+    const remoteColumns = await getRemoteTableColumns(client, config.tableName)
+    const writeColumns = config.columns.filter((column) => remoteColumns.has(column))
+
+    if (writeColumns.length === 0) {
+      throw new Error(`Remote table "${config.tableName}" has no compatible writable columns`)
+    }
+
+    const placeholders = writeColumns.map(() => '?').join(', ')
+    const assignments = writeColumns
       .filter((column) => column !== config.primaryKey)
       .map((column) => `${quoteIdentifier(column)} = excluded.${quoteIdentifier(column)}`)
       .join(', ')
-    const values = config.columns.map((column) => row[column] ?? null)
+    const values = writeColumns.map((column) => row[column] ?? null)
 
-    await client.execute(
-      `INSERT INTO ${quoteIdentifier(config.tableName)} (${quoteColumns(config.columns)})
+    const sql = assignments
+      ? `INSERT INTO ${quoteIdentifier(config.tableName)} (${quoteColumns(writeColumns)})
        VALUES (${placeholders})
        ON CONFLICT(${quoteIdentifier(config.primaryKey)}) DO UPDATE SET ${assignments}`,
-      values,
-    )
+      : `INSERT INTO ${quoteIdentifier(config.tableName)} (${quoteColumns(writeColumns)})
+       VALUES (${placeholders})
+       ON CONFLICT(${quoteIdentifier(config.primaryKey)}) DO NOTHING`
+
+    logSync('writing remote row', {
+      table: config.tableName,
+      writeColumns,
+    })
+
+    await client.execute(sql, values)
   }
 
   function upsertSyncState(database, tableName, values) {
@@ -192,16 +272,35 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     const orderedTables = [...replicatedTables].sort((left, right) => left.pullOrder - right.pullOrder)
 
     for (const config of orderedTables) {
+      const remoteColumns = await getRemoteTableColumns(client, config.tableName)
+      const effectiveWatermarkColumn = resolveCompatibleWatermarkColumn(config, remoteColumns)
       const state = getSyncState(database, config.tableName)
       const since = state?.last_pulled_at ?? DEFAULT_WATERMARK
-      const remoteRows = await fetchRemoteRows(
-        client,
-        `SELECT ${quoteColumns(config.columns)}
-           FROM ${quoteIdentifier(config.tableName)}
-          WHERE ${quoteIdentifier(config.watermarkColumn)} > ?
-          ORDER BY ${quoteIdentifier(config.watermarkColumn)} ASC, ${quoteIdentifier(config.primaryKey)} ASC`,
-        [since],
-      )
+
+      logSync('pulling remote rows', {
+        table: config.tableName,
+        since,
+        watermarkColumn: effectiveWatermarkColumn ?? 'FULL_TABLE_SCAN',
+      })
+      const remoteRows = effectiveWatermarkColumn
+        ? await fetchRemoteRows(
+            client,
+            `SELECT ${buildRemoteSelectColumns(config, remoteColumns, effectiveWatermarkColumn)}
+               FROM ${quoteIdentifier(config.tableName)}
+              WHERE ${quoteIdentifier(effectiveWatermarkColumn)} > ?
+              ORDER BY ${quoteIdentifier(effectiveWatermarkColumn)} ASC, ${quoteIdentifier(config.primaryKey)} ASC`,
+            [since],
+          )
+        : await fetchRemoteRows(
+            client,
+            `SELECT ${buildRemoteSelectColumns(config, remoteColumns, effectiveWatermarkColumn)}
+               FROM ${quoteIdentifier(config.tableName)}
+              ORDER BY ${quoteIdentifier(config.primaryKey)} ASC`,
+          )
+      logSync('remote rows fetched', {
+        table: config.tableName,
+        count: remoteRows.length,
+      })
 
       for (const row of remoteRows) {
         upsertLocalRow(database, config, row)
@@ -211,11 +310,19 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
         await reconcileHardDeletes(database, client, config)
       }
 
-      if (remoteRows.length > 0) {
+      if (remoteRows.length > 0 && effectiveWatermarkColumn) {
         const lastRow = remoteRows[remoteRows.length - 1]
         upsertSyncState(database, config.tableName, {
           lastPulledAt: lastRow[config.watermarkColumn] ?? since,
           lastSyncAt: state?.last_sync_at ?? null,
+        })
+        logSync('sync state updated for table', {
+          table: config.tableName,
+          lastPulledAt: lastRow[config.watermarkColumn] ?? since,
+        })
+      } else if (remoteRows.length > 0) {
+        logSync('skipping sync watermark update because remote table has no compatible watermark column', {
+          table: config.tableName,
         })
       }
     }
@@ -414,9 +521,14 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
 
   async function performSync() {
     const database = getDatabase()
+    logSync('perform sync started')
     const client = await getTursoClient()
 
     refreshCounts(database)
+    logSync('local queue counts before sync', {
+      pendingWrites: status.pendingWrites,
+      conflictedWrites: status.conflictedWrites,
+    })
 
     if (!client) {
       setStatus('offline')
@@ -424,31 +536,47 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     }
 
     setStatus('syncing')
+    logSync('probing Turso connectivity')
     await client.execute('SELECT 1')
+    logSync('Turso connectivity probe succeeded')
 
     await pullRemoteChanges(database, client)
+    logSync('remote pull phase completed')
     const affectedRecords = await flushOutbox(database, client)
+    logSync('outbox flush completed', {
+      affectedRecords: affectedRecords.length,
+    })
     await refreshAffectedRows(database, client, affectedRecords)
+    logSync('affected rows refresh completed')
 
     status.status = 'online'
     status.lastError = null
     status.lastCheckedAt = new Date().toISOString()
     status.lastSyncedAt = status.lastCheckedAt
+    logSync('sync finished successfully', {
+      lastSyncedAt: status.lastSyncedAt,
+    })
 
     return getStatusSnapshot(database)
   }
 
   async function triggerSync() {
     if (syncPromise) {
+      logSync('reusing in-flight sync promise')
       return syncPromise
     }
 
+    logSync('trigger sync requested')
     syncPromise = performSync()
       .catch((error) => {
+        logSync('sync failed', {
+          error: error instanceof Error ? error.message : String(error),
+        })
         setStatus('offline', error)
         return getStatusSnapshot(getDatabase())
       })
       .finally(() => {
+        logSync('sync promise cleared')
         syncPromise = null
       })
 

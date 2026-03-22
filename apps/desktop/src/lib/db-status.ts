@@ -5,6 +5,7 @@ import {
   conflictedCount,
   connectionMode,
   connectionStatus,
+  erroredCount,
   lastApiCheck,
   lastApiError,
   lastConnectionAttempt,
@@ -25,6 +26,7 @@ export interface DbStatusSnapshot {
   apiConfigured?: boolean
   apiReachable?: boolean
   pendingWrites?: number
+  erroredWrites?: number
   conflictedWrites?: number
   lastCheckedAt?: string | null
   lastSyncedAt?: string | null
@@ -40,6 +42,7 @@ export interface NormalizedDbStatusSnapshot {
   apiConfigured: boolean
   apiReachable: boolean
   pendingWrites?: number
+  erroredWrites?: number
   conflictedWrites?: number
   lastCheckedAt: number | null
   lastSyncedAt: number | null
@@ -81,6 +84,7 @@ export function normalizeDbStatusSnapshot(snapshot: DbStatusSnapshot): Normalize
     apiConfigured: snapshot.apiConfigured ?? mode === 'api',
     apiReachable: snapshot.apiReachable ?? (mode === 'api' ? status !== 'error' : false),
     pendingWrites: snapshot.pendingWrites,
+    erroredWrites: snapshot.erroredWrites,
     conflictedWrites: snapshot.conflictedWrites,
     lastCheckedAt,
     lastSyncedAt,
@@ -97,6 +101,7 @@ function applyDbStatusSnapshot(snapshot: DbStatusSnapshot): void {
     mode: normalized.mode,
     remoteConfigured: normalized.remoteConfigured,
     pendingWrites: normalized.pendingWrites,
+    erroredWrites: normalized.erroredWrites,
     conflictedWrites: normalized.conflictedWrites,
     lastCheckedAt: normalized.lastCheckedAt,
     lastSyncedAt: normalized.lastSyncedAt,
@@ -158,6 +163,7 @@ export function getDbStatusSnapshot(): DbStatusSnapshot {
     apiConfigured: apiConfigured.value,
     apiReachable: apiReachable.value,
     pendingWrites: pendingCount.value,
+    erroredWrites: erroredCount.value,
     conflictedWrites: conflictedCount.value,
     lastCheckedAt: getLastCheckedAt(),
     lastSyncedAt: lastSuccessfulSync.value > 0 ? new Date(lastSuccessfulSync.value).toISOString() : undefined,

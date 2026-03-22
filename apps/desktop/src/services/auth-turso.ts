@@ -180,6 +180,11 @@ export class AuthService {
     localStorage.removeItem('auth_token') // Clear JWT token
   }
 
+  private clearPersistedUser(): void {
+    this.currentUser = null
+    localStorage.removeItem('pos_user')
+  }
+
   getCurrentUser(): User | null {
     if (this.currentUser) {
       return this.currentUser
@@ -196,6 +201,45 @@ export class AuthService {
     }
 
     return null
+  }
+
+  async restoreCurrentUser(): Promise<User | null> {
+    if (this.currentUser) {
+      return this.currentUser
+    }
+
+    const storedUser = localStorage.getItem('pos_user')
+    if (!storedUser) {
+      return null
+    }
+
+    try {
+      const parsedUser = JSON.parse(storedUser) as User
+
+      if (!isDesktop) {
+        this.currentUser = parsedUser
+        return parsedUser
+      }
+
+      const users = await query<DatabaseUser>('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1', [
+        Number(parsedUser.id),
+      ])
+
+      if (users.length === 0) {
+        this.clearPersistedUser()
+        return null
+      }
+
+      const restoredUser = this.convertDbUser(users[0])
+      this.currentUser = restoredUser
+      localStorage.setItem('pos_user', JSON.stringify(restoredUser))
+
+      return restoredUser
+    } catch (error) {
+      console.error('Restore current user error:', error)
+      this.clearPersistedUser()
+      return null
+    }
   }
 
   isAuthenticated(): boolean {

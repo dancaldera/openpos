@@ -6,6 +6,7 @@ import {
   conflictedCount,
   connectionMode,
   connectionStatus,
+  erroredCount,
   lastApiCheck,
   lastApiError,
   lastConnectionAttempt,
@@ -70,6 +71,7 @@ export function DbStatusBadge() {
   const status = connectionStatus.value
   const config = STATUS_CONFIG[status]
   const pending = pendingCount.value
+  const errors = erroredCount.value
   const conflicts = conflictedCount.value
   const isRemoteConfigured = remoteConfigured.value
   const isApiConfigured = apiConfigured.value
@@ -93,11 +95,13 @@ export function DbStatusBadge() {
       : 'text-rose-400 font-medium'
 
   const badgeLabel =
-    status === 'offline' && pending > 0
-      ? `Offline · ${pending} queued`
-      : conflicts > 0
-        ? `${config.label} · ${conflicts} conflicts`
-        : config.label
+    status === 'offline' && errors > 0
+      ? `Offline · ${errors} failed`
+      : status === 'offline' && pending > 0
+        ? `Offline · ${pending} queued`
+        : conflicts > 0
+          ? `${config.label} · ${conflicts} conflicts`
+          : config.label
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -190,6 +194,13 @@ export function DbStatusBadge() {
               <span class="text-gray-400">Pending writes</span>
               <span class={pending > 0 ? 'text-yellow-400 font-medium' : 'text-gray-500'}>
                 {pending > 0 ? `${pending} queued` : 'None'}
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-gray-400">Write errors</span>
+              <span class={errors > 0 ? 'text-rose-400 font-medium' : 'text-gray-500'}>
+                {errors > 0 ? `${errors} retrying` : 'None'}
               </span>
             </div>
 
