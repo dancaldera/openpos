@@ -60,6 +60,9 @@ export interface DesktopApi {
     initialize(): Promise<DesktopFirstRunStatus>
     retry(): Promise<DesktopFirstRunStatus>
   }
+  orders: {
+    syncAggregate(orderId: string, operation: 'UPSERT' | 'DELETE'): Promise<{ queued: boolean }>
+  }
   db: {
     query<T>(sql: string, params?: unknown[]): Promise<T[]>
     execute(sql: string, params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }>

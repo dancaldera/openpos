@@ -224,12 +224,22 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
 
   function upsertLocalRow(database, config, row) {
     const placeholders = config.columns.map(() => '?').join(', ')
+    const assignments = config.columns
+      .filter((column) => column !== config.primaryKey)
+      .map((column) => `${quoteIdentifier(column)} = excluded.${quoteIdentifier(column)}`)
+      .join(', ')
     const values = config.columns.map((column) => row[column] ?? null)
+
+    logSync('upserting local replicated row without replace semantics', {
+      table: config.tableName,
+      recordId: String(row[config.primaryKey]),
+    })
 
     database
       .prepare(
-        `INSERT OR REPLACE INTO ${quoteIdentifier(config.tableName)} (${quoteColumns(config.columns)})
-         VALUES (${placeholders})`,
+        `INSERT INTO ${quoteIdentifier(config.tableName)} (${quoteColumns(config.columns)})
+         VALUES (${placeholders})
+         ON CONFLICT(${quoteIdentifier(config.primaryKey)}) DO UPDATE SET ${assignments}`,
       )
       .run(...values)
   }
@@ -326,6 +336,17 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
 
   async function pullRemoteChanges(database, client) {
     const orderedTables = [...replicatedTables].sort((left, right) => left.pullOrder - right.pullOrder)
+    const changedOrderIds = new Set()
+    const queuedOrderIds = new Set(
+      database
+        .prepare(
+          `SELECT order_id
+             FROM order_sync_queue
+            WHERE operation = 'UPSERT'`,
+        )
+        .all()
+        .map((row) => String(row.order_id)),
+    )
 
     for (const config of orderedTables) {
       const remoteColumns = await getRemoteTableColumns(client, config.tableName)
@@ -358,11 +379,60 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
         count: remoteRows.length,
       })
 
-      for (const row of remoteRows) {
-        upsertLocalRow(database, config, row)
+      if (config.tableName === 'orders' && remoteRows.length > 0) {
+        for (const row of remoteRows) {
+          changedOrderIds.add(String(row.id))
+        }
+
+        logSync('remote order changed', {
+          orderIds: [...changedOrderIds],
+        })
       }
 
-      if (config.deleteStrategy === 'hard') {
+      if (config.tableName === 'order_items') {
+        const refreshedOrderIds = []
+        const deleteByOrderStatement = database.prepare('DELETE FROM order_items WHERE order_id = ?')
+
+        for (const orderId of changedOrderIds) {
+          if (queuedOrderIds.has(orderId)) {
+            logSync('child snapshot skipped because local aggregate push is pending', {
+              orderId,
+            })
+            continue
+          }
+
+          const remoteSnapshotRows = await fetchRemoteRows(
+            client,
+            `SELECT ${buildRemoteSelectColumns(config, remoteColumns, effectiveWatermarkColumn)}
+               FROM ${quoteIdentifier(config.tableName)}
+              WHERE order_id = ?
+              ORDER BY ${quoteIdentifier(config.primaryKey)} ASC`,
+            [coerceRecordId(orderId)],
+          )
+
+          deleteByOrderStatement.run(coerceRecordId(orderId))
+          for (const row of remoteSnapshotRows) {
+            upsertLocalRow(database, config, row)
+          }
+
+          refreshedOrderIds.push({
+            orderId,
+            itemCount: remoteSnapshotRows.length,
+          })
+        }
+
+        if (refreshedOrderIds.length > 0) {
+          logSync('full child snapshot refreshed', {
+            orders: refreshedOrderIds,
+          })
+        }
+      } else {
+        for (const row of remoteRows) {
+          upsertLocalRow(database, config, row)
+        }
+      }
+
+      if (config.deleteStrategy === 'hard' && config.tableName !== 'order_items') {
         await reconcileHardDeletes(database, client, config)
       }
 
@@ -858,7 +928,18 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     }
 
     const config = replicatedTablesByName[parsed.tableName]
-    if (!config || config.tableName === 'sync_outbox' || config.tableName === 'sync_state') {
+    if (
+      !config ||
+      config.tableName === 'sync_outbox' ||
+      config.tableName === 'sync_state' ||
+      config.tableName === 'order_items' ||
+      config.tableName === 'orders'
+    ) {
+      if (config?.tableName === 'orders' || config?.tableName === 'order_items') {
+        logSync('ignoring generic outbox capture for desktop aggregate-owned table', {
+          table: config.tableName,
+        })
+      }
       return null
     }
 
