@@ -37,6 +37,8 @@ interface DatabaseOrderItem {
   total_price: number
   variant_id: number | null
   variant_attributes: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export const ordersRouter = new Hono()
@@ -118,9 +120,22 @@ ordersRouter.post('/', async (c) => {
 
   for (const item of body.items) {
     await execute(
-      `INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, total_price, variant_id, variant_attributes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [orderId, Number(item.productId), item.productName, item.quantity, item.unitPrice, item.quantity * item.unitPrice, item.variantId ? Number(item.variantId) : null, item.variantAttributes ?? null],
+      `INSERT INTO order_items (
+         order_id, product_id, product_name, quantity, unit_price, total_price,
+         variant_id, variant_attributes, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        orderId,
+        Number(item.productId),
+        item.productName,
+        item.quantity,
+        item.unitPrice,
+        item.quantity * item.unitPrice,
+        item.variantId ? Number(item.variantId) : null,
+        item.variantAttributes ?? null,
+        now,
+        now,
+      ],
     )
   }
 
