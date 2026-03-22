@@ -1,4 +1,4 @@
-import Database from '@tauri-apps/plugin-sql'
+import Database from '../lib/local-database'
 import { companySettingsService } from './company-settings-sqlite'
 import { type ProductVariant, productVariantsService } from './product-variants-sqlite'
 import { productService } from './products-sqlite'

@@ -8,12 +8,8 @@
  * Priority: build-time env vars > runtime config file
  */
 
-import { isTauri } from './platform'
-
-export interface RuntimeConfig {
-  tursoDatabaseUrl?: string
-  tursoAuthToken?: string
-}
+import { type RuntimeConfig, requireDesktopApi } from './desktop'
+import { isDesktop } from './platform'
 
 let cachedConfig: RuntimeConfig | null | undefined
 
@@ -22,17 +18,8 @@ let cachedConfig: RuntimeConfig | null | undefined
  * Returns the app-specific config path ending in config.json.
  */
 async function getConfigPath(): Promise<string | null> {
-  if (!isTauri) return null
-
-  try {
-    // Dynamic import — only loaded in Tauri context
-    const { appConfigDir, join } = await import('@tauri-apps/api/path')
-    const configDir = await appConfigDir()
-    return await join(configDir, 'config.json')
-  } catch (error) {
-    console.warn('[RuntimeConfig] Failed to get config path:', error)
-    return null
-  }
+  if (!isDesktop) return null
+  return 'userData/config.json'
 }
 
 /**
@@ -47,7 +34,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig | null> {
     return cachedConfig
   }
 
-  if (!isTauri) {
+  if (!isDesktop) {
     cachedConfig = null
     return null
   }
@@ -60,18 +47,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig | null> {
   }
 
   try {
-    // Dynamic import — only loaded in Tauri context
-    const { BaseDirectory, readTextFile } = await import('@tauri-apps/plugin-fs')
-    const content = await readTextFile('config.json', { baseDir: BaseDirectory.AppConfig })
-
-    let config: RuntimeConfig
-    try {
-      config = JSON.parse(content) as RuntimeConfig
-    } catch (error) {
-      console.warn('[RuntimeConfig] Config file contains invalid JSON:', configPath, error)
-      cachedConfig = null
-      return null
-    }
+    const config = await requireDesktopApi().getRuntimeConfig()
 
     // Validate the config has at least one Turso field
     if (config.tursoDatabaseUrl || config.tursoAuthToken) {

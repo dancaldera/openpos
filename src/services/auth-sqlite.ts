@@ -1,13 +1,13 @@
-import { invoke } from '@tauri-apps/api/core'
-import Database from '@tauri-apps/plugin-sql'
+import { requireDesktopApi } from '../lib/desktop'
+import Database from '../lib/local-database'
 
 // Helper functions for password hashing
 async function hashPassword(password: string): Promise<string> {
-  return await invoke('hash_password', { password })
+  return requireDesktopApi().hashPassword(password)
 }
 
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return await invoke('verify_password', { password, hash })
+  return requireDesktopApi().verifyPassword(password, hash)
 }
 
 export interface User {

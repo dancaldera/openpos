@@ -1,25 +1,10 @@
 import { signal } from '@preact/signals'
 import { connect, type Connection as TursoClient } from '@tursodatabase/serverless'
 import { loadDesktopDbConnectionConfig } from './desktop-db-config'
-import { isTauri } from './platform'
+import Database, { type LocalDatabaseClient } from './local-database'
+import { isDesktop } from './platform'
 
-// ---------------------------------------------------------------------------
-// Tauri SQL plugin types — loaded dynamically at runtime (Tauri only).
-// We never statically import @tauri-apps/plugin-sql so the web bundle
-// stays free of any Tauri-specific code.
-// ---------------------------------------------------------------------------
-interface TauriDatabaseInstance {
-  select: <T>(sql: string, params?: unknown[]) => Promise<T>
-  execute: (sql: string, params?: unknown[]) => Promise<{ lastInsertId: number; rowsAffected: number }>
-}
-
-/** Dynamically load the Tauri SQL plugin. Only call this inside Tauri. */
-async function loadTauriDatabase(path: string): Promise<TauriDatabaseInstance> {
-  const mod = await import('@tauri-apps/plugin-sql')
-  return mod.default.load(path) as Promise<TauriDatabaseInstance>
-}
-
-export type DbClient = TursoClient | TauriDatabaseInstance
+export type DbClient = TursoClient | LocalDatabaseClient
 
 export interface DbClientResult {
   client: DbClient
@@ -29,8 +14,8 @@ export interface DbClientResult {
 export type ConnectionStatus = 'remote' | 'local' | 'syncing' | 'error'
 export type DbStatusMode = 'api' | 'sqlite' | 'turso'
 
-export const connectionStatus = signal<ConnectionStatus>(isTauri ? 'local' : 'syncing')
-export const connectionMode = signal<DbStatusMode>(isTauri ? 'sqlite' : 'api')
+export const connectionStatus = signal<ConnectionStatus>(isDesktop ? 'local' : 'syncing')
+export const connectionMode = signal<DbStatusMode>(isDesktop ? 'sqlite' : 'api')
 export const remoteConfigured = signal<boolean>(false)
 export const lastConnectionAttempt = signal<number>(0)
 
@@ -50,7 +35,7 @@ interface SetConnectionStateOptions {
 
 function resolveConnectionMode(status: ConnectionStatus, override?: DbStatusMode): DbStatusMode {
   if (override) return override
-  if (!isTauri) return 'api'
+  if (!isDesktop) return 'api'
   return status === 'remote' || status === 'syncing' ? 'turso' : 'sqlite'
 }
 
@@ -74,7 +59,7 @@ export function setConnectionState(status: ConnectionStatus, options: SetConnect
 class DbManager {
   private static instance: DbManager
   private tursoClient: TursoClient | null = null
-  private localDb: TauriDatabaseInstance | null = null
+  private localDb: LocalDatabaseClient | null = null
   private isOnline = true
   private connectionResolved = false
   private healthCheckTimer: ReturnType<typeof setInterval> | null = null
@@ -94,7 +79,7 @@ class DbManager {
   }
 
   private async loadRemoteConfig(forceRefresh = false) {
-    if (!isTauri) {
+    if (!isDesktop) {
       remoteConfigured.value = false
       return { configured: false } as const
     }
@@ -104,17 +89,17 @@ class DbManager {
     return config
   }
 
-  private async getLocalDb(): Promise<TauriDatabaseInstance> {
+  private async getLocalDb(): Promise<LocalDatabaseClient> {
     if (!this.localDb) {
-      this.localDb = await loadTauriDatabase('sqlite:postpos.db')
-      console.log('[DbManager] Connected to local SQLite (offline mode)')
+      this.localDb = await Database.load('sqlite:postpos.db')
+      console.log('[DbManager] Connected to local desktop SQLite')
     }
 
     return this.localDb
   }
 
   async refreshPendingCount(): Promise<void> {
-    if (!isTauri) return
+    if (!isDesktop) return
 
     try {
       const localDb = await this.getLocalDb()
@@ -133,7 +118,7 @@ class DbManager {
   }
 
   private async probeRemoteConnection(forceRefresh = false): Promise<boolean> {
-    if (!isTauri) return false
+    if (!isDesktop) return false
 
     if (this.healthCheckPromise) {
       return this.healthCheckPromise
@@ -224,7 +209,7 @@ class DbManager {
           configured: false
         }
 
-    if (isTauri) {
+    if (isDesktop) {
       config = await this.loadRemoteConfig()
 
       if (config.configured && !this.connectionResolved) {
@@ -245,7 +230,7 @@ class DbManager {
       }
     }
 
-    if (!isTauri) {
+    if (!isDesktop) {
       setConnectionState('error', { mode: 'api' })
       throw new Error('[DbManager] No database connection: Turso is required in web mode')
     }
@@ -276,7 +261,7 @@ class DbManager {
   }
 
   startHealthCheck(intervalMs = this.BASE_HEALTH_CHECK_INTERVAL): void {
-    if (!isTauri) return
+    if (!isDesktop) return
 
     void this.refreshPendingCount()
     void this.probeRemoteConnection().catch((error) => {
@@ -309,8 +294,8 @@ class DbManager {
     this.nextRetryAt = 0
     remoteConfigured.value = false
     pendingCount.value = 0
-    setConnectionState(isTauri ? 'local' : 'syncing', {
-      mode: isTauri ? 'sqlite' : 'api',
+    setConnectionState(isDesktop ? 'local' : 'syncing', {
+      mode: isDesktop ? 'sqlite' : 'api',
       lastCheckedAt: null,
     })
   }

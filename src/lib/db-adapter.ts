@@ -1,8 +1,8 @@
 import type { Connection as TursoClient } from '@tursodatabase/serverless'
 import { type DbClient, db, pendingCount } from './db'
-import { isTauri } from './platform'
+import { isDesktop } from './platform'
 
-// Tauri database instance type (mirrors the interface in db.ts without a static import)
+// Local desktop database instance type (mirrors the interface in db.ts without a static import)
 type TauriDatabaseInstance = Exclude<DbClient, TursoClient>
 
 // Re-export db for convenience
@@ -108,10 +108,10 @@ async function enqueueWrite(info: WriteInfo, sql: string, params: unknown[]): Pr
 
 /**
  * Execute a SELECT query and return results
- * Normalizes the API between Turso and Tauri SQL (desktop) or API calls (web)
+ * Normalizes the API between Turso/local desktop SQLite or API calls (web)
  */
 export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
-  if (!isTauri) {
+  if (!isDesktop) {
     // Web mode: delegate to API adapter
     const { query: apiQuery } = await import('./api-adapter')
     return apiQuery<T>(sql, params)
@@ -128,7 +128,7 @@ export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]
     return result.rows as T[]
   }
 
-  // Tauri SQL: db.select returns the array directly
+  // Local desktop SQLite: db.select returns the array directly
   const tauriDb = client as TauriDatabaseInstance
   return tauriDb.select<T[]>(sql, params)
 }
@@ -144,7 +144,7 @@ export async function execute(
   sql: string,
   params: unknown[] = [],
 ): Promise<{ lastInsertId: number; rowsAffected: number }> {
-  if (!isTauri) {
+  if (!isDesktop) {
     // Web mode: delegate to API adapter
     const { execute: apiExecute } = await import('./api-adapter')
     return apiExecute(sql, params)
@@ -163,7 +163,7 @@ export async function execute(
     }
   }
 
-  // Tauri SQL: db.execute returns { lastInsertId, rowsAffected }
+  // Local desktop SQLite: db.execute returns { lastInsertId, rowsAffected }
   const tauriDb = client as TauriDatabaseInstance
   const result = await tauriDb.execute(sql, params)
 
@@ -186,7 +186,7 @@ export async function execute(
  * Useful for batch operations
  */
 export async function transaction(statements: Array<{ sql: string; params?: unknown[] }>): Promise<void> {
-  if (!isTauri) {
+  if (!isDesktop) {
     // Web mode: delegate to API adapter (transaction handled server-side)
     const { execute: apiExecute } = await import('./api-adapter')
     for (const { sql, params = [] } of statements) {
@@ -205,7 +205,7 @@ export async function transaction(statements: Array<{ sql: string; params?: unkn
       await tursoClient.execute(sql, params)
     }
   } else {
-    // Tauri SQL: use transaction
+    // Local desktop SQLite: use transaction
     const tauriDb = client as TauriDatabaseInstance
     // Tauri SQL doesn't have explicit transaction method, so we execute sequentially
     // SQLite auto-commits each statement, but we can wrap in BEGIN/COMMIT
