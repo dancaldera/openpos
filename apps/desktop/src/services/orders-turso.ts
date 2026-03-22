@@ -448,6 +448,7 @@ export class OrderService {
          WHERE id = ?`,
         [status, paymentMethod || currentOrder.paymentMethod, now, completedAt, parseInt(id, 10)],
       )
+      await this.syncDesktopOrderAggregate(id, 'UPSERT')
 
       // Return updated order
       const updatedOrder = await this.getOrder(id)

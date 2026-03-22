@@ -224,12 +224,22 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
 
   function upsertLocalRow(database, config, row) {
     const placeholders = config.columns.map(() => '?').join(', ')
+    const assignments = config.columns
+      .filter((column) => column !== config.primaryKey)
+      .map((column) => `${quoteIdentifier(column)} = excluded.${quoteIdentifier(column)}`)
+      .join(', ')
     const values = config.columns.map((column) => row[column] ?? null)
+
+    logSync('upserting local replicated row without replace semantics', {
+      table: config.tableName,
+      recordId: String(row[config.primaryKey]),
+    })
 
     database
       .prepare(
-        `INSERT OR REPLACE INTO ${quoteIdentifier(config.tableName)} (${quoteColumns(config.columns)})
-         VALUES (${placeholders})`,
+        `INSERT INTO ${quoteIdentifier(config.tableName)} (${quoteColumns(config.columns)})
+         VALUES (${placeholders})
+         ON CONFLICT(${quoteIdentifier(config.primaryKey)}) DO UPDATE SET ${assignments}`,
       )
       .run(...values)
   }
@@ -374,31 +384,52 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
           changedOrderIds.add(String(row.id))
         }
 
-        logSync('tracked remote order changes', {
+        logSync('remote order changed', {
           orderIds: [...changedOrderIds],
         })
       }
 
-      if (config.tableName === 'order_items' && changedOrderIds.size > 0) {
+      if (config.tableName === 'order_items') {
+        const refreshedOrderIds = []
         const deleteByOrderStatement = database.prepare('DELETE FROM order_items WHERE order_id = ?')
 
         for (const orderId of changedOrderIds) {
           if (queuedOrderIds.has(orderId)) {
-            logSync('skipping local order_items rebuild because order is pending local aggregate push', {
+            logSync('child snapshot skipped because local aggregate push is pending', {
               orderId,
             })
             continue
           }
 
+          const remoteSnapshotRows = await fetchRemoteRows(
+            client,
+            `SELECT ${buildRemoteSelectColumns(config, remoteColumns, effectiveWatermarkColumn)}
+               FROM ${quoteIdentifier(config.tableName)}
+              WHERE order_id = ?
+              ORDER BY ${quoteIdentifier(config.primaryKey)} ASC`,
+            [coerceRecordId(orderId)],
+          )
+
           deleteByOrderStatement.run(coerceRecordId(orderId))
-          logSync('rebuilding local order_items for remote order', {
+          for (const row of remoteSnapshotRows) {
+            upsertLocalRow(database, config, row)
+          }
+
+          refreshedOrderIds.push({
             orderId,
+            itemCount: remoteSnapshotRows.length,
           })
         }
-      }
 
-      for (const row of remoteRows) {
-        upsertLocalRow(database, config, row)
+        if (refreshedOrderIds.length > 0) {
+          logSync('full child snapshot refreshed', {
+            orders: refreshedOrderIds,
+          })
+        }
+      } else {
+        for (const row of remoteRows) {
+          upsertLocalRow(database, config, row)
+        }
       }
 
       if (config.deleteStrategy === 'hard' && config.tableName !== 'order_items') {
@@ -901,8 +932,14 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
       !config ||
       config.tableName === 'sync_outbox' ||
       config.tableName === 'sync_state' ||
-      config.tableName === 'order_items'
+      config.tableName === 'order_items' ||
+      config.tableName === 'orders'
     ) {
+      if (config?.tableName === 'orders' || config?.tableName === 'order_items') {
+        logSync('ignoring generic outbox capture for desktop aggregate-owned table', {
+          table: config.tableName,
+        })
+      }
       return null
     }
 
