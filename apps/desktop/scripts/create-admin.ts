@@ -1,18 +1,23 @@
 #!/usr/bin/env bun
+
 /**
  * Create Admin User (Interactive)
  *
  * bun run db:create-admin
  */
 
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { createInterface } from 'node:readline/promises'
+import { fileURLToPath } from 'node:url'
 import { connect } from '@tursodatabase/serverless'
 import bcrypt from 'bcryptjs'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { createInterface } from 'node:readline/promises'
+
+const scriptDir = dirname(fileURLToPath(import.meta.url))
+const repoRoot = resolve(scriptDir, '../../..')
 
 function loadEnv(): Record<string, string> {
-  const content = readFileSync(resolve(process.cwd(), '.env.local'), 'utf-8')
+  const content = readFileSync(resolve(repoRoot, '.env.local'), 'utf-8')
   const env: Record<string, string> = {}
   for (const line of content.split('\n')) {
     const trimmed = line.trim()
