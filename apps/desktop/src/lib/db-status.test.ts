@@ -13,6 +13,7 @@ describe('normalizeDbStatusSnapshot', () => {
     expect(normalized).toEqual({
       status: 'online',
       mode: 'api',
+      isSyncing: false,
       remoteConfigured: true,
       apiConfigured: true,
       apiReachable: true,
@@ -47,6 +48,7 @@ describe('normalizeDbStatusSnapshot', () => {
     expect(normalized).toEqual({
       status: 'offline',
       mode: 'mirror',
+      isSyncing: false,
       remoteConfigured: true,
       apiConfigured: true,
       apiReachable: false,
@@ -73,6 +75,7 @@ describe('normalizeDbStatusSnapshot', () => {
 
     expect(normalized.status).toBe('error')
     expect(normalized.mode).toBe('mirror')
+    expect(normalized.isSyncing).toBe(false)
     expect(normalized.remoteConfigured).toBe(false)
     expect(normalized.apiConfigured).toBe(false)
     expect(normalized.apiReachable).toBe(false)
