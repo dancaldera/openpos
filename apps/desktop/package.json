@@ -8,7 +8,6 @@
   "scripts": {
     "prepare:native": "mkdir -p .cache/home && HOME=$PWD/.cache/home npm_config_devdir=$PWD/.cache/electron-gyp electron-builder install-app-deps",
     "dev": "vite",
-    "dev:desktop": "bun run prepare:native && concurrently -k \"vite\" \"wait-on tcp:1420 && VITE_DEV_SERVER_URL=http://localhost:1420 electron .\"",
     "dev:web": "vite --config vite.web.config.ts",
     "build": "tsc && vite build",
     "build:desktop": "bun run prepare:native && bun run build && electron-builder --dir",
@@ -37,12 +36,10 @@
     "@preact/preset-vite": "^2.9.3",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^25.5.0",
-    "concurrently": "^9.2.1",
     "electron": "^37.3.1",
     "electron-builder": "^26.0.12",
     "typescript": "~5.9.3",
-    "vite": "^7.3.0",
-    "wait-on": "^8.0.5"
+    "vite": "^7.3.0"
   },
   "build": {
     "appId": "com.openpos.desktop",
