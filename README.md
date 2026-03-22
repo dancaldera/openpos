@@ -92,14 +92,21 @@ Then create the runtime config file at `~/.config/com.openpos.app/config.json`:
 ```json
 {
   "tursoDatabaseUrl": "libsql://your-db.turso.io",
-  "tursoAuthToken": "your-token-here"
+  "tursoAuthToken": "your-token-here",
+  "apiUrl": "https://your-api.example.com",
+  "printerCommand": "lp",
+  "printerArgs": []
 }
 ```
 
+Include only the fields needed for that install. Public production desktop installs do not require any env vars by default.
+
 Desktop config precedence is:
 1. `~/.config/com.openpos.app/config.json`
-2. Runtime env vars (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) for local development or internal CI only
+2. Runtime env vars (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `VITE_API_URL`) for local development or internal CI only
 3. Local SQLite fallback when no remote config is present
+
+`OPENPOS_PRINTER_COMMAND` is an optional non-secret runtime override for packaged desktop installs and defaults to `lp`.
 
 Public GitHub releases must not embed `TURSO_AUTH_TOKEN`, `JWT_SECRET`, or other backend secrets.
 

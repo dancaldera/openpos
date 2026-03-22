@@ -845,6 +845,10 @@ function registerIpcHandlers() {
   ipcMain.handle('desktop:orders-sync-aggregate', (_event, payload) =>
     syncOrderAggregate(payload.orderId, payload.operation),
   )
+  ipcMain.handle('desktop:config', () => {
+    const { apiUrl } = resolveConnectionConfig()
+    return { apiUrl }
+  })
 }
 
 app.whenReady().then(() => {
