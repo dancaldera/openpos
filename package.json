@@ -15,10 +15,14 @@
     "build:desktop:web": "bun run --cwd apps/desktop build:web",
     "build:api": "bun run --cwd apps/api build",
     "build:landing": "bun run --cwd apps/landing build",
-    "check": "tsc -p scripts/tsconfig.json && bun run --cwd apps/desktop check && bun run --cwd apps/api check"
+    "check": "tsc -p scripts/tsconfig.json && bun run --cwd apps/desktop check && bun run --cwd apps/api check",
+    "test": "bun run test:desktop && bun run test:api",
+    "test:desktop": "bun run --cwd apps/desktop test",
+    "test:api": "bun run --cwd apps/api test"
   },
   "devDependencies": {
     "@types/node": "^24.10.13",
+    "bun-types": "^1.3.11",
     "typescript": "^5.9.3"
   }
 }

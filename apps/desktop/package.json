@@ -14,9 +14,10 @@
     "build:desktop:linux": "bun run prepare:native && bun run build && electron-builder --linux",
     "build:web": "tsc && vite build --config vite.web.config.ts",
     "preview": "vite preview",
-    "lint": "biome lint src scripts --write",
+    "lint": "biome lint src scripts",
     "format": "biome format src scripts --write",
-    "check": "biome check src scripts --write && tsc -p tsconfig.json && tsc -p tsconfig.scripts.json",
+    "check": "biome check src scripts && tsc -p tsconfig.json && tsc -p tsconfig.scripts.json && tsc -p tsconfig.test.json",
+    "test": "bun test",
     "db:migrate": "bun run scripts/migrate-turso.ts",
     "db:create-admin": "bun run scripts/create-admin.ts",
     "version:bump": "bun run scripts/bump-version.ts"

@@ -21,7 +21,7 @@ OpenPOS is organized as a Bun workspace monorepo with three runnable application
 **User Experience**
 - Modern glass morphism UI with Tailwind CSS v4
 - Fully responsive across all screen sizes
-- Multi-language support (8 languages)
+- Multi-language support (currently English and Spanish)
 - **Auto-update system** with signed updates and background checking
 
 ## Tech Stack
@@ -75,6 +75,8 @@ bun run dev:landing
 
 The desktop renderer runs on `http://localhost:1420` during development.
 
+Run `bun install` before any `bun run ...` script in a fresh clone. The root validation entrypoint is `bun run check`, and the root test entrypoint is `bun run test`.
+
 ### Desktop Runtime Config
 
 For AppImage installs:
@@ -114,6 +116,7 @@ Public GitHub releases must not embed `TURSO_AUTH_TOKEN`, `JWT_SECRET`, or other
 | `bun run build:api` | Build the API |
 | `bun run build:landing` | Build the landing site |
 | `bun run check` | Run desktop and API checks |
+| `bun run test` | Run the initial desktop and API test suites |
 
 ## Default Credentials
 
@@ -188,9 +191,9 @@ Those values are runtime or web/API configuration, not desktop release build inp
 
 ## Internationalization
 
-OpenPOS supports 8 languages with dynamic switching and persistent preferences. See [TRANSLATIONS.md](./TRANSLATIONS.md) for implementation details.
+OpenPOS currently supports 2 languages with dynamic switching and persistent preferences.
 
-**Supported Languages**: English (default), Spanish, French, German, Italian, Portuguese, Chinese, Japanese
+**Supported Languages**: English (default), Spanish
 
 ## Contributing
 

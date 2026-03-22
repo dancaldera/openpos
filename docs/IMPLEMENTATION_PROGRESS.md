@@ -1,4 +1,6 @@
-# Titanic POS - Multi-Industry Implementation Progress
+# OpenPOS - Multi-Industry Implementation Progress
+
+> Historical note: this document is a legacy planning snapshot last updated on December 29, 2024. It should not be treated as the current roadmap or current implementation truth without checking the codebase first.
 
 **Project Goal:** Transform Titanic POS from a retail-focused system into a flexible, industry-agnostic platform supporting optics shops, butcher shops, general retail, and other business types.
 
