@@ -1,0 +1,20 @@
+{
+  "name": "@openpos/data",
+  "private": true,
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "files": [
+    "assets",
+    "migrations",
+    "src"
+  ],
+  "scripts": {
+    "migrate:remote": "bun run scripts/migrate-remote.ts",
+    "build:bootstrap": "bun run scripts/build-bootstrap.ts"
+  },
+  "dependencies": {
+    "@tursodatabase/serverless": "^0.2.4"
+  }
+}

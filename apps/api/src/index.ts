@@ -18,7 +18,7 @@ import { usersRouter } from './routes/users.js'
 import { analyticsRouter } from './routes/analytics.js'
 import { settingsRouter } from './routes/settings.js'
 
-const app = new Hono()
+export const app = new Hono()
 
 // Global middleware
 app.use('/*', corsMiddleware)
@@ -101,7 +101,7 @@ export default app
 // ---------------------------------------------------------------------------
 // Standalone Node.js server (Railway, local dev, etc.)
 // ---------------------------------------------------------------------------
-if (!process.env.VERCEL) {
+if (import.meta.main && !process.env.VERCEL) {
   const { serve } = await import('@hono/node-server')
   const port = Number(process.env.PORT ?? 3001)
   serve({ fetch: app.fetch, port }, (info) => {

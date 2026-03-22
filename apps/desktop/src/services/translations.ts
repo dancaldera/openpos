@@ -1,10 +1,10 @@
 import { signal } from '@preact/signals'
 
-interface TranslationKeys {
+export interface TranslationKeys {
   [key: string]: string | TranslationKeys
 }
 
-interface Locale {
+export interface Locale {
   code: string
   name: string
   nativeName: string
@@ -12,22 +12,48 @@ interface Locale {
   rtl?: boolean
 }
 
+interface StorageLike {
+  getItem(key: string): string | null
+  setItem(key: string, value: string): void
+}
+
+type TranslationModule = {
+  default: TranslationKeys
+}
+
+export type TranslationLoader = (locale: string) => Promise<TranslationKeys>
+
 export const SUPPORTED_LOCALES: Locale[] = [
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
   { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸' },
 ]
 
-class TranslationService {
+const PREFERRED_LANGUAGE_KEY = 'preferred-language'
+
+function getStorage(): StorageLike | null {
+  return typeof globalThis.localStorage === 'undefined' ? null : globalThis.localStorage
+}
+
+const defaultTranslationLoader: TranslationLoader = async (locale) => {
+  const translation = (await import(`../locales/${locale}.json`)) as TranslationModule
+  return translation.default
+}
+
+export class TranslationService {
   private translations = signal<Record<string, TranslationKeys>>({})
   private currentLocale = signal<string>('en')
   private fallbackLocale = 'en'
 
+  constructor(
+    private readonly loadLocale: TranslationLoader = defaultTranslationLoader,
+    private readonly storage: StorageLike | null = getStorage(),
+  ) {}
+
   async loadTranslation(locale: string): Promise<void> {
     try {
-      const translation = await import(`../locales/${locale}.json`)
       this.translations.value = {
         ...this.translations.value,
-        [locale]: translation.default,
+        [locale]: await this.loadLocale(locale),
       }
     } catch (error) {
       console.warn(`Failed to load translation for ${locale}:`, error)
@@ -39,7 +65,7 @@ class TranslationService {
       await this.loadTranslation(locale)
     }
     this.currentLocale.value = locale
-    localStorage.setItem('preferred-language', locale)
+    this.storage?.setItem(PREFERRED_LANGUAGE_KEY, locale)
   }
 
   t(key: string, params?: Record<string, string | number | boolean>): string {
@@ -81,7 +107,7 @@ class TranslationService {
   }
 
   async initialize(): Promise<void> {
-    const savedLocale = localStorage.getItem('preferred-language') || 'en'
+    const savedLocale = this.storage?.getItem(PREFERRED_LANGUAGE_KEY) || 'en'
     await this.setLocale(savedLocale)
   }
 }

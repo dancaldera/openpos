@@ -1,20 +1,34 @@
 import { useSignal } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
-import { connectionMode, connectionStatus, lastConnectionAttempt, pendingCount, remoteConfigured } from '../../lib/db'
+import {
+  apiConfigured,
+  apiReachable,
+  conflictedCount,
+  connectionMode,
+  connectionStatus,
+  erroredCount,
+  lastApiCheck,
+  lastApiError,
+  lastConnectionAttempt,
+  lastSuccessfulSync,
+  lastSyncError,
+  pendingCount,
+  remoteConfigured,
+} from '../../lib/db'
 
 const STATUS_CONFIG = {
-  remote: {
+  online: {
     dot: 'bg-green-400',
-    label: 'Remote',
-    sublabel: 'Remote database',
+    label: 'Online',
+    sublabel: 'Remote sync healthy',
     border: 'border-green-500/30',
     badgeBg: 'bg-gray-900/90',
     textColor: 'text-green-400',
   },
-  local: {
+  offline: {
     dot: 'bg-yellow-400',
-    label: 'Local',
-    sublabel: 'SQLite (offline mode)',
+    label: 'Offline',
+    sublabel: 'Using local SQLite mirror',
     border: 'border-yellow-500/30',
     badgeBg: 'bg-gray-900/90',
     textColor: 'text-yellow-400',
@@ -22,7 +36,7 @@ const STATUS_CONFIG = {
   syncing: {
     dot: 'bg-blue-400',
     label: 'Syncing',
-    sublabel: 'Connecting to Turso…',
+    sublabel: 'Reconciling local mirror',
     border: 'border-blue-500/30',
     badgeBg: 'bg-gray-900/90',
     textColor: 'text-blue-400',
@@ -30,7 +44,7 @@ const STATUS_CONFIG = {
   error: {
     dot: 'bg-red-500',
     label: 'Error',
-    sublabel: 'No database connection',
+    sublabel: 'Sync subsystem unavailable',
     border: 'border-red-500/30',
     badgeBg: 'bg-gray-900/90',
     textColor: 'text-red-400',
@@ -57,55 +71,72 @@ export function DbStatusBadge() {
   const status = connectionStatus.value
   const config = STATUS_CONFIG[status]
   const pending = pendingCount.value
+  const errors = erroredCount.value
+  const conflicts = conflictedCount.value
   const isRemoteConfigured = remoteConfigured.value
+  const isApiConfigured = apiConfigured.value
+  const isApiReachable = apiReachable.value
   const lastCheckedAt =
     lastConnectionAttempt.value > 0 ? new Date(lastConnectionAttempt.value).toISOString() : undefined
+  const lastSyncedAt = lastSuccessfulSync.value > 0 ? new Date(lastSuccessfulSync.value).toISOString() : undefined
+  const lastApiCheckedAt = lastApiCheck.value > 0 ? new Date(lastApiCheck.value).toISOString() : undefined
+  const lastError = lastSyncError.value
+  const lastApiFailure = lastApiError.value
 
-  const modeDescription =
-    connectionMode.value === 'api'
-      ? 'Via API server'
-      : connectionMode.value === 'sqlite'
-        ? 'SQLite (offline mode)'
-        : 'Direct remote sync'
+  const modeDescription = connectionMode.value === 'api' ? 'API server' : 'Local SQLite mirror'
+  const panelTitle = connectionMode.value === 'api' ? 'API Connection' : 'Data Connectivity'
+  const panelSubtitle =
+    connectionMode.value === 'api' ? 'Web client API status' : 'Desktop local-first sync and API health'
+  const apiStatusLabel = !isApiConfigured ? 'Not configured' : isApiReachable ? 'Reachable' : 'Unavailable'
+  const apiStatusClass = !isApiConfigured
+    ? 'text-gray-500'
+    : isApiReachable
+      ? 'text-green-400'
+      : 'text-rose-400 font-medium'
 
-  /** Badge text: shows pending count when local and queue is non-empty */
-  const badgeLabel = status === 'local' && pending > 0 ? `Local · ${pending} pending` : config.label
+  const badgeLabel =
+    status === 'offline' && errors > 0
+      ? `Offline · ${errors} failed`
+      : status === 'offline' && pending > 0
+        ? `Offline · ${pending} queued`
+        : conflicts > 0
+          ? `${config.label} · ${conflicts} conflicts`
+          : config.label
 
-  // Close popover when clicking outside
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         popoverOpen.value = false
       }
     }
+
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Relative time ticker — re-renders every 5s while popover is open
   const tick = useSignal(0)
   useEffect(() => {
     if (!popoverOpen.value) return
+
     const id = setInterval(() => {
       tick.value += 1
     }, 5000)
+
     return () => clearInterval(id)
   }, [popoverOpen.value])
 
   return (
     <div ref={wrapperRef} class="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
-      {/* Popover */}
       {popoverOpen.value && (
         <div
           class={`mb-1 w-64 rounded-lg border ${config.border} bg-gray-900/95 backdrop-blur-sm shadow-xl text-xs text-gray-300 overflow-hidden`}
         >
           <div class="px-4 py-3 border-b border-white/10">
-            <p class="font-semibold text-white text-sm">Database Connection</p>
-            <p class="text-gray-400 mt-0.5">Current storage mode</p>
+            <p class="font-semibold text-white text-sm">{panelTitle}</p>
+            <p class="text-gray-400 mt-0.5">{panelSubtitle}</p>
           </div>
 
           <div class="px-4 py-3 space-y-2.5">
-            {/* Status row */}
             <div class="flex items-center justify-between">
               <span class="text-gray-400">Status</span>
               <span class={`font-medium ${config.textColor} flex items-center gap-1.5`}>
@@ -121,43 +152,82 @@ export function DbStatusBadge() {
               </span>
             </div>
 
-            {/* Mode description */}
             <div class="flex items-center justify-between">
               <span class="text-gray-400">Mode</span>
               <span class="text-gray-200">{modeDescription}</span>
             </div>
 
-            {/* Turso configured */}
             <div class="flex items-center justify-between">
-              <span class="text-gray-400">Remote DB configured</span>
+              <span class="text-gray-400">API</span>
+              <span class={apiStatusClass}>{apiStatusLabel}</span>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-gray-400">Remote configured</span>
               <span class={isRemoteConfigured ? 'text-green-400' : 'text-gray-500'}>
                 {isRemoteConfigured ? 'Yes' : 'No'}
               </span>
             </div>
 
-            {/* Last check */}
             {lastCheckedAt && (
               <div class="flex items-center justify-between">
                 <span class="text-gray-400">Last check</span>
-                <span class="text-gray-200">
-                  {/* tick.value accessed to trigger re-render */}
-                  {tick.value >= 0 && formatRelativeTime(lastCheckedAt)}
-                </span>
+                <span class="text-gray-200">{tick.value >= 0 && formatRelativeTime(lastCheckedAt)}</span>
               </div>
             )}
 
-            {/* Pending writes (Tauri only) */}
+            {lastApiCheckedAt && (
+              <div class="flex items-center justify-between">
+                <span class="text-gray-400">API check</span>
+                <span class="text-gray-200">{tick.value >= 0 && formatRelativeTime(lastApiCheckedAt)}</span>
+              </div>
+            )}
+
+            {lastSyncedAt && (
+              <div class="flex items-center justify-between">
+                <span class="text-gray-400">Last sync</span>
+                <span class="text-gray-200">{tick.value >= 0 && formatRelativeTime(lastSyncedAt)}</span>
+              </div>
+            )}
+
             <div class="flex items-center justify-between">
               <span class="text-gray-400">Pending writes</span>
               <span class={pending > 0 ? 'text-yellow-400 font-medium' : 'text-gray-500'}>
                 {pending > 0 ? `${pending} queued` : 'None'}
               </span>
             </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-gray-400">Write errors</span>
+              <span class={errors > 0 ? 'text-rose-400 font-medium' : 'text-gray-500'}>
+                {errors > 0 ? `${errors} retrying` : 'None'}
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-gray-400">Conflicts</span>
+              <span class={conflicts > 0 ? 'text-rose-400 font-medium' : 'text-gray-500'}>
+                {conflicts > 0 ? `${conflicts} need review` : 'None'}
+              </span>
+            </div>
+
+            {lastError && (
+              <div class="space-y-1">
+                <span class="text-gray-400">Last error</span>
+                <p class="text-rose-300 leading-relaxed">{lastError}</p>
+              </div>
+            )}
+
+            {lastApiFailure && lastApiFailure !== lastError && (
+              <div class="space-y-1">
+                <span class="text-gray-400">API error</span>
+                <p class="text-rose-300 leading-relaxed">{lastApiFailure}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Badge pill */}
       <button
         type="button"
         onClick={() => {
@@ -178,7 +248,7 @@ export function DbStatusBadge() {
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
         ) : (
-          <span class={`w-2 h-2 rounded-full ${config.dot} ${status === 'remote' ? 'animate-pulse' : ''}`} />
+          <span class={`w-2 h-2 rounded-full ${config.dot} ${status === 'online' ? 'animate-pulse' : ''}`} />
         )}
         <span class={`text-xs font-medium ${config.textColor}`}>{badgeLabel}</span>
       </button>

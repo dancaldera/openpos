@@ -1,35 +1,17 @@
-import { getApiUrl } from './api-config'
+import { requestApiJson } from './api-client'
 import { isDesktop } from './platform'
-
-function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token')
-}
 
 export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
   if (isDesktop) {
     throw new Error('query() should not be called from api-adapter in desktop mode')
   }
 
-  const token = getAuthToken()
-  if (!token) {
-    throw new Error('No auth token available for API call')
-  }
-
-  const response = await fetch(getApiUrl('/api/query'), {
+  const data = await requestApiJson<{ rows: T[] }>('/api/query', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ sql, params }),
+    requireAuth: true,
+    body: { sql, params },
   })
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-    throw new Error(`API query failed: ${error.error || response.statusText}`)
-  }
-
-  const data = await response.json()
   return data.rows as T[]
 }
 
@@ -41,26 +23,12 @@ export async function execute(
     throw new Error('execute() should not be called from api-adapter in desktop mode')
   }
 
-  const token = getAuthToken()
-  if (!token) {
-    throw new Error('No auth token available for API call')
-  }
-
-  const response = await fetch(getApiUrl('/api/execute'), {
+  const data = await requestApiJson<{ lastInsertId?: number; rowsAffected?: number }>('/api/execute', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ sql, params }),
+    requireAuth: true,
+    body: { sql, params },
   })
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-    throw new Error(`API execute failed: ${error.error || response.statusText}`)
-  }
-
-  const data = await response.json()
   return {
     lastInsertId: data.lastInsertId || 0,
     rowsAffected: data.rowsAffected || 0,

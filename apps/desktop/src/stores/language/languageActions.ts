@@ -28,11 +28,13 @@ export const languageActions = {
       const settings = await companySettingsService.getSettings()
       const defaultLang = settings.language || 'en'
 
-      await this.changeLanguage(defaultLang)
+      await translationService.setLocale(defaultLang)
+      languageStore.currentLocale.value = defaultLang
     } catch (error) {
       console.error('Failed to initialize language:', error)
       // Fallback to English if company settings are not available
-      await this.changeLanguage('en')
+      await translationService.setLocale('en')
+      languageStore.currentLocale.value = 'en'
     }
   },
 }
