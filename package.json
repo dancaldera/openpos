@@ -5,16 +5,20 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "bun run dev:desktop",
-    "dev:desktop": "bun run --cwd apps/desktop dev:desktop",
-    "dev:desktop:web": "bun run --cwd apps/desktop dev:web",
-    "dev:api": "bun run --cwd apps/api dev",
-    "dev:landing": "bun run --cwd apps/landing dev",
+    "dev": "bun scripts/dev-runner.ts dev",
+    "dev:desktop": "bun scripts/dev-runner.ts dev:desktop",
+    "dev:desktop:web": "bun scripts/dev-runner.ts dev:desktop:web",
+    "dev:api": "bun scripts/dev-runner.ts dev:api",
+    "dev:landing": "bun scripts/dev-runner.ts dev:landing",
     "build": "bun run build:desktop",
     "build:desktop": "bun run --cwd apps/desktop build:desktop",
     "build:desktop:web": "bun run --cwd apps/desktop build:web",
     "build:api": "bun run --cwd apps/api build",
     "build:landing": "bun run --cwd apps/landing build",
-    "check": "bun run --cwd apps/desktop check && bun run --cwd apps/api check"
+    "check": "tsc -p scripts/tsconfig.json && bun run --cwd apps/desktop check && bun run --cwd apps/api check"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.13",
+    "typescript": "^5.9.3"
   }
 }

@@ -8,6 +8,7 @@
 	"files": {
 		"ignoreUnknown": false,
 		"includes": [
+			"scripts/**/*.ts",
 			"apps/desktop/src/**/*.js",
 			"apps/desktop/src/**/*.jsx",
 			"apps/desktop/src/**/*.ts",
