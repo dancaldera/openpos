@@ -351,8 +351,9 @@ export class OrderService {
         if (hasVariantSupport) {
           await db.execute(
             `INSERT INTO order_items (
-              order_id, product_id, product_name, quantity, unit_price, total_price, variant_id, variant_attributes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              order_id, product_id, product_name, quantity, unit_price, total_price,
+              variant_id, variant_attributes, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               orderId,
               parseInt(item.productId, 10),
@@ -362,15 +363,26 @@ export class OrderService {
               item.totalPrice,
               item.variantId ? parseInt(item.variantId, 10) : null,
               item.variantAttributes ? JSON.stringify(item.variantAttributes) : null,
+              now,
+              now,
             ],
           )
         } else {
           // Fallback for old schema without variant support
           await db.execute(
             `INSERT INTO order_items (
-              order_id, product_id, product_name, quantity, unit_price, total_price
-            ) VALUES (?, ?, ?, ?, ?, ?)`,
-            [orderId, parseInt(item.productId, 10), item.productName, item.quantity, item.unitPrice, item.totalPrice],
+              order_id, product_id, product_name, quantity, unit_price, total_price, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              orderId,
+              parseInt(item.productId, 10),
+              item.productName,
+              item.quantity,
+              item.unitPrice,
+              item.totalPrice,
+              now,
+              now,
+            ],
           )
         }
       }
@@ -946,8 +958,9 @@ export class OrderService {
         if (hasVariantSupport) {
           await db.execute(
             `INSERT INTO order_items (
-              order_id, product_id, product_name, quantity, unit_price, total_price, variant_id, variant_attributes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              order_id, product_id, product_name, quantity, unit_price, total_price,
+              variant_id, variant_attributes, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               parseInt(orderId, 10),
               parseInt(item.productId, 10),
@@ -957,14 +970,16 @@ export class OrderService {
               item.totalPrice,
               item.variantId ? parseInt(item.variantId, 10) : null,
               item.variantAttributes ? JSON.stringify(item.variantAttributes) : null,
+              now,
+              now,
             ],
           )
         } else {
           // Fallback for old schema without variant support
           await db.execute(
             `INSERT INTO order_items (
-              order_id, product_id, product_name, quantity, unit_price, total_price
-            ) VALUES (?, ?, ?, ?, ?, ?)`,
+              order_id, product_id, product_name, quantity, unit_price, total_price, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               parseInt(orderId, 10),
               parseInt(item.productId, 10),
@@ -972,6 +987,8 @@ export class OrderService {
               item.quantity,
               item.unitPrice,
               item.totalPrice,
+              now,
+              now,
             ],
           )
         }
