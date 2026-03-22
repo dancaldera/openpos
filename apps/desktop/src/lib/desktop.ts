@@ -46,6 +46,7 @@ export interface DesktopApi {
   hashPassword(password: string): Promise<string>
   verifyPassword(password: string, hash: string): Promise<boolean>
   printThermalReceipt(receiptData: string): Promise<string>
+  getConfig(): Promise<{ apiUrl: string }>
   sync: {
     getStatus(): Promise<DesktopSyncStatusSnapshot>
     trigger(): Promise<DesktopSyncStatusSnapshot>
