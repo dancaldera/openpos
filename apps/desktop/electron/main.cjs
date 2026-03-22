@@ -12,6 +12,17 @@ const pkg = require('../package.json')
 let mainWindow = null
 let db = null
 let syncManager = null
+let initialSyncPromise = null
+let initialSyncError = null
+
+function logStartup(message, details) {
+  if (details === undefined) {
+    console.log(`[startup] ${message}`)
+    return
+  }
+
+  console.log(`[startup] ${message}`, details)
+}
 
 function isDev() {
   return !app.isPackaged
@@ -207,6 +218,141 @@ async function getConnectivitySnapshot(options = {}) {
   }
 }
 
+function getActiveUserCount(database = ensureDatabase()) {
+  const row = database.prepare(`SELECT COUNT(*) AS count FROM users WHERE deleted_at IS NULL`).get()
+  return Number(row?.count ?? 0)
+}
+
+function getFirstRunStatus(database = ensureDatabase()) {
+  const activeUserCount = getActiveUserCount(database)
+  const remoteConfig = getDbConnectionConfig()
+  const syncSnapshot = syncManager ? syncManager.getStatusSnapshot(database) : null
+  let nextStatus = null
+
+  if (activeUserCount > 0) {
+    initialSyncError = null
+    nextStatus = {
+      status: 'readyForSignIn',
+      remoteConfigured: Boolean(remoteConfig.configured),
+      activeUserCount,
+      lastError: null,
+      lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
+      lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
+    }
+    logStartup('first-run status resolved', nextStatus)
+    return nextStatus
+  }
+
+  if (!remoteConfig.configured) {
+    nextStatus = {
+      status: 'needsRemoteConfig',
+      remoteConfigured: false,
+      activeUserCount,
+      lastError: null,
+      lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
+      lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
+    }
+    logStartup('first-run status resolved', nextStatus)
+    return nextStatus
+  }
+
+  if (initialSyncPromise || syncSnapshot?.status === 'syncing') {
+    nextStatus = {
+      status: 'syncingInitialData',
+      remoteConfigured: true,
+      activeUserCount,
+      lastError: null,
+      lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
+      lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
+    }
+    logStartup('first-run status resolved', nextStatus)
+    return nextStatus
+  }
+
+  if (initialSyncError) {
+    nextStatus = {
+      status: 'initialSyncFailed',
+      remoteConfigured: true,
+      activeUserCount,
+      lastError: initialSyncError,
+      lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
+      lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
+    }
+    logStartup('first-run status resolved', nextStatus)
+    return nextStatus
+  }
+
+  nextStatus = {
+    status: 'syncingInitialData',
+    remoteConfigured: true,
+    activeUserCount,
+    lastError: null,
+    lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
+    lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
+  }
+
+  logStartup('first-run status resolved', nextStatus)
+  return nextStatus
+}
+
+async function initializeFirstRun() {
+  const status = getFirstRunStatus()
+  logStartup('initialize first run requested', {
+    status: status.status,
+    activeUserCount: status.activeUserCount,
+    remoteConfigured: status.remoteConfigured,
+  })
+
+  if (status.status === 'readyForSignIn' || status.status === 'needsRemoteConfig') {
+    return status
+  }
+
+  if (initialSyncPromise) {
+    logStartup('initial sync already in progress')
+    return initialSyncPromise
+  }
+
+  initialSyncError = null
+
+  initialSyncPromise = (async () => {
+    let resolvedStatus = null
+
+    try {
+      logStartup('starting initial sync', {
+        dbPath: getDbPath(),
+        remoteConfigured: getDbConnectionConfig().configured,
+        activeUserCountBefore: getActiveUserCount(),
+      })
+      const syncSnapshot = await syncManager.triggerSync()
+      logStartup('initial sync finished', syncSnapshot)
+
+      if (getActiveUserCount() > 0) {
+        initialSyncError = null
+        logStartup('initial sync populated local users', { activeUserCount: getActiveUserCount() })
+        resolvedStatus = getFirstRunStatus()
+      } else {
+        initialSyncError = syncSnapshot?.lastError || 'Initial sync completed, but no active users were mirrored from Turso.'
+        logStartup('initial sync completed without local users', {
+          activeUserCount: getActiveUserCount(),
+          lastError: initialSyncError,
+        })
+      }
+    } catch (error) {
+      initialSyncError = error instanceof Error ? error.message : String(error)
+      logStartup('initial sync threw error', {
+        error: initialSyncError,
+      })
+    } finally {
+      logStartup('initial sync promise cleared')
+      initialSyncPromise = null
+    }
+
+    return resolvedStatus ?? getFirstRunStatus()
+  })()
+
+  return initialSyncPromise
+}
+
 function tableHasColumn(database, tableName, columnName) {
   return database.prepare(`PRAGMA table_info(${tableName})`).all().some((column) => column.name === columnName)
 }
@@ -271,12 +417,14 @@ function ensureDatabase() {
   fs.mkdirSync(app.getPath('userData'), { recursive: true })
 
   const dbPath = getDbPath()
+  logStartup('ensuring local database', { dbPath })
   if (!fs.existsSync(dbPath)) {
     const bootstrapDbPath = getBootstrapDbPath()
     if (!fs.existsSync(bootstrapDbPath)) {
       throw new Error(`Bootstrap database not found at ${bootstrapDbPath}`)
     }
 
+    logStartup('creating local database from bootstrap', { bootstrapDbPath, dbPath })
     fs.copyFileSync(bootstrapDbPath, dbPath)
   }
 
@@ -420,6 +568,9 @@ function registerIpcHandlers() {
   ipcMain.handle('desktop:sync-conflicts', () => syncManager.getConflictSummary())
   ipcMain.handle('desktop:connectivity-status', () => getConnectivitySnapshot())
   ipcMain.handle('desktop:connectivity-refresh', () => getConnectivitySnapshot({ refresh: true }))
+  ipcMain.handle('desktop:startup-status', () => getFirstRunStatus())
+  ipcMain.handle('desktop:startup-initialize', () => initializeFirstRun())
+  ipcMain.handle('desktop:startup-retry', () => initializeFirstRun())
 }
 
 app.whenReady().then(() => {

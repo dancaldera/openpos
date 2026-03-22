@@ -16,8 +16,8 @@ class AppSettingsStore {
     return AppSettingsStore.instance
   }
 
-  async initialize(): Promise<void> {
-    if (this.isInitialized.value) return
+  async initialize(force = false): Promise<void> {
+    if (this.isInitialized.value && !force) return
 
     try {
       this.isLoading.value = true

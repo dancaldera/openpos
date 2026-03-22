@@ -19,6 +19,11 @@ contextBridge.exposeInMainWorld('openposDesktop', {
     getStatus: () => ipcRenderer.invoke('desktop:connectivity-status'),
     refresh: () => ipcRenderer.invoke('desktop:connectivity-refresh'),
   },
+  startup: {
+    getStatus: () => ipcRenderer.invoke('desktop:startup-status'),
+    initialize: () => ipcRenderer.invoke('desktop:startup-initialize'),
+    retry: () => ipcRenderer.invoke('desktop:startup-retry'),
+  },
   db: {
     query: (sql, params) => ipcRenderer.invoke('desktop:db-query', sql, params),
     execute: (sql, params) => ipcRenderer.invoke('desktop:db-execute', sql, params),

@@ -8,6 +8,7 @@ export interface DesktopSyncStatusSnapshot {
   mode: 'mirror'
   remoteConfigured: boolean
   pendingWrites: number
+  erroredWrites: number
   conflictedWrites: number
   lastCheckedAt?: string | null
   lastSyncedAt?: string | null
@@ -29,6 +30,15 @@ export interface DesktopConnectivitySnapshot extends DesktopSyncStatusSnapshot {
   apiLastError?: string | null
 }
 
+export interface DesktopFirstRunStatus {
+  status: 'needsRemoteConfig' | 'syncingInitialData' | 'initialSyncFailed' | 'readyForSignIn'
+  remoteConfigured: boolean
+  activeUserCount: number
+  lastError?: string | null
+  lastCheckedAt?: string | null
+  lastSyncedAt?: string | null
+}
+
 export interface DesktopApi {
   getInfo(): Promise<{ isDesktop: boolean; isElectron: boolean; version: string }>
   greet(name: string): Promise<string>
@@ -43,6 +53,11 @@ export interface DesktopApi {
   connectivity: {
     getStatus(): Promise<DesktopConnectivitySnapshot>
     refresh(): Promise<DesktopConnectivitySnapshot>
+  }
+  startup: {
+    getStatus(): Promise<DesktopFirstRunStatus>
+    initialize(): Promise<DesktopFirstRunStatus>
+    retry(): Promise<DesktopFirstRunStatus>
   }
   db: {
     query<T>(sql: string, params?: unknown[]): Promise<T[]>

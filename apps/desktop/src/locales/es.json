@@ -725,6 +725,20 @@
     "electronics": "Electrónica",
     "other": "Otros"
   },
+  "startup": {
+    "subtitle": "Configuración inicial del escritorio",
+    "needsRemoteConfigTitle": "Se requiere configuración remota",
+    "needsRemoteConfigDescription": "Este escritorio debe conectarse a Turso antes del primer inicio de sesión.",
+    "syncingTitle": "Sincronizando datos iniciales",
+    "syncingDescription": "Descargando usuarios y configuración desde Turso a la base de datos local del escritorio.",
+    "initialSyncFailedTitle": "Falló la sincronización inicial",
+    "initialSyncFailedDescription": "La base de datos local sigue vacía. Reintenta después de restaurar la conectividad con Turso.",
+    "remoteConfigured": "Remoto configurado: {{value}}",
+    "activeUsers": "Usuarios activos replicados localmente: {{count}}",
+    "configureRemoteHint": "Agrega las credenciales de Turso a la configuración de ejecución del escritorio o al entorno y luego reinicia la app.",
+    "retry": "Reintentar sincronización inicial",
+    "firstRunRequired": "La primera ejecución requiere una sincronización exitosa con Turso"
+  },
   "update": {
     "title": "Actualización Disponible",
     "available": "Actualizar",
