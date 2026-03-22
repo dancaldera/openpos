@@ -132,7 +132,7 @@ async function refreshWebDbStatus(): Promise<void> {
 
   webStatusRequest = (async () => {
     try {
-      const response = await fetch(getApiUrl('/api/db-status'))
+      const response = await fetch(await getApiUrl('/api/db-status'))
       if (!response.ok) {
         throw new Error(`db-status request failed with ${response.status}`)
       }

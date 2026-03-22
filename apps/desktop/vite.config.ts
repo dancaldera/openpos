@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig(async () => ({
   plugins: [preact(), tailwindcss()],
   clearScreen: false,
+  base: './',
   define: {
     VITE_PLATFORM: JSON.stringify('desktop'),
   },
@@ -18,7 +19,7 @@ export default defineConfig(async () => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks(id) {
+        manualChunks(id: string) {
           if (id.includes('node_modules/preact') || id.includes('node_modules/@preact/signals')) {
             return 'vendor'
           }

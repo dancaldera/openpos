@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('openposDesktop', {
   hashPassword: (password) => ipcRenderer.invoke('desktop:hash-password', password),
   verifyPassword: (password, hash) => ipcRenderer.invoke('desktop:verify-password', password, hash),
   printThermalReceipt: (receiptData) => ipcRenderer.invoke('desktop:print-thermal-receipt', receiptData),
+  getConfig: () => ipcRenderer.invoke('desktop:config'),
   sync: {
     getStatus: () => ipcRenderer.invoke('desktop:sync-status'),
     trigger: () => ipcRenderer.invoke('desktop:sync-trigger'),
