@@ -64,7 +64,6 @@ OpenPOS is a Bun workspace monorepo. The main product is a cross-platform deskto
 apps/
 ├── desktop/
 │   ├── electron/               # Main/preload process and migrations
-│   ├── scripts/                # Desktop operational scripts
 │   ├── src/                    # Preact renderer
 │   └── package.json
 ├── api/
@@ -73,6 +72,8 @@ apps/
 └── landing/
     ├── src/                    # Astro pages and layouts
     └── package.json
+
+scripts/                        # Repository operational scripts
 ```
 
 ## Internationalization (i18n)

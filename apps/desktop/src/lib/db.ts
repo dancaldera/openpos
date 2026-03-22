@@ -7,9 +7,13 @@ export type DbStatusMode = 'api' | 'mirror'
 export const connectionStatus = signal<ConnectionStatus>(isDesktop ? 'offline' : 'syncing')
 export const connectionMode = signal<DbStatusMode>(isDesktop ? 'mirror' : 'api')
 export const remoteConfigured = signal<boolean>(false)
+export const apiConfigured = signal<boolean>(!isDesktop)
+export const apiReachable = signal<boolean>(false)
 export const lastConnectionAttempt = signal<number>(0)
 export const lastSuccessfulSync = signal<number>(0)
 export const lastSyncError = signal<string | null>(null)
+export const lastApiCheck = signal<number>(0)
+export const lastApiError = signal<string | null>(null)
 export const pendingCount = signal<number>(0)
 export const conflictedCount = signal<number>(0)
 
@@ -54,5 +58,30 @@ export function setConnectionState(status: ConnectionStatus, options: SetConnect
 
   if (options.error !== undefined) {
     lastSyncError.value = options.error ?? null
+  }
+}
+
+interface SetApiStateOptions {
+  configured?: boolean
+  reachable?: boolean
+  lastCheckedAt?: number | null
+  error?: string | null
+}
+
+export function setApiState(options: SetApiStateOptions = {}): void {
+  if (typeof options.configured === 'boolean') {
+    apiConfigured.value = options.configured
+  }
+
+  if (typeof options.reachable === 'boolean') {
+    apiReachable.value = options.reachable
+  }
+
+  if (options.lastCheckedAt !== undefined) {
+    lastApiCheck.value = options.lastCheckedAt ?? 0
+  }
+
+  if (options.error !== undefined) {
+    lastApiError.value = options.error ?? null
   }
 }

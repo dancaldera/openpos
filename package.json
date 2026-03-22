@@ -17,9 +17,12 @@
     "build:api": "bun run --cwd apps/api build",
     "build:landing": "bun run --cwd apps/landing build",
     "db:migrate:remote": "bun run --cwd packages/data migrate:remote",
+    "db:create-admin": "bun scripts/create-admin.ts",
     "db:build-bootstrap": "bun run --cwd packages/data build:bootstrap",
+    "version:bump": "bun scripts/bump-version.ts",
     "check": "tsc -p scripts/tsconfig.json && bun run --cwd apps/desktop check && bun run --cwd apps/api check",
-    "test": "bun run test:desktop && bun run test:api",
+    "test": "bun run test:scripts && bun run test:desktop && bun run test:api",
+    "test:scripts": "bun test scripts",
     "test:desktop": "bun run --cwd apps/desktop test",
     "test:api": "bun run --cwd apps/api test"
   },

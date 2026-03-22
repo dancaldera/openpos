@@ -1,10 +1,3 @@
-export interface RuntimeConfig {
-  tursoDatabaseUrl?: string
-  tursoAuthToken?: string
-  printerCommand?: string
-  printerArgs?: string[]
-}
-
 export interface DesktopDatabaseStatement {
   sql: string
   params?: unknown[]
@@ -29,17 +22,27 @@ export interface DesktopSyncConflict {
   remoteUpdatedAt?: string | null
 }
 
+export interface DesktopConnectivitySnapshot extends DesktopSyncStatusSnapshot {
+  apiConfigured: boolean
+  apiReachable: boolean
+  apiLastCheckedAt?: string | null
+  apiLastError?: string | null
+}
+
 export interface DesktopApi {
   getInfo(): Promise<{ isDesktop: boolean; isElectron: boolean; version: string }>
   greet(name: string): Promise<string>
   hashPassword(password: string): Promise<string>
   verifyPassword(password: string, hash: string): Promise<boolean>
-  getRuntimeConfig(): Promise<RuntimeConfig>
   printThermalReceipt(receiptData: string): Promise<string>
   sync: {
     getStatus(): Promise<DesktopSyncStatusSnapshot>
     trigger(): Promise<DesktopSyncStatusSnapshot>
     getConflicts(): Promise<DesktopSyncConflict[]>
+  }
+  connectivity: {
+    getStatus(): Promise<DesktopConnectivitySnapshot>
+    refresh(): Promise<DesktopConnectivitySnapshot>
   }
   db: {
     query<T>(sql: string, params?: unknown[]): Promise<T[]>

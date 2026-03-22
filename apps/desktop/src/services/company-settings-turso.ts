@@ -1,4 +1,4 @@
-import { getApiUrl } from '../lib/api-config'
+import { requestApiJson } from '../lib/api-client'
 import { execute, query } from '../lib/db-adapter'
 import { isDesktop } from '../lib/platform'
 
@@ -96,9 +96,7 @@ export class CompanySettingsService {
     if (!isDesktop && !localStorage.getItem('auth_token')) {
       // Web mode, pre-login: fetch from public API endpoint (only safe fields)
       try {
-        const res = await fetch(getApiUrl('/api/settings/public'))
-        if (!res.ok) throw new Error('Failed to fetch public settings')
-        const data = await res.json()
+        const data = await requestApiJson<Partial<CompanySettings>>('/api/settings/public')
 
         // Return partial settings with defaults for missing fields
         return {

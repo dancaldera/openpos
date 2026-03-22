@@ -4,6 +4,7 @@ const Database = require('better-sqlite3')
 const fs = require('node:fs')
 const path = require('node:path')
 const { spawn } = require('node:child_process')
+const { createPublicConnectionConfig, resolveDesktopConnectionConfig } = require('./config-resolver.cjs')
 const { createSyncManager } = require('./sync-manager.cjs')
 
 const pkg = require('../package.json')
@@ -137,17 +138,72 @@ function getRuntimeConfig() {
   return parseJsonFile(getConfigPath())
 }
 
+function resolveConnectionConfig() {
+  return resolveDesktopConnectionConfig({
+    runtimeConfig: getRuntimeConfig(),
+    processEnv: process.env,
+    envConfig: getDotEnvConfig(),
+    defaultApiUrl: isDev() ? 'http://localhost:3001' : undefined,
+  })
+}
+
 function getDbConnectionConfig() {
-  const config = getRuntimeConfig()
-  const envConfig = getDotEnvConfig()
-  const url = config.tursoDatabaseUrl || process.env.TURSO_DATABASE_URL || envConfig.TURSO_DATABASE_URL || undefined
-  const authToken =
-    config.tursoAuthToken || process.env.TURSO_AUTH_TOKEN || envConfig.TURSO_AUTH_TOKEN || undefined
+  return resolveConnectionConfig().remote
+}
+
+function getApiConnectionConfig() {
+  return resolveConnectionConfig().api
+}
+
+async function probeApiConnection() {
+  const apiConfig = getApiConnectionConfig()
+  const checkedAt = new Date().toISOString()
+
+  if (!apiConfig.configured || !apiConfig.url) {
+    return {
+      ...createPublicConnectionConfig({ api: apiConfig, remote: getDbConnectionConfig() }),
+      apiReachable: false,
+      apiLastCheckedAt: checkedAt,
+      apiLastError: null,
+    }
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 3_000)
+
+  try {
+    const healthUrl = new URL('/api/health', apiConfig.url).toString()
+    const response = await fetch(healthUrl, { signal: controller.signal })
+
+    if (!response.ok) {
+      throw new Error(`API health check failed with ${response.status}`)
+    }
+
+    return {
+      ...createPublicConnectionConfig({ api: apiConfig, remote: getDbConnectionConfig() }),
+      apiReachable: true,
+      apiLastCheckedAt: checkedAt,
+      apiLastError: null,
+    }
+  } catch (error) {
+    return {
+      ...createPublicConnectionConfig({ api: apiConfig, remote: getDbConnectionConfig() }),
+      apiReachable: false,
+      apiLastCheckedAt: checkedAt,
+      apiLastError: error instanceof Error ? error.message : String(error),
+    }
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+async function getConnectivitySnapshot(options = {}) {
+  const syncSnapshot = options.refresh ? await syncManager.triggerSync() : syncManager.getStatusSnapshot()
+  const apiSnapshot = await probeApiConnection()
 
   return {
-    url,
-    authToken,
-    configured: Boolean(url && authToken),
+    ...syncSnapshot,
+    ...apiSnapshot,
   }
 }
 
@@ -355,7 +411,6 @@ function registerIpcHandlers() {
   ipcMain.handle('desktop:greet', (_event, name) => `Hello, ${name}!!`)
   ipcMain.handle('desktop:hash-password', (_event, password) => bcrypt.hash(password, 12))
   ipcMain.handle('desktop:verify-password', (_event, password, hash) => bcrypt.compare(password, hash))
-  ipcMain.handle('desktop:get-runtime-config', () => getRuntimeConfig())
   ipcMain.handle('desktop:db-query', (_event, sql, params) => runSelect(sql, params))
   ipcMain.handle('desktop:db-execute', (_event, sql, params) => runExecute(sql, params))
   ipcMain.handle('desktop:db-transaction', (_event, statements) => runTransaction(statements))
@@ -363,6 +418,8 @@ function registerIpcHandlers() {
   ipcMain.handle('desktop:sync-status', () => syncManager.getStatusSnapshot())
   ipcMain.handle('desktop:sync-trigger', () => syncManager.triggerSync())
   ipcMain.handle('desktop:sync-conflicts', () => syncManager.getConflictSummary())
+  ipcMain.handle('desktop:connectivity-status', () => getConnectivitySnapshot())
+  ipcMain.handle('desktop:connectivity-refresh', () => getConnectivitySnapshot({ refresh: true }))
 }
 
 app.whenReady().then(() => {
