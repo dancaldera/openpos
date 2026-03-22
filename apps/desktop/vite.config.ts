@@ -19,7 +19,7 @@ export default defineConfig(async () => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks(id) {
+        manualChunks(id: string) {
           if (id.includes('node_modules/preact') || id.includes('node_modules/@preact/signals')) {
             return 'vendor'
           }
