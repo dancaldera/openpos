@@ -4,15 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OpenPOS is a modern Point of Sale (POS) application built as a cross-platform desktop application using Tauri v2.8. It combines a Rust backend with a Preact + TypeScript frontend, styled with Tailwind CSS.
+OpenPOS is a Bun workspace monorepo. The main product is a cross-platform desktop POS application built with Electron and Preact, alongside a Hono API and an Astro landing site.
 
 ## Essential Commands
 
-- `bun tauri dev` - Start full development environment (frontend + backend)
-- `bun dev` - Start Vite development server (frontend only, port 1420)
-- `bun build` - Build frontend for production
-- `bun tauri build` - Build complete application
-- `bun tauri bundle` - Generate platform-specific installers
+- `bun run dev` - Start the Electron desktop app
+- `bun run dev:desktop:web` - Start the desktop renderer in a browser
+- `bun run dev:api` - Start the API server
+- `bun run dev:landing` - Start the landing site
+- `bun run build:desktop` - Build the desktop app bundle
+- `bun run build:api` - Build the API
+- `bun run build:landing` - Build the landing site
 - `bun check` - Run linting, formatting, and type checks
 
 ## Architecture
@@ -28,8 +30,8 @@ OpenPOS is a modern Point of Sale (POS) application built as a cross-platform de
 - Route protection and permission-based UI rendering
 
 ### Component Architecture
-- Reusable UI components in `src/components/ui/`
-- Page components in `src/pages/`
+- Reusable UI components in `apps/desktop/src/components/ui/`
+- Page components in `apps/desktop/src/pages/`
 - Layout component handles navigation and role-based menus
 
 ### Service Layer
@@ -40,56 +42,45 @@ OpenPOS is a modern Point of Sale (POS) application built as a cross-platform de
 
 ### Database Architecture
 - **SQLite**: Local-first storage with `postpos.db`
-- **Access**: Via `@tauri-apps/plugin-sql` v2.3 (Tauri v2 SQL plugin)
-- **Migrations**: Versioned schema updates in `src-tauri/src/lib.rs`
+- **Desktop Access**: Via Electron IPC + `better-sqlite3`
+- **Migrations**: SQL files in `apps/desktop/electron/migrations/`
 - **Tables**: `users`, `customers`, `products`, `orders`, `company_settings`
-- **Permissions**: Configured in `src-tauri/capabilities/default.json`
+- **Remote Sync**: Turso via `@tursodatabase/serverless`
 
 ## Configuration
 
-- **Dev Server**: `http://localhost:1420` (fixed port required by Tauri)
+- **Workspace Layout**: Applications live under `apps/`
+- **Dev Server**: `http://localhost:1420` for the desktop renderer
 - **TypeScript**: Strict mode, ES2020 target, Preact JSX
-- **Tauri v2**: 1200x800 window (resizable), config schema v2
-- **Plugins**: `@tauri-apps/plugin-opener` v2.5, `@tauri-apps/plugin-sql` v2.3
-- **Capabilities**: Permissions defined in `src-tauri/capabilities/default.json`
+- **Electron**: 1200x800 desktop window with preload IPC bridge
+- **API**: Hono on Node/Bun runtime
+- **Landing**: Astro site in its own workspace app
 - **Code Quality**: Biome for linting, formatting, import organization
 
 ## File Structure
 
-```
-src/
-├── components/
-│   ├── Layout.tsx              # Main layout with sidebar
-│   └── ui/                     # Reusable UI components
-├── pages/                      # Application pages
-├── hooks/
-│   ├── useAuth.ts              # Authentication hook
-│   └── useTranslation.ts       # i18n hook
-├── services/
-│   ├── {entity}-sqlite.ts      # SQLite services (preferred)
-│   └── translations.ts         # Translation service
-├── stores/
-│   ├── auth/                   # Auth store & actions
-│   └── language/               # Language store & actions
-├── locales/                    # Translation files (en.json, es.json, etc.)
-└── main.tsx                    # Entry point
-
-src-tauri/
-├── src/
-│   ├── main.rs                 # Application entry
-│   └── lib.rs                  # Tauri commands, setup, migrations
-├── capabilities/               # Tauri v2 permissions
-│   └── default.json            # Core, opener, SQL permissions
-└── tauri.conf.json             # Tauri v2 configuration
+```text
+apps/
+├── desktop/
+│   ├── electron/               # Main/preload process and migrations
+│   ├── scripts/                # Desktop operational scripts
+│   ├── src/                    # Preact renderer
+│   └── package.json
+├── api/
+│   ├── src/                    # Hono routes and middleware
+│   └── package.json
+└── landing/
+    ├── src/                    # Astro pages and layouts
+    └── package.json
 ```
 
 ## Internationalization (i18n)
 
 ### Key Files
-- `src/locales/*.json` - Translation files (en, es, fr, de, it, pt, zh, ja)
-- `src/services/translations.ts` - Translation service
-- `src/hooks/useTranslation.ts` - Translation hook
-- `src/stores/language/` - Language state management
+- `apps/desktop/src/locales/*.json` - Translation files (en, es, fr, de, it, pt, zh, ja)
+- `apps/desktop/src/services/translations.ts` - Translation service
+- `apps/desktop/src/hooks/useTranslation.ts` - Translation hook
+- `apps/desktop/src/stores/language/` - Language state management
 
 ### Implementation Pattern
 
@@ -157,7 +148,7 @@ export const SUPPORTED_LOCALES = [
 - Separate state and actions in store pattern
 
 ### UI Components
-- Use existing components from `src/components/ui/`
+- Use existing components from `apps/desktop/src/components/ui/`
 - Follow the established design system
 - Ensure responsive design with Tailwind
 
@@ -180,9 +171,9 @@ export const SUPPORTED_LOCALES = [
 
 ## File Naming Conventions
 
-- **SQLite Services**: `src/services/{entity}-sqlite.ts` (preferred)
-- **Mock Services**: `src/services/{entity}.ts` (legacy)
+- **SQLite Services**: `apps/desktop/src/services/{entity}-sqlite.ts` (preferred)
+- **Turso Services**: `apps/desktop/src/services/{entity}-turso.ts`
 - Always export both service class and singleton instance
 - Database: `postpos.db` in app config directory
-- Migrations: Defined in `src-tauri/src/lib.rs`
-- Capabilities: `src-tauri/capabilities/{name}.json` (Tauri v2 permissions)
+- Migrations: `apps/desktop/electron/migrations/{schema,seeds}`
+- Workspace apps: `apps/{desktop,api,landing}`

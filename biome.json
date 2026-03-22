@@ -8,10 +8,13 @@
 	"files": {
 		"ignoreUnknown": false,
 		"includes": [
-			"src/**/*.js",
-			"src/**/*.jsx",
-			"src/**/*.ts",
-			"src/**/*.tsx"
+			"scripts/**/*.ts",
+			"apps/desktop/src/**/*.js",
+			"apps/desktop/src/**/*.jsx",
+			"apps/desktop/src/**/*.ts",
+			"apps/desktop/src/**/*.tsx",
+			"apps/desktop/scripts/**/*.ts",
+			"apps/api/src/**/*.ts"
 		]
 	},
 	"formatter": {

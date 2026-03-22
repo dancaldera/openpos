@@ -1,0 +1,67 @@
+{
+  "name": "@openpos/desktop",
+  "private": true,
+  "version": "0.2.5",
+  "description": "OpenPOS desktop application powered by Electron and Preact",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "prepare:native": "mkdir -p .cache/home && HOME=$PWD/.cache/home npm_config_devdir=$PWD/.cache/electron-gyp electron-builder install-app-deps",
+    "dev": "vite",
+    "dev:web": "vite --config vite.web.config.ts",
+    "build": "tsc && vite build",
+    "build:desktop": "bun run prepare:native && bun run build && electron-builder --dir",
+    "build:desktop:linux": "bun run prepare:native && bun run build && electron-builder --linux",
+    "build:web": "tsc && vite build --config vite.web.config.ts",
+    "preview": "vite preview",
+    "lint": "biome lint src scripts --write",
+    "format": "biome format src scripts --write",
+    "check": "biome check src scripts --write && tsc -p tsconfig.json && tsc -p tsconfig.scripts.json",
+    "db:migrate": "bun run scripts/migrate-turso.ts",
+    "db:create-admin": "bun run scripts/create-admin.ts",
+    "version:bump": "bun run scripts/bump-version.ts"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.5.1",
+    "@tailwindcss/vite": "^4.1.18",
+    "@tursodatabase/serverless": "^0.2.4",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.2.0",
+    "preact": "^10.28.1",
+    "sonner": "^2.0.7",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.12",
+    "@preact/preset-vite": "^2.9.3",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/node": "^25.5.0",
+    "electron": "^37.3.1",
+    "electron-builder": "^26.0.12",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.0"
+  },
+  "build": {
+    "appId": "com.openpos.desktop",
+    "productName": "OpenPOS",
+    "directories": {
+      "buildResources": "electron/build",
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "icon": "electron/build/icons/icon.icns"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "electron/build/icons/icon.png"
+    }
+  }
+}

@@ -9,6 +9,7 @@ lCerna-debug.log*
 bun-debug.log*
 
 node_modules
+.astro
 dist
 dist-electron
 dist-ssr
@@ -27,3 +28,4 @@ dist-web
 *.sln
 *.sw?
 .vercel
+.cache

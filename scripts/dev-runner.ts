@@ -1,0 +1,249 @@
+#!/usr/bin/env bun
+
+import { existsSync } from 'node:fs'
+import { Socket } from 'node:net'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { spawn, type ChildProcess } from 'node:child_process'
+
+type DevMode = 'dev' | 'dev:desktop' | 'dev:desktop:web' | 'dev:api' | 'dev:landing'
+
+const DEV_MODES: DevMode[] = ['dev', 'dev:desktop', 'dev:desktop:web', 'dev:api', 'dev:landing']
+const VITE_PORT = 1420
+const VITE_URL = `http://localhost:${VITE_PORT}`
+const PORT_WAIT_TIMEOUT_MS = 30_000
+const SHUTDOWN_TIMEOUT_MS = 5_000
+const LOOPBACK_HOSTS = ['127.0.0.1', '::1', 'localhost']
+
+const scriptDir = dirname(fileURLToPath(import.meta.url))
+const rootDir = resolve(scriptDir, '..')
+const desktopDir = join(rootDir, 'apps/desktop')
+const apiDir = join(rootDir, 'apps/api')
+const landingDir = join(rootDir, 'apps/landing')
+
+const mode = process.argv[2] as DevMode | undefined
+const children = new Set<ChildProcess>()
+let shuttingDown = false
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolveDelay) => {
+    setTimeout(resolveDelay, ms)
+  })
+}
+
+function isDevMode(value: string | undefined): value is DevMode {
+  return value !== undefined && DEV_MODES.includes(value as DevMode)
+}
+
+function registerChild(child: ChildProcess): ChildProcess {
+  children.add(child)
+  child.once('exit', () => {
+    children.delete(child)
+  })
+  return child
+}
+
+function waitForChildExit(child: ChildProcess): Promise<number> {
+  return new Promise((resolveChild, rejectChild) => {
+    child.once('error', rejectChild)
+    child.once('exit', (code, signal) => {
+      if (signal) {
+        resolveChild(signal === 'SIGINT' ? 130 : 1)
+        return
+      }
+
+      resolveChild(code ?? 0)
+    })
+  })
+}
+
+async function runCommand(command: string, args: string[], cwd: string, env = process.env): Promise<void> {
+  const child = registerChild(
+    spawn(command, args, {
+      cwd,
+      env,
+      stdio: 'inherit',
+    }),
+  )
+
+  const exitCode = await waitForChildExit(child)
+  if (exitCode !== 0) {
+    throw new Error(`${command} ${args.join(' ')} exited with code ${exitCode}`)
+  }
+}
+
+function spawnLongRunning(command: string, args: string[], cwd: string, env = process.env): ChildProcess {
+  return registerChild(
+    spawn(command, args, {
+      cwd,
+      env,
+      stdio: 'inherit',
+    }),
+  )
+}
+
+function resolveWorkspaceBinary(workspaceDir: string, binaryName: string): string {
+  const extension = process.platform === 'win32' ? '.cmd' : ''
+  const candidates = [
+    join(workspaceDir, 'node_modules', '.bin', `${binaryName}${extension}`),
+    join(rootDir, 'node_modules', '.bin', `${binaryName}${extension}`),
+  ]
+
+  const match = candidates.find((candidate) => existsSync(candidate))
+  if (!match) {
+    throw new Error(`Unable to resolve binary "${binaryName}" from ${workspaceDir}`)
+  }
+
+  return match
+}
+
+async function canConnectToPort(port: number, host: string): Promise<boolean> {
+  return new Promise<boolean>((resolvePort) => {
+    const socket = new Socket()
+
+    socket.once('connect', () => {
+      socket.destroy()
+      resolvePort(true)
+    })
+
+    socket.once('error', () => {
+      socket.destroy()
+      resolvePort(false)
+    })
+
+    socket.connect(port, host)
+  })
+}
+
+async function waitForPort(port: number, timeoutMs: number): Promise<void> {
+  const startedAt = Date.now()
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const results = await Promise.all(LOOPBACK_HOSTS.map((host) => canConnectToPort(port, host)))
+    const isOpen = results.some(Boolean)
+
+    if (isOpen) {
+      return
+    }
+
+    await delay(250)
+  }
+
+  throw new Error(`Timed out waiting for port ${port}`)
+}
+
+async function terminateChildren(signal: NodeJS.Signals = 'SIGTERM'): Promise<void> {
+  if (children.size === 0) {
+    return
+  }
+
+  for (const child of children) {
+    if (!child.killed) {
+      child.kill(signal)
+    }
+  }
+
+  await delay(250)
+
+  const deadline = Date.now() + SHUTDOWN_TIMEOUT_MS
+  while (children.size > 0 && Date.now() < deadline) {
+    await delay(100)
+  }
+
+  for (const child of children) {
+    if (!child.killed) {
+      child.kill('SIGKILL')
+    }
+  }
+}
+
+async function shutdown(exitCode: number, signal: NodeJS.Signals = 'SIGTERM'): Promise<never> {
+  if (!shuttingDown) {
+    shuttingDown = true
+    await terminateChildren(signal)
+  }
+
+  process.exit(exitCode)
+}
+
+function installSignalHandlers(): void {
+  const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM']
+
+  for (const signal of signals) {
+    process.on(signal, () => {
+      const exitCode = signal === 'SIGINT' ? 130 : 143
+      void shutdown(exitCode, signal)
+    })
+  }
+}
+
+async function runDesktopMode(): Promise<void> {
+  await runCommand('bun', ['run', 'prepare:native'], desktopDir)
+
+  const viteProcess = spawnLongRunning('bun', ['run', 'dev'], desktopDir)
+  const viteExit = waitForChildExit(viteProcess).then((exitCode) => ({
+    name: 'vite' as const,
+    exitCode,
+  }))
+
+  try {
+    await waitForPort(VITE_PORT, PORT_WAIT_TIMEOUT_MS)
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error))
+    await shutdown(1)
+  }
+
+  console.log(`Launching Electron against ${VITE_URL}`)
+  const electronProcess = spawnLongRunning(resolveWorkspaceBinary(desktopDir, 'electron'), ['.'], desktopDir, {
+    ...process.env,
+    VITE_DEV_SERVER_URL: VITE_URL,
+  })
+  const electronExit = waitForChildExit(electronProcess).then((exitCode) => ({
+    name: 'electron' as const,
+    exitCode,
+  }))
+
+  const firstExit = await Promise.race([viteExit, electronExit])
+  if (firstExit.name === 'vite' && firstExit.exitCode === 0) {
+    console.error('Vite exited before Electron was closed')
+    await shutdown(1)
+  }
+
+  await shutdown(firstExit.exitCode)
+}
+
+async function runSingleProcessMode(command: string, args: string[], cwd: string): Promise<void> {
+  const child = spawnLongRunning(command, args, cwd)
+  const exitCode = await waitForChildExit(child)
+  await shutdown(exitCode)
+}
+
+async function main(): Promise<void> {
+  if (!isDevMode(mode)) {
+    console.error(`Usage: bun scripts/dev-runner.ts <${DEV_MODES.join('|')}>`)
+    process.exit(1)
+  }
+
+  installSignalHandlers()
+
+  switch (mode) {
+    case 'dev':
+    case 'dev:desktop':
+      await runDesktopMode()
+      return
+    case 'dev:desktop:web':
+      await runSingleProcessMode('bun', ['run', 'dev:web'], desktopDir)
+      return
+    case 'dev:api':
+      await runSingleProcessMode('bun', ['run', 'dev'], apiDir)
+      return
+    case 'dev:landing':
+      await runSingleProcessMode('bun', ['run', 'dev'], landingDir)
+      return
+  }
+}
+
+main().catch(async (error) => {
+  console.error(error instanceof Error ? error.message : String(error))
+  await shutdown(1)
+})
