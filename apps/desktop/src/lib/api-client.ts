@@ -25,7 +25,7 @@ export async function requestApiJson<T>(path: string, options: ApiRequestOptions
     requestHeaders.set('Authorization', `Bearer ${token}`)
   }
 
-  const response = await fetch(getApiUrl(path), {
+  const response = await fetch(await getApiUrl(path), {
     ...init,
     headers: requestHeaders,
     body: body === undefined ? undefined : JSON.stringify(body),
