@@ -6,6 +6,7 @@ import {
   DialogConfirm,
   Input,
   Pagination,
+  PasswordInput,
   Select,
   Table,
   TableBody,
@@ -165,27 +166,20 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
 
             {(!user || (user && hasRole('admin')) || (user && hasRole('manager') && user.role !== 'admin')) && (
               <div>
-                <Input
+                <PasswordInput
                   label={`🔐 ${user ? t('members.resetPassword') : t('auth.password')}`}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="\d{6}"
-                  maxLength={6}
                   value={formData.password}
-                  onInput={(e) => {
-                    const value = (e.target as HTMLInputElement).value
-                    // Only allow digits
-                    const numericValue = value.replace(/\D/g, '')
+                  onInput={(e) =>
                     setFormData({
                       ...formData,
-                      password: numericValue,
+                      password: (e.target as HTMLInputElement).value,
                     })
-                  }}
+                  }
                   required={!user}
-                  placeholder={user ? t('members.leaveBlankKeepCurrent') : t('members.password6digits')}
+                  placeholder={user ? t('members.leaveBlankKeepCurrent') : t('members.enterNewPassword')}
+                  showStrength={!user || formData.password.length > 0}
+                  helperText={user ? t('members.passwordResetHint') : undefined}
                 />
-                {user && <p class="text-xs text-gray-600 mt-2">{t('members.passwordResetHint')}</p>}
-                {!user && <p class="text-xs text-gray-600 mt-2">{t('members.passwordMust6Numbers')}</p>}
               </div>
             )}
           </form>

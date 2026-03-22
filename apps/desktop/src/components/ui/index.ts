@@ -7,6 +7,7 @@ export { Input } from './Input'
 export { LanguageSelector } from './LanguageSelector'
 export { Link } from './Link'
 export { Pagination } from './Pagination'
+export { PasswordInput } from './PasswordInput'
 export { Select } from './Select'
 export { Sidebar } from './Sidebar'
 export {
