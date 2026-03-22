@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig(async () => ({
   plugins: [preact(), tailwindcss()],
   clearScreen: false,
+  base: './',
   define: {
     VITE_PLATFORM: JSON.stringify('desktop'),
   },
