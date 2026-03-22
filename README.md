@@ -1,4 +1,4 @@
-# OpenPOS
+# OpenPOS - Modern Cross-Platform Point of Sale System
 
 OpenPOS is organized as a Bun workspace monorepo with three runnable applications:
 
