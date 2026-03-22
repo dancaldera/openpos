@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, nativeImage } = require('electron')
 const bcrypt = require('bcryptjs')
 const Database = require('better-sqlite3')
 const fs = require('node:fs')
@@ -22,9 +22,41 @@ function getIndexHtmlPath() {
   return path.join(__dirname, '..', 'dist', 'index.html')
 }
 
-function getIconPath() {
-  const iconsDir = path.join(__dirname, 'build', 'icons')
+function getIconsDir() {
+  const candidates = [
+    path.join(__dirname, 'build', 'icons'),
+    path.join(process.resourcesPath, 'electron', 'build', 'icons'),
+    path.join(process.resourcesPath, 'app.asar', 'electron', 'build', 'icons'),
+    path.join(process.resourcesPath, 'app.asar.unpacked', 'electron', 'build', 'icons'),
+  ]
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0]
+}
+
+function getIconPath(kind = 'window') {
+  const iconsDir = getIconsDir()
+
+  if (process.platform === 'darwin') {
+    return path.join(iconsDir, kind === 'dock' ? 'icon.icns' : 'icon.png')
+  }
+
   return path.join(iconsDir, process.platform === 'win32' ? 'icon.ico' : 'icon.png')
+}
+
+function setAppIcon() {
+  if (process.platform !== 'darwin' || typeof app.dock?.setIcon !== 'function') {
+    return
+  }
+
+  const dockIconPath = getIconPath('dock')
+  if (!fs.existsSync(dockIconPath)) {
+    return
+  }
+
+  const dockIcon = nativeImage.createFromPath(dockIconPath)
+  if (!dockIcon.isEmpty()) {
+    app.dock.setIcon(dockIcon)
+  }
 }
 
 function getConfigPath() {
@@ -232,6 +264,7 @@ function registerIpcHandlers() {
 }
 
 app.whenReady().then(() => {
+  setAppIcon()
   ensureDatabase()
   registerIpcHandlers()
   createWindow()
