@@ -1,6 +1,6 @@
 import { getApiUrl } from '../lib/api-config'
 import { execute, query } from '../lib/db-adapter'
-import { isTauri } from '../lib/platform'
+import { isDesktop } from '../lib/platform'
 
 export interface CompanySettings {
   id: string
@@ -93,7 +93,7 @@ export class CompanySettingsService {
   }
 
   async getSettings(): Promise<CompanySettings> {
-    if (!isTauri && !localStorage.getItem('auth_token')) {
+    if (!isDesktop && !localStorage.getItem('auth_token')) {
       // Web mode, pre-login: fetch from public API endpoint (only safe fields)
       try {
         const res = await fetch(getApiUrl('/api/settings/public'))

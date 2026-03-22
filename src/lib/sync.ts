@@ -16,7 +16,8 @@
 import { connect, type Connection as TursoClient } from '@tursodatabase/serverless'
 import { pendingCount, setConnectionState } from './db'
 import { loadDesktopDbConnectionConfig } from './desktop-db-config'
-import { isTauri } from './platform'
+import Database, { type LocalDatabaseClient } from './local-database'
+import { isDesktop } from './platform'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,19 +45,10 @@ interface MaxCreatedAt {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-// Local SQLite instance type — mirrors the Tauri plugin without a static import
-interface LocalDb {
-  select: <T>(sql: string, params?: unknown[]) => Promise<T>
-  execute: (sql: string, params?: unknown[]) => Promise<{ lastInsertId: number; rowsAffected: number }>
-}
-
 /** Get a direct local SQLite client — used for queue operations. */
-async function getLocalClient(): Promise<LocalDb> {
-  if (!isTauri) throw new Error('[sync] getLocalClient called in web context — should never happen')
-  // Force the local path by temporarily overriding nothing — we use the Tauri
-  // Database.load API directly so we're always talking to local SQLite.
-  const mod = await import('@tauri-apps/plugin-sql')
-  return mod.default.load('sqlite:postpos.db') as Promise<LocalDb>
+async function getLocalClient(): Promise<LocalDatabaseClient> {
+  if (!isDesktop) throw new Error('[sync] getLocalClient called in web context — should never happen')
+  return Database.load('sqlite:postpos.db')
 }
 
 /** Get a Turso client. Throws if Turso is not configured. */
@@ -67,7 +59,7 @@ async function getTursoClient(): Promise<TursoClient> {
 }
 
 /** Refresh the pendingCount signal by counting unsynced rows. */
-async function refreshPendingCount(local: LocalDb): Promise<void> {
+async function refreshPendingCount(local: LocalDatabaseClient): Promise<void> {
   try {
     const rows = await local.select<[{ cnt: number }]>(
       'SELECT COUNT(*) AS cnt FROM pending_sync_queue WHERE synced_at IS NULL',
@@ -134,7 +126,7 @@ export async function drainQueue(): Promise<void> {
 /**
  * Tables with updated_at that we pull from Turso and upsert locally.
  * Column lists are derived directly from the migration files — keep in sync
- * with src-tauri/src/migrations/schema/*.sql whenever the schema changes.
+ * with electron/migrations/schema/*.sql whenever the schema changes.
  */
 const TABLES_WITH_UPDATED_AT = [
   {

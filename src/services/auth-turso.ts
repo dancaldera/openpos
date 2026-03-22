@@ -1,6 +1,7 @@
 import { getApiUrl } from '../lib/api-config'
 import { execute, query } from '../lib/db-adapter'
-import { isTauri } from '../lib/platform'
+import { requireDesktopApi } from '../lib/desktop'
+import { isDesktop } from '../lib/platform'
 
 // ---------------------------------------------------------------------------
 // Password hashing helpers
@@ -9,9 +10,8 @@ import { isTauri } from '../lib/platform'
 // ---------------------------------------------------------------------------
 
 async function hashPassword(password: string): Promise<string> {
-  if (isTauri) {
-    const { invoke } = await import('@tauri-apps/api/core')
-    return invoke<string>('hash_password', { password })
+  if (isDesktop) {
+    return requireDesktopApi().hashPassword(password)
   }
   const res = await fetch(getApiUrl('/api/auth/hash'), {
     method: 'POST',
@@ -24,9 +24,8 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  if (isTauri) {
-    const { invoke } = await import('@tauri-apps/api/core')
-    return invoke<boolean>('verify_password', { password, hash })
+  if (isDesktop) {
+    return requireDesktopApi().verifyPassword(password, hash)
   }
   const res = await fetch(getApiUrl('/api/auth/verify'), {
     method: 'POST',
@@ -110,7 +109,7 @@ export class AuthService {
 
   async signIn(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
     try {
-      if (!isTauri) {
+      if (!isDesktop) {
         // Web mode: authenticate via API server
         const res = await fetch(getApiUrl('/api/auth/login'), {
           method: 'POST',
@@ -250,7 +249,7 @@ export class AuthService {
   async getAllUsersForLogin(): Promise<User[]> {
     // Public method for login page - no authentication required
     // Only return active users (not deleted)
-    if (!isTauri) {
+    if (!isDesktop) {
       // Web mode: fetch from public API endpoint
       try {
         const res = await fetch(getApiUrl('/api/auth/users'))

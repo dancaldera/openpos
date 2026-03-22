@@ -68,7 +68,7 @@ bun tauri dev
 
 The application will open as a desktop app on `http://localhost:1420`.
 
-### Runtime Turso Config
+### Desktop Runtime Config
 
 For AppImage installs:
 
@@ -87,7 +87,12 @@ Then create the runtime config file at `~/.config/com.openpos.app/config.json`:
 }
 ```
 
-OpenPOS reads build-time env vars first and then falls back to `~/.config/com.openpos.app/config.json`.
+Desktop config precedence is:
+1. `~/.config/com.openpos.app/config.json`
+2. Runtime env vars (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) for local development or internal CI only
+3. Local SQLite fallback when no remote config is present
+
+Public GitHub releases must not embed `TURSO_AUTH_TOKEN`, `JWT_SECRET`, or other backend secrets.
 
 ## Available Scripts
 
@@ -168,8 +173,18 @@ gh release create v0.X.X \
 ```
 
 **Required GitHub Secrets:**
+- `GITHUB_TOKEN` - Provided automatically by GitHub Actions for release publishing
 - `TAURI_SIGNING_PRIVATE_KEY` - Private signing key content
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` - Key password (if set)
+
+**Do not inject into public desktop release builds:**
+- `TURSO_DATABASE_URL`
+- `TURSO_AUTH_TOKEN`
+- `JWT_SECRET`
+- `ALLOWED_ORIGIN`
+- `VITE_API_URL`
+
+Those values are runtime or web/API configuration, not desktop release build inputs. If a production desktop install should use Turso, distribute `config.json` through your private operational process after install instead of baking secrets into the artifact.
 
 ## Internationalization
 

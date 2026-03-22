@@ -8,7 +8,7 @@ import {
   setConnectionState,
 } from './db'
 import { reconnectToTurso, startHealthCheck, stopHealthCheck } from './db-adapter'
-import { isTauri } from './platform'
+import { isDesktop } from './platform'
 
 export interface DbStatusSnapshot {
   status: typeof connectionStatus.value
@@ -73,7 +73,7 @@ export function getDbStatusSnapshot(): DbStatusSnapshot {
 }
 
 export function startDbStatusMonitor(intervalMs = 30_000): void {
-  if (isTauri) {
+  if (isDesktop) {
     startHealthCheck(intervalMs)
     return
   }
@@ -88,7 +88,7 @@ export function startDbStatusMonitor(intervalMs = 30_000): void {
 }
 
 export function stopDbStatusMonitor(): void {
-  if (isTauri) {
+  if (isDesktop) {
     stopHealthCheck()
     return
   }
@@ -100,7 +100,7 @@ export function stopDbStatusMonitor(): void {
 }
 
 export async function refreshConnectionStatus(): Promise<boolean> {
-  if (isTauri) {
+  if (isDesktop) {
     return reconnectToTurso()
   }
 

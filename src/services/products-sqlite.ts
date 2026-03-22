@@ -1,5 +1,5 @@
-import Database from '@tauri-apps/plugin-sql'
 import { formatBarcodeForStorage, normalizeBarcode } from '../lib/barcodes'
+import Database from '../lib/local-database'
 import { type ProductVariant, productVariantsService } from './product-variants-sqlite'
 
 export type ProductVariantType = 'simple' | 'configurable'

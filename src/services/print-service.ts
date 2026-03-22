@@ -1,21 +1,7 @@
-import { invoke } from '@tauri-apps/api/core'
+import { requireDesktopApi } from '../lib/desktop'
+import { isDesktop } from '../lib/platform'
 import type { CompanySettings } from './company-settings-turso'
 import type { Order, OrderItem } from './orders-turso'
-
-// Add a helper to safely check for Tauri environment
-const isTauriEnvironment = (): boolean => {
-  try {
-    return (
-      typeof window !== 'undefined' &&
-      ('__TAURI__' in window ||
-        '__TAURI_INTERNALS__' in window ||
-        window.location.protocol === 'tauri:' ||
-        navigator.userAgent.includes('Tauri'))
-    )
-  } catch {
-    return false
-  }
-}
 
 export interface PrintReceiptItem {
   name: string
@@ -40,56 +26,16 @@ export interface PrintReceiptData {
 
 export async function printThermalReceipt(receiptData: PrintReceiptData): Promise<string> {
   try {
-    // Use the helper function to detect Tauri environment
-    const isTauriApp = isTauriEnvironment()
-
-    console.log('Print detection - isTauriApp:', isTauriApp)
-    console.log('Print detection - window.__TAURI__:', typeof window !== 'undefined' && '__TAURI__' in window)
-    console.log('Print detection - protocol:', typeof window !== 'undefined' ? window.location.protocol : 'undefined')
-    console.log('Print detection - invoke function:', typeof invoke)
-    console.log(
-      'Print detection - window keys:',
-      typeof window !== 'undefined'
-        ? Object.keys(window).filter((k) => k.includes('TAURI') || k.includes('tauri'))
-        : 'no window',
-    )
-    console.log(
-      'Print detection - user agent:',
-      typeof navigator !== 'undefined' ? navigator.userAgent : 'no navigator',
-    )
-
-    // Try to force Tauri invoke first if invoke function is available
-    if (typeof invoke === 'function') {
-      try {
-        // We're in the app - use Tauri invoke
-        console.log('Using Tauri invoke for printing')
-        const jsonString = JSON.stringify(receiptData)
-        console.log('Calling Tauri print command with data:', `${jsonString.substring(0, 100)}...`)
-
-        const response = await invoke('print_thermal_receipt', { receiptData: jsonString })
-        console.log('Tauri print response:', response)
-        return response as string
-      } catch (invokeError: unknown) {
-        console.error('Tauri invoke failed, falling back to clipboard:', invokeError)
-        // Re-throw the error if it's a fatal/unrecoverable error to prevent silent failures
-        const errorMessage = invokeError instanceof Error ? invokeError.message : String(invokeError)
-        if (errorMessage.includes('fatal') || errorMessage.includes('crash')) {
-          throw new Error(`Print service crashed: ${errorMessage}`)
-        }
-        // Fall through to clipboard fallback for other errors
-      }
-    }
-
-    // Fallback to clipboard (either invoke not available or invoke failed)
-    console.log('Using clipboard fallback for printing')
     const jsonString = JSON.stringify(receiptData)
 
-    // Check if clipboard API is available and we have permission
+    if (isDesktop) {
+      return requireDesktopApi().printThermalReceipt(jsonString)
+    }
+
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(jsonString)
       return 'Receipt data copied to clipboard (running in web browser)'
     } else {
-      // Fallback for older browsers or non-secure contexts
       let textArea: HTMLTextAreaElement | null = null
       try {
         textArea = document.createElement('textarea')
@@ -100,7 +46,7 @@ export async function printThermalReceipt(receiptData: PrintReceiptData): Promis
         textArea.setAttribute('readonly', '')
         document.body.appendChild(textArea)
         textArea.select()
-        textArea.setSelectionRange(0, 99999) // For mobile devices
+        textArea.setSelectionRange(0, 99999)
 
         const success = document.execCommand('copy')
 
@@ -113,7 +59,6 @@ export async function printThermalReceipt(receiptData: PrintReceiptData): Promis
         console.error('Clipboard fallback error:', fallbackError)
         throw new Error('Failed to copy to clipboard - clipboard operation failed')
       } finally {
-        // Ensure cleanup even if errors occur
         if (textArea?.parentNode) {
           try {
             document.body.removeChild(textArea)
