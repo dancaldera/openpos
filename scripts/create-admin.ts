@@ -14,7 +14,7 @@ import { connect } from '@tursodatabase/serverless'
 import bcrypt from 'bcryptjs'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
-const repoRoot = resolve(scriptDir, '../../..')
+const repoRoot = resolve(scriptDir, '..')
 
 function loadEnv(): Record<string, string> {
   const content = readFileSync(resolve(repoRoot, '.env.local'), 'utf-8')

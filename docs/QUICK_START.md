@@ -1,4 +1,6 @@
-# Titanic POS - Quick Start Guide
+# OpenPOS - Customer Management Quick Start
+
+> Historical note: this document describes the completed customer-management rollout from December 2024. Treat the current codebase and root `README.md` as the source of truth for active scripts and supported locales.
 
 ## What's New: Customer Management (Phase 1) ✅
 
@@ -84,14 +86,17 @@ The application now includes a complete customer management system! You can trac
 ## Development Commands
 
 ```bash
-# Start development server
-bun tauri dev
+# Install dependencies in a fresh clone
+bun install
 
-# Build for production
-bun tauri build
+# Start the desktop app
+bun run dev
 
-# Run linting/formatting
-bun check
+# Run read-only validation
+bun run check
+
+# Run automated tests
+bun run test
 ```
 
 ---
@@ -116,8 +121,10 @@ bun check
 
 ## What's Next?
 
-### Pending Translations (2-3 hours)
-Customer translations need to be added to 7 language files:
+### Translation Status
+Customer translations currently ship in the implemented locales only:
+- `apps/desktop/src/locales/en.json`
+- `apps/desktop/src/locales/es.json`
 - Spanish (es.json)
 - French (fr.json)
 - German (de.json)

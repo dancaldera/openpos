@@ -3,8 +3,8 @@
  * Bump version across multiple files in the project.
  *
  * Usage:
- *   bun run scripts/bump-version.ts <version>
- *   bun run scripts/bump-version.ts 0.3.0
+ *   bun run version:bump <version>
+ *   bun run version:bump 0.3.0
  */
 
 import { readFile, writeFile } from 'node:fs/promises'
@@ -12,7 +12,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
-const repoRoot = resolve(scriptDir, '../../..')
+const repoRoot = resolve(scriptDir, '..')
 
 const FILES_TO_UPDATE = [
   {
@@ -28,7 +28,6 @@ const FILES_TO_UPDATE = [
 ]
 
 async function bumpVersion(newVersion: string) {
-  // Validate version format
   if (!/^\d+\.\d+\.\d+$/.test(newVersion)) {
     console.error(`Invalid version format: ${newVersion}`)
     console.error('Expected format: X.Y.Z (e.g., 0.3.0)')
@@ -68,12 +67,11 @@ async function bumpVersion(newVersion: string) {
   console.log(`  3. Tag and release: git tag v${newVersion} && git push origin v${newVersion}`)
 }
 
-// Main
 const version = process.argv[2]
 
 if (!version) {
-  console.error('Usage: bun run scripts/bump-version.ts <version>')
-  console.error('Example: bun run scripts/bump-version.ts 0.3.0')
+  console.error('Usage: bun run version:bump <version>')
+  console.error('Example: bun run version:bump 0.3.0')
   process.exit(1)
 }
 

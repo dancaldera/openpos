@@ -1,19 +1,43 @@
-export interface DesktopDbConnectionConfig {
-  url?: string
-  authToken?: string
-  configured: boolean
-}
-
-export interface RuntimeConfig {
-  tursoDatabaseUrl?: string
-  tursoAuthToken?: string
-  printerCommand?: string
-  printerArgs?: string[]
-}
-
 export interface DesktopDatabaseStatement {
   sql: string
   params?: unknown[]
+}
+
+export interface DesktopSyncStatusSnapshot {
+  status: 'online' | 'offline' | 'syncing' | 'error'
+  isSyncing: boolean
+  mode: 'mirror'
+  remoteConfigured: boolean
+  pendingWrites: number
+  erroredWrites: number
+  conflictedWrites: number
+  lastCheckedAt?: string | null
+  lastSyncedAt?: string | null
+  lastError?: string | null
+}
+
+export interface DesktopSyncConflict {
+  tableName: string
+  recordId: string
+  reason: string
+  localUpdatedAt?: string | null
+  remoteUpdatedAt?: string | null
+}
+
+export interface DesktopConnectivitySnapshot extends DesktopSyncStatusSnapshot {
+  apiConfigured: boolean
+  apiReachable: boolean
+  apiLastCheckedAt?: string | null
+  apiLastError?: string | null
+}
+
+export interface DesktopFirstRunStatus {
+  status: 'needsRemoteConfig' | 'syncingInitialData' | 'initialSyncFailed' | 'readyForSignIn'
+  remoteConfigured: boolean
+  activeUserCount: number
+  lastError?: string | null
+  lastCheckedAt?: string | null
+  lastSyncedAt?: string | null
 }
 
 export interface DesktopApi {
@@ -21,9 +45,21 @@ export interface DesktopApi {
   greet(name: string): Promise<string>
   hashPassword(password: string): Promise<string>
   verifyPassword(password: string, hash: string): Promise<boolean>
-  getDbConnectionConfig(): Promise<DesktopDbConnectionConfig>
-  getRuntimeConfig(): Promise<RuntimeConfig>
   printThermalReceipt(receiptData: string): Promise<string>
+  sync: {
+    getStatus(): Promise<DesktopSyncStatusSnapshot>
+    trigger(): Promise<DesktopSyncStatusSnapshot>
+    getConflicts(): Promise<DesktopSyncConflict[]>
+  }
+  connectivity: {
+    getStatus(): Promise<DesktopConnectivitySnapshot>
+    refresh(): Promise<DesktopConnectivitySnapshot>
+  }
+  startup: {
+    getStatus(): Promise<DesktopFirstRunStatus>
+    initialize(): Promise<DesktopFirstRunStatus>
+    retry(): Promise<DesktopFirstRunStatus>
+  }
   db: {
     query<T>(sql: string, params?: unknown[]): Promise<T[]>
     execute(sql: string, params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }>

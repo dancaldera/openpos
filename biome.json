@@ -13,7 +13,6 @@
 			"apps/desktop/src/**/*.jsx",
 			"apps/desktop/src/**/*.ts",
 			"apps/desktop/src/**/*.tsx",
-			"apps/desktop/scripts/**/*.ts",
 			"apps/api/src/**/*.ts"
 		]
 	},
