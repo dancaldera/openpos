@@ -7,7 +7,6 @@ on:
 
 env:
   APP_VERSION: 0.3.0
-  CARGO_TERM_COLOR: always
 
 jobs:
   build-linux:
@@ -29,50 +28,22 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install dependencies (Ubuntu only)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libasound2-dev
-
       - name: Install frontend dependencies
         run: bun install
 
-      - name: Validate public release environment
-        run: |
-          forbidden_vars=(
-            TURSO_DATABASE_URL
-            TURSO_AUTH_TOKEN
-            JWT_SECRET
-            ALLOWED_ORIGIN
-            VITE_API_URL
-          )
+      - name: Build Electron app
+        run: bun run build:desktop:linux
+        working-directory: apps/desktop
 
-          found=0
-          for var_name in "${forbidden_vars[@]}"; do
-            if printenv "$var_name" >/dev/null; then
-              echo "Forbidden environment variable set for public desktop release: $var_name"
-              found=1
-            fi
-          done
-
-          if [ "$found" -ne 0 ]; then
-            echo "Public desktop releases must not embed runtime or backend configuration."
-            exit 1
-          fi
-
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: OpenPOS v${{ env.APP_VERSION }} - Linux Release
+          body: 'OpenPOS v${{ env.APP_VERSION }}. See CHANGELOG.md for details.'
+          draft: false
+          prerelease: false
+          files: |
+            apps/desktop/dist-electron/*.AppImage
+            apps/desktop/dist-electron/*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: OpenPOS v${{ env.APP_VERSION }} - Linux Release
-          releaseBody: 'OpenPOS v${{ env.APP_VERSION }}. See CHANGELOG.md for details.'
-          releaseDraft: false
-          prerelease: false
-          args: --target x86_64-unknown-linux-gnu
