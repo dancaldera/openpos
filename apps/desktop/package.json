@@ -1,5 +1,5 @@
 {
-  "name": "@openpos/desktop",
+  "name": "openpos-desktop",
   "private": true,
   "version": "0.3.1",
   "description": "OpenPOS desktop application powered by Electron and Preact",
