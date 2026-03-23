@@ -79,15 +79,23 @@ Run `bun install` before any `bun run ...` script in a fresh clone. The root val
 
 ### Desktop Runtime Config
 
-For AppImage installs:
+The config file location depends on your operating system:
+
+| Platform | Config Path |
+|----------|-------------|
+| **macOS** | `~/Library/Application Support/openpos-desktop/config.json` |
+| **Linux** | `~/.config/openpos-desktop/config.json` |
+| **Windows** | `%APPDATA%\openpos-desktop\config.json` |
+
+**Linux (AppImage) Setup:**
 
 ```bash
 sudo mv openpos.AppImage /usr/local/bin/openpos
 chmod +x /usr/local/bin/openpos
-mkdir -p ~/.config/com.openpos.app
+mkdir -p ~/.config/openpos-desktop
 ```
 
-Then create the runtime config file at `~/.config/com.openpos.app/config.json`:
+Then create the runtime config file:
 
 ```json
 {
@@ -102,7 +110,7 @@ Then create the runtime config file at `~/.config/com.openpos.app/config.json`:
 Include only the fields needed for that install. Public production desktop installs do not require any env vars by default.
 
 Desktop config precedence is:
-1. `~/.config/com.openpos.app/config.json`
+1. Platform-specific config.json (see table above)
 2. Runtime env vars (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `VITE_API_URL`) for local development or internal CI only
 3. Local SQLite fallback when no remote config is present
 
