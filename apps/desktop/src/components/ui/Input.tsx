@@ -1,5 +1,6 @@
 import type { JSX } from 'preact'
 import { clsx, generateId } from '../../lib/utils'
+import { FormField } from './FormField'
 
 interface InputProps {
   label?: string
@@ -74,16 +75,8 @@ export function Input({
   const classes = clsx(baseClasses, sizes[size], stateClasses, className)
 
   return (
-    <div class="w-full">
-      {label && (
-        <label for={inputId} class="block text-sm font-medium text-gray-700 mb-2">
-          {label}
-          {required && <span class="text-red-500 ml-1">*</span>}
-        </label>
-      )}
-
+    <FormField id={inputId} label={label} required={required} error={error} helperText={helperText}>
       <div class="relative">
-        {/* Left Icon */}
         {leftIcon && (
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <div class="h-5 w-5 text-gray-400 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">
@@ -107,7 +100,6 @@ export function Input({
           {...props}
         />
 
-        {/* Right Icon */}
         {rightIcon && (
           <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
             {onRightIconClick ? (
@@ -127,10 +119,6 @@ export function Input({
           </div>
         )}
       </div>
-
-      {error && <p class="mt-2 text-sm text-red-600">{error}</p>}
-
-      {helperText && !error && <p class="mt-1 text-sm text-gray-600">{helperText}</p>}
-    </div>
+    </FormField>
   )
 }

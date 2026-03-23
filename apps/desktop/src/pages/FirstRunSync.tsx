@@ -1,5 +1,4 @@
 import { DbStatusBadge } from '../components/ui/DbStatusBadge'
-import { UpdateNotification } from '../components/ui/UpdateNotification'
 import { useTranslation } from '../hooks/useTranslation'
 import { APP_VERSION } from '../lib/app-version'
 import type { DesktopFirstRunStatus } from '../lib/desktop'
@@ -105,7 +104,6 @@ export default function FirstRunSync({ status, isRetrying, onRetry }: FirstRunSy
       </div>
 
       <DbStatusBadge />
-      <UpdateNotification />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useSignal } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
+import { useClickOutside } from '../../hooks/useClickOutside'
 import {
   apiConfigured,
   apiReachable,
@@ -15,6 +16,8 @@ import {
   pendingCount,
   remoteConfigured,
 } from '../../lib/db'
+import { formatRelativeTime } from '../../lib/utils'
+import { SpinnerIcon } from './icons'
 
 const STATUS_CONFIG = {
   online: {
@@ -51,22 +54,25 @@ const STATUS_CONFIG = {
   },
 } as const
 
-function formatRelativeTime(timestamp?: string): string {
-  if (!timestamp) return 'not yet'
-
-  const parsed = Date.parse(timestamp)
-  if (Number.isNaN(parsed)) return 'not yet'
-
-  const diff = Math.floor((Date.now() - parsed) / 1000)
-  if (diff < 5) return 'just now'
-  if (diff < 60) return `${diff}s ago`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  return `${Math.floor(diff / 3600)}h ago`
+function getBadgeLabel(
+  status: keyof typeof STATUS_CONFIG,
+  config: (typeof STATUS_CONFIG)[keyof typeof STATUS_CONFIG],
+  pending: number,
+  errors: number,
+  conflicts: number,
+): string {
+  if (status === 'offline' && errors > 0) return `Offline · ${errors} failed`
+  if (status === 'offline' && pending > 0) return `Offline · ${pending} queued`
+  if (conflicts > 0) return `${config.label} · ${conflicts} conflicts`
+  return config.label
 }
 
 export function DbStatusBadge() {
   const popoverOpen = useSignal(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  useClickOutside(wrapperRef, () => {
+    popoverOpen.value = false
+  })
 
   const status = connectionStatus.value
   const config = STATUS_CONFIG[status]
@@ -94,34 +100,15 @@ export function DbStatusBadge() {
       ? 'text-green-400'
       : 'text-rose-400 font-medium'
 
-  const badgeLabel =
-    status === 'offline' && errors > 0
-      ? `Offline · ${errors} failed`
-      : status === 'offline' && pending > 0
-        ? `Offline · ${pending} queued`
-        : conflicts > 0
-          ? `${config.label} · ${conflicts} conflicts`
-          : config.label
+  const badgeLabel = getBadgeLabel(status, config, pending, errors, conflicts)
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        popoverOpen.value = false
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
+  // Tick to re-render relative times every 5 seconds when popover is open
   const tick = useSignal(0)
   useEffect(() => {
     if (!popoverOpen.value) return
-
     const id = setInterval(() => {
       tick.value += 1
     }, 5000)
-
     return () => clearInterval(id)
   }, [popoverOpen.value])
 
@@ -141,10 +128,7 @@ export function DbStatusBadge() {
               <span class="text-gray-400">Status</span>
               <span class={`font-medium ${config.textColor} flex items-center gap-1.5`}>
                 {status === 'syncing' ? (
-                  <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" role="img" aria-hidden="true">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
+                  <SpinnerIcon class="w-3 h-3 animate-spin" />
                 ) : (
                   <span class={`inline-block w-2 h-2 rounded-full ${config.dot}`} />
                 )}
@@ -237,16 +221,7 @@ export function DbStatusBadge() {
         title={config.sublabel}
       >
         {status === 'syncing' ? (
-          <svg
-            class={`w-2.5 h-2.5 animate-spin ${config.textColor}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            role="img"
-            aria-hidden="true"
-          >
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
+          <SpinnerIcon class={`w-2.5 h-2.5 animate-spin ${config.textColor}`} />
         ) : (
           <span class={`w-2 h-2 rounded-full ${config.dot} ${status === 'online' ? 'animate-pulse' : ''}`} />
         )}

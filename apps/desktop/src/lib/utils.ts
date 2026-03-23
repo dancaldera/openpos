@@ -42,3 +42,19 @@ export const disabledClasses = 'opacity-50 cursor-not-allowed'
 export function generateId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).substring(2, 11)}`
 }
+
+/**
+ * Format a timestamp as relative time (e.g., "5m ago", "just now")
+ */
+export function formatRelativeTime(timestamp?: string): string {
+  if (!timestamp) return 'not yet'
+
+  const parsed = Date.parse(timestamp)
+  if (Number.isNaN(parsed)) return 'not yet'
+
+  const diff = Math.floor((Date.now() - parsed) / 1000)
+  if (diff < 5) return 'just now'
+  if (diff < 60) return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  return `${Math.floor(diff / 3600)}h ago`
+}
