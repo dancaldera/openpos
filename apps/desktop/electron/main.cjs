@@ -815,6 +815,8 @@ function createWindow() {
 
   if (isDev()) {
     mainWindow.loadURL(getRendererUrl())
+    // Open DevTools in a separate window in development mode
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
     mainWindow.loadFile(getIndexHtmlPath())
   }
