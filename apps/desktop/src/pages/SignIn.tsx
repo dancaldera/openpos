@@ -187,14 +187,14 @@ export default function SignIn() {
 
           <div class="mt-8 pt-6 border-t border-gray-200 text-center">
             <span class="text-xs text-gray-500">
-              v{APP_VERSION} • © 2025 OSS, by{' '}
+              v{APP_VERSION} • © 2025 • MIT License •{' '}
               <a
-                href="https://github.com/dancaldera"
+                href="https://github.com/dancaldera/openpos"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="text-blue-600 hover:text-blue-800 hover:underline"
               >
-                dancaldera
+                GitHub
               </a>
             </span>
           </div>
