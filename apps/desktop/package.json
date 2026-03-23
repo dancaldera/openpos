@@ -71,6 +71,7 @@
         "deb"
       ],
       "category": "Office",
+      "executableName": "openpos",
       "icon": "electron/build/icons/icon.png"
     }
   }
