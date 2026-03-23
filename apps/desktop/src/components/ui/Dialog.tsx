@@ -2,6 +2,7 @@ import type { ComponentChildren } from 'preact'
 import { useEffect, useState } from 'preact/hooks'
 import { clsx } from '../../lib/utils'
 import { Button } from './Button'
+import { CloseIcon } from './icons'
 
 interface DialogProps {
   isOpen: boolean
@@ -91,10 +92,7 @@ export function Dialog({ isOpen, onClose, title, children, size = 'md' }: Dialog
                 onClick={onClose}
                 class="p-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <title>Close</title>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <CloseIcon class="w-5 h-5" />
               </button>
             </div>
           )}

@@ -1,6 +1,7 @@
 import type { ComponentChildren, JSX } from 'preact'
 import { useState } from 'preact/hooks'
 import { clsx } from '../../lib/utils'
+import { ChevronLeftIcon } from './icons'
 
 interface SidebarItem {
   id: string
@@ -60,16 +61,7 @@ export function Sidebar({
               class="p-2 rounded-lg hover:bg-gray-800 transition-colors"
               aria-label="Toggle sidebar"
             >
-              <svg
-                class={clsx('w-4 h-4 transition-transform', isCollapsed && 'rotate-180')}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <title>Toggle sidebar</title>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              <ChevronLeftIcon class={clsx('w-4 h-4 transition-transform', isCollapsed && 'rotate-180')} />
             </button>
           )}
         </div>
