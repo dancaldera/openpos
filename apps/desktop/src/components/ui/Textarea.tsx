@@ -1,5 +1,6 @@
 import type { JSX } from 'preact'
 import { clsx, generateId } from '../../lib/utils'
+import { FormField } from './FormField'
 
 interface TextareaProps {
   label?: string
@@ -62,14 +63,7 @@ export function Textarea({
   const classes = clsx(baseClasses, sizes[size], stateClasses, className)
 
   return (
-    <div class="w-full">
-      {label && (
-        <label for={textareaId} class="block text-sm font-medium text-gray-700 mb-2">
-          {label}
-          {required && <span class="text-red-500 ml-1">*</span>}
-        </label>
-      )}
-
+    <FormField id={textareaId} label={label} required={required} error={error} helperText={helperText}>
       <textarea
         id={textareaId}
         placeholder={placeholder}
@@ -84,10 +78,6 @@ export function Textarea({
         class={classes}
         {...props}
       />
-
-      {error && <p class="mt-2 text-sm text-red-600">{error}</p>}
-
-      {helperText && !error && <p class="mt-1 text-sm text-gray-600">{helperText}</p>}
-    </div>
+    </FormField>
   )
 }

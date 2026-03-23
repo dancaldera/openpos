@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import { DbStatusBadge } from '../components/ui/DbStatusBadge'
-import { UpdateNotification } from '../components/ui/UpdateNotification'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import { APP_VERSION } from '../lib/app-version'
@@ -203,7 +202,6 @@ export default function SignIn() {
       </div>
 
       <DbStatusBadge />
-      <UpdateNotification />
     </div>
   )
 }

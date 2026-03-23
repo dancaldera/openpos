@@ -1,5 +1,7 @@
 import type { JSX } from 'preact'
 import { clsx, generateId } from '../../lib/utils'
+import { FormField } from './FormField'
+import { ChevronDownIcon } from './icons'
 
 interface SelectOption {
   value: string
@@ -55,14 +57,7 @@ export function Select({
   const paddingClasses = multiple ? 'px-4 py-2.5 text-sm' : 'pl-4 pr-10 py-2.5 text-sm'
 
   return (
-    <div class="w-full">
-      {label && (
-        <label for={selectId} class="block text-sm font-medium text-gray-700 mb-2">
-          {label}
-          {required && <span class="text-red-500 ml-1">*</span>}
-        </label>
-      )}
-
+    <FormField id={selectId} label={label} required={required} error={error} helperText={helperText}>
       <div class="relative">
         <select
           id={selectId}
@@ -90,22 +85,10 @@ export function Select({
 
         {!multiple && (
           <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-            <svg
-              class={clsx('w-4 h-4 text-gray-600', disabled && 'text-gray-400')}
-              viewBox="0 0 16 16"
-              aria-hidden="true"
-              fill="none"
-            >
-              <path d="M5.75 10.75L8 13L10.25 10.75" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M10.25 5.25L8 3L5.75 5.25" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <ChevronDownIcon class={clsx('w-4 h-4', disabled ? 'text-gray-400' : 'text-gray-600')} />
           </span>
         )}
       </div>
-
-      {error && <p class="mt-2 text-sm text-red-600">{error}</p>}
-
-      {helperText && !error && <p class="mt-1 text-sm text-gray-600">{helperText}</p>}
-    </div>
+    </FormField>
   )
 }

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { Toaster } from 'sonner'
 import Layout from './components/Layout'
-import { UpdateNotification } from './components/ui/UpdateNotification'
 import { useAuth } from './hooks/useAuth'
 import { startDbStatusMonitor, stopDbStatusMonitor } from './lib/db-status'
 import { type DesktopFirstRunStatus, requireDesktopApi } from './lib/desktop'
@@ -176,7 +175,6 @@ function App() {
         {renderPage()}
       </Layout>
       <Toaster position="top-right" />
-      <UpdateNotification />
     </>
   )
 }

@@ -1,0 +1,105 @@
+---
+import FeatureCard from './FeatureCard.astro'
+
+const features = [
+  {
+    icon: 'offline',
+    title: 'Offline-First',
+    description: 'Works without internet connection. All your data stays local and syncs automatically when you\'re back online.',
+    color: 'blue'
+  },
+  {
+    icon: 'sync',
+    title: 'Real-Time Sync',
+    description: 'Automatic cloud synchronization powered by Turso. Your data is always up-to-date across all devices.',
+    color: 'green'
+  },
+  {
+    icon: 'desktop',
+    title: 'Cross-Platform Desktop',
+    description: 'Native apps for Linux, macOS, and Windows. One codebase, all platforms, consistent experience.',
+    color: 'purple'
+  },
+  {
+    icon: 'language',
+    title: 'Multi-Language',
+    description: 'Full support for English and Spanish. Easily extendable to more languages for global reach.',
+    color: 'cyan'
+  },
+  {
+    icon: 'users',
+    title: 'Role-Based Access',
+    description: 'Three user roles: Admin, Manager, and User. Fine-grained permissions for secure team management.',
+    color: 'orange'
+  },
+  {
+    icon: 'variants',
+    title: 'Product Variants',
+    description: 'Advanced variant management with attributes, pricing, and stock levels. Perfect for complex catalogs.',
+    color: 'pink'
+  },
+  {
+    icon: 'barcode',
+    title: 'Barcode Scanning',
+    description: 'Quick product lookup with barcode scanner support. Fast checkout for high-volume retail.',
+    color: 'blue'
+  },
+  {
+    icon: 'analytics',
+    title: 'Analytics Dashboard',
+    description: 'Business insights at a glance. Track sales, top products, and team performance in real-time.',
+    color: 'purple'
+  },
+  {
+    icon: 'loyalty',
+    title: 'Customer Loyalty',
+    description: 'Built-in points system and purchase tracking. Reward your best customers automatically.',
+    color: 'green'
+  },
+  {
+    icon: 'print',
+    title: 'Receipt Printing',
+    description: 'Thermal printer support with customizable receipts. Professional output for every transaction.',
+    color: 'orange'
+  }
+]
+---
+
+<section id="features" class="py-24 bg-gray-900">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Section header -->
+    <div class="text-center mb-16">
+      <span class="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-sm font-medium mb-6">
+        Features
+      </span>
+      <h2 class="text-4xl md:text-5xl font-bold text-white mb-6">
+        Everything You Need to <span class="text-blue-500">Sell</span>
+      </h2>
+      <p class="text-xl text-gray-400 max-w-3xl mx-auto">
+        A complete POS solution with all the features modern retailers demand.
+        No subscriptions, no hidden fees, fully open source.
+      </p>
+    </div>
+
+    <!-- Features grid -->
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {features.map(feature => (
+        <FeatureCard {...feature} />
+      ))}
+    </div>
+
+    <!-- Bottom CTA -->
+    <div class="mt-16 text-center">
+      <p class="text-gray-500 mb-4">And many more features in development</p>
+      <a
+        href="https://demo.openpos.xyz"
+        class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all duration-300 shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40"
+      >
+        Explore All Features
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg>
+      </a>
+    </div>
+  </div>
+</section>
