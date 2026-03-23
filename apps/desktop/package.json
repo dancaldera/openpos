@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.3.1",
   "description": "OpenPOS desktop application powered by Electron and Preact",
+  "author": {
+    "name": "Daniel Caldera",
+    "email": "dancaldera@proton.me"
+  },
+  "homepage": "https://github.com/dancaldera/OpenPOS",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -65,6 +70,7 @@
         "AppImage",
         "deb"
       ],
+      "category": "Office",
       "icon": "electron/build/icons/icon.png"
     }
   }
