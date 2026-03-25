@@ -27,8 +27,7 @@ interface UseUpdateCheckerReturn {
 
   // Actions
   checkForUpdate: () => Promise<boolean>
-  downloadAndInstall: (onProgress?: (progress: number) => void) => Promise<boolean>
-  installAndRelaunch: () => Promise<void>
+  downloadAndInstall: () => Promise<boolean>
   dismissUpdate: () => void
   clearError: () => void
 }
@@ -52,9 +51,8 @@ export function useUpdateChecker(): UseUpdateCheckerReturn {
     lastCheckTime: lastCheckTime.value,
 
     // Actions
-    checkForUpdate: updateActions.checkForUpdate,
-    downloadAndInstall: updateActions.downloadAndInstall,
-    installAndRelaunch: updateActions.installAndRelaunch,
+    checkForUpdate: updateActions.checkForUpdate.bind(updateActions),
+    downloadAndInstall: updateActions.downloadAndInstall.bind(updateActions),
     dismissUpdate: updateActions.dismissUpdate,
     clearError: updateActions.clearError,
   }

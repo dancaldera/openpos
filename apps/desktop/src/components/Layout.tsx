@@ -2,7 +2,7 @@ import type { ComponentChildren } from 'preact'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
-import { Button, DbStatusBadge } from './ui'
+import { Button, DbStatusBadge, UpdateBadge } from './ui'
 import { Sidebar } from './ui/Sidebar'
 
 interface LayoutProps {
@@ -128,6 +128,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
         </main>
       </div>
 
+      <UpdateBadge />
       <DbStatusBadge />
     </div>
   )
