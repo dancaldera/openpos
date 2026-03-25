@@ -20,4 +20,5 @@ export {
   TableRow,
 } from './Table'
 export { Textarea } from './Textarea'
+export { UpdateBadge } from './UpdateBadge'
 export { VirtualKeypad } from './VirtualKeypad'

@@ -1,63 +1,85 @@
+import { getDesktopApi } from '../../lib/desktop'
 import {
   downloadError,
   isChecking,
-  isDownloading,
   lastCheckTime,
   updateAvailable,
-  updateDownloadProgress,
-  updateReadyToInstall,
+  updateReleaseNotes,
+  updateReleaseUrl,
   updateVersion,
 } from './updateStore'
 
-/**
- * Update actions for the auto-update system.
- * Provides methods to check for updates, download, and install them.
- */
+const GITHUB_RELEASES_URL = 'https://api.github.com/repos/dancaldera/OpenPOS/releases/latest'
+const GITHUB_RELEASES_PAGE = 'https://github.com/dancaldera/OpenPOS/releases/latest'
+
+function isNewerVersion(latest: string, current: string): boolean {
+  const parse = (v: string) => v.split('.').map(Number)
+  const [lMaj, lMin, lPatch] = parse(latest)
+  const [cMaj, cMin, cPatch] = parse(current)
+  if (lMaj !== cMaj) return lMaj > cMaj
+  if (lMin !== cMin) return lMin > cMin
+  return lPatch > cPatch
+}
+
 export const updateActions = {
-  /**
-   * Check if an update is available.
-   * Returns true if an update was found, false otherwise.
-   */
   async checkForUpdate(): Promise<boolean> {
-    isChecking.value = false
-    updateAvailable.value = false
-    updateVersion.value = null
-    lastCheckTime.value = Date.now()
+    if (isChecking.value) return false
+
+    isChecking.value = true
     downloadError.value = null
-    return false
+
+    try {
+      const api = getDesktopApi()
+      if (!api) return false
+
+      const { version: currentVersion } = await api.getInfo()
+
+      const response = await fetch(GITHUB_RELEASES_URL, {
+        headers: { Accept: 'application/vnd.github.v3+json' },
+        signal: AbortSignal.timeout(10_000),
+      })
+
+      if (!response.ok) {
+        throw new Error(`GitHub API responded with ${response.status}`)
+      }
+
+      const release = await response.json()
+      const latestTag: string = release.tag_name ?? ''
+      const latestVersion = latestTag.replace(/^v/, '')
+
+      lastCheckTime.value = Date.now()
+
+      if (latestVersion && isNewerVersion(latestVersion, currentVersion)) {
+        updateVersion.value = latestVersion
+        updateAvailable.value = true
+        updateReleaseUrl.value = release.html_url ?? GITHUB_RELEASES_PAGE
+        updateReleaseNotes.value = release.body ?? null
+        return true
+      }
+
+      updateAvailable.value = false
+      updateVersion.value = null
+      return false
+    } catch (error) {
+      downloadError.value = error instanceof Error ? error.message : String(error)
+      return false
+    } finally {
+      isChecking.value = false
+    }
   },
 
-  /**
-   * Download the update with progress tracking.
-   * Returns true if download completed successfully.
-   */
-  async downloadAndInstall(onProgress?: (progress: number) => void): Promise<boolean> {
-    isDownloading.value = false
-    updateDownloadProgress.value = 0
-    updateReadyToInstall.value = false
-    downloadError.value = 'Desktop auto-updates are disabled in the Electron migration'
-    onProgress?.(0)
-    return false
+  async downloadAndInstall(): Promise<boolean> {
+    const api = getDesktopApi()
+    if (!api?.updates) return false
+    const url = updateReleaseUrl.value ?? GITHUB_RELEASES_PAGE
+    await api.updates.openReleasePage(url)
+    return true
   },
 
-  /**
-   * Restart the app to apply the downloaded update.
-   */
-  async installAndRelaunch(): Promise<void> {
-    downloadError.value = 'Desktop auto-updates are disabled in the Electron migration'
-  },
-
-  /**
-   * Dismiss the current update notification.
-   * User can be reminded later.
-   */
   dismissUpdate(): void {
     updateAvailable.value = false
   },
 
-  /**
-   * Clear any error state.
-   */
   clearError(): void {
     downloadError.value = null
   },

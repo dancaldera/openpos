@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, nativeImage } = require('electron')
+const { app, BrowserWindow, ipcMain, shell, nativeImage } = require('electron')
 const bcrypt = require('bcryptjs')
 const Database = require('better-sqlite3')
 const fs = require('node:fs')
@@ -850,6 +850,15 @@ function registerIpcHandlers() {
   ipcMain.handle('desktop:config', () => {
     const { apiUrl } = resolveConnectionConfig()
     return { apiUrl }
+  })
+  ipcMain.handle('desktop:open-external', (_event, url) => {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'https:') throw new Error('Only https: URLs allowed')
+    return shell.openExternal(url)
+  })
+  ipcMain.handle('desktop:relaunch', () => {
+    app.relaunch()
+    app.exit(0)
   })
 }
 
