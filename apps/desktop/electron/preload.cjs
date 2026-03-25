@@ -37,4 +37,8 @@ contextBridge.exposeInMainWorld('openposDesktop', {
     execute: (sql, params) => ipcRenderer.invoke('desktop:db-execute', sql, params),
     transaction: (statements) => ipcRenderer.invoke('desktop:db-transaction', statements),
   },
+  updates: {
+    openReleasePage: (url) => ipcRenderer.invoke('desktop:open-external', url),
+    relaunch: () => ipcRenderer.invoke('desktop:relaunch'),
+  },
 })

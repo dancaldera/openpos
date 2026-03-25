@@ -69,6 +69,10 @@ export interface DesktopApi {
     execute(sql: string, params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }>
     transaction(statements: DesktopDatabaseStatement[]): Promise<void>
   }
+  updates: {
+    openReleasePage(url: string): Promise<void>
+    relaunch(): Promise<void>
+  }
 }
 
 declare global {
