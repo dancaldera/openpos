@@ -179,8 +179,8 @@ OpenPOS includes an integrated auto-update system for Linux that automatically c
 # 1. Bump the desktop version
 bun run version:bump 0.X.X
 
-# 2. Build the Linux desktop bundle
-bun run build:desktop
+# 2. Build the Linux desktop artifacts
+bun run --cwd apps/desktop build:desktop:linux
 
 # 3. Create GitHub release with Linux artifacts
 gh release create v0.X.X \
@@ -188,12 +188,16 @@ gh release create v0.X.X \
   apps/desktop/dist-electron/*.AppImage \
   --title "v0.X.X - Your Title" \
   --notes "Release notes here"
+
+# Or trigger the automated release workflow
+git tag v0.X.X
+git push origin main --tags
 ```
 
 **Required GitHub Secrets:**
 - `GITHUB_TOKEN` - Provided automatically by GitHub Actions for release publishing
-- `TAURI_SIGNING_PRIVATE_KEY` - Private signing key content
-- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` - Key password (if set)
+
+No additional signing secrets are required for the current Linux release workflow.
 
 **Do not inject into public desktop release builds:**
 - `TURSO_DATABASE_URL`
