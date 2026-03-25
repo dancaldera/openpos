@@ -41,13 +41,6 @@ const FILES_TO_UPDATE: FileToUpdate[] = [
     pattern: /"version":\s*"[\d.]+"/,
     replacement: (version: string) => `"version": "${version}"`,
   },
-  // CI/CD
-  {
-    name: 'Release workflow',
-    path: resolve(repoRoot, '.github/workflows/release.yml'),
-    pattern: /^(\s*APP_VERSION:\s*)[\d.]+$/m,
-    replacement: (version: string) => `$1${version}`,
-  },
 ]
 
 async function bumpVersion(newVersion: string) {
