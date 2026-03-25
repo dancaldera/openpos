@@ -13,6 +13,8 @@ export const isChecking = signal(false)
 export const downloadError = signal<string | null>(null)
 export const lastCheckTime = signal(0)
 export const updateReadyToInstall = signal(false)
+export const updateReleaseUrl = signal<string | null>(null)
+export const updateReleaseNotes = signal<string | null>(null)
 
 /**
  * Computed: True when an update is available and has a version
