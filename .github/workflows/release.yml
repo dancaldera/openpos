@@ -9,7 +9,6 @@ on:
       tag:
         description: Release tag to build and publish
         required: true
-        default: v0.3.2
         type: string
 
 permissions:
@@ -48,13 +47,57 @@ jobs:
       - name: Validate release version
         id: version
         run: |
-          node -e "const fs = require('fs'); const tag = process.env.RELEASE_TAG.replace(/^v/, ''); const files = ['apps/desktop/package.json', 'apps/api/package.json', 'apps/landing/package.json']; for (const file of files) { const version = JSON.parse(fs.readFileSync(file, 'utf8')).version; if (version !== tag) { console.error(`${file} version ${version} does not match tag ${tag}`); process.exit(1); } } fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${tag}\n`);"
+          node <<'EOF'
+          const fs = require('fs')
+
+          const output = process.env.GITHUB_OUTPUT
+          if (!output) {
+            throw new Error('GITHUB_OUTPUT is not defined')
+          }
+
+          const tag = process.env.RELEASE_TAG.replace(/^v/, '')
+          const files = ['apps/desktop/package.json', 'apps/api/package.json', 'apps/landing/package.json']
+
+          for (const file of files) {
+            const version = JSON.parse(fs.readFileSync(file, 'utf8')).version
+            if (version !== tag) {
+              console.error(`${file} version ${version} does not match tag ${tag}`)
+              process.exit(1)
+            }
+          }
+
+          fs.appendFileSync(output, `version=${tag}\n`)
+          EOF
+
+      - name: Print release context
+        run: |
+          echo "Release tag: ${RELEASE_TAG}"
+          echo "Validated version: ${{ steps.version.outputs.version }}"
 
       - name: Check desktop app
         run: bun run --cwd apps/desktop check
 
       - name: Build Linux artifacts
         run: bun run --cwd apps/desktop build:desktop:linux
+
+      - name: Verify Linux artifacts
+        run: |
+          shopt -s nullglob
+          appimages=(apps/desktop/dist-electron/*.AppImage)
+          debs=(apps/desktop/dist-electron/*.deb)
+
+          if [ ${#appimages[@]} -eq 0 ]; then
+            echo "Missing AppImage artifact in apps/desktop/dist-electron"
+            exit 1
+          fi
+
+          if [ ${#debs[@]} -eq 0 ]; then
+            echo "Missing deb artifact in apps/desktop/dist-electron"
+            exit 1
+          fi
+
+          printf 'AppImage artifacts:\n%s\n' "${appimages[@]}"
+          printf 'deb artifacts:\n%s\n' "${debs[@]}"
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
