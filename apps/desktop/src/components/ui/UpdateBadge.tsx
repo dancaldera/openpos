@@ -16,6 +16,8 @@ import {
 import { SpinnerIcon } from './icons'
 
 const currentAppVersion = signal<string | null>(null)
+const FALLBACK_RELEASE_URL = 'https://github.com/dancaldera/OpenPOS/releases/latest'
+
 if (isDesktop) {
   getDesktopApi()
     ?.getInfo()
@@ -23,6 +25,42 @@ if (isDesktop) {
       currentAppVersion.value = version
     })
     .catch(() => {})
+}
+
+export interface UpdateBadgeViewModelInput {
+  available: boolean
+  checking: boolean
+  checkedAt: number
+  error: string | null
+  installedVersion: string | null
+  latestVersion: string | null
+  releaseNotes: string | null
+  releaseUrl: string | null
+}
+
+export function getUpdateBadgeViewModel({
+  available,
+  checking,
+  checkedAt,
+  error,
+  installedVersion,
+  latestVersion,
+  releaseNotes,
+  releaseUrl,
+}: UpdateBadgeViewModelInput) {
+  return {
+    borderClass: available ? 'border-amber-500/40' : 'border-gray-700/50',
+    iconColorClass: available ? 'text-amber-400' : 'text-gray-400',
+    headline: available ? 'New version available' : 'Check for a newer release',
+    installedVersionLabel: installedVersion ?? '…',
+    primaryLabel: available && latestVersion ? `v${latestVersion}` : 'Updates',
+    latestVersionLabel: latestVersion,
+    lastCheckedLabel: checkedAt > 0 ? new Date(checkedAt).toLocaleTimeString() : null,
+    releaseNotesPreview: releaseNotes ? releaseNotes.slice(0, 200) : null,
+    releaseUrl: releaseUrl ?? FALLBACK_RELEASE_URL,
+    checkingLabel: checking ? 'Checking…' : 'Check for updates',
+    error,
+  }
 }
 
 function RocketIcon({ class: className }: { class?: string }) {
@@ -63,56 +101,65 @@ export function UpdateBadge() {
   const error = downloadError.value
   const checkedAt = lastCheckTime.value
 
-  const borderClass = available ? 'border-amber-500/40' : 'border-gray-700/50'
-  const iconColorClass = available ? 'text-amber-400' : 'text-gray-400'
+  const viewModel = getUpdateBadgeViewModel({
+    available,
+    checking,
+    checkedAt,
+    error,
+    installedVersion,
+    latestVersion,
+    releaseNotes,
+    releaseUrl,
+  })
 
   async function handleViewRelease() {
-    const url = releaseUrl ?? 'https://github.com/dancaldera/OpenPOS/releases/latest'
-    await getDesktopApi()?.updates.openReleasePage(url)
+    await getDesktopApi()?.updates.openReleasePage(viewModel.releaseUrl)
   }
 
   return (
     <div ref={wrapperRef} class="fixed bottom-4 left-4 z-50 flex flex-col items-start gap-2">
       {popoverOpen.value && (
         <div
-          class={`mb-1 w-64 rounded-lg border ${borderClass} bg-gray-900/95 backdrop-blur-sm shadow-xl text-xs text-gray-300 overflow-hidden`}
+          class={`mb-1 w-64 rounded-lg border ${viewModel.borderClass} bg-gray-900/95 backdrop-blur-sm shadow-xl text-xs text-gray-300 overflow-hidden`}
         >
           <div class="px-4 py-3 border-b border-white/10">
             <p class="font-semibold text-white text-sm">App Update</p>
-            <p class="text-gray-400 mt-0.5">{available ? 'New version available' : 'Check for a newer release'}</p>
+            <p class="text-gray-400 mt-0.5">{viewModel.headline}</p>
           </div>
 
           <div class="px-4 py-3 space-y-2.5">
             <div class="flex items-center justify-between">
               <span class="text-gray-400">Installed</span>
-              <span class="text-gray-200">{installedVersion ?? '…'}</span>
+              <span class="text-gray-200">{viewModel.installedVersionLabel}</span>
             </div>
 
-            {latestVersion && (
+            {viewModel.latestVersionLabel && (
               <div class="flex items-center justify-between">
                 <span class="text-gray-400">Latest</span>
-                <span class={available ? 'text-amber-400 font-medium' : 'text-gray-200'}>{latestVersion}</span>
+                <span class={available ? 'text-amber-400 font-medium' : 'text-gray-200'}>
+                  {viewModel.latestVersionLabel}
+                </span>
               </div>
             )}
 
-            {checkedAt > 0 && (
+            {viewModel.lastCheckedLabel && (
               <div class="flex items-center justify-between">
                 <span class="text-gray-400">Last checked</span>
-                <span class="text-gray-200">{new Date(checkedAt).toLocaleTimeString()}</span>
+                <span class="text-gray-200">{viewModel.lastCheckedLabel}</span>
               </div>
             )}
 
-            {releaseNotes && (
+            {viewModel.releaseNotesPreview && (
               <div class="space-y-1 pt-0.5">
                 <span class="text-gray-400">Release notes</span>
-                <p class="text-gray-300 leading-relaxed line-clamp-3">{releaseNotes.slice(0, 200)}</p>
+                <p class="text-gray-300 leading-relaxed line-clamp-3">{viewModel.releaseNotesPreview}</p>
               </div>
             )}
 
-            {error && (
+            {viewModel.error && (
               <div class="space-y-1 pt-0.5">
                 <span class="text-gray-400">Error</span>
-                <p class="text-rose-300 leading-relaxed">{error}</p>
+                <p class="text-rose-300 leading-relaxed">{viewModel.error}</p>
               </div>
             )}
           </div>
@@ -127,7 +174,7 @@ export function UpdateBadge() {
               class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium transition-colors disabled:opacity-50"
             >
               {checking && <SpinnerIcon class="w-3 h-3 animate-spin" />}
-              {checking ? 'Checking…' : 'Check for updates'}
+              {viewModel.checkingLabel}
             </button>
 
             {available && (
@@ -148,18 +195,18 @@ export function UpdateBadge() {
         onClick={() => {
           popoverOpen.value = !popoverOpen.value
         }}
-        class={`relative flex items-center gap-2 px-3 py-1.5 rounded-full border ${borderClass} bg-gray-900/90 backdrop-blur-sm shadow-lg cursor-pointer select-none transition-opacity hover:opacity-90 active:scale-95`}
+        class={`relative flex items-center gap-2 px-3 py-1.5 rounded-full border ${viewModel.borderClass} bg-gray-900/90 backdrop-blur-sm shadow-lg cursor-pointer select-none transition-opacity hover:opacity-90 active:scale-95`}
         title="App updates"
       >
         {checking ? (
-          <SpinnerIcon class={`w-3 h-3 animate-spin ${iconColorClass}`} />
+          <SpinnerIcon class={`w-3 h-3 animate-spin ${viewModel.iconColorClass}`} />
         ) : (
           <span class="relative inline-flex">
-            <RocketIcon class={`w-3 h-3 ${iconColorClass}`} />
+            <RocketIcon class={`w-3 h-3 ${viewModel.iconColorClass}`} />
             {available && <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />}
           </span>
         )}
-        <span class={`text-xs font-medium ${iconColorClass}`}>{available ? `v${latestVersion}` : 'Updates'}</span>
+        <span class={`text-xs font-medium ${viewModel.iconColorClass}`}>{viewModel.primaryLabel}</span>
       </button>
     </div>
   )

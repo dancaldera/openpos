@@ -12,13 +12,39 @@ import {
 const GITHUB_RELEASES_URL = 'https://api.github.com/repos/dancaldera/OpenPOS/releases/latest'
 const GITHUB_RELEASES_PAGE = 'https://github.com/dancaldera/OpenPOS/releases/latest'
 
-function isNewerVersion(latest: string, current: string): boolean {
-  const parse = (v: string) => v.split('.').map(Number)
-  const [lMaj, lMin, lPatch] = parse(latest)
-  const [cMaj, cMin, cPatch] = parse(current)
+function parseVersion(version: string): [number, number, number] | null {
+  if (!/^\d+\.\d+\.\d+$/.test(version)) {
+    return null
+  }
+
+  const [major, minor, patch] = version.split('.').map((part) => Number.parseInt(part, 10))
+  if ([major, minor, patch].some((part) => Number.isNaN(part))) {
+    return null
+  }
+
+  return [major, minor, patch]
+}
+
+export function isNewerVersion(latest: string, current: string): boolean {
+  const latestParts = parseVersion(latest)
+  const currentParts = parseVersion(current)
+
+  if (!latestParts || !currentParts) {
+    return false
+  }
+
+  const [lMaj, lMin, lPatch] = latestParts
+  const [cMaj, cMin, cPatch] = currentParts
   if (lMaj !== cMaj) return lMaj > cMaj
   if (lMin !== cMin) return lMin > cMin
   return lPatch > cPatch
+}
+
+function clearUpdateMetadata(): void {
+  updateAvailable.value = false
+  updateVersion.value = null
+  updateReleaseUrl.value = null
+  updateReleaseNotes.value = null
 }
 
 export const updateActions = {
@@ -57,10 +83,10 @@ export const updateActions = {
         return true
       }
 
-      updateAvailable.value = false
-      updateVersion.value = null
+      clearUpdateMetadata()
       return false
     } catch (error) {
+      clearUpdateMetadata()
       downloadError.value = error instanceof Error ? error.message : String(error)
       return false
     } finally {
