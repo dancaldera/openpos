@@ -64,6 +64,8 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) 
   let cachedConfigKey = null
   let cachedConnectModule = null
   let hardDeleteCycleCounter = 0
+  let remoteInfrastructureEnsured = false
+  let lastKnownVersion = null
   const remoteSchemaCache = new Map()
   const status = {
     status: 'offline',
@@ -196,6 +198,56 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) 
     return columns
   }
 
+  async function ensureRemoteInfrastructure(client) {
+    if (remoteInfrastructureEnsured) return
+    try {
+      // Check if sentinel already exists (avoids re-running all setup)
+      const check = await fetchRemoteRows(client, 'SELECT version FROM sync_metadata WHERE id = 1')
+      if (check.length > 0) {
+        remoteInfrastructureEnsured = true
+        logSync('remote infrastructure already exists')
+        return
+      }
+    } catch {
+      // Table doesn't exist yet — continue with full setup
+    }
+
+    try {
+      // Create indexes on updated_at for all replicated tables
+      for (const config of replicatedTables) {
+        if (config.watermarkColumn) {
+          await client.execute(
+            `CREATE INDEX IF NOT EXISTS idx_${config.tableName}_${config.watermarkColumn} ON ${quoteIdentifier(config.tableName)}(${quoteIdentifier(config.watermarkColumn)})`,
+          )
+        }
+      }
+
+      // Create sentinel table
+      await client.execute(
+        'CREATE TABLE IF NOT EXISTS sync_metadata (id INTEGER PRIMARY KEY, version INTEGER NOT NULL DEFAULT 0)',
+      )
+      await client.execute('INSERT OR IGNORE INTO sync_metadata (id, version) VALUES (1, 0)')
+
+      // Create triggers on all replicated tables to increment sentinel version
+      for (const config of replicatedTables) {
+        const table = quoteIdentifier(config.tableName)
+        for (const op of ['ins', 'upd', 'del']) {
+          const event = op === 'ins' ? 'INSERT' : op === 'upd' ? 'UPDATE' : 'DELETE'
+          await client.execute(
+            `CREATE TRIGGER IF NOT EXISTS trg_${config.tableName}_sync_${op} AFTER ${event} ON ${table} BEGIN UPDATE sync_metadata SET version = version + 1 WHERE id = 1; END`,
+          )
+        }
+      }
+
+      remoteInfrastructureEnsured = true
+      logSync('remote infrastructure created (indexes, sentinel, triggers)')
+    } catch (error) {
+      logSync('failed to ensure remote infrastructure', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
   function resolveCompatibleWatermarkColumn(config, remoteColumns) {
     if (remoteColumns.has(config.watermarkColumn)) {
       return config.watermarkColumn
@@ -318,15 +370,20 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) 
     )
   }
 
-  async function reconcileHardDeletes(database, client, config) {
-    const remoteCountRows = await fetchRemoteRows(
-      client,
-      `SELECT COUNT(*) AS c FROM ${quoteIdentifier(config.tableName)}`,
-    )
+  async function reconcileHardDeletes(database, client, config, prefetchedRemoteCount) {
+    let remoteCount
+    if (prefetchedRemoteCount !== undefined) {
+      remoteCount = prefetchedRemoteCount
+    } else {
+      const remoteCountRows = await fetchRemoteRows(
+        client,
+        `SELECT COUNT(*) AS c FROM ${quoteIdentifier(config.tableName)}`,
+      )
+      remoteCount = Number(remoteCountRows[0]?.c ?? 0)
+    }
     const localCountRow = database
       .prepare(`SELECT COUNT(*) AS c FROM ${quoteIdentifier(config.tableName)}`)
       .get()
-    const remoteCount = Number(remoteCountRows[0]?.c ?? 0)
     const localCount = Number(localCountRow?.c ?? 0)
 
     if (remoteCount >= localCount) {
@@ -381,11 +438,102 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) 
     }
   }
 
-  async function pullRemoteChanges(database, client) {
+  async function detectChangedTables(database, client, { includeHardDeleteCounts = false } = {}) {
+    // Step 1: Check sentinel version (1 row read)
+    try {
+      const sentinel = await fetchRemoteRows(client, 'SELECT version FROM sync_metadata WHERE id = 1')
+      const remoteVersion = sentinel[0]?.version ?? null
+
+      if (
+        remoteVersion !== null &&
+        lastKnownVersion !== null &&
+        remoteVersion === lastKnownVersion &&
+        !includeHardDeleteCounts
+      ) {
+        logSync('sentinel unchanged, skipping detection', { version: remoteVersion })
+        return { changedTables: new Set(), remoteCounts: new Map() }
+      }
+
+      lastKnownVersion = remoteVersion
+    } catch {
+      // Sentinel table may not exist yet — fall through to full detection
+    }
+
+    // Step 2: Sentinel changed (or first cycle) — run EXISTS to find which tables
+    const orderedTables = [...replicatedTables].sort((left, right) => left.pullOrder - right.pullOrder)
+    const selectParts = []
+    const params = []
+    const alwaysPull = []
+    const watermarkTables = []
+
+    for (const config of orderedTables) {
+      const state = getSyncState(database, config.tableName)
+      const since = state?.last_pulled_at ?? DEFAULT_WATERMARK
+
+      if (config.watermarkColumn) {
+        selectParts.push(
+          `(SELECT EXISTS(SELECT 1 FROM ${quoteIdentifier(config.tableName)} WHERE ${quoteIdentifier(config.watermarkColumn)} > ?)) AS ${quoteIdentifier('chg_' + config.tableName)}`,
+        )
+        params.push(since)
+        watermarkTables.push(config.tableName)
+      } else {
+        alwaysPull.push(config.tableName)
+      }
+
+      if (includeHardDeleteCounts && config.deleteStrategy === 'hard' && config.tableName !== 'order_items') {
+        selectParts.push(
+          `(SELECT COUNT(*) FROM ${quoteIdentifier(config.tableName)}) AS ${quoteIdentifier('cnt_' + config.tableName)}`,
+        )
+      }
+    }
+
+    const changedTables = new Set(alwaysPull)
+    const remoteCounts = new Map()
+
+    if (selectParts.length > 0) {
+      const sql = `SELECT ${selectParts.join(', ')}`
+      const rows = await fetchRemoteRows(client, sql, params)
+      const row = rows[0]
+
+      if (row) {
+        for (const tableName of watermarkTables) {
+          if (row['chg_' + tableName] === 1) {
+            changedTables.add(tableName)
+          }
+        }
+
+        for (const config of orderedTables) {
+          const countKey = 'cnt_' + config.tableName
+          if (countKey in row) {
+            remoteCounts.set(config.tableName, Number(row[countKey]))
+          }
+        }
+      }
+    }
+
+    logSync('change detection completed', {
+      changedTables: [...changedTables],
+      totalTables: orderedTables.length,
+    })
+
+    return { changedTables, remoteCounts }
+  }
+
+  async function runHardDeleteReconciliation(database, client, remoteCounts) {
+    const hardDeleteTables = replicatedTables.filter(
+      (config) => config.deleteStrategy === 'hard' && config.tableName !== 'order_items',
+    )
+    for (const config of hardDeleteTables) {
+      const remoteCount = remoteCounts.get(config.tableName)
+      if (remoteCount !== undefined) {
+        await reconcileHardDeletes(database, client, config, remoteCount)
+      }
+    }
+  }
+
+  async function pullRemoteChanges(database, client, changedTables) {
     const orderedTables = [...replicatedTables].sort((left, right) => left.pullOrder - right.pullOrder)
     const changedOrderIds = new Set()
-    hardDeleteCycleCounter++
-    const runHardDeletes = hardDeleteCycleCounter % 4 === 0
     const queuedOrderIds = new Set(
       database
         .prepare(
@@ -398,36 +546,20 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) 
     )
 
     for (const config of orderedTables) {
+      if (!changedTables.has(config.tableName)) {
+        continue
+      }
+
       const remoteColumns = await getRemoteTableColumns(client, config.tableName)
       const effectiveWatermarkColumn = resolveCompatibleWatermarkColumn(config, remoteColumns)
       const state = getSyncState(database, config.tableName)
       const since = state?.last_pulled_at ?? DEFAULT_WATERMARK
 
-      logSync('pulling remote rows', {
+      logSync('pulling changed rows', {
         table: config.tableName,
         since,
         watermarkColumn: effectiveWatermarkColumn ?? 'FULL_TABLE_SCAN',
       })
-
-      if (effectiveWatermarkColumn) {
-        const countRows = await fetchRemoteRows(
-          client,
-          `SELECT COUNT(*) AS c FROM ${quoteIdentifier(config.tableName)}
-            WHERE ${quoteIdentifier(effectiveWatermarkColumn)} > ?`,
-          [since],
-        )
-        const changedCount = Number(countRows[0]?.c ?? 0)
-
-        if (changedCount === 0) {
-          logSync('table unchanged, skipping pull', { table: config.tableName })
-
-          if (config.deleteStrategy === 'hard' && config.tableName !== 'order_items' && runHardDeletes) {
-            await reconcileHardDeletes(database, client, config)
-          }
-
-          continue
-        }
-      }
 
       const remoteRows = effectiveWatermarkColumn
         ? await fetchRemoteRows(
@@ -508,10 +640,6 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) 
         for (const row of remoteRows) {
           upsertLocalRow(database, config, row)
         }
-      }
-
-      if (config.deleteStrategy === 'hard' && config.tableName !== 'order_items' && runHardDeletes) {
-        await reconcileHardDeletes(database, client, config)
       }
 
       if (remoteRows.length > 0 && effectiveWatermarkColumn) {
@@ -737,11 +865,21 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) 
     }
 
     beginSync({ foreground })
-    logSync('probing Turso connectivity')
-    await client.execute('SELECT 1')
-    logSync('Turso connectivity probe succeeded')
+    await ensureRemoteInfrastructure(client)
+    hardDeleteCycleCounter++
+    const runHardDeletes = hardDeleteCycleCounter % 8 === 0
+    const { changedTables, remoteCounts } = await detectChangedTables(database, client, {
+      includeHardDeleteCounts: runHardDeletes,
+    })
 
-    await pullRemoteChanges(database, client)
+    if (changedTables.size > 0) {
+      await pullRemoteChanges(database, client, changedTables)
+    } else {
+      logSync('no changes detected, skipping pull')
+    }
+    if (runHardDeletes && remoteCounts.size > 0) {
+      await runHardDeleteReconciliation(database, client, remoteCounts)
+    }
     logSync('remote pull phase completed')
     await flushOutbox(database, client)
     logSync('outbox flush completed')
