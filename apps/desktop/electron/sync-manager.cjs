@@ -57,9 +57,13 @@ function rowsMateriallyEqual(config, left, right) {
   })
 }
 
-function createSyncManager({ getDatabase, getRemoteConfig }) {
+function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) {
   let pollTimer = null
   let syncPromise = null
+  let cachedClient = null
+  let cachedConfigKey = null
+  let cachedConnectModule = null
+  let hardDeleteCycleCounter = 0
   const remoteSchemaCache = new Map()
   const status = {
     status: 'offline',
@@ -91,9 +95,27 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     }
   }
 
+  function invalidateCachedClient() {
+    cachedClient = null
+    cachedConfigKey = null
+  }
+
   async function getTursoClient() {
     const config = getRemoteConfig()
     status.remoteConfigured = Boolean(config.configured)
+
+    if (!config.configured || !config.url || !config.authToken) {
+      invalidateCachedClient()
+      logSync('remote client unavailable because config is incomplete')
+      return null
+    }
+
+    const configKey = `${config.url}:${config.authToken}`
+
+    if (cachedClient && cachedConfigKey === configKey) {
+      return cachedClient
+    }
+
     logSync('resolve remote config', {
       configured: Boolean(config.configured),
       hasUrl: Boolean(config.url),
@@ -101,17 +123,17 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
       url: config.url ?? null,
     })
 
-    if (!config.configured || !config.url || !config.authToken) {
-      logSync('remote client unavailable because config is incomplete')
-      return null
+    if (!cachedConnectModule) {
+      cachedConnectModule = (await import('@tursodatabase/serverless')).connect
     }
 
-    const { connect } = await import('@tursodatabase/serverless')
     logSync('creating Turso client')
-    return connect({
+    cachedClient = cachedConnectModule({
       url: config.url,
       authToken: config.authToken,
     })
+    cachedConfigKey = configKey
+    return cachedClient
   }
 
   function setStatus(nextStatus, error = null) {
@@ -297,6 +319,31 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
   }
 
   async function reconcileHardDeletes(database, client, config) {
+    const remoteCountRows = await fetchRemoteRows(
+      client,
+      `SELECT COUNT(*) AS c FROM ${quoteIdentifier(config.tableName)}`,
+    )
+    const localCountRow = database
+      .prepare(`SELECT COUNT(*) AS c FROM ${quoteIdentifier(config.tableName)}`)
+      .get()
+    const remoteCount = Number(remoteCountRows[0]?.c ?? 0)
+    const localCount = Number(localCountRow?.c ?? 0)
+
+    if (remoteCount >= localCount) {
+      logSync('hard delete reconciliation skipped (counts match or remote has more)', {
+        table: config.tableName,
+        remoteCount,
+        localCount,
+      })
+      return
+    }
+
+    logSync('hard delete reconciliation running (local has extra rows)', {
+      table: config.tableName,
+      remoteCount,
+      localCount,
+    })
+
     const remoteIds = new Set(
       (
         await fetchRemoteRows(
@@ -337,6 +384,8 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
   async function pullRemoteChanges(database, client) {
     const orderedTables = [...replicatedTables].sort((left, right) => left.pullOrder - right.pullOrder)
     const changedOrderIds = new Set()
+    hardDeleteCycleCounter++
+    const runHardDeletes = hardDeleteCycleCounter % 4 === 0
     const queuedOrderIds = new Set(
       database
         .prepare(
@@ -359,6 +408,27 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
         since,
         watermarkColumn: effectiveWatermarkColumn ?? 'FULL_TABLE_SCAN',
       })
+
+      if (effectiveWatermarkColumn) {
+        const countRows = await fetchRemoteRows(
+          client,
+          `SELECT COUNT(*) AS c FROM ${quoteIdentifier(config.tableName)}
+            WHERE ${quoteIdentifier(effectiveWatermarkColumn)} > ?`,
+          [since],
+        )
+        const changedCount = Number(countRows[0]?.c ?? 0)
+
+        if (changedCount === 0) {
+          logSync('table unchanged, skipping pull', { table: config.tableName })
+
+          if (config.deleteStrategy === 'hard' && config.tableName !== 'order_items' && runHardDeletes) {
+            await reconcileHardDeletes(database, client, config)
+          }
+
+          continue
+        }
+      }
+
       const remoteRows = effectiveWatermarkColumn
         ? await fetchRemoteRows(
             client,
@@ -390,41 +460,49 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
       }
 
       if (config.tableName === 'order_items') {
-        const refreshedOrderIds = []
-        const deleteByOrderStatement = database.prepare('DELETE FROM order_items WHERE order_id = ?')
-
-        for (const orderId of changedOrderIds) {
-          if (queuedOrderIds.has(orderId)) {
-            logSync('child snapshot skipped because local aggregate push is pending', {
-              orderId,
-            })
-            continue
+        const pullableOrderIds = [...changedOrderIds].filter((id) => {
+          if (queuedOrderIds.has(id)) {
+            logSync('child snapshot skipped because local aggregate push is pending', { orderId: id })
+            return false
           }
+          return true
+        })
 
+        if (pullableOrderIds.length > 0) {
+          const placeholders = pullableOrderIds.map(() => '?').join(', ')
           const remoteSnapshotRows = await fetchRemoteRows(
             client,
             `SELECT ${buildRemoteSelectColumns(config, remoteColumns, effectiveWatermarkColumn)}
                FROM ${quoteIdentifier(config.tableName)}
-              WHERE order_id = ?
-              ORDER BY ${quoteIdentifier(config.primaryKey)} ASC`,
-            [coerceRecordId(orderId)],
+              WHERE order_id IN (${placeholders})
+              ORDER BY order_id ASC, ${quoteIdentifier(config.primaryKey)} ASC`,
+            pullableOrderIds.map((id) => coerceRecordId(id)),
           )
 
-          deleteByOrderStatement.run(coerceRecordId(orderId))
+          const itemsByOrder = new Map()
           for (const row of remoteSnapshotRows) {
-            upsertLocalRow(database, config, row)
+            const oid = String(row.order_id)
+            if (!itemsByOrder.has(oid)) {
+              itemsByOrder.set(oid, [])
+            }
+            itemsByOrder.get(oid).push(row)
           }
 
-          refreshedOrderIds.push({
-            orderId,
-            itemCount: remoteSnapshotRows.length,
-          })
-        }
+          const deleteByOrderStatement = database.prepare('DELETE FROM order_items WHERE order_id = ?')
+          const refreshedOrderIds = []
 
-        if (refreshedOrderIds.length > 0) {
-          logSync('full child snapshot refreshed', {
-            orders: refreshedOrderIds,
-          })
+          for (const orderId of pullableOrderIds) {
+            deleteByOrderStatement.run(coerceRecordId(orderId))
+            const items = itemsByOrder.get(orderId) ?? []
+            for (const row of items) {
+              upsertLocalRow(database, config, row)
+            }
+            refreshedOrderIds.push({ orderId, itemCount: items.length })
+          }
+
+          if (refreshedOrderIds.length > 0) {
+            logSync('full child snapshot refreshed', { orders: refreshedOrderIds })
+          }
         }
       } else {
         for (const row of remoteRows) {
@@ -432,7 +510,7 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
         }
       }
 
-      if (config.deleteStrategy === 'hard' && config.tableName !== 'order_items') {
+      if (config.deleteStrategy === 'hard' && config.tableName !== 'order_items' && runHardDeletes) {
         await reconcileHardDeletes(database, client, config)
       }
 
@@ -505,18 +583,14 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     return remoteUpdatedAt >= localUpdatedAt
   }
 
-  async function restoreAuthoritativeLocalState(database, client, config, recordId) {
-    const remoteRow = await fetchRemoteRow(client, config, recordId)
-
+  function applyLocalState(database, config, remoteRow, recordId) {
     if (remoteRow) {
       upsertLocalRow(database, config, remoteRow)
-      return remoteRow
+    } else {
+      database
+        .prepare(`DELETE FROM ${quoteIdentifier(config.tableName)} WHERE ${quoteIdentifier(config.primaryKey)} = ?`)
+        .run(coerceRecordId(recordId))
     }
-
-    database
-      .prepare(`DELETE FROM ${quoteIdentifier(config.tableName)} WHERE ${quoteIdentifier(config.primaryKey)} = ?`)
-      .run(coerceRecordId(recordId))
-    return null
   }
 
   async function flushOutbox(database, client) {
@@ -528,7 +602,7 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
           ORDER BY created_at ASC, id ASC`,
       )
       .all(...OUTBOX_ACTIVE_STATUSES)
-    const affectedRecords = []
+    const affectedTables = new Set()
 
     for (const row of rows) {
       const config = replicatedTablesByName[row.table_name]
@@ -563,7 +637,7 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
             table: config.tableName,
             recordId: String(row.record_id),
           })
-          await restoreAuthoritativeLocalState(database, client, config, row.record_id)
+          applyLocalState(database, config, remoteRow, row.record_id)
           markOutboxRow(database, row.id, {
             status: 'synced',
             attempts: Number(row.attempts ?? 0),
@@ -577,7 +651,7 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
           table: config.tableName,
           recordId: String(row.record_id),
         })
-        await restoreAuthoritativeLocalState(database, client, config, row.record_id)
+        applyLocalState(database, config, remoteRow, row.record_id)
         markOutboxRow(database, row.id, {
           status: 'conflict',
           attempts: Number(row.attempts ?? 0) + 1,
@@ -587,7 +661,7 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
       }
 
       if (row.operation !== 'DELETE' && remoteRow === null && row.base_remote_updated_at) {
-        await restoreAuthoritativeLocalState(database, client, config, row.record_id)
+        applyLocalState(database, config, null, row.record_id)
         markOutboxRow(database, row.id, {
           status: 'conflict',
           attempts: Number(row.attempts ?? 0) + 1,
@@ -597,7 +671,7 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
       }
 
       if (remoteWinsConflict(row.base_remote_updated_at, localUpdatedAt, remoteUpdatedAt)) {
-        await restoreAuthoritativeLocalState(database, client, config, row.record_id)
+        applyLocalState(database, config, remoteRow, row.record_id)
         markOutboxRow(database, row.id, {
           status: 'conflict',
           attempts: Number(row.attempts ?? 0) + 1,
@@ -620,17 +694,13 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
           await upsertRemoteRow(client, config, localPayload)
         }
 
-        await restoreAuthoritativeLocalState(database, client, config, row.record_id)
         markOutboxRow(database, row.id, {
           status: 'synced',
           attempts: Number(row.attempts ?? 0),
           lastError: null,
           syncedAt: new Date().toISOString(),
         })
-        affectedRecords.push({
-          tableName: config.tableName,
-          recordId: row.record_id,
-        })
+        affectedTables.add(config.tableName)
       } catch (error) {
         markOutboxRow(database, row.id, {
           status: 'error',
@@ -640,24 +710,9 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
       }
     }
 
-    return affectedRecords
-  }
-
-  async function refreshAffectedRows(database, client, affectedRecords) {
-    const deduped = new Map()
-
-    for (const item of affectedRecords) {
-      deduped.set(`${item.tableName}:${item.recordId}`, item)
-    }
-
-    for (const item of deduped.values()) {
-      const config = replicatedTablesByName[item.tableName]
-      if (!config) continue
-
-      await restoreAuthoritativeLocalState(database, client, config, item.recordId)
-
-      const state = getSyncState(database, config.tableName)
-      upsertSyncState(database, config.tableName, {
+    for (const tableName of affectedTables) {
+      const state = getSyncState(database, tableName)
+      upsertSyncState(database, tableName, {
         lastPulledAt: state?.last_pulled_at ?? DEFAULT_WATERMARK,
         lastSyncAt: new Date().toISOString(),
       })
@@ -688,12 +743,19 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
 
     await pullRemoteChanges(database, client)
     logSync('remote pull phase completed')
-    const affectedRecords = await flushOutbox(database, client)
-    logSync('outbox flush completed', {
-      affectedRecords: affectedRecords.length,
-    })
-    await refreshAffectedRows(database, client, affectedRecords)
-    logSync('affected rows refresh completed')
+    await flushOutbox(database, client)
+    logSync('outbox flush completed')
+
+    if (onFlushOrderQueue) {
+      try {
+        await onFlushOrderQueue(client)
+        logSync('order queue flush completed')
+      } catch (error) {
+        logSync('order queue flush failed', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
 
     status.status = 'online'
     status.isSyncing = false
@@ -719,6 +781,7 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
         logSync('sync failed', {
           error: error instanceof Error ? error.message : String(error),
         })
+        invalidateCachedClient()
         endSync()
         setStatus('offline', error)
         return getStatusSnapshot(getDatabase())
@@ -731,36 +794,8 @@ function createSyncManager({ getDatabase, getRemoteConfig }) {
     return syncPromise
   }
 
-  async function heartbeat({ runSync = true } = {}) {
-    const database = getDatabase()
-    refreshCounts(database)
-
-    const client = await getTursoClient().catch((error) => {
-      setStatus('offline', error)
-      return null
-    })
-
-    if (!client) {
-      setStatus('offline')
-      return getStatusSnapshot(database)
-    }
-
-    try {
-      await client.execute('SELECT 1')
-    } catch (error) {
-      setStatus('offline', error)
-      return getStatusSnapshot(database)
-    }
-
-    if (runSync) {
-      return triggerSync({ foreground: false })
-    }
-
-    status.status = 'online'
-    status.lastError = null
-    status.lastCheckedAt = new Date().toISOString()
-
-    return getStatusSnapshot(database)
+  async function heartbeat() {
+    return triggerSync({ foreground: false })
   }
 
   function start(intervalMs = 15_000) {

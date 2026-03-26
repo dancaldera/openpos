@@ -14,10 +14,9 @@ let db = null
 let syncManager = null
 let initialSyncPromise = null
 let initialSyncError = null
-let orderSyncTimer = null
-let orderSyncPromise = null
-
-const ORDER_SYNC_INTERVAL_MS = 15_000
+let cachedRemoteClient = null
+let cachedRemoteConfigKey = null
+let cachedRemoteConnectModule = null
 const ORDER_COLUMNS = [
   'id',
   'subtotal',
@@ -476,14 +475,27 @@ async function getRemoteDbClient() {
   const config = getDbConnectionConfig()
 
   if (!config.configured || !config.url || !config.authToken) {
+    cachedRemoteClient = null
+    cachedRemoteConfigKey = null
     return null
   }
 
-  const { connect } = await import('@tursodatabase/serverless')
-  return connect({
+  const configKey = `${config.url}:${config.authToken}`
+
+  if (cachedRemoteClient && cachedRemoteConfigKey === configKey) {
+    return cachedRemoteClient
+  }
+
+  if (!cachedRemoteConnectModule) {
+    cachedRemoteConnectModule = (await import('@tursodatabase/serverless')).connect
+  }
+
+  cachedRemoteClient = cachedRemoteConnectModule({
     url: config.url,
     authToken: config.authToken,
   })
+  cachedRemoteConfigKey = configKey
+  return cachedRemoteClient
 }
 
 function upsertOrderSyncQueue(database, orderId, operation, lastError = null) {
@@ -623,60 +635,37 @@ async function syncOrderAggregate(orderId, operation, options = {}) {
   }
 }
 
-async function flushOrderSyncQueue() {
-  if (orderSyncPromise) {
-    return orderSyncPromise
-  }
+async function flushOrderSyncQueueWithClient(client) {
+  const database = ensureDatabase()
+  const queuedOrders = database
+    .prepare('SELECT order_id, operation FROM order_sync_queue ORDER BY updated_at ASC')
+    .all()
 
-  orderSyncPromise = (async () => {
-    const database = ensureDatabase()
-    const queuedOrders = database
-      .prepare('SELECT order_id, operation FROM order_sync_queue ORDER BY updated_at ASC')
-      .all()
-
-    for (const row of queuedOrders) {
-      try {
-        await syncOrderAggregate(row.order_id, row.operation, { queueOnError: false })
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        database
-          .prepare(
-            `UPDATE order_sync_queue
-                SET attempts = attempts + 1,
-                    last_error = ?,
-                    updated_at = ?
-              WHERE order_id = ?`,
-          )
-          .run(message, new Date().toISOString(), String(row.order_id))
-        logOrderSync('aggregate retry failed', {
-          orderId: String(row.order_id),
-          operation: row.operation,
-          error: message,
-        })
-      }
+  for (const row of queuedOrders) {
+    try {
+      await applyRemoteOrderAggregate(client, database, row.order_id, row.operation)
+      clearOrderSyncQueue(database, row.order_id)
+      logOrderSync('aggregate synced', {
+        orderId: String(row.order_id),
+        operation: row.operation,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      database
+        .prepare(
+          `UPDATE order_sync_queue
+              SET attempts = attempts + 1,
+                  last_error = ?,
+                  updated_at = ?
+            WHERE order_id = ?`,
+        )
+        .run(message, new Date().toISOString(), String(row.order_id))
+      logOrderSync('aggregate retry failed', {
+        orderId: String(row.order_id),
+        operation: row.operation,
+        error: message,
+      })
     }
-  })().finally(() => {
-    orderSyncPromise = null
-  })
-
-  return orderSyncPromise
-}
-
-function startOrderSyncQueue() {
-  if (orderSyncTimer) {
-    return
-  }
-
-  void flushOrderSyncQueue()
-  orderSyncTimer = setInterval(() => {
-    void flushOrderSyncQueue()
-  }, ORDER_SYNC_INTERVAL_MS)
-}
-
-function stopOrderSyncQueue() {
-  if (orderSyncTimer) {
-    clearInterval(orderSyncTimer)
-    orderSyncTimer = null
   }
 }
 
@@ -868,11 +857,11 @@ app.whenReady().then(() => {
   syncManager = createSyncManager({
     getDatabase: ensureDatabase,
     getRemoteConfig: getDbConnectionConfig,
+    onFlushOrderQueue: flushOrderSyncQueueWithClient,
   })
   registerIpcHandlers()
   createWindow()
   syncManager.start()
-  startOrderSyncQueue()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -891,8 +880,6 @@ app.on('before-quit', () => {
   if (syncManager) {
     syncManager.stop()
   }
-
-  stopOrderSyncQueue()
 
   if (db) {
     db.close()
