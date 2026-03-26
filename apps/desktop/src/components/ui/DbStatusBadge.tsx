@@ -16,6 +16,7 @@ import {
   pendingCount,
   remoteConfigured,
 } from '../../lib/db'
+import { isDesktop } from '../../lib/platform'
 import { formatRelativeTime } from '../../lib/utils'
 import { SpinnerIcon } from './icons'
 
@@ -68,6 +69,8 @@ function getBadgeLabel(
 }
 
 export function DbStatusBadge() {
+  if (!isDesktop) return null
+
   const popoverOpen = useSignal(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   useClickOutside(wrapperRef, () => {
