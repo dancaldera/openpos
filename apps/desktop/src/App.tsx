@@ -33,7 +33,6 @@ function App() {
     const initializeApp = async () => {
       await languageActions.initializeLanguage()
       await appSettingsStore.initialize()
-      startDbStatusMonitor()
 
       if (!isDesktop) {
         await authActions.initializeAuth()
@@ -44,6 +43,7 @@ function App() {
       }
 
       try {
+        startDbStatusMonitor()
         const startupApi = requireDesktopApi().startup
         const status = await startupApi.getStatus()
 
