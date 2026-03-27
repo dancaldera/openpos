@@ -78,26 +78,19 @@ jobs:
         run: bun run --cwd apps/desktop check
 
       - name: Build Linux artifacts
-        run: bun run --cwd apps/desktop build:desktop:linux
+        run: bun run --cwd apps/desktop build:desktop:linux:appimage
 
       - name: Verify Linux artifacts
         run: |
           shopt -s nullglob
           appimages=(apps/desktop/dist-electron/*.AppImage)
-          debs=(apps/desktop/dist-electron/*.deb)
 
           if [ ${#appimages[@]} -eq 0 ]; then
             echo "Missing AppImage artifact in apps/desktop/dist-electron"
             exit 1
           fi
 
-          if [ ${#debs[@]} -eq 0 ]; then
-            echo "Missing deb artifact in apps/desktop/dist-electron"
-            exit 1
-          fi
-
           printf 'AppImage artifacts:\n%s\n' "${appimages[@]}"
-          printf 'deb artifacts:\n%s\n' "${debs[@]}"
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
@@ -108,4 +101,3 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             apps/desktop/dist-electron/*.AppImage
-            apps/desktop/dist-electron/*.deb
