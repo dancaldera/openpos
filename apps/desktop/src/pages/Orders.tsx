@@ -21,8 +21,61 @@ import { companySettingsService } from '../services/company-settings-turso'
 import { type Customer, customerService } from '../services/customers-turso'
 import { type Order, orderService } from '../services/orders-turso'
 import { formatReceiptData, printThermalReceipt } from '../services/print-service'
+import { resolveProductImageUrls } from '../services/product-images'
 import { type Product, type ProductWithVariants, productService } from '../services/products-turso'
 import { userService } from '../services/users-turso'
+
+const getCategoryIcon = (category: string): string => {
+  const icons: { [key: string]: string } = {
+    Beverages: '🥤',
+    Bakery: '🍞',
+    'Coffee & Tea': '☕',
+    Dairy: '🥛',
+    Snacks: '🍫',
+    Seafood: '🐟',
+    'Frozen Foods': '🧊',
+    'Fresh Produce': '🍎',
+    'Meat & Poultry': '🍖',
+    'Pantry Items': '🥫',
+    'Condiments & Sauces': '🫙',
+    'Breakfast Items': '🍳',
+    'Household Items': '🧽',
+    'Personal Care': '🧴',
+    Electronics: '📱',
+    Other: '📦',
+  }
+  return icons[category] || '📦'
+}
+
+interface ProductVisualProps {
+  product?: Product
+  name: string
+  imageUrl?: string
+  sizeClass?: string
+  roundedClass?: string
+  className?: string
+}
+
+function ProductVisual({
+  product,
+  name,
+  imageUrl,
+  sizeClass = 'h-10 w-10',
+  roundedClass = 'rounded-lg',
+  className = '',
+}: ProductVisualProps) {
+  return (
+    <div
+      class={`flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-sm ${sizeClass} ${roundedClass} ${className}`}
+    >
+      {imageUrl ? (
+        <img src={imageUrl} alt={name} class="h-full w-full object-cover" />
+      ) : (
+        <span class="text-base leading-none">{getCategoryIcon(product?.category || 'Other')}</span>
+      )}
+    </div>
+  )
+}
 
 export default function Orders() {
   const { t } = useTranslation()
@@ -30,6 +83,7 @@ export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([])
   const [allOrders, setAllOrders] = useState<Order[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [productCatalog, setProductCatalog] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -52,6 +106,7 @@ export default function Orders() {
   const [isPrinting, setIsPrinting] = useState(false)
   const [printStatus, setPrintStatus] = useState<string | null>(null)
   const [lastPrintTime, setLastPrintTime] = useState<number>(0)
+  const [resolvedImageUrls, setResolvedImageUrls] = useState<Record<string, string>>({})
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -126,6 +181,34 @@ export default function Orders() {
     return options
   }
 
+  const syncResolvedImageUrls = async (productList: Product[]) => {
+    const keys = Array.from(new Set(productList.map((product) => product.image?.trim()).filter(Boolean))) as string[]
+
+    if (keys.length === 0) {
+      return
+    }
+
+    try {
+      const urls = await resolveProductImageUrls(keys)
+      setResolvedImageUrls((prev) => ({
+        ...prev,
+        ...urls,
+      }))
+    } catch (err) {
+      console.error('Failed to resolve product image URLs for orders:', err)
+    }
+  }
+
+  const getProductById = (productId: string) => productCatalog.find((product) => product.id === productId)
+
+  const getProductImageUrl = (product?: Product) => {
+    if (!product?.image) {
+      return undefined
+    }
+
+    return resolvedImageUrls[product.image]
+  }
+
   const loadData = async (dateFilter?: string, page?: number) => {
     try {
       setIsLoading(true)
@@ -164,7 +247,9 @@ export default function Orders() {
       }
       setOrderStats(stats)
 
+      setProductCatalog(productsData)
       setProducts(productsData.filter((p) => p.isActive && p.stock > 0))
+      void syncResolvedImageUrls(productsData)
 
       // Load variants for all configurable products
       const variantsMap: Record<string, ProductWithVariants> = {}
@@ -896,12 +981,27 @@ export default function Orders() {
                       {order.items.length} {order.items.length === 1 ? t('orders.item') : t('orders.items')}
                     </div>
                     <div class="space-y-1">
-                      {order.items.slice(0, 2).map((item) => (
-                        <div key={item.productId} class="flex justify-between text-xs text-gray-600">
-                          <span class="truncate mr-2">{item.productName}</span>
-                          <span class="flex-shrink-0 font-medium">×{item.quantity}</span>
-                        </div>
-                      ))}
+                      {order.items.slice(0, 2).map((item, itemIndex) => {
+                        const product = getProductById(item.productId)
+                        return (
+                          <div
+                            key={`${item.productId}-${item.variantId || 'simple'}-${itemIndex}`}
+                            class="flex items-center justify-between gap-2 text-xs text-gray-600"
+                          >
+                            <div class="flex min-w-0 items-center gap-2">
+                              <ProductVisual
+                                product={product}
+                                name={item.productName}
+                                imageUrl={getProductImageUrl(product)}
+                                sizeClass="h-8 w-8"
+                                roundedClass="rounded-md"
+                              />
+                              <span class="truncate">{item.productName}</span>
+                            </div>
+                            <span class="flex-shrink-0 font-medium">×{item.quantity}</span>
+                          </div>
+                        )
+                      })}
                       {order.items.length > 2 && (
                         <div class="text-xs text-gray-500">
                           +{order.items.length - 2} {t('orders.more')}...
@@ -1154,18 +1254,24 @@ export default function Orders() {
                         >
                           <div class="flex flex-col h-full">
                             <div class="flex-1">
-                              <div class="flex items-start justify-between mb-2">
-                                <div class="font-semibold text-gray-900 text-sm leading-tight flex-1">
-                                  {product.name}
+                              <div class="flex items-start justify-between mb-3 gap-3">
+                                <div class="flex min-w-0 flex-1 items-start gap-3">
+                                  <ProductVisual
+                                    product={product}
+                                    name={product.name}
+                                    imageUrl={getProductImageUrl(product)}
+                                    sizeClass="h-12 w-12"
+                                  />
+                                  <div class="min-w-0 flex-1">
+                                    <div class="font-semibold text-gray-900 text-sm leading-tight">{product.name}</div>
+                                    <div class="text-xs text-gray-600 mt-1 font-medium bg-gray-100 px-2 py-1 rounded-full inline-block">
+                                      {product.category}
+                                    </div>
+                                  </div>
                                 </div>
                                 {isConfigurable && (
-                                  <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full ml-2">
-                                    🏷️
-                                  </span>
+                                  <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">🏷️</span>
                                 )}
-                              </div>
-                              <div class="text-xs text-gray-600 mb-3 font-medium bg-gray-100 px-2 py-1 rounded-full inline-block">
-                                {product.category}
                               </div>
                               {product.barcode && (
                                 <div class="text-[11px] text-gray-500 mb-2 font-mono">{product.barcode}</div>
@@ -1251,7 +1357,7 @@ export default function Orders() {
                 <h3 class="text-lg font-semibold text-gray-900 mb-6">{t('orders.orderSummary')}</h3>
                 <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 space-y-4">
                   {newOrder.items.map((item) => {
-                    const product = products.find((p) => p.id === item.productId)
+                    const product = getProductById(item.productId)
                     const variant = item.variantId
                       ? productsWithVariants[item.productId]?.variants?.find((v) => v.id === item.variantId)
                       : undefined
@@ -1264,23 +1370,26 @@ export default function Orders() {
                         key={`${item.productId}-${item.variantId || 'simple'}`}
                         class="flex justify-between items-center bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200"
                       >
-                        <div class="flex-1">
-                          <div class="font-semibold text-gray-900 mb-1">{product.name}</div>
-                          {variantAttributes && (
-                            <div class="text-xs text-purple-700 mb-2">
-                              {Object.entries(variantAttributes).map(([k, v]) => (
-                                <span
-                                  key={k}
-                                  class="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 mr-1 mb-1"
-                                >
-                                  <span class="capitalize">{k}:</span> {v}
-                                </span>
-                              ))}
+                        <div class="flex flex-1 items-start gap-3">
+                          <ProductVisual product={product} name={product.name} imageUrl={getProductImageUrl(product)} />
+                          <div class="flex-1">
+                            <div class="font-semibold text-gray-900 mb-1">{product.name}</div>
+                            {variantAttributes && (
+                              <div class="text-xs text-purple-700 mb-2">
+                                {Object.entries(variantAttributes).map(([k, v]) => (
+                                  <span
+                                    key={k}
+                                    class="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 mr-1 mb-1"
+                                  >
+                                    <span class="capitalize">{k}:</span> {v}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <div class="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full inline-block">
+                              {formatCurrency(itemPrice)} × {item.quantity} ={' '}
+                              <span class="font-bold text-blue-600">{formatCurrency(itemPrice * item.quantity)}</span>
                             </div>
-                          )}
-                          <div class="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full inline-block">
-                            {formatCurrency(itemPrice)} × {item.quantity} ={' '}
-                            <span class="font-bold text-blue-600">{formatCurrency(itemPrice * item.quantity)}</span>
                           </div>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -1793,29 +1902,37 @@ export default function Orders() {
                   {selectedOrder.items.map((item, index) => (
                     <div
                       key={`${item.productId}-${item.variantId || 'simple'}-${index}`}
-                      class="flex justify-between items-center bg-gray-50 rounded-lg p-4"
+                      class="flex items-center justify-between gap-4 bg-gray-50 rounded-lg p-4"
                     >
-                      <div class="flex-1">
-                        <div class="font-semibold text-gray-900">{item.productName}</div>
-                        {item.variantAttributes && (
-                          <div class="text-xs text-purple-700 mt-1">
-                            {Object.entries(item.variantAttributes).map(([k, v]) => (
-                              <span
-                                key={k}
-                                class="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 mr-1 mb-1"
-                              >
-                                <span class="capitalize">{k}:</span> {v}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <div class="text-sm text-gray-600">
-                          {t('orders.productId')}: {item.productId}
-                          {item.variantId && (
-                            <span class="ml-2 text-purple-700">
-                              {t('variants.variant')} ID: {item.variantId}
-                            </span>
+                      <div class="flex min-w-0 flex-1 items-start gap-3">
+                        <ProductVisual
+                          product={getProductById(item.productId)}
+                          name={item.productName}
+                          imageUrl={getProductImageUrl(getProductById(item.productId))}
+                          sizeClass="h-12 w-12"
+                        />
+                        <div class="min-w-0 flex-1">
+                          <div class="font-semibold text-gray-900">{item.productName}</div>
+                          {item.variantAttributes && (
+                            <div class="text-xs text-purple-700 mt-1">
+                              {Object.entries(item.variantAttributes).map(([k, v]) => (
+                                <span
+                                  key={k}
+                                  class="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 mr-1 mb-1"
+                                >
+                                  <span class="capitalize">{k}:</span> {v}
+                                </span>
+                              ))}
+                            </div>
                           )}
+                          <div class="text-sm text-gray-600">
+                            {t('orders.productId')}: {item.productId}
+                            {item.variantId && (
+                              <span class="ml-2 text-purple-700">
+                                {t('variants.variant')} ID: {item.variantId}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div class="text-center mx-4">
