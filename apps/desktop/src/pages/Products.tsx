@@ -24,6 +24,12 @@ import {
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import { normalizeBarcode } from '../lib/barcodes'
+import {
+  deleteProductImage,
+  resolveProductImageUrls,
+  uploadProductImage,
+  validateProductImageFile,
+} from '../services/product-images'
 import { type ProductVariant, productVariantsService } from '../services/product-variants-turso'
 import { PRODUCT_CATEGORIES, type Product, type ProductWithVariants, productService } from '../services/products-turso'
 
@@ -66,11 +72,28 @@ const getCategoryOptions = (t: TranslateFunction) =>
 interface EditProductModalProps {
   product: Product | null
   isOpen: boolean
+  resolvedImageUrl?: string
   onClose: () => void
-  onSave: (product: Product) => void
+  onSave: (product: Product, options?: { warning?: string }) => void
 }
 
-function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModalProps) {
+function getErrorMessage(message: string, t: TranslateFunction): string {
+  if (message === 'No auth token available for API call') {
+    return t('errors.missingAuthToken')
+  }
+
+  if (message === 'Unsupported image type. Allowed types: JPEG, PNG, WEBP.') {
+    return t('products.invalidImageType')
+  }
+
+  if (message === 'Image exceeds maximum size of 5 MB.') {
+    return t('products.imageTooLarge')
+  }
+
+  return message || t('errors.generic')
+}
+
+function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }: EditProductModalProps) {
   const { t } = useTranslation()
 
   const [formData, setFormData] = useState({
@@ -81,10 +104,22 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
     stock: 0,
     category: '',
     barcode: '',
+    image: '',
     isActive: true,
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('')
+  const [temporaryPreviewUrl, setTemporaryPreviewUrl] = useState<string | null>(null)
+  const [removeExistingImage, setRemoveExistingImage] = useState(false)
+
+  const clearTemporaryPreview = () => {
+    if (temporaryPreviewUrl) {
+      URL.revokeObjectURL(temporaryPreviewUrl)
+      setTemporaryPreviewUrl(null)
+    }
+  }
 
   useEffect(() => {
     if (product && isOpen) {
@@ -96,6 +131,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
         stock: product.stock,
         category: product.category,
         barcode: product.barcode || '',
+        image: product.image || '',
         isActive: product.isActive,
       })
     } else if (isOpen) {
@@ -107,11 +143,84 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
         stock: 0,
         category: '',
         barcode: '',
+        image: '',
         isActive: true,
       })
     }
+    clearTemporaryPreview()
+    setSelectedImageFile(null)
+    setImagePreviewUrl(resolvedImageUrl || '')
+    setRemoveExistingImage(false)
     setError('')
-  }, [product, isOpen])
+  }, [product, isOpen, resolvedImageUrl])
+
+  useEffect(() => {
+    if (!isOpen || selectedImageFile || !product?.image || resolvedImageUrl || removeExistingImage) {
+      return
+    }
+
+    let isCancelled = false
+
+    void (async () => {
+      try {
+        const urls = await resolveProductImageUrls([product.image || ''])
+        if (!isCancelled && product.image && urls[product.image]) {
+          setImagePreviewUrl(urls[product.image])
+        }
+      } catch (err) {
+        console.error('Failed to resolve product image preview:', err)
+      }
+    })()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [isOpen, product, removeExistingImage, resolvedImageUrl, selectedImageFile])
+
+  useEffect(
+    () => () => {
+      if (temporaryPreviewUrl) {
+        URL.revokeObjectURL(temporaryPreviewUrl)
+      }
+    },
+    [temporaryPreviewUrl],
+  )
+
+  const handleImageSelection = (e: Event) => {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+
+    if (!file) {
+      return
+    }
+
+    const validationError = validateProductImageFile(file)
+    if (validationError) {
+      setError(getErrorMessage(validationError, t))
+      input.value = ''
+      return
+    }
+
+    clearTemporaryPreview()
+    const nextPreviewUrl = URL.createObjectURL(file)
+    setTemporaryPreviewUrl(nextPreviewUrl)
+    setSelectedImageFile(file)
+    setImagePreviewUrl(nextPreviewUrl)
+    setRemoveExistingImage(false)
+    setError('')
+    input.value = ''
+  }
+
+  const handleRemoveImage = () => {
+    clearTemporaryPreview()
+    setSelectedImageFile(null)
+    setImagePreviewUrl('')
+    setRemoveExistingImage(Boolean(product?.image))
+    setFormData({
+      ...formData,
+      image: '',
+    })
+  }
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault()
@@ -119,6 +228,19 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
     setError('')
 
     try {
+      const previousImageKey = product?.image?.trim() || ''
+      let uploadedImageKey: string | undefined
+      let nextImageKey = previousImageKey
+
+      if (selectedImageFile) {
+        const uploaded = await uploadProductImage(selectedImageFile)
+        uploadedImageKey = uploaded.key
+        nextImageKey = uploaded.key
+        setImagePreviewUrl(uploaded.url)
+      } else if (removeExistingImage) {
+        nextImageKey = ''
+      }
+
       let result: { success: boolean; product?: Product; error?: string }
       if (product) {
         result = await productService.updateProduct(product.id, {
@@ -129,6 +251,7 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
           stock: formData.stock,
           category: formData.category,
           barcode: formData.barcode || undefined,
+          image: selectedImageFile || removeExistingImage ? nextImageKey : undefined,
           isActive: formData.isActive,
           variantType: product.variantType,
         })
@@ -141,19 +264,41 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
           stock: formData.stock,
           category: formData.category,
           barcode: formData.barcode || undefined,
+          image: nextImageKey || undefined,
           isActive: formData.isActive,
           variantType: 'simple',
         })
       }
 
       if (result.success && result.product) {
-        onSave(result.product)
+        let warning: string | undefined
+        const shouldDeletePreviousImage =
+          Boolean(previousImageKey) &&
+          ((Boolean(uploadedImageKey) && previousImageKey !== uploadedImageKey) || removeExistingImage)
+
+        if (shouldDeletePreviousImage && previousImageKey) {
+          try {
+            await deleteProductImage(previousImageKey)
+          } catch (deleteError) {
+            console.error('Failed to delete previous product image:', deleteError)
+            warning = removeExistingImage ? t('products.imageDeleteOnRemoveFailed') : t('products.imageDeleteFailed')
+          }
+        }
+
+        onSave(result.product, { warning })
         onClose()
       } else {
+        if (uploadedImageKey) {
+          try {
+            await deleteProductImage(uploadedImageKey)
+          } catch (cleanupError) {
+            console.error('Failed to clean up uploaded image after product save failure:', cleanupError)
+          }
+        }
         setError(result.error || t('errors.generic'))
       }
-    } catch (_err) {
-      setError(t('errors.generic'))
+    } catch (err) {
+      setError(getErrorMessage(err instanceof Error ? err.message : t('errors.generic'), t))
     } finally {
       setIsLoading(false)
     }
@@ -227,6 +372,57 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
                 class="bg-white/80 text-gray-900"
                 placeholder={t('products.enterDescription')}
               />
+            </div>
+
+            <div>
+              <div class="mb-2 flex items-center justify-between">
+                <div class="block text-sm font-medium text-gray-900">{`🖼️ ${t('products.productImage')}`}</div>
+                {(imagePreviewUrl || product?.image) && (
+                  <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage} disabled={isLoading}>
+                    {t('products.removeImage')}
+                  </Button>
+                )}
+              </div>
+
+              <div class="rounded-2xl border border-dashed border-indigo-200 bg-white/70 p-4">
+                <div class="flex flex-col gap-4 md:flex-row md:items-center">
+                  <div class="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-sm">
+                    {imagePreviewUrl ? (
+                      <img src={imagePreviewUrl} alt={t('products.imagePreview')} class="h-full w-full object-cover" />
+                    ) : (
+                      <div class="flex flex-col items-center gap-1 text-gray-400">
+                        <span class="text-3xl">🖼️</span>
+                        <span class="text-xs font-medium">{t('products.noImage')}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium text-gray-900">
+                      {selectedImageFile ? t('products.changeImage') : t('products.uploadImage')}
+                    </p>
+                    <p class="mt-1 text-xs text-gray-500">{t('products.imageHelp')}</p>
+                    {selectedImageFile && (
+                      <p class="mt-2 text-xs font-medium text-indigo-700">
+                        {t('products.imageSelected', { fileName: selectedImageFile.name })}
+                      </p>
+                    )}
+
+                    <label class="mt-3 inline-flex cursor-pointer items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100">
+                      <span>
+                        {selectedImageFile || imagePreviewUrl ? t('products.changeImage') : t('products.uploadImage')}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        class="sr-only"
+                        onChange={handleImageSelection}
+                        disabled={isLoading}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="grid grid-cols-3 gap-4">
@@ -359,7 +555,13 @@ function EditProductModal({ product, isOpen, onClose, onSave }: EditProductModal
           {t('common.cancel')}
         </Button>
         <Button type="button" onClick={() => handleSubmit(new Event('submit'))} disabled={isLoading}>
-          {isLoading ? t('common.loading') : product ? t('common.edit') : t('common.add')}
+          {isLoading
+            ? selectedImageFile
+              ? t('products.uploadingImage')
+              : t('common.loading')
+            : product
+              ? t('common.edit')
+              : t('common.add')}
         </Button>
       </div>
     </Dialog>
@@ -384,6 +586,7 @@ export default function Products() {
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [pageSize] = useState(10)
+  const [resolvedImageUrls, setResolvedImageUrls] = useState<Record<string, string>>({})
 
   // Variant state
   const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set())
@@ -399,6 +602,24 @@ export default function Products() {
   useEffect(() => {
     loadProducts()
   }, [])
+
+  const syncResolvedImageUrls = async (productList: Product[]) => {
+    const keys = Array.from(new Set(productList.map((product) => product.image?.trim()).filter(Boolean))) as string[]
+
+    if (keys.length === 0) {
+      return
+    }
+
+    try {
+      const urls = await resolveProductImageUrls(keys)
+      setResolvedImageUrls((prev) => ({
+        ...prev,
+        ...urls,
+      }))
+    } catch (err) {
+      console.error('Failed to resolve product image URLs:', err)
+    }
+  }
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -428,6 +649,7 @@ export default function Products() {
       setTotalCount(paginatedResult.totalCount)
       setTotalPages(paginatedResult.totalPages)
       setCurrentPage(paginatedResult.currentPage)
+      void syncResolvedImageUrls(paginatedResult.products)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('errors.generic')
       setError(message)
@@ -450,6 +672,7 @@ export default function Products() {
       setTotalCount(searchResults.totalCount)
       setTotalPages(searchResults.totalPages)
       setCurrentPage(searchResults.currentPage)
+      void syncResolvedImageUrls(searchResults.products)
     } catch (_err) {
       setError(t('errors.generic'))
     } finally {
@@ -469,10 +692,29 @@ export default function Products() {
 
   const handleDeleteProduct = async (productId: string) => {
     try {
+      const productToDelete =
+        allProducts.find((p) => p.id === productId) || products.find((p) => p.id === productId) || null
       const result = await productService.deleteProduct(productId)
       if (result.success) {
+        if (productToDelete?.image) {
+          try {
+            await deleteProductImage(productToDelete.image)
+          } catch (deleteError) {
+            console.error('Failed to delete product image after deleting product:', deleteError)
+            setError(t('products.imageDeleteOnProductDeleteFailed'))
+          }
+        }
         setAllProducts(allProducts.filter((p) => p.id !== productId))
         setProducts(products.filter((p) => p.id !== productId))
+        setResolvedImageUrls((prev) => {
+          if (!productToDelete?.image) {
+            return prev
+          }
+
+          const next = { ...prev }
+          delete next[productToDelete.image]
+          return next
+        })
         setDeleteConfirm(null)
       } else {
         setError(result.error || t('errors.generic'))
@@ -482,12 +724,15 @@ export default function Products() {
     }
   }
 
-  const handleSaveProduct = async (_savedProduct: Product) => {
+  const handleSaveProduct = async (_savedProduct: Product, options?: { warning?: string }) => {
     // Reload data to reflect changes with proper pagination
     if (searchQuery.trim()) {
       await handleSearch(searchQuery, currentPage)
     } else {
       await loadProducts(currentPage)
+    }
+    if (options?.warning) {
+      setError(options.warning)
     }
     setIsModalOpen(false)
   }
@@ -796,8 +1041,16 @@ export default function Products() {
                   >
                     <TableCell>
                       <div class="flex items-start gap-2.5">
-                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-sm text-white shadow-sm">
-                          {getCategoryIcon(product.category)}
+                        <div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-sm text-white shadow-sm">
+                          {product.image && resolvedImageUrls[product.image] ? (
+                            <img
+                              src={resolvedImageUrls[product.image]}
+                              alt={product.name}
+                              class="h-full w-full object-cover"
+                            />
+                          ) : (
+                            getCategoryIcon(product.category)
+                          )}
                         </div>
                         <div class="min-w-0 flex-1">
                           <div class="flex items-center gap-1.5">
@@ -992,7 +1245,11 @@ export default function Products() {
       <EditProductModal
         product={editingProduct}
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        resolvedImageUrl={editingProduct?.image ? resolvedImageUrls[editingProduct.image] : undefined}
+        onClose={() => {
+          setIsModalOpen(false)
+          setEditingProduct(null)
+        }}
         onSave={handleSaveProduct}
       />
 
