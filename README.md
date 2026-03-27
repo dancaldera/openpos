@@ -22,7 +22,8 @@ Install a specific version:
 curl -fsSL https://raw.githubusercontent.com/dancaldera/OpenPOS/main/scripts/install-latest-appimage.sh | bash -s -- --version 0.3.6
 ```
 
-The installer places the binary at `/usr/local/bin/openpos` by default. Use `--install-dir` for a user-local path such as `~/.local/bin`.
+The installer places the binary at `~/.local/bin/openpos` by default. Use `--install-dir` to override the target directory.
+Make sure `~/.local/bin` is in your `PATH` if your shell does not already include it.
 
 ## Desktop Runtime Config
 

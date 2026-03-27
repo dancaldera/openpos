@@ -4,7 +4,7 @@ set -euo pipefail
 
 REPO_OWNER="dancaldera"
 REPO_NAME="OpenPOS"
-INSTALL_DIR="/usr/local/bin"
+INSTALL_DIR="${HOME:-}/.local/bin"
 VERSION="latest"
 
 usage() {
@@ -16,7 +16,7 @@ Downloads and installs the OpenPOS AppImage from GitHub Releases.
 Examples:
   install-latest-appimage.sh
   install-latest-appimage.sh --version 0.3.5
-  install-latest-appimage.sh --install-dir "$HOME/.local/bin"
+  install-latest-appimage.sh --install-dir /opt/openpos/bin
 EOF
 }
 
@@ -231,6 +231,11 @@ fi
 require_command curl
 require_command install
 require_command mktemp
+
+if [[ -z "${HOME:-}" ]]; then
+  echo "HOME is not set" >&2
+  exit 1
+fi
 
 ARCH="$(detect_arch)"
 DOWNLOAD_URL="$(resolve_download_url "$ARCH")" || {
