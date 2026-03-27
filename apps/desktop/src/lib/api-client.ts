@@ -1,4 +1,5 @@
 import { getApiUrl } from './api-config'
+import { expireSession, isExpiredTokenMessage } from './auth-session'
 
 function getAuthToken(): string | null {
   return localStorage.getItem('auth_token')
@@ -21,7 +22,7 @@ export async function requestApi(path: string, options: ApiRequestOptions = {}):
   if (requireAuth) {
     const token = getAuthToken()
     if (!token) {
-      throw new Error('No auth token available for API call')
+      expireSession()
     }
     requestHeaders.set('Authorization', `Bearer ${token}`)
   }
@@ -38,7 +39,13 @@ export async function requestApiJson<T>(path: string, options: ApiRequestOptions
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText || 'Unknown error' }))
-    throw new Error(error.error || response.statusText || 'API request failed')
+    const errorMessage = error.error || response.statusText || 'API request failed'
+
+    if (options.requireAuth && (response.status === 401 || isExpiredTokenMessage(errorMessage))) {
+      expireSession()
+    }
+
+    throw new Error(errorMessage)
   }
 
   if (response.status === 204) {
