@@ -17,6 +17,7 @@ import { customersRouter } from './routes/customers.js'
 import { usersRouter } from './routes/users.js'
 import { analyticsRouter } from './routes/analytics.js'
 import { settingsRouter } from './routes/settings.js'
+import { productImagesRouter } from './routes/product-images.js'
 
 export const app = new Hono()
 
@@ -80,6 +81,7 @@ app.post('/api/execute', authMiddleware, async (c) => {
 
 // Route groups
 app.route('/api/auth', authRouter)
+app.route('/api/products/images', productImagesRouter)
 app.route('/api/products', productsRouter)
 app.route('/api/orders', ordersRouter)
 app.route('/api/customers', customersRouter)
