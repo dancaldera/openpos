@@ -44,7 +44,6 @@ const ORDER_ITEM_COLUMNS = [
   'created_at',
   'updated_at',
 ]
-const APPIMAGE_INSTALL_PATH = '/usr/local/bin/openpos'
 const UPDATE_TEMP_DIR_NAME = 'openpos-updates'
 
 function logStartup(message, details) {
@@ -83,6 +82,10 @@ function getRendererUrl() {
 
 function getIndexHtmlPath() {
   return path.join(__dirname, '..', 'dist', 'index.html')
+}
+
+function getAppImageInstallPath() {
+  return path.join(app.getPath('home'), '.local', 'bin', 'openpos')
 }
 
 function getIconsDir() {
@@ -262,24 +265,19 @@ async function installDownloadedAppImage(tempPath) {
     throw new Error('Refusing to install update from an unexpected location')
   }
 
-  const stagedPath = `${APPIMAGE_INSTALL_PATH}.new`
+  const installPath = getAppImageInstallPath()
+  const installDir = path.dirname(installPath)
+  const stagedPath = `${installPath}.new`
 
   emitUpdateStatus({ phase: 'installing' })
 
   try {
-    await runCommand('pkexec', [
-      '/bin/sh',
-      '-c',
-      'set -eu\ncp "$1" "$2"\nchmod 755 "$2"\nmv "$2" "$3"\n',
-      'openpos-update',
-      resolvedTempPath,
-      stagedPath,
-      APPIMAGE_INSTALL_PATH,
-    ])
+    await fs.promises.mkdir(installDir, { recursive: true })
+    await fs.promises.copyFile(resolvedTempPath, stagedPath)
+    await fs.promises.chmod(stagedPath, 0o755)
+    await fs.promises.rename(stagedPath, installPath)
   } catch (error) {
-    if (error instanceof Error && /ENOENT/.test(error.message)) {
-      throw new Error('pkexec is not available on this system')
-    }
+    await fs.promises.rm(stagedPath, { force: true }).catch(() => {})
     throw error
   }
 }
@@ -289,11 +287,13 @@ async function restartFromInstalledAppImage() {
     throw new Error('In-app AppImage updates are only supported on Linux')
   }
 
-  if (!fs.existsSync(APPIMAGE_INSTALL_PATH)) {
-    throw new Error(`Installed AppImage not found at ${APPIMAGE_INSTALL_PATH}`)
+  const installPath = getAppImageInstallPath()
+
+  if (!fs.existsSync(installPath)) {
+    throw new Error(`Installed AppImage not found at ${installPath}`)
   }
 
-  const child = spawn(APPIMAGE_INSTALL_PATH, [], {
+  const child = spawn(installPath, [], {
     detached: true,
     stdio: 'ignore',
   })
