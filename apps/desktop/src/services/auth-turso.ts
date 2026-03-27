@@ -1,4 +1,5 @@
 import { requestApiJson } from '../lib/api-client'
+import { clearPersistedAuth, isAuthExpiredError } from '../lib/auth-session'
 import { execute, query } from '../lib/db-adapter'
 import { requireDesktopApi } from '../lib/desktop'
 import { isDesktop } from '../lib/platform'
@@ -176,13 +177,12 @@ export class AuthService {
 
   signOut(): void {
     this.currentUser = null
-    localStorage.removeItem('pos_user')
-    localStorage.removeItem('auth_token') // Clear JWT token
+    clearPersistedAuth()
   }
 
   private clearPersistedUser(): void {
     this.currentUser = null
-    localStorage.removeItem('pos_user')
+    clearPersistedAuth()
   }
 
   getCurrentUser(): User | null {
@@ -217,8 +217,13 @@ export class AuthService {
       const parsedUser = JSON.parse(storedUser) as User
 
       if (!isDesktop) {
-        this.currentUser = parsedUser
-        return parsedUser
+        const data = await requestApiJson<{ user: User }>('/api/auth/me', {
+          requireAuth: true,
+        })
+
+        this.currentUser = data.user
+        localStorage.setItem('pos_user', JSON.stringify(data.user))
+        return data.user
       }
 
       const users = await query<DatabaseUser>('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1', [
@@ -236,6 +241,11 @@ export class AuthService {
 
       return restoredUser
     } catch (error) {
+      if (isAuthExpiredError(error)) {
+        this.clearPersistedUser()
+        return null
+      }
+
       console.error('Restore current user error:', error)
       this.clearPersistedUser()
       return null

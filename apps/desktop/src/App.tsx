@@ -79,6 +79,12 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setCurrentPage('dashboard')
+    }
+  }, [isAuthenticated])
+
   const handleRetryStartup = async () => {
     if (!isDesktop) {
       return

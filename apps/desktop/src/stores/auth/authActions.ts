@@ -1,3 +1,4 @@
+import { setSessionExpiredHandler } from '../../lib/auth-session'
 import { authService, type User } from '../../services/auth-turso'
 import { error, isLoading, user } from './authStore'
 
@@ -58,3 +59,7 @@ export const authActions = {
     return authService.hasRole(role)
   },
 }
+
+setSessionExpiredHandler(() => {
+  authActions.signOut()
+})
