@@ -1,65 +1,152 @@
+/** @jsxImportSource preact */
 import { signal, useSignal } from '@preact/signals'
 import { useRef } from 'preact/hooks'
 import { useClickOutside } from '../../hooks/useClickOutside'
+import { useTranslation } from '../../hooks/useTranslation'
 import { getDesktopApi } from '../../lib/desktop'
 import { isDesktop } from '../../lib/platform'
 import { updateActions } from '../../stores/update/updateActions'
 import {
   downloadError,
   isChecking,
+  isDownloading,
+  isInstalling,
   lastCheckTime,
+  updateAssetName,
+  updateAssetUrl,
   updateAvailable,
+  updateDownloadProgress,
+  updateReadyToInstall,
   updateReleaseNotes,
   updateReleaseUrl,
   updateVersion,
 } from '../../stores/update/updateStore'
 import { SpinnerIcon } from './icons'
 
-const currentAppVersion = signal<string | null>(null)
+const currentAppInfo = signal<{
+  version: string
+  platform: string
+  arch: string
+} | null>(null)
+
 const FALLBACK_RELEASE_URL = 'https://github.com/dancaldera/OpenPOS/releases/latest'
 
 if (isDesktop) {
   getDesktopApi()
     ?.getInfo()
-    .then(({ version }) => {
-      currentAppVersion.value = version
+    .then(({ version, platform, arch }) => {
+      currentAppInfo.value = { version, platform, arch }
     })
     .catch(() => {})
+}
+
+interface UpdateBadgeLabels {
+  updates: string
+  checking: string
+  checkForUpdates: string
+  appUpdate: string
+  checkForNewerRelease: string
+  newVersionAvailable: string
+  automaticInstallUnavailable: string
+  downloadUpdate: string
+  installAndRestart: string
+  downloading: string
+  installing: string
+  readyToInstall: string
+  downloadedAsset: string
+  status: string
+  installed: string
+  latest: string
+  lastChecked: string
+  releaseNotes: string
+  error: string
+  viewRelease: string
 }
 
 export interface UpdateBadgeViewModelInput {
   available: boolean
   checking: boolean
   checkedAt: number
+  downloadProgress: number
+  downloading: boolean
   error: string | null
   installedVersion: string | null
+  installing: boolean
   latestVersion: string | null
+  linuxSupported: boolean
+  readyToInstall: boolean
   releaseNotes: string | null
   releaseUrl: string | null
+  updateAssetName: string | null
+  updateAssetUrl: string | null
+  labels: UpdateBadgeLabels
 }
 
 export function getUpdateBadgeViewModel({
   available,
   checking,
   checkedAt,
+  downloadProgress,
+  downloading,
   error,
   installedVersion,
+  installing,
   latestVersion,
+  linuxSupported,
+  readyToInstall,
   releaseNotes,
   releaseUrl,
+  updateAssetName: assetName,
+  updateAssetUrl: assetUrl,
+  labels,
 }: UpdateBadgeViewModelInput) {
+  const canAutoInstall = available && linuxSupported && Boolean(assetUrl)
+  const progressLabel =
+    downloading && downloadProgress > 0
+      ? `${labels.downloading} ${downloadProgress}%`
+      : downloading
+        ? labels.downloading
+        : null
+
+  let headline = available ? labels.newVersionAvailable : labels.checkForNewerRelease
+  if (available && !canAutoInstall) {
+    headline = labels.automaticInstallUnavailable
+  }
+
+  let primaryLabel = labels.updates
+  if (downloading) {
+    primaryLabel = downloadProgress > 0 ? `${downloadProgress}%` : labels.downloading
+  } else if (available && latestVersion) {
+    primaryLabel = `v${latestVersion}`
+  }
+
+  let actionLabel = labels.downloadUpdate
+  if (readyToInstall) {
+    actionLabel = labels.installAndRestart
+  } else if (installing) {
+    actionLabel = labels.installing
+  } else if (downloading) {
+    actionLabel = progressLabel ?? labels.downloading
+  }
+
   return {
     borderClass: available ? 'border-amber-500/40' : 'border-gray-700/50',
     iconColorClass: available ? 'text-amber-400' : 'text-gray-400',
-    headline: available ? 'New version available' : 'Check for a newer release',
+    headline,
     installedVersionLabel: installedVersion ?? '…',
-    primaryLabel: available && latestVersion ? `v${latestVersion}` : 'Updates',
+    primaryLabel,
     latestVersionLabel: latestVersion,
     lastCheckedLabel: checkedAt > 0 ? new Date(checkedAt).toLocaleTimeString() : null,
     releaseNotesPreview: releaseNotes ? releaseNotes.slice(0, 200) : null,
     releaseUrl: releaseUrl ?? FALLBACK_RELEASE_URL,
-    checkingLabel: checking ? 'Checking…' : 'Check for updates',
+    checkingLabel: checking ? labels.checking : labels.checkForUpdates,
     error,
+    canAutoInstall,
+    actionLabel,
+    actionDisabled: checking || downloading || installing,
+    showViewRelease: available,
+    statusLabel: readyToInstall ? labels.readyToInstall : progressLabel,
+    downloadedAssetLabel: readyToInstall ? assetName : null,
   }
 }
 
@@ -86,9 +173,36 @@ function RocketIcon({ class: className }: { class?: string }) {
 export function UpdateBadge() {
   if (!isDesktop) return null
 
+  const { t } = useTranslation()
+  const labels: UpdateBadgeLabels = {
+    updates: t('update.updates'),
+    checking: t('update.checking'),
+    checkForUpdates: t('update.checkForUpdates'),
+    appUpdate: t('update.appUpdate'),
+    checkForNewerRelease: t('update.checkForNewerRelease'),
+    newVersionAvailable: t('update.newVersionAvailableShort'),
+    automaticInstallUnavailable: t('update.automaticInstallUnavailable'),
+    downloadUpdate: t('update.downloadUpdate'),
+    installAndRestart: t('update.installAndRestart'),
+    downloading: t('update.downloading'),
+    installing: t('update.installing'),
+    readyToInstall: t('update.readyToInstall'),
+    downloadedAsset: t('update.downloadedAsset'),
+    status: t('update.statusLabel'),
+    installed: t('update.installedLabel'),
+    latest: t('update.latestLabel'),
+    lastChecked: t('update.lastCheckedLabel'),
+    releaseNotes: t('update.releaseNotesLabel'),
+    error: t('update.errorLabel'),
+    viewRelease: t('update.viewRelease'),
+  }
+
   const popoverOpen = useSignal(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const installedVersion = currentAppVersion.value
+  const appInfo = currentAppInfo.value
+  const installedVersion = appInfo?.version ?? null
+  const linuxSupported = appInfo?.platform === 'linux'
+
   useClickOutside(wrapperRef, () => {
     popoverOpen.value = false
   })
@@ -98,44 +212,67 @@ export function UpdateBadge() {
   const latestVersion = updateVersion.value
   const releaseUrl = updateReleaseUrl.value
   const releaseNotes = updateReleaseNotes.value
+  const assetName = updateAssetName.value
+  const assetUrl = updateAssetUrl.value
   const error = downloadError.value
   const checkedAt = lastCheckTime.value
+  const downloading = isDownloading.value
+  const installing = isInstalling.value
+  const readyToInstall = updateReadyToInstall.value
+  const downloadProgress = updateDownloadProgress.value
 
   const viewModel = getUpdateBadgeViewModel({
     available,
     checking,
     checkedAt,
+    downloadProgress,
+    downloading,
     error,
     installedVersion,
+    installing,
     latestVersion,
+    linuxSupported,
+    readyToInstall,
     releaseNotes,
     releaseUrl,
+    updateAssetName: assetName,
+    updateAssetUrl: assetUrl,
+    labels,
   })
 
   async function handleViewRelease() {
     await getDesktopApi()?.updates.openReleasePage(viewModel.releaseUrl)
   }
 
+  async function handleInstallAction() {
+    if (readyToInstall) {
+      await updateActions.installAndRestart()
+      return
+    }
+
+    await updateActions.downloadUpdate()
+  }
+
   return (
     <div ref={wrapperRef} class="fixed bottom-4 left-4 z-50 flex flex-col items-start gap-2">
       {popoverOpen.value && (
         <div
-          class={`mb-1 w-64 rounded-lg border ${viewModel.borderClass} bg-gray-900/95 backdrop-blur-sm shadow-xl text-xs text-gray-300 overflow-hidden`}
+          class={`mb-1 w-72 rounded-lg border ${viewModel.borderClass} bg-gray-900/95 backdrop-blur-sm shadow-xl text-xs text-gray-300 overflow-hidden`}
         >
           <div class="px-4 py-3 border-b border-white/10">
-            <p class="font-semibold text-white text-sm">App Update</p>
+            <p class="font-semibold text-white text-sm">{labels.appUpdate}</p>
             <p class="text-gray-400 mt-0.5">{viewModel.headline}</p>
           </div>
 
           <div class="px-4 py-3 space-y-2.5">
             <div class="flex items-center justify-between">
-              <span class="text-gray-400">Installed</span>
+              <span class="text-gray-400">{labels.installed}</span>
               <span class="text-gray-200">{viewModel.installedVersionLabel}</span>
             </div>
 
             {viewModel.latestVersionLabel && (
               <div class="flex items-center justify-between">
-                <span class="text-gray-400">Latest</span>
+                <span class="text-gray-400">{labels.latest}</span>
                 <span class={available ? 'text-amber-400 font-medium' : 'text-gray-200'}>
                   {viewModel.latestVersionLabel}
                 </span>
@@ -144,21 +281,35 @@ export function UpdateBadge() {
 
             {viewModel.lastCheckedLabel && (
               <div class="flex items-center justify-between">
-                <span class="text-gray-400">Last checked</span>
+                <span class="text-gray-400">{labels.lastChecked}</span>
                 <span class="text-gray-200">{viewModel.lastCheckedLabel}</span>
+              </div>
+            )}
+
+            {viewModel.statusLabel && (
+              <div class="space-y-1 pt-0.5">
+                <span class="text-gray-400">{labels.status}</span>
+                <p class="text-amber-300 leading-relaxed">{viewModel.statusLabel}</p>
+              </div>
+            )}
+
+            {viewModel.downloadedAssetLabel && (
+              <div class="space-y-1 pt-0.5">
+                <span class="text-gray-400">{labels.downloadedAsset}</span>
+                <p class="text-gray-300 leading-relaxed break-all">{viewModel.downloadedAssetLabel}</p>
               </div>
             )}
 
             {viewModel.releaseNotesPreview && (
               <div class="space-y-1 pt-0.5">
-                <span class="text-gray-400">Release notes</span>
+                <span class="text-gray-400">{labels.releaseNotes}</span>
                 <p class="text-gray-300 leading-relaxed line-clamp-3">{viewModel.releaseNotesPreview}</p>
               </div>
             )}
 
             {viewModel.error && (
               <div class="space-y-1 pt-0.5">
-                <span class="text-gray-400">Error</span>
+                <span class="text-gray-400">{labels.error}</span>
                 <p class="text-rose-300 leading-relaxed">{viewModel.error}</p>
               </div>
             )}
@@ -170,20 +321,36 @@ export function UpdateBadge() {
               onClick={() => {
                 void updateActions.checkForUpdate()
               }}
-              disabled={checking}
+              disabled={checking || downloading || installing}
               class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium transition-colors disabled:opacity-50"
             >
               {checking && <SpinnerIcon class="w-3 h-3 animate-spin" />}
               {viewModel.checkingLabel}
             </button>
 
-            {available && (
+            {viewModel.canAutoInstall && (
               <button
                 type="button"
-                onClick={handleViewRelease}
-                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition-colors"
+                onClick={() => {
+                  void handleInstallAction()
+                }}
+                disabled={viewModel.actionDisabled}
+                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition-colors disabled:opacity-50"
               >
-                View Release ↗
+                {(downloading || installing) && <SpinnerIcon class="w-3 h-3 animate-spin" />}
+                {viewModel.actionLabel}
+              </button>
+            )}
+
+            {viewModel.showViewRelease && (
+              <button
+                type="button"
+                onClick={() => {
+                  void handleViewRelease()
+                }}
+                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium transition-colors"
+              >
+                {labels.viewRelease} ↗
               </button>
             )}
           </div>
@@ -196,9 +363,9 @@ export function UpdateBadge() {
           popoverOpen.value = !popoverOpen.value
         }}
         class={`relative flex items-center gap-2 px-3 py-1.5 rounded-full border ${viewModel.borderClass} bg-gray-900/90 backdrop-blur-sm shadow-lg cursor-pointer select-none transition-opacity hover:opacity-90 active:scale-95`}
-        title="App updates"
+        title={labels.appUpdate}
       >
-        {checking ? (
+        {checking || downloading || installing ? (
           <SpinnerIcon class={`w-3 h-3 animate-spin ${viewModel.iconColorClass}`} />
         ) : (
           <span class="relative inline-flex">

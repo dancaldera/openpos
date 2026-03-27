@@ -44,6 +44,8 @@ const ORDER_ITEM_COLUMNS = [
   'created_at',
   'updated_at',
 ]
+const APPIMAGE_INSTALL_PATH = '/usr/local/bin/openpos'
+const UPDATE_TEMP_DIR_NAME = 'openpos-updates'
 
 function logStartup(message, details) {
   if (details === undefined) {
@@ -126,6 +128,177 @@ function getConfigPath() {
 
 function getDbPath() {
   return path.join(app.getPath('userData'), 'postpos.db')
+}
+
+function getUpdateTempDir() {
+  return path.join(app.getPath('temp'), UPDATE_TEMP_DIR_NAME)
+}
+
+function emitUpdateStatus(payload) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return
+  }
+
+  mainWindow.webContents.send('desktop:update-status', payload)
+}
+
+function ensureHttpsUrl(url) {
+  const parsed = new URL(url)
+  if (parsed.protocol !== 'https:') {
+    throw new Error('Only https: URLs allowed')
+  }
+
+  return parsed
+}
+
+function sanitizeVersion(version) {
+  return String(version || 'latest').replace(/[^a-zA-Z0-9._-]/g, '-')
+}
+
+function resolveDownloadFileName(downloadUrl, version) {
+  const url = ensureHttpsUrl(downloadUrl)
+  const candidate = path.basename(url.pathname)
+  if (candidate.toLowerCase().endsWith('.appimage')) {
+    return candidate
+  }
+
+  return `openpos-${sanitizeVersion(version)}-${process.arch}.AppImage`
+}
+
+async function downloadAppImageUpdate(downloadUrl, version) {
+  if (process.platform !== 'linux') {
+    throw new Error('In-app AppImage updates are only supported on Linux')
+  }
+
+  const fileName = resolveDownloadFileName(downloadUrl, version)
+  const tempDir = getUpdateTempDir()
+  const tempPath = path.join(tempDir, fileName)
+
+  await fs.promises.mkdir(tempDir, { recursive: true })
+
+  const response = await fetch(downloadUrl, {
+    headers: { Accept: 'application/octet-stream' },
+  })
+
+  if (!response.ok || !response.body) {
+    throw new Error(`Failed to download update (${response.status})`)
+  }
+
+  const totalBytes = Number.parseInt(response.headers.get('content-length') || '0', 10)
+  const reader = response.body.getReader()
+  const fileHandle = await fs.promises.open(tempPath, 'w')
+  let receivedBytes = 0
+
+  emitUpdateStatus({ phase: 'downloading', progress: 0 })
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        break
+      }
+
+      if (value) {
+        await fileHandle.write(value)
+        receivedBytes += value.length
+
+        if (totalBytes > 0) {
+          emitUpdateStatus({
+            phase: 'downloading',
+            progress: Math.min(100, Math.round((receivedBytes / totalBytes) * 100)),
+          })
+        } else {
+          emitUpdateStatus({ phase: 'downloading', progress: null })
+        }
+      }
+    }
+  } catch (error) {
+    await fileHandle.close()
+    await fs.promises.rm(tempPath, { force: true })
+    throw error
+  }
+
+  await fileHandle.close()
+  await fs.promises.chmod(tempPath, 0o755)
+  emitUpdateStatus({ phase: 'downloaded', filePath: tempPath, progress: 100 })
+  return { filePath: tempPath }
+}
+
+function runCommand(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    let stderr = ''
+
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString()
+    })
+
+    child.on('error', reject)
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve()
+        return
+      }
+
+      reject(new Error(stderr.trim() || `${command} exited with code ${code}`))
+    })
+  })
+}
+
+async function installDownloadedAppImage(tempPath) {
+  if (process.platform !== 'linux') {
+    throw new Error('In-app AppImage updates are only supported on Linux')
+  }
+
+  if (!tempPath || !fs.existsSync(tempPath)) {
+    throw new Error('Downloaded AppImage was not found')
+  }
+
+  const expectedTempDir = path.resolve(getUpdateTempDir())
+  const resolvedTempPath = path.resolve(tempPath)
+  if (!resolvedTempPath.startsWith(expectedTempDir + path.sep) && resolvedTempPath !== expectedTempDir) {
+    throw new Error('Refusing to install update from an unexpected location')
+  }
+
+  const stagedPath = `${APPIMAGE_INSTALL_PATH}.new`
+
+  emitUpdateStatus({ phase: 'installing' })
+
+  try {
+    await runCommand('pkexec', [
+      '/bin/sh',
+      '-c',
+      'set -eu\ncp "$1" "$2"\nchmod 755 "$2"\nmv "$2" "$3"\n',
+      'openpos-update',
+      resolvedTempPath,
+      stagedPath,
+      APPIMAGE_INSTALL_PATH,
+    ])
+  } catch (error) {
+    if (error instanceof Error && /ENOENT/.test(error.message)) {
+      throw new Error('pkexec is not available on this system')
+    }
+    throw error
+  }
+}
+
+async function restartFromInstalledAppImage() {
+  if (process.platform !== 'linux') {
+    throw new Error('In-app AppImage updates are only supported on Linux')
+  }
+
+  if (!fs.existsSync(APPIMAGE_INSTALL_PATH)) {
+    throw new Error(`Installed AppImage not found at ${APPIMAGE_INSTALL_PATH}`)
+  }
+
+  const child = spawn(APPIMAGE_INSTALL_PATH, [], {
+    detached: true,
+    stdio: 'ignore',
+  })
+  child.unref()
+  app.exit(0)
 }
 
 function getBootstrapDbPath() {
@@ -831,6 +1004,8 @@ function registerIpcHandlers() {
     isDesktop: true,
     isElectron: true,
     version: pkg.version,
+    platform: process.platform,
+    arch: process.arch,
   }))
 
   ipcMain.handle('desktop:greet', (_event, name) => `Hello, ${name}!!`)
@@ -856,14 +1031,36 @@ function registerIpcHandlers() {
     return { apiUrl }
   })
   ipcMain.handle('desktop:open-external', (_event, url) => {
-    const parsed = new URL(url)
-    if (parsed.protocol !== 'https:') throw new Error('Only https: URLs allowed')
+    ensureHttpsUrl(url)
     return shell.openExternal(url)
   })
   ipcMain.handle('desktop:relaunch', () => {
     app.relaunch()
     app.exit(0)
   })
+  ipcMain.handle('desktop:update-download-appimage', async (_event, payload) => {
+    try {
+      return await downloadAppImageUpdate(payload.url, payload.version)
+    } catch (error) {
+      emitUpdateStatus({
+        phase: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  })
+  ipcMain.handle('desktop:update-install-appimage', async (_event, payload) => {
+    try {
+      await installDownloadedAppImage(payload.tempPath)
+    } catch (error) {
+      emitUpdateStatus({
+        phase: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  })
+  ipcMain.handle('desktop:update-restart-appimage', () => restartFromInstalledAppImage())
 }
 
 app.whenReady().then(() => {

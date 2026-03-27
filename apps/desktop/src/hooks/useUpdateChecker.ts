@@ -4,6 +4,7 @@ import {
   hasUpdate,
   isChecking,
   isDownloading,
+  isInstalling,
   isUpdating,
   lastCheckTime,
   updateAvailable,
@@ -19,6 +20,7 @@ interface UseUpdateCheckerReturn {
   updateVersion: string | null
   downloadProgress: number
   isDownloading: boolean
+  isInstalling: boolean
   isChecking: boolean
   isUpdating: boolean
   error: string | null
@@ -44,6 +46,7 @@ export function useUpdateChecker(): UseUpdateCheckerReturn {
     updateVersion: updateVersion.value,
     downloadProgress: updateDownloadProgress.value,
     isDownloading: isDownloading.value,
+    isInstalling: isInstalling.value,
     isChecking: isChecking.value,
     isUpdating: isUpdating.value,
     error: downloadError.value,
