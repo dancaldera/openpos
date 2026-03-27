@@ -4,6 +4,7 @@ set -euo pipefail
 
 CONFIG_DIR="${HOME:-}/.config/openpos-desktop"
 CONFIG_PATH="${CONFIG_DIR}/config.json"
+PROMPT_FD=0
 
 usage() {
   cat <<'EOF'
@@ -24,10 +25,25 @@ require_command() {
   fi
 }
 
+setup_prompt_input() {
+  if [[ -t 0 ]]; then
+    PROMPT_FD=0
+    return
+  fi
+
+  if { exec 3</dev/tty; } 2>/dev/null; then
+    PROMPT_FD=3
+    return
+  fi
+
+  echo "Interactive input requires a terminal." >&2
+  exit 1
+}
+
 confirm_overwrite() {
   local answer
   printf 'Config already exists at %s. Overwrite? [y/N]: ' "$CONFIG_PATH"
-  read -r answer
+  read -r -u "$PROMPT_FD" answer
   case "$answer" in
     y|Y|yes|YES)
       return 0
@@ -47,11 +63,11 @@ prompt_value() {
 
   if [[ "$secret" == "true" ]]; then
     printf '%s: ' "$label"
-    read -r -s value
+    read -r -s -u "$PROMPT_FD" value
     printf '\n'
   else
     printf '%s: ' "$label"
-    read -r value
+    read -r -u "$PROMPT_FD" value
   fi
 
   printf -v "$var_name" '%s' "$value"
@@ -119,6 +135,7 @@ if [[ -z "${HOME:-}" ]]; then
 fi
 
 require_command python3
+setup_prompt_input
 
 echo "OpenPOS desktop config will be written to:"
 echo "  ${CONFIG_PATH}"
