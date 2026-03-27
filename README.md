@@ -43,6 +43,14 @@ Example:
 
 Include only the fields needed for that install. Public GitHub releases must not embed `TURSO_AUTH_TOKEN`, `JWT_SECRET`, or other backend secrets.
 
+Create the file interactively:
+
+```bash
+bash scripts/create-desktop-config.sh
+```
+
+This writes `~/.config/openpos-desktop/config.json` and asks before overwriting an existing file.
+
 ## Development
 
 Prerequisites:
