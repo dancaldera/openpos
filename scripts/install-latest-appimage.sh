@@ -52,14 +52,131 @@ detect_arch() {
   esac
 }
 
-download_url() {
-  local asset_name="$1"
+release_api_url() {
   if [[ "$VERSION" == "latest" ]]; then
-    printf 'https://github.com/%s/%s/releases/latest/download/%s' "$REPO_OWNER" "$REPO_NAME" "$asset_name"
+    printf 'https://api.github.com/repos/%s/%s/releases/latest' "$REPO_OWNER" "$REPO_NAME"
     return
   fi
 
-  printf 'https://github.com/%s/%s/releases/download/v%s/%s' "$REPO_OWNER" "$REPO_NAME" "$VERSION" "$asset_name"
+  printf 'https://api.github.com/repos/%s/%s/releases/tags/v%s' "$REPO_OWNER" "$REPO_NAME" "$VERSION"
+}
+
+arch_match_tokens() {
+  case "$1" in
+    x64)
+      printf '%s\n' 'x64' 'x86_64' 'amd64'
+      ;;
+    arm64)
+      printf '%s\n' 'arm64' 'aarch64'
+      ;;
+    *)
+      printf '%s\n' "$1"
+      ;;
+  esac
+}
+
+extract_download_url_from_release_json() {
+  local release_json="$1"
+  local arch="$2"
+
+  RELEASE_JSON="$release_json" python3 - "$arch" <<'PY'
+import json
+import os
+import sys
+
+arch = sys.argv[1].lower()
+
+if arch == "x64":
+    arch_tokens = ("x64", "x86_64", "amd64")
+elif arch == "arm64":
+    arch_tokens = ("arm64", "aarch64")
+else:
+    arch_tokens = (arch,)
+
+payload = json.loads(os.environ["RELEASE_JSON"])
+assets = payload.get("assets") or []
+appimages = [
+    asset
+    for asset in assets
+    if isinstance(asset, dict)
+    and isinstance(asset.get("name"), str)
+    and asset["name"].lower().endswith(".appimage")
+    and isinstance(asset.get("browser_download_url"), str)
+]
+
+selected = None
+for asset in appimages:
+    name = asset["name"].lower()
+    if any(token in name for token in arch_tokens):
+        selected = asset
+        break
+
+if selected is None and len(appimages) == 1:
+    selected = appimages[0]
+
+if selected is None:
+    sys.exit(1)
+
+sys.stdout.write(selected["browser_download_url"])
+PY
+}
+
+probe_download_url() {
+  local arch="$1"
+  local -a candidates=()
+  local -a arch_names=()
+
+  mapfile -t arch_names < <(arch_match_tokens "$arch")
+
+  if [[ "$VERSION" == "latest" ]]; then
+    local token
+    for token in "${arch_names[@]}"; do
+      candidates+=("openpos-${token}.AppImage")
+    done
+    candidates+=("openpos.AppImage")
+  else
+    local token
+    for token in "${arch_names[@]}"; do
+      candidates+=(
+        "openpos-${VERSION}-${token}.AppImage"
+        "openpos-${token}.AppImage"
+      )
+    done
+    candidates+=("openpos-${VERSION}.AppImage" "openpos.AppImage")
+  fi
+
+  local asset_name url
+  for asset_name in "${candidates[@]}"; do
+    if [[ "$VERSION" == "latest" ]]; then
+      url="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest/download/${asset_name}"
+    else
+      url="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/v${VERSION}/${asset_name}"
+    fi
+
+    if curl --fail --silent --show-error --location --head --proto '=https' --tlsv1.2 "$url" >/dev/null 2>&1; then
+      printf '%s' "$url"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+resolve_download_url() {
+  local arch="$1"
+  local release_json=""
+
+  release_json="$(curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+    -H 'Accept: application/vnd.github+json' \
+    "$(release_api_url)" 2>/dev/null || true)"
+
+  if [[ -n "$release_json" ]] && command -v python3 >/dev/null 2>&1; then
+    if extract_download_url_from_release_json "$release_json" "$arch"; then
+      return 0
+    fi
+  fi
+
+  probe_download_url "$arch"
 }
 
 install_file() {
@@ -116,8 +233,11 @@ require_command install
 require_command mktemp
 
 ARCH="$(detect_arch)"
-ASSET_NAME="openpos-${ARCH}.AppImage"
-DOWNLOAD_URL="$(download_url "$ASSET_NAME")"
+DOWNLOAD_URL="$(resolve_download_url "$ARCH")" || {
+  echo "Unable to find a matching AppImage asset for version ${VERSION} on ${ARCH}" >&2
+  exit 1
+}
+ASSET_NAME="$(basename "${DOWNLOAD_URL%%\?*}")"
 TMP_DIR="$(mktemp -d)"
 TMP_FILE="${TMP_DIR}/${ASSET_NAME}"
 DESTINATION="${INSTALL_DIR}/openpos"
