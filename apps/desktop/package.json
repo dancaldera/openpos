@@ -1,7 +1,7 @@
 {
   "name": "openpos-desktop",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "OpenPOS desktop application powered by Electron and Preact",
   "author": {
     "name": "Daniel Caldera",
