@@ -1,27 +1,42 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import {
   downloadError,
+  downloadedUpdatePath,
   isChecking,
+  isDownloading,
+  isInstalling,
   lastCheckTime,
+  updateAssetName,
+  updateAssetUrl,
   updateAvailable,
+  updateDownloadProgress,
+  updateReadyToInstall,
   updateReleaseNotes,
   updateReleaseUrl,
   updateVersion,
 } from './updateStore'
 
-const getInfo = mock(async () => ({ version: '0.3.1' }))
+const getInfo = mock(async () => ({ version: '0.3.1', platform: 'linux', arch: 'x64' }))
 const openReleasePage = mock(async () => {})
+const downloadAppImageUpdate = mock(async () => ({ filePath: '/tmp/openpos-0.3.2.AppImage' }))
+const installDownloadedAppImage = mock(async () => {})
+const restartFromInstalledAppImage = mock(async () => {})
+const onStatusChange = mock(() => () => {})
 
 mock.module('../../lib/desktop', () => ({
   getDesktopApi: () => ({
     getInfo,
     updates: {
       openReleasePage,
+      downloadAppImageUpdate,
+      installDownloadedAppImage,
+      restartFromInstalledAppImage,
+      onStatusChange,
     },
   }),
 }))
 
-const { isNewerVersion, updateActions } = await import('./updateActions')
+const { isNewerVersion, pickAppImageAsset, updateActions } = await import('./updateActions')
 
 describe('isNewerVersion', () => {
   it('detects newer semantic versions', () => {
@@ -38,20 +53,55 @@ describe('isNewerVersion', () => {
   })
 })
 
+describe('pickAppImageAsset', () => {
+  it('selects the matching linux asset for x64', () => {
+    const asset = pickAppImageAsset(
+      [
+        { name: 'openpos-0.3.2-arm64.AppImage', browser_download_url: 'https://example.com/arm64' },
+        { name: 'openpos-0.3.2-x86_64.AppImage', browser_download_url: 'https://example.com/x64' },
+      ],
+      'x64',
+    )
+
+    expect(asset?.browser_download_url).toBe('https://example.com/x64')
+  })
+
+  it('returns the only AppImage when arch-specific naming is absent', () => {
+    const asset = pickAppImageAsset(
+      [{ name: 'openpos-0.3.2.AppImage', browser_download_url: 'https://example.com/openpos' }],
+      'x64',
+    )
+
+    expect(asset?.name).toBe('openpos-0.3.2.AppImage')
+  })
+})
+
 describe('updateActions.checkForUpdate', () => {
   beforeEach(() => {
     getInfo.mockClear()
     openReleasePage.mockClear()
+    downloadAppImageUpdate.mockClear()
+    installDownloadedAppImage.mockClear()
+    restartFromInstalledAppImage.mockClear()
+    onStatusChange.mockClear()
+
     downloadError.value = null
+    downloadedUpdatePath.value = null
     isChecking.value = false
+    isDownloading.value = false
+    isInstalling.value = false
     lastCheckTime.value = 0
+    updateAssetName.value = null
+    updateAssetUrl.value = null
     updateAvailable.value = false
+    updateDownloadProgress.value = 0
+    updateReadyToInstall.value = false
     updateReleaseNotes.value = null
     updateReleaseUrl.value = null
     updateVersion.value = null
   })
 
-  it('stores release metadata when a newer version exists', async () => {
+  it('stores release metadata and AppImage asset when a newer version exists', async () => {
     globalThis.fetch = mock(
       async () =>
         new Response(
@@ -59,6 +109,12 @@ describe('updateActions.checkForUpdate', () => {
             tag_name: 'v0.3.2',
             html_url: 'https://github.com/dancaldera/OpenPOS/releases/tag/v0.3.2',
             body: 'Release notes for 0.3.2',
+            assets: [
+              {
+                name: 'openpos-0.3.2-x86_64.AppImage',
+                browser_download_url: 'https://github.com/dancaldera/OpenPOS/releases/download/v0.3.2/openpos.AppImage',
+              },
+            ],
           }),
           { status: 200 },
         ),
@@ -72,9 +128,33 @@ describe('updateActions.checkForUpdate', () => {
     expect(updateVersion.value).toBe('0.3.2')
     expect(updateReleaseUrl.value).toBe('https://github.com/dancaldera/OpenPOS/releases/tag/v0.3.2')
     expect(updateReleaseNotes.value).toBe('Release notes for 0.3.2')
+    expect(updateAssetName.value).toBe('openpos-0.3.2-x86_64.AppImage')
+    expect(updateAssetUrl.value).toBe('https://github.com/dancaldera/OpenPOS/releases/download/v0.3.2/openpos.AppImage')
     expect(lastCheckTime.value).toBeGreaterThan(0)
     expect(downloadError.value).toBeNull()
     expect(isChecking.value).toBe(false)
+  })
+
+  it('keeps the release visible but disables auto-install when no AppImage asset exists', async () => {
+    globalThis.fetch = mock(
+      async () =>
+        new Response(
+          JSON.stringify({
+            tag_name: 'v0.3.2',
+            html_url: 'https://github.com/dancaldera/OpenPOS/releases/tag/v0.3.2',
+            body: 'Release notes for 0.3.2',
+            assets: [],
+          }),
+          { status: 200 },
+        ),
+    ) as unknown as typeof fetch
+
+    const result = await updateActions.checkForUpdate()
+
+    expect(result).toBe(true)
+    expect(updateAvailable.value).toBe(true)
+    expect(updateAssetName.value).toBeNull()
+    expect(updateAssetUrl.value).toBeNull()
   })
 
   it('clears stale release metadata when the installed version is current', async () => {
@@ -82,6 +162,8 @@ describe('updateActions.checkForUpdate', () => {
     updateVersion.value = '0.3.9'
     updateReleaseUrl.value = 'https://github.com/dancaldera/OpenPOS/releases/tag/v0.3.9'
     updateReleaseNotes.value = 'Old notes'
+    updateAssetName.value = 'old.AppImage'
+    updateAssetUrl.value = 'https://example.com/old.AppImage'
 
     globalThis.fetch = mock(
       async () =>
@@ -102,6 +184,8 @@ describe('updateActions.checkForUpdate', () => {
     expect(updateVersion.value).toBeNull()
     expect(updateReleaseUrl.value).toBeNull()
     expect(updateReleaseNotes.value).toBeNull()
+    expect(updateAssetName.value).toBeNull()
+    expect(updateAssetUrl.value).toBeNull()
     expect(downloadError.value).toBeNull()
   })
 
@@ -122,5 +206,37 @@ describe('updateActions.checkForUpdate', () => {
     expect(updateReleaseNotes.value).toBeNull()
     expect(downloadError.value).toBe('GitHub API responded with 503')
     expect(isChecking.value).toBe(false)
+  })
+})
+
+describe('updateActions.downloadAndInstall', () => {
+  beforeEach(() => {
+    downloadError.value = null
+    downloadedUpdatePath.value = null
+    isDownloading.value = false
+    isInstalling.value = false
+    updateAssetUrl.value = 'https://example.com/openpos-0.3.2.AppImage'
+    updateVersion.value = '0.3.2'
+    updateReadyToInstall.value = false
+  })
+
+  it('downloads the update when it is not ready yet', async () => {
+    const result = await updateActions.downloadAndInstall()
+
+    expect(result).toBe(true)
+    expect(downloadAppImageUpdate).toHaveBeenCalledWith('https://example.com/openpos-0.3.2.AppImage', '0.3.2')
+    expect(downloadedUpdatePath.value).toBe('/tmp/openpos-0.3.2.AppImage')
+    expect(updateReadyToInstall.value).toBe(true)
+  })
+
+  it('installs and restarts once the AppImage has been downloaded', async () => {
+    downloadedUpdatePath.value = '/tmp/openpos-0.3.2.AppImage'
+    updateReadyToInstall.value = true
+
+    const result = await updateActions.downloadAndInstall()
+
+    expect(result).toBe(true)
+    expect(installDownloadedAppImage).toHaveBeenCalledWith('/tmp/openpos-0.3.2.AppImage')
+    expect(restartFromInstalledAppImage).toHaveBeenCalledTimes(1)
   })
 })

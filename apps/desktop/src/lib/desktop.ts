@@ -40,8 +40,15 @@ export interface DesktopFirstRunStatus {
   lastSyncedAt?: string | null
 }
 
+export interface DesktopUpdateStatusEvent {
+  phase: 'downloading' | 'downloaded' | 'installing' | 'error'
+  progress?: number | null
+  filePath?: string
+  message?: string
+}
+
 export interface DesktopApi {
-  getInfo(): Promise<{ isDesktop: boolean; isElectron: boolean; version: string }>
+  getInfo(): Promise<{ isDesktop: boolean; isElectron: boolean; version: string; platform: string; arch: string }>
   greet(name: string): Promise<string>
   hashPassword(password: string): Promise<string>
   verifyPassword(password: string, hash: string): Promise<boolean>
@@ -72,6 +79,10 @@ export interface DesktopApi {
   updates: {
     openReleasePage(url: string): Promise<void>
     relaunch(): Promise<void>
+    downloadAppImageUpdate(url: string, version: string): Promise<{ filePath: string }>
+    installDownloadedAppImage(tempPath: string): Promise<void>
+    restartFromInstalledAppImage(): Promise<void>
+    onStatusChange(listener: (event: DesktopUpdateStatusEvent) => void): () => void
   }
 }
 

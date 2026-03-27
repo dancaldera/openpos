@@ -1,5 +1,33 @@
-import { describe, expect, it } from 'bun:test'
-import { getUpdateBadgeViewModel } from './UpdateBadge'
+import { describe, expect, it, mock } from 'bun:test'
+
+mock.module('./icons', () => ({
+  SpinnerIcon: () => null,
+}))
+
+const { getUpdateBadgeViewModel } = await import('./UpdateBadge')
+
+const labels = {
+  updates: 'Updates',
+  checking: 'Checking...',
+  checkForUpdates: 'Check for updates',
+  appUpdate: 'App Update',
+  checkForNewerRelease: 'Check for a newer release',
+  newVersionAvailable: 'New version available',
+  automaticInstallUnavailable: 'Automatic install is available only for Linux AppImage releases',
+  downloadUpdate: 'Download update',
+  installAndRestart: 'Install & Restart',
+  downloading: 'Downloading...',
+  installing: 'Installing update...',
+  readyToInstall: 'Ready to install! Click to restart.',
+  downloadedAsset: 'Downloaded file',
+  status: 'Status',
+  installed: 'Installed',
+  latest: 'Latest',
+  lastChecked: 'Last checked',
+  releaseNotes: 'Release notes',
+  error: 'Error',
+  viewRelease: 'View release',
+}
 
 describe('getUpdateBadgeViewModel', () => {
   it('returns the idle badge state when no update is available', () => {
@@ -7,11 +35,19 @@ describe('getUpdateBadgeViewModel', () => {
       available: false,
       checking: false,
       checkedAt: 0,
+      downloadProgress: 0,
+      downloading: false,
       error: null,
       installedVersion: null,
+      installing: false,
       latestVersion: null,
+      linuxSupported: true,
+      readyToInstall: false,
       releaseNotes: null,
       releaseUrl: null,
+      updateAssetName: null,
+      updateAssetUrl: null,
+      labels,
     })
 
     expect(viewModel.primaryLabel).toBe('Updates')
@@ -21,6 +57,7 @@ describe('getUpdateBadgeViewModel', () => {
     expect(viewModel.releaseNotesPreview).toBeNull()
     expect(viewModel.releaseUrl).toBe('https://github.com/dancaldera/OpenPOS/releases/latest')
     expect(viewModel.checkingLabel).toBe('Check for updates')
+    expect(viewModel.canAutoInstall).toBe(false)
   })
 
   it('returns the update-available state with a truncated release note preview', () => {
@@ -29,11 +66,19 @@ describe('getUpdateBadgeViewModel', () => {
       available: true,
       checking: false,
       checkedAt: Date.UTC(2026, 2, 26, 12, 0, 0),
+      downloadProgress: 0,
+      downloading: false,
       error: null,
       installedVersion: '0.3.1',
+      installing: false,
       latestVersion: '0.3.2',
+      linuxSupported: true,
+      readyToInstall: false,
       releaseNotes: longNotes,
       releaseUrl: 'https://github.com/dancaldera/OpenPOS/releases/tag/v0.3.2',
+      updateAssetName: 'openpos-0.3.2-x86_64.AppImage',
+      updateAssetUrl: 'https://github.com/dancaldera/OpenPOS/releases/download/v0.3.2/openpos.AppImage',
+      labels,
     })
 
     expect(viewModel.primaryLabel).toBe('v0.3.2')
@@ -43,22 +88,84 @@ describe('getUpdateBadgeViewModel', () => {
     expect(viewModel.lastCheckedLabel).toBeTruthy()
     expect(viewModel.releaseNotesPreview).toBe(longNotes.slice(0, 200))
     expect(viewModel.releaseUrl).toBe('https://github.com/dancaldera/OpenPOS/releases/tag/v0.3.2')
+    expect(viewModel.canAutoInstall).toBe(true)
+    expect(viewModel.actionLabel).toBe('Download update')
   })
 
-  it('returns the checking state and preserves visible errors', () => {
+  it('returns the downloading state with progress in the badge label', () => {
     const viewModel = getUpdateBadgeViewModel({
-      available: false,
-      checking: true,
+      available: true,
+      checking: false,
       checkedAt: 0,
-      error: 'GitHub API responded with 503',
-      installedVersion: '0.3.2',
-      latestVersion: null,
+      downloadProgress: 64,
+      downloading: true,
+      error: null,
+      installedVersion: '0.3.1',
+      installing: false,
+      latestVersion: '0.3.2',
+      linuxSupported: true,
+      readyToInstall: false,
       releaseNotes: null,
       releaseUrl: null,
+      updateAssetName: 'openpos-0.3.2-x86_64.AppImage',
+      updateAssetUrl: 'https://example.com/openpos.AppImage',
+      labels,
     })
 
-    expect(viewModel.checkingLabel).toBe('Checking…')
-    expect(viewModel.error).toBe('GitHub API responded with 503')
-    expect(viewModel.primaryLabel).toBe('Updates')
+    expect(viewModel.primaryLabel).toBe('64%')
+    expect(viewModel.actionLabel).toBe('Downloading... 64%')
+    expect(viewModel.statusLabel).toBe('Downloading... 64%')
+    expect(viewModel.actionDisabled).toBe(true)
+  })
+
+  it('returns the ready-to-install state and preserves visible errors', () => {
+    const viewModel = getUpdateBadgeViewModel({
+      available: true,
+      checking: false,
+      checkedAt: 0,
+      downloadProgress: 100,
+      downloading: false,
+      error: 'pkexec denied the action',
+      installedVersion: '0.3.1',
+      installing: false,
+      latestVersion: '0.3.2',
+      linuxSupported: true,
+      readyToInstall: true,
+      releaseNotes: null,
+      releaseUrl: null,
+      updateAssetName: 'openpos-0.3.2-x86_64.AppImage',
+      updateAssetUrl: 'https://example.com/openpos.AppImage',
+      labels,
+    })
+
+    expect(viewModel.actionLabel).toBe('Install & Restart')
+    expect(viewModel.statusLabel).toBe('Ready to install! Click to restart.')
+    expect(viewModel.downloadedAssetLabel).toBe('openpos-0.3.2-x86_64.AppImage')
+    expect(viewModel.error).toBe('pkexec denied the action')
+  })
+
+  it('falls back to release-view mode when linux auto install is unavailable', () => {
+    const viewModel = getUpdateBadgeViewModel({
+      available: true,
+      checking: false,
+      checkedAt: 0,
+      downloadProgress: 0,
+      downloading: false,
+      error: null,
+      installedVersion: '0.3.1',
+      installing: false,
+      latestVersion: '0.3.2',
+      linuxSupported: false,
+      readyToInstall: false,
+      releaseNotes: null,
+      releaseUrl: null,
+      updateAssetName: null,
+      updateAssetUrl: null,
+      labels,
+    })
+
+    expect(viewModel.headline).toBe('Automatic install is available only for Linux AppImage releases')
+    expect(viewModel.canAutoInstall).toBe(false)
+    expect(viewModel.showViewRelease).toBe(true)
   })
 })

@@ -7,8 +7,12 @@ import { computed, signal } from '@preact/signals'
 
 export const updateAvailable = signal(false)
 export const updateVersion = signal<string | null>(null)
+export const updateAssetName = signal<string | null>(null)
+export const updateAssetUrl = signal<string | null>(null)
+export const downloadedUpdatePath = signal<string | null>(null)
 export const updateDownloadProgress = signal(0)
 export const isDownloading = signal(false)
+export const isInstalling = signal(false)
 export const isChecking = signal(false)
 export const downloadError = signal<string | null>(null)
 export const lastCheckTime = signal(0)
@@ -24,4 +28,4 @@ export const hasUpdate = computed(() => updateAvailable.value && updateVersion.v
 /**
  * Computed: True when any update operation is in progress
  */
-export const isUpdating = computed(() => isChecking.value || isDownloading.value)
+export const isUpdating = computed(() => isChecking.value || isDownloading.value || isInstalling.value)
