@@ -49,6 +49,12 @@ Create the file interactively:
 bash scripts/create-desktop-config.sh
 ```
 
+Or run it directly from GitHub:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dancaldera/OpenPOS/main/scripts/create-desktop-config.sh | bash
+```
+
 This writes `~/.config/openpos-desktop/config.json` and asks before overwriting an existing file.
 
 ## Development
