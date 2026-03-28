@@ -1,4 +1,5 @@
 import type { ComponentChildren, JSX } from 'preact'
+import { clsx } from '../../lib/utils'
 
 interface FormProps {
   children: ComponentChildren
@@ -26,7 +27,7 @@ export function Form({
   }
 
   return (
-    <form class={`${spacings[spacing]} ${className}`.trim()} onSubmit={handleSubmit} {...props}>
+    <form class={clsx(spacings[spacing], className)} onSubmit={handleSubmit} {...props}>
       {children}
     </form>
   )

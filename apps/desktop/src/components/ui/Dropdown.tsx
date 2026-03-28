@@ -1,6 +1,7 @@
 import type { ComponentChildren } from 'preact'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { useClickOutside } from '../../hooks/useClickOutside'
+import { clsx } from '../../lib/utils'
 
 export interface DropdownItem {
   id: string
@@ -18,7 +19,7 @@ interface DropdownProps {
   align?: 'left' | 'right'
 }
 
-export default function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
+export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   useClickOutside(dropdownRef, () => setIsOpen(false))
@@ -39,8 +40,6 @@ export default function Dropdown({ trigger, items, align = 'right' }: DropdownPr
     }
   }, [isOpen])
 
-  const alignment = align === 'left' ? 'left-0' : 'right-0'
-
   return (
     <div class="relative inline-block text-left" ref={dropdownRef}>
       <button
@@ -59,10 +58,11 @@ export default function Dropdown({ trigger, items, align = 'right' }: DropdownPr
 
       {isOpen && (
         <div
-          class={`
-            absolute ${alignment} z-50 mt-2 w-48 rounded-md shadow-lg
-            bg-white border border-gray-200 focus:outline-none
-          `}
+          class={clsx(
+            'absolute z-50 mt-2 w-48 rounded-md shadow-lg',
+            'bg-white border border-gray-200 focus:outline-none',
+            align === 'left' ? 'left-0' : 'right-0',
+          )}
           role="menu"
         >
           <div class="py-1">
@@ -82,12 +82,12 @@ export default function Dropdown({ trigger, items, align = 'right' }: DropdownPr
                     }
                   }}
                   disabled={item.disabled}
-                  class={`
-                    w-full px-4 py-2 text-left text-sm flex items-center space-x-2
-                    hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500
-                    ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                    ${item.variant === 'danger' ? 'text-red-600 hover:text-red-700' : 'text-gray-700'}
-                  `}
+                  class={clsx(
+                    'w-full px-4 py-2 text-left text-sm flex items-center space-x-2',
+                    'hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                    item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                    item.variant === 'danger' ? 'text-red-600 hover:text-red-700' : 'text-gray-700',
+                  )}
                   role="menuitem"
                 >
                   {item.icon && <span>{item.icon}</span>}

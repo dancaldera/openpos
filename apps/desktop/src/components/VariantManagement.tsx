@@ -7,7 +7,7 @@ import {
   type ProductVariantInput,
   productVariantsService,
 } from '../services/product-variants-turso'
-import { Button, Dialog, Input, Select } from './ui'
+import { Button, Dialog, ErrorAlert, Input, Select } from './ui'
 
 interface ProductVariantRowProps {
   variant: ProductVariant
@@ -169,14 +169,7 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
       size="md"
     >
       <div>
-        {error && (
-          <div class="bg-red-500/10 backdrop-blur-sm border border-red-400/20 text-red-700 px-4 py-3 rounded-xl mb-6">
-            <div class="flex items-center">
-              <span class="text-red-500 mr-2">⚠️</span>
-              {error}
-            </div>
-          </div>
-        )}
+        {error && <ErrorAlert class="mb-6">{error}</ErrorAlert>}
 
         <form onSubmit={handleSubmit} class="space-y-6">
           {/* SKU & Barcode */}
@@ -429,14 +422,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title={t('variants.variantGenerator')} size="lg">
       <div>
-        {error && (
-          <div class="bg-red-500/10 backdrop-blur-sm border border-red-400/20 text-red-700 px-4 py-3 rounded-xl mb-6">
-            <div class="flex items-center">
-              <span class="text-red-500 mr-2">⚠️</span>
-              {error}
-            </div>
-          </div>
-        )}
+        {error && <ErrorAlert class="mb-6">{error}</ErrorAlert>}
 
         {/* Step indicator */}
         <div class="flex items-center justify-center mb-8">
@@ -665,14 +651,7 @@ export function VariantSettingsModal({ productId, isOpen, onClose, onSaved }: Va
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title={t('variants.enableVariants')} size="md">
       <div>
-        {error && (
-          <div class="bg-red-500/10 backdrop-blur-sm border border-red-400/20 text-red-700 px-4 py-3 rounded-xl mb-6">
-            <div class="flex items-center">
-              <span class="text-red-500 mr-2">⚠️</span>
-              {error}
-            </div>
-          </div>
-        )}
+        {error && <ErrorAlert class="mb-6">{error}</ErrorAlert>}
 
         <div class="space-y-6">
           <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">

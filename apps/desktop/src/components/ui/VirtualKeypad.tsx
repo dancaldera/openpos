@@ -1,4 +1,5 @@
 import { useTranslation } from '../../hooks/useTranslation'
+import { clsx } from '../../lib/utils'
 
 interface VirtualKeypadProps {
   onDigitPress: (digit: string) => void
@@ -21,51 +22,56 @@ export function VirtualKeypad({ onDigitPress, onBackspace, disabled = false, siz
   }
 
   const isLarge = size === 'large'
-  const containerClass = isLarge ? 'max-w-72' : 'max-w-48'
-  const gridClass = isLarge ? 'gap-3 p-4' : 'gap-2 p-3'
   const buttonTextClass = isLarge ? 'text-3xl' : 'text-lg'
+  const buttonBase = clsx(
+    'aspect-square rounded font-bold transition-colors',
+    'disabled:opacity-50 disabled:cursor-not-allowed',
+    'focus:outline-none focus:ring-2',
+    buttonTextClass,
+  )
 
   return (
-    <div class={`w-full ${containerClass} mx-auto mt-3 px-1`}>
-      <div class={`grid grid-cols-3 ${gridClass} bg-gray-100 rounded-lg border border-gray-300`}>
-        {/* Numbers 1-9 */}
+    <div class={clsx('w-full mx-auto mt-3 px-1', isLarge ? 'max-w-72' : 'max-w-48')}>
+      <div
+        class={clsx(
+          'grid grid-cols-3 bg-gray-100 rounded-lg border border-gray-300',
+          isLarge ? 'gap-3 p-4' : 'gap-2 p-3',
+        )}
+      >
         {Array.from({ length: 9 }, (_, i) => i + 1).map((num) => (
           <button
             key={num}
             type="button"
             onClick={() => handleDigitPress(num.toString())}
             disabled={disabled}
-            class={`aspect-square rounded bg-blue-600 hover:bg-blue-700 text-white font-bold ${buttonTextClass} transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500`}
+            class={clsx(buttonBase, 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500')}
             aria-label={`Digit ${num}`}
           >
             {num}
           </button>
         ))}
 
-        {/* Backspace button */}
         <button
           type="button"
           onClick={() => handleDigitPress('backspace')}
           disabled={disabled}
-          class={`aspect-square rounded bg-red-500 hover:bg-red-600 text-white font-bold ${buttonTextClass} transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-red-500`}
+          class={clsx(buttonBase, 'bg-red-500 hover:bg-red-600 text-white focus:ring-red-500')}
           aria-label={t('auth.backspace')}
         >
           ⌫
         </button>
 
-        {/* Zero button */}
         <button
           type="button"
           onClick={() => handleDigitPress('0')}
           disabled={disabled}
-          class={`aspect-square rounded bg-blue-600 hover:bg-blue-700 text-white font-bold ${buttonTextClass} transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500`}
+          class={clsx(buttonBase, 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500')}
           aria-label="Digit 0"
         >
           0
         </button>
 
-        {/* Empty space for grid layout */}
-        <div class="aspect-square"></div>
+        <div class="aspect-square" />
       </div>
     </div>
   )

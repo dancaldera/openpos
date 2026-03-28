@@ -1,5 +1,5 @@
 import type { JSX } from 'preact'
-import { clsx, generateId } from '../../lib/utils'
+import { clsx, generateId, inputBaseClasses, inputStateClasses } from '../../lib/utils'
 import { FormField } from './FormField'
 
 interface TextareaProps {
@@ -40,27 +40,13 @@ export function Textarea({
 }: TextareaProps & Omit<JSX.HTMLAttributes<HTMLTextAreaElement>, 'size'>) {
   const textareaId = id || generateId('textarea')
 
-  const baseClasses = clsx(
-    'w-full rounded-xl border transition-colors duration-150 resize-vertical',
-    'focus:outline-none focus:ring-2 focus:ring-offset-2',
-    disabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'bg-white',
-  )
-
   const sizes = {
     sm: 'px-4 py-2 text-sm',
     md: 'px-4 py-2.5 text-sm',
     lg: 'px-5 py-3 text-base',
   } as const
 
-  const stateClasses = error
-    ? clsx('border-red-500 text-red-900 placeholder-red-300', 'focus:ring-red-500 focus:border-red-500')
-    : clsx(
-        'border-gray-300 text-gray-900 placeholder-gray-500',
-        'focus:ring-blue-500 focus:border-blue-500',
-        'hover:border-gray-400',
-      )
-
-  const classes = clsx(baseClasses, sizes[size], stateClasses, className)
+  const classes = clsx(inputBaseClasses(disabled), 'resize-vertical', sizes[size], inputStateClasses(error), className)
 
   return (
     <FormField id={textareaId} label={label} required={required} error={error} helperText={helperText}>

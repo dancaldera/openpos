@@ -78,11 +78,6 @@ export function Dialog({ isOpen, onClose, title, children, size = 'md' }: Dialog
           )}
           role="dialog"
           aria-modal="true"
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              onClose()
-            }
-          }}
         >
           {title && (
             <div class="flex items-center justify-between p-6 border-b border-gray-200">
@@ -127,11 +122,7 @@ export function DialogConfirm({
           <Button variant="secondary" onClick={onClose}>
             {cancelText}
           </Button>
-          <Button
-            variant={variant === 'danger' ? 'danger' : 'primary'}
-            onClick={handleConfirm}
-            class={variant === 'danger' ? 'bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700' : ''}
-          >
+          <Button variant={variant === 'danger' ? 'danger' : 'primary'} onClick={handleConfirm}>
             {confirmText}
           </Button>
         </div>
