@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { toast } from 'sonner'
+import { Button } from '../components/ui/Button'
 import { DbStatusBadge } from '../components/ui/DbStatusBadge'
+import { Form } from '../components/ui/Form'
+import { Input } from '../components/ui/Input'
+import { MailIcon, SpinnerIcon } from '../components/ui/icons'
+import { PasswordInput } from '../components/ui/PasswordInput'
 import { UpdateBadge } from '../components/ui/UpdateBadge'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
@@ -14,7 +19,6 @@ export default function SignIn() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const animationRef = useRef<number>(0)
@@ -82,8 +86,7 @@ export default function SignIn() {
     }
   }, [])
 
-  const handleSubmit = async (e: Event) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     if (!email || !password) {
       toast.error(t('auth.fillAllFields'))
       return
@@ -112,79 +115,39 @@ export default function SignIn() {
             <p class="text-sm text-gray-600 mt-2">{t('auth.signInToAccount')}</p>
           </div>
 
-          <form onSubmit={handleSubmit} class="space-y-6">
-            <div>
-              <label htmlFor="email" class="block text-sm font-medium text-gray-700 mb-2">
-                {t('auth.email')}
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
-                placeholder="email@example.com"
-                disabled={isLoading}
-                required
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all bg-white text-gray-900 disabled:bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <label htmlFor="password" class="block text-sm font-medium text-gray-700">
-                  {t('auth.password')}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  class="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  {showPassword ? t('auth.hide') : t('auth.show')}
-                </button>
-              </div>
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
-                placeholder="••••••••"
-                disabled={isLoading}
-                required
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all bg-white text-gray-900 disabled:bg-gray-100"
-              />
-            </div>
-
-            <button
-              type="submit"
+          <Form onSubmit={handleSubmit} spacing="lg">
+            <Input
+              label={t('auth.email')}
+              type="email"
+              value={email}
+              onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
+              placeholder="email@example.com"
               disabled={isLoading}
-              class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
+              required
+              size="lg"
+              leftIcon={<MailIcon />}
+            />
+
+            <PasswordInput
+              label={t('auth.password')}
+              value={password}
+              onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
+              placeholder="••••••••"
+              disabled={isLoading}
+              required
+            />
+
+            <Button type="submit" variant="primary" size="lg" disabled={isLoading} class="w-full">
               {isLoading ? (
                 <>
-                  <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" role="img">
-                    <title>Loading</title>
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                      fill="none"
-                    />
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
+                  <SpinnerIcon class="animate-spin h-5 w-5 mr-2" />
                   {t('common.loading')}
                 </>
               ) : (
                 t('auth.signIn')
               )}
-            </button>
-          </form>
+            </Button>
+          </Form>
 
           <div class="mt-8 pt-6 border-t border-gray-200 text-center">
             <span class="text-xs text-gray-500">
