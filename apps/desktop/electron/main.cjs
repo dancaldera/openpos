@@ -5,6 +5,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { spawn } = require('node:child_process')
 const { createPublicConnectionConfig, resolveDesktopConnectionConfig } = require('./config-resolver.cjs')
+const { isLegacyLocalImageKey } = require('./product-image-keys.cjs')
 const { createSyncManager } = require('./sync-manager.cjs')
 
 const pkg = require('../package.json')
@@ -45,6 +46,13 @@ const ORDER_ITEM_COLUMNS = [
   'updated_at',
 ]
 const UPDATE_TEMP_DIR_NAME = 'openpos-updates'
+const PRODUCT_IMAGES_DIR_NAME = 'product-images'
+const MIME_BY_EXT = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' }
+const EXT_BY_MIME = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' }
+
+function getProductImagesDir() {
+  return path.join(app.getPath('userData'), PRODUCT_IMAGES_DIR_NAME)
+}
 
 function logStartup(message, details) {
   if (details === undefined) {
@@ -1061,6 +1069,60 @@ function registerIpcHandlers() {
     }
   })
   ipcMain.handle('desktop:update-restart-appimage', () => restartFromInstalledAppImage())
+
+  // ── Product images (local file system) ──────────────────────────────
+  ipcMain.handle('desktop:image-save', async (_event, payload) => {
+    const { base64, mimeType } = payload
+    if (!base64 || !mimeType) {
+      throw new Error('base64 and mimeType are required')
+    }
+
+    const ext = EXT_BY_MIME[mimeType]
+    if (!ext) {
+      throw new Error(`Unsupported image type: ${mimeType}`)
+    }
+
+    const { randomUUID } = require('node:crypto')
+    const dir = getProductImagesDir()
+    await fs.promises.mkdir(dir, { recursive: true })
+
+    const fileName = `${randomUUID()}${ext}`
+    const filePath = path.join(dir, fileName)
+    const buffer = Buffer.from(base64, 'base64')
+    await fs.promises.writeFile(filePath, buffer)
+
+    return { key: fileName }
+  })
+
+  ipcMain.handle('desktop:image-resolve', async (_event, keys) => {
+    const dir = getProductImagesDir()
+    const urls = {}
+
+    for (const key of keys) {
+      if (!isLegacyLocalImageKey(key)) {
+        continue
+      }
+      const safeName = path.basename(key)
+      const filePath = path.join(dir, safeName)
+      try {
+        const buffer = await fs.promises.readFile(filePath)
+        const ext = path.extname(safeName).toLowerCase()
+        const mime = MIME_BY_EXT[ext] || 'image/jpeg'
+        urls[key] = `data:${mime};base64,${buffer.toString('base64')}`
+      } catch {
+        // File missing — skip silently
+      }
+    }
+
+    return urls
+  })
+
+  ipcMain.handle('desktop:image-delete', async (_event, key) => {
+    if (!isLegacyLocalImageKey(key)) return
+    const safeName = path.basename(key)
+    const filePath = path.join(getProductImagesDir(), safeName)
+    await fs.promises.rm(filePath, { force: true })
+  })
 }
 
 app.whenReady().then(() => {

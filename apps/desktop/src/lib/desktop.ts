@@ -76,6 +76,11 @@ export interface DesktopApi {
     execute(sql: string, params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }>
     transaction(statements: DesktopDatabaseStatement[]): Promise<void>
   }
+  images: {
+    save(payload: { base64: string; mimeType: string }): Promise<{ key: string }>
+    resolve(keys: string[]): Promise<Record<string, string>>
+    delete(key: string): Promise<void>
+  }
   updates: {
     openReleasePage(url: string): Promise<void>
     relaunch(): Promise<void>

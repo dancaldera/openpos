@@ -1,5 +1,5 @@
 import type { JSX } from 'preact'
-import { clsx, generateId } from '../../lib/utils'
+import { clsx, generateId, iconWrapperClasses, inputBaseClasses, inputStateClasses } from '../../lib/utils'
 import { FormField } from './FormField'
 
 interface InputProps {
@@ -52,36 +52,20 @@ export function Input({
 }: InputProps & Omit<JSX.HTMLAttributes<HTMLInputElement>, 'size'>) {
   const inputId = id || generateId('input')
 
-  const baseClasses = clsx(
-    'w-full rounded-xl border transition-colors duration-150',
-    'focus:outline-none focus:ring-2 focus:ring-offset-2',
-    disabled ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'bg-white',
-  )
-
   const sizes = {
     sm: leftIcon ? 'pl-10 pr-4 py-2 text-sm' : rightIcon ? 'pl-4 pr-10 py-2 text-sm' : 'px-4 py-2 text-sm',
     md: leftIcon ? 'pl-10 pr-4 py-2.5 text-sm' : rightIcon ? 'pl-4 pr-10 py-2.5 text-sm' : 'px-4 py-2.5 text-sm',
     lg: leftIcon ? 'pl-12 pr-5 py-3 text-base' : rightIcon ? 'pl-5 pr-12 py-3 text-base' : 'px-5 py-3 text-base',
   }
 
-  const stateClasses = error
-    ? clsx('border-red-500 text-red-900 placeholder-red-300', 'focus:ring-red-500 focus:border-red-500')
-    : clsx(
-        'border-gray-300 text-gray-900 placeholder-gray-500',
-        'focus:ring-blue-500 focus:border-blue-500',
-        'hover:border-gray-400',
-      )
-
-  const classes = clsx(baseClasses, sizes[size], stateClasses, className)
+  const classes = clsx(inputBaseClasses(disabled), sizes[size], inputStateClasses(error), className)
 
   return (
     <FormField id={inputId} label={label} required={required} error={error} helperText={helperText}>
       <div class="relative">
         {leftIcon && (
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <div class="h-5 w-5 text-gray-400 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">
-              {leftIcon}
-            </div>
+            <div class={clsx('h-5 w-5 text-gray-400', iconWrapperClasses)}>{leftIcon}</div>
           </div>
         )}
 
@@ -109,11 +93,11 @@ export function Input({
                 onClick={onRightIconClick}
                 aria-label="Right icon action"
               >
-                <div class="h-4 w-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">{rightIcon}</div>
+                <div class={clsx('h-4 w-4', iconWrapperClasses)}>{rightIcon}</div>
               </button>
             ) : (
               <div class="pointer-events-none text-gray-400">
-                <div class="h-4 w-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">{rightIcon}</div>
+                <div class={clsx('h-4 w-4', iconWrapperClasses)}>{rightIcon}</div>
               </div>
             )}
           </div>

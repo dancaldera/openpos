@@ -3,6 +3,7 @@ const { replicatedTables, replicatedTablesByName } = require('@openpos/data')
 const DEFAULT_WATERMARK = '1970-01-01T00:00:00.000Z'
 const OUTBOX_ACTIVE_STATUSES = ['pending', 'error']
 const OUTBOX_OPEN_STATUSES = ['pending', 'error', 'conflict']
+const PRODUCT_IMAGE_REPAIR_BATCH_SIZE = 200
 
 function logSync(message, details) {
   if (details === undefined) {
@@ -57,7 +58,7 @@ function rowsMateriallyEqual(config, left, right) {
   })
 }
 
-function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) {
+function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, getRemoteClient: getRemoteClientOverride }) {
   let pollTimer = null
   let syncPromise = null
   let cachedClient = null
@@ -124,6 +125,12 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) 
       hasAuthToken: Boolean(config.authToken),
       url: config.url ?? null,
     })
+
+    if (getRemoteClientOverride) {
+      cachedClient = await getRemoteClientOverride(config)
+      cachedConfigKey = configKey
+      return cachedClient
+    }
 
     if (!cachedConnectModule) {
       cachedConnectModule = (await import('@tursodatabase/serverless')).connect
@@ -880,6 +887,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) 
     if (runHardDeletes && remoteCounts.size > 0) {
       await runHardDeleteReconciliation(database, client, remoteCounts)
     }
+    await repairMissingProductImages(database, client)
     logSync('remote pull phase completed')
     await flushOutbox(database, client)
     logSync('outbox flush completed')
@@ -1033,6 +1041,70 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue }) 
         )
         .get(coerceRecordId(recordId)) ?? null
     )
+  }
+
+  async function repairMissingProductImages(database, client) {
+    const config = replicatedTablesByName.products
+    if (!config) {
+      return
+    }
+
+    const candidateIds = database
+      .prepare(
+        `SELECT p.${quoteIdentifier(config.primaryKey)} AS id
+           FROM ${quoteIdentifier(config.tableName)} p
+          WHERE TRIM(COALESCE(p.image, '')) = ''
+            AND NOT EXISTS (
+              SELECT 1
+                FROM sync_outbox so
+               WHERE so.table_name = ?
+                 AND so.record_id = CAST(p.${quoteIdentifier(config.primaryKey)} AS TEXT)
+                 AND so.status IN (${OUTBOX_OPEN_STATUSES.map(() => '?').join(', ')})
+            )
+          ORDER BY p.${quoteIdentifier(config.primaryKey)} ASC
+          LIMIT ?`,
+      )
+      .all(config.tableName, ...OUTBOX_OPEN_STATUSES, PRODUCT_IMAGE_REPAIR_BATCH_SIZE)
+      .map((row) => String(row.id))
+
+    if (candidateIds.length === 0) {
+      return
+    }
+
+    const remoteColumns = await getRemoteTableColumns(client, config.tableName)
+    const effectiveWatermarkColumn = resolveCompatibleWatermarkColumn(config, remoteColumns)
+    const placeholders = candidateIds.map(() => '?').join(', ')
+    const remoteRows = await fetchRemoteRows(
+      client,
+      `SELECT ${buildRemoteSelectColumns(config, remoteColumns, effectiveWatermarkColumn)}
+         FROM ${quoteIdentifier(config.tableName)}
+        WHERE ${quoteIdentifier(config.primaryKey)} IN (${placeholders})
+          AND TRIM(COALESCE(image, '')) != ''
+        ORDER BY ${quoteIdentifier(config.primaryKey)} ASC`,
+      candidateIds.map((id) => coerceRecordId(id)),
+    )
+
+    let repairedCount = 0
+
+    for (const row of remoteRows) {
+      const localRow = selectRowByPrimaryKey(database, config, row[config.primaryKey])
+      if (!localRow) {
+        continue
+      }
+
+      if (String(localRow.image ?? '').trim()) {
+        continue
+      }
+
+      upsertLocalRow(database, config, row)
+      repairedCount++
+    }
+
+    if (repairedCount > 0) {
+      logSync('repaired blank local product images from remote', {
+        repairedCount,
+      })
+    }
   }
 
   function getExistingOutboxRow(database, tableName, recordId) {

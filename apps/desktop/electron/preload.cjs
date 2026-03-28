@@ -37,6 +37,11 @@ contextBridge.exposeInMainWorld('openposDesktop', {
     execute: (sql, params) => ipcRenderer.invoke('desktop:db-execute', sql, params),
     transaction: (statements) => ipcRenderer.invoke('desktop:db-transaction', statements),
   },
+  images: {
+    save: (payload) => ipcRenderer.invoke('desktop:image-save', payload),
+    resolve: (keys) => ipcRenderer.invoke('desktop:image-resolve', keys),
+    delete: (key) => ipcRenderer.invoke('desktop:image-delete', key),
+  },
   updates: {
     openReleasePage: (url) => ipcRenderer.invoke('desktop:open-external', url),
     relaunch: () => ipcRenderer.invoke('desktop:relaunch'),

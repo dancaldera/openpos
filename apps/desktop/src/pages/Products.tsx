@@ -82,6 +82,10 @@ function getErrorMessage(message: string, t: TranslateFunction): string {
     return t('errors.missingAuthToken')
   }
 
+  if (message === 'Failed to upload product image.') {
+    return t('products.imageUploadFailed')
+  }
+
   if (message === 'Unsupported image type. Allowed types: JPEG, PNG, WEBP.') {
     return t('products.invalidImageType')
   }
