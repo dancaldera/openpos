@@ -1,5 +1,6 @@
 import { formatBarcodeForStorage, normalizeBarcode } from '../lib/barcodes'
 import { execute, query } from '../lib/db-adapter'
+import { invalidateDashboardStatsCache } from './dashboard-stats'
 import { type ProductVariant, productVariantsService } from './product-variants-turso'
 
 export type ProductVariantType = 'simple' | 'configurable'
@@ -277,6 +278,8 @@ export class ProductService {
         updatedAt: now,
       }
 
+      invalidateDashboardStatsCache('turso')
+
       return { success: true, product: newProduct }
     } catch (error) {
       console.error('Create product error:', error)
@@ -389,6 +392,8 @@ export class ProductService {
         parseInt(id, 10),
       ])
 
+      invalidateDashboardStatsCache('turso')
+
       return {
         success: true,
         product: this.convertDbProduct(updatedProduct[0]),
@@ -406,6 +411,8 @@ export class ProductService {
       if (result.rowsAffected === 0) {
         return { success: false, error: 'Product not found' }
       }
+
+      invalidateDashboardStatsCache('turso')
 
       return { success: true }
     } catch (error) {

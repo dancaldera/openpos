@@ -1,5 +1,6 @@
 import Database from '../lib/local-database'
 import { companySettingsService } from './company-settings-sqlite'
+import { invalidateDashboardStatsCache } from './dashboard-stats'
 import { type ProductVariant, productVariantsService } from './product-variants-sqlite'
 import { productService } from './products-sqlite'
 
@@ -401,6 +402,8 @@ export class OrderService {
         updatedAt: now,
       }
 
+      invalidateDashboardStatsCache('sqlite')
+
       return { success: true, order: newOrder }
     } catch (error) {
       console.error('Create order error:', error)
@@ -450,6 +453,7 @@ export class OrderService {
          WHERE id = ?`,
         [status, paymentMethod || currentOrder.paymentMethod, now, completedAt, parseInt(id, 10)],
       )
+      invalidateDashboardStatsCache('sqlite')
 
       // Return updated order
       const updatedOrder = await this.getOrder(id)
@@ -481,6 +485,8 @@ export class OrderService {
       if (result.rowsAffected === 0) {
         return { success: false, error: 'Order not found' }
       }
+
+      invalidateDashboardStatsCache('sqlite')
 
       return { success: true }
     } catch (error) {
@@ -1007,6 +1013,7 @@ export class OrderService {
           parseInt(orderId, 10),
         ],
       )
+      invalidateDashboardStatsCache('sqlite')
 
       // Return updated order
       const updatedOrder = await this.getOrder(orderId)

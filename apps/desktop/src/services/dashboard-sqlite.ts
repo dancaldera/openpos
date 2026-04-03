@@ -1,13 +1,13 @@
+import Database from '../lib/local-database'
+import {
+  type DashboardStats,
+  invalidateDashboardStatsCache as invalidateDashboardStatsCacheEntry,
+  loadDashboardStats,
+} from './dashboard-stats'
 import { orderService } from './orders-sqlite'
 import { productService } from './products-sqlite'
 
-export interface DashboardStats {
-  totalSales: number
-  ordersToday: number
-  averageOrderValue: number
-  lowStockProducts: number
-  pendingOrders: number
-}
+export type { DashboardStats } from './dashboard-stats'
 
 export interface SalesData {
   date: string
@@ -38,42 +38,15 @@ export class DashboardService {
     return DashboardService.instance
   }
 
+  invalidateDashboardStatsCache(): void {
+    invalidateDashboardStatsCacheEntry('sqlite')
+  }
+
   async getDashboardStats(): Promise<DashboardStats> {
     try {
-      // Get all data in parallel for better performance
-      const [orders, products] = await Promise.all([orderService.getOrders(), productService.getProducts()])
+      const db = await Database.load('sqlite:postpos.db')
 
-      // Get today's date range
-      const today = new Date()
-      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString()
-      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString()
-
-      // Filter orders for today only
-      const todayOrders = orders.filter((order) => order.createdAt >= todayStart && order.createdAt < todayEnd)
-      const todayCompletedOrders = todayOrders.filter((o) => o.status === 'completed' || o.status === 'paid')
-
-      // Total sales today (sum of today's completed/paid orders)
-      const totalSales = todayCompletedOrders.reduce((sum, order) => sum + order.total, 0)
-
-      // Orders today count
-      const ordersToday = todayOrders.length
-
-      // Average order value today
-      const averageOrderValue = todayCompletedOrders.length > 0 ? totalSales / todayCompletedOrders.length : 0
-
-      // Low stock products (stock < 10 and > 0)
-      const lowStockProducts = products.filter((p) => p.isActive && p.stock > 0 && p.stock < 10).length
-
-      // Pending orders
-      const pendingOrders = orders.filter((o) => o.status === 'pending').length
-
-      return {
-        totalSales,
-        ordersToday,
-        averageOrderValue,
-        lowStockProducts,
-        pendingOrders,
-      }
+      return await loadDashboardStats('sqlite', (sql, params = []) => db.select(sql, params))
     } catch (error) {
       console.error('Dashboard stats error:', error)
       throw new Error('Failed to fetch dashboard statistics')
