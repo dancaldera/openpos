@@ -10,6 +10,7 @@ interface DialogProps {
   title?: string
   children: ComponentChildren
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
+  closeOnOutsideClick?: boolean
 }
 
 interface DialogConfirmProps {
@@ -23,7 +24,21 @@ interface DialogConfirmProps {
   variant?: 'danger' | 'primary'
 }
 
-export function Dialog({ isOpen, onClose, title, children, size = 'md' }: DialogProps) {
+type DialogKeyboardEvent = Pick<KeyboardEvent, 'key'>
+
+export function handleDialogEscape(event: DialogKeyboardEvent, isOpen: boolean, onClose: () => void) {
+  if (event.key === 'Escape' && isOpen) {
+    onClose()
+  }
+}
+
+export function handleDialogOutsideClick(closeOnOutsideClick: boolean, onClose: () => void) {
+  if (closeOnOutsideClick) {
+    onClose()
+  }
+}
+
+export function Dialog({ isOpen, onClose, title, children, size = 'md', closeOnOutsideClick = true }: DialogProps) {
   const [isAnimating, setIsAnimating] = useState(false)
 
   useEffect(() => {
@@ -36,9 +51,7 @@ export function Dialog({ isOpen, onClose, title, children, size = 'md' }: Dialog
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
-      }
+      handleDialogEscape(e, isOpen, onClose)
     }
 
     document.addEventListener('keydown', handleEscape)
@@ -64,14 +77,14 @@ export function Dialog({ isOpen, onClose, title, children, size = 'md' }: Dialog
           isAnimating ? 'opacity-100' : 'opacity-0',
           'border-0 p-0 cursor-pointer',
         )}
-        onClick={onClose}
+        onClick={() => handleDialogOutsideClick(closeOnOutsideClick, onClose)}
         aria-label="Close dialog"
       />
 
-      <div class="relative z-10 flex min-h-full items-center justify-center p-4">
+      <div class="pointer-events-none relative z-10 flex min-h-full items-center justify-center p-4">
         <div
           class={clsx(
-            'relative w-full bg-white rounded-lg shadow-xl',
+            'pointer-events-auto relative w-full bg-white rounded-lg shadow-xl',
             'transition-all duration-200 transform',
             isAnimating ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
             sizeClasses[size],
