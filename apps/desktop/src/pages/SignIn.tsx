@@ -97,6 +97,8 @@ export default function SignIn() {
       const result = await signIn(email, password)
       if (!result.success) {
         toast.error(result.error || t('auth.signInFailed'))
+      } else if (result.warning) {
+        toast.warning(result.warning)
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('auth.signInFailed'))

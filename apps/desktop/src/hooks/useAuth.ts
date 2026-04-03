@@ -10,7 +10,7 @@ interface UseAuthReturn {
   isAdmin: boolean
   isManager: boolean
   isUser: boolean
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string; warning?: string }>
   signOut: () => void
   hasPermission: (permission: string) => boolean
   hasRole: (role: User['role']) => boolean

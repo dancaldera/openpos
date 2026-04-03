@@ -47,13 +47,21 @@ export interface DesktopUpdateStatusEvent {
   message?: string
 }
 
+export interface DesktopRuntimeConfigSummary {
+  apiUrl: string
+  configPath: string
+  configSource: 'legacy' | 'userData' | 'env' | 'bundled'
+  legacyConfigPath: string
+  userDataConfigPath: string
+}
+
 export interface DesktopApi {
   getInfo(): Promise<{ isDesktop: boolean; isElectron: boolean; version: string; platform: string; arch: string }>
   greet(name: string): Promise<string>
   hashPassword(password: string): Promise<string>
   verifyPassword(password: string, hash: string): Promise<boolean>
   printThermalReceipt(receiptData: string): Promise<string>
-  getConfig(): Promise<{ apiUrl: string }>
+  getConfig(): Promise<DesktopRuntimeConfigSummary>
   sync: {
     getStatus(): Promise<DesktopSyncStatusSnapshot>
     trigger(): Promise<DesktopSyncStatusSnapshot>

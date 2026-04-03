@@ -27,7 +27,8 @@ Make sure `~/.local/bin` is in your `PATH` if your shell does not already includ
 
 ## Desktop Runtime Config
 
-Linux packaged installs read runtime config from `~/.config/openpos-desktop/config.json`.
+Linux packaged installs use `~/.config/openpos-desktop/config.json` as the primary runtime config path.
+For backward compatibility, the app also checks the Electron user-data config file if the primary path is missing.
 
 Example:
 
@@ -49,7 +50,7 @@ Create the file interactively:
 bash scripts/create-desktop-config.sh
 ```
 
-This writes `~/.config/openpos-desktop/config.json` and asks before overwriting an existing file.
+This writes the primary runtime config file at `~/.config/openpos-desktop/config.json` and asks before overwriting an existing file.
 
 ## Development
 

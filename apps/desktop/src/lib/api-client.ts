@@ -34,12 +34,29 @@ export async function requestApi(path: string, options: ApiRequestOptions = {}):
   })
 }
 
+async function getApiErrorMessage(response: Response): Promise<string> {
+  const contentType = response.headers.get('content-type') || ''
+
+  if (contentType.includes('application/json')) {
+    const payload = await response.json().catch(() => null)
+    const errorMessage =
+      payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string'
+        ? payload.error
+        : null
+    if (errorMessage) {
+      return errorMessage
+    }
+  }
+
+  const text = await response.text().catch(() => '')
+  return text.trim() || response.statusText || 'API request failed'
+}
+
 export async function requestApiJson<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const response = await requestApi(path, options)
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText || 'Unknown error' }))
-    const errorMessage = error.error || response.statusText || 'API request failed'
+    const errorMessage = await getApiErrorMessage(response)
 
     if (options.requireAuth && (response.status === 401 || isExpiredTokenMessage(errorMessage))) {
       expireSession()

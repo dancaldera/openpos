@@ -29,13 +29,19 @@ class MemoryStorage {
 }
 
 const requestApiJson = mock(async () => ({}))
-const saveImage = mock(async () => ({ key: 'local-image.jpg' }))
 const resolveImages = mock(async () => ({}))
 const deleteImage = mock(async () => {})
+const getApiBaseUrl = mock(async () => 'https://api.example.com')
+const getDesktopApiConfig = mock(async () => ({
+  apiUrl: 'https://api.example.com',
+  configPath: '/home/ana/.config/openpos-desktop/config.json',
+  configSource: 'legacy' as const,
+  legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+  userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
+}))
 const logError = mock(() => {})
 const requireDesktopApi = mock(() => ({
   images: {
-    save: saveImage,
     resolve: resolveImages,
     delete: deleteImage,
   },
@@ -43,6 +49,11 @@ const requireDesktopApi = mock(() => ({
 
 mock.module('../lib/api-client', () => ({
   requestApiJson,
+}))
+
+mock.module('../lib/api-config', () => ({
+  getApiBaseUrl,
+  getDesktopApiConfig,
 }))
 
 mock.module('../lib/desktop', () => ({
@@ -53,24 +64,18 @@ mock.module('../lib/platform', () => ({
   isDesktop: true,
 }))
 
-class MockFileReader {
-  result: string | ArrayBuffer | null = null
-  onload: (() => void) | null = null
-  onerror: (() => void) | null = null
-
-  readAsDataURL(file: Blob): void {
-    this.result = `data:${file.type};base64,bGVhbg==`
-    queueMicrotask(() => {
-      this.onload?.()
-    })
-  }
-}
-
-globalThis.FileReader = MockFileReader as unknown as typeof FileReader
 console.error = logError as typeof console.error
 
-const { deleteProductImage, isLegacyLocalImageKey, isRemoteImageKey, resolveProductImageUrls, uploadProductImage } =
-  await import('./product-images')
+const { AuthExpiredError } = await import('../lib/auth-session')
+const {
+  deleteProductImage,
+  DESKTOP_API_NOT_CONFIGURED_MESSAGE,
+  DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE,
+  isLegacyLocalImageKey,
+  isRemoteImageKey,
+  resolveProductImageUrls,
+  uploadProductImage,
+} = await import('./product-images')
 
 describe('product image service desktop routing', () => {
   const imageFile = new File(['lean'], 'product.jpg', { type: 'image/jpeg' })
@@ -80,11 +85,20 @@ describe('product image service desktop routing', () => {
     storage = new MemoryStorage()
     globalThis.localStorage = storage as unknown as Storage
     requestApiJson.mockReset()
-    saveImage.mockReset()
+    getApiBaseUrl.mockReset()
+    getDesktopApiConfig.mockReset()
     resolveImages.mockReset()
     deleteImage.mockReset()
     logError.mockReset()
     requireDesktopApi.mockClear()
+    getApiBaseUrl.mockResolvedValue('https://api.example.com')
+    getDesktopApiConfig.mockResolvedValue({
+      apiUrl: 'https://api.example.com',
+      configPath: '/home/ana/.config/openpos-desktop/config.json',
+      configSource: 'legacy',
+      legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+      userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
+    })
   })
 
   it('classifies local filenames and remote keys correctly', () => {
@@ -114,7 +128,7 @@ describe('product image service desktop routing', () => {
       body: expect.any(FormData),
       requireAuth: true,
     })
-    expect(saveImage).not.toHaveBeenCalled()
+    expect(requestApiJson).toHaveBeenCalledTimes(1)
   })
 
   it('throws when API upload fails in desktop mode', async () => {
@@ -122,7 +136,50 @@ describe('product image service desktop routing', () => {
     requestApiJson.mockRejectedValueOnce(new Error('offline'))
 
     await expect(uploadProductImage(imageFile)).rejects.toThrow('Failed to upload product image.')
-    expect(saveImage).not.toHaveBeenCalled()
+  })
+
+  it('throws a desktop config error when no API URL is configured for remote upload', async () => {
+    getApiBaseUrl.mockResolvedValueOnce('')
+    getDesktopApiConfig.mockResolvedValueOnce({
+      apiUrl: '',
+      configPath: '/home/ana/.config/openpos-desktop/config.json',
+      configSource: 'legacy',
+      legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+      userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
+    })
+
+    await expect(uploadProductImage(imageFile)).rejects.toThrow(
+      `${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::/home/ana/.config/openpos-desktop/config.json`,
+    )
+    expect(requestApiJson).not.toHaveBeenCalled()
+  })
+
+  it('throws a remote-session error when desktop has API config but no auth token', async () => {
+    await expect(uploadProductImage(imageFile)).rejects.toThrow(DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE)
+    expect(requestApiJson).not.toHaveBeenCalled()
+  })
+
+  it('includes the persisted remote auth failure details when desktop sign-in could not get a token', async () => {
+    storage.setItem(
+      'desktop_remote_auth_status',
+      JSON.stringify({
+        apiConfigured: true,
+        lastError: 'JWT_SECRET environment variable is not set',
+        configPath: '/home/ana/.config/openpos-desktop/config.json',
+      }),
+    )
+
+    await expect(uploadProductImage(imageFile)).rejects.toThrow(
+      `${DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE}::JWT_SECRET environment variable is not set`,
+    )
+    expect(requestApiJson).not.toHaveBeenCalled()
+  })
+
+  it('preserves auth-expired errors from the API upload path', async () => {
+    storage.setItem('auth_token', 'desktop-token')
+    requestApiJson.mockRejectedValueOnce(new AuthExpiredError())
+
+    await expect(uploadProductImage(imageFile)).rejects.toBeInstanceOf(AuthExpiredError)
   })
 
   it('resolves remote keys through the API and local keys through desktop IPC', async () => {
@@ -197,9 +254,9 @@ describe('product image service desktop routing', () => {
   })
 
   it('does not call the remote delete API when desktop has no auth token', async () => {
-    await deleteProductImage('products/2026/03/object.jpg')
-
-    expect(requestApiJson).not.toHaveBeenCalled()
+    await expect(deleteProductImage('products/2026/03/object.jpg')).rejects.toThrow(
+      DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE,
+    )
     expect(deleteImage).not.toHaveBeenCalled()
   })
 
@@ -210,9 +267,19 @@ describe('product image service desktop routing', () => {
     expect(requestApiJson).not.toHaveBeenCalled()
   })
 
-  it('throws when desktop has no auth token for remote upload', async () => {
-    await expect(uploadProductImage(imageFile)).rejects.toThrow('No auth token available for API call')
+  it('throws a desktop config error on remote delete when API is not configured', async () => {
+    getApiBaseUrl.mockResolvedValueOnce('')
+    getDesktopApiConfig.mockResolvedValueOnce({
+      apiUrl: '',
+      configPath: '/home/ana/.config/openpos-desktop/config.json',
+      configSource: 'legacy',
+      legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+      userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
+    })
+
+    await expect(deleteProductImage('products/2026/03/object.jpg')).rejects.toThrow(
+      `${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::/home/ana/.config/openpos-desktop/config.json`,
+    )
     expect(requestApiJson).not.toHaveBeenCalled()
-    expect(saveImage).not.toHaveBeenCalled()
   })
 })

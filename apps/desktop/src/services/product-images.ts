@@ -1,11 +1,39 @@
 import { requestApiJson } from '../lib/api-client'
+import { getDesktopApiConfig } from '../lib/api-config'
+import { isAuthExpiredError } from '../lib/auth-session'
 import { requireDesktopApi } from '../lib/desktop'
 import { isDesktop } from '../lib/platform'
+import { getDesktopRemoteSessionState } from './auth-turso'
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp'])
 const PRODUCT_IMAGE_UPLOAD_FAILED_MESSAGE = 'Failed to upload product image.'
+export const DESKTOP_API_NOT_CONFIGURED_MESSAGE = 'Desktop API is not configured.'
+export const DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE = 'Remote session is unavailable. Sign out and sign in again.'
+const DESKTOP_REMOTE_SESSION_UNAVAILABLE_PREFIX = `${DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE}::`
+
+export function createDesktopApiNotConfiguredMessage(configPath: string): string {
+  return `${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::${configPath}`
+}
+
+export function extractDesktopApiConfigPath(message: string): string | null {
+  const prefix = `${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::`
+  return message.startsWith(prefix) ? message.slice(prefix.length) : null
+}
+
+export function createDesktopRemoteSessionUnavailableMessage(details?: string | null): string {
+  const normalizedDetails = typeof details === 'string' ? details.trim() : ''
+  return normalizedDetails
+    ? `${DESKTOP_REMOTE_SESSION_UNAVAILABLE_PREFIX}${normalizedDetails}`
+    : DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE
+}
+
+export function extractDesktopRemoteSessionDetails(message: string): string | null {
+  return message.startsWith(DESKTOP_REMOTE_SESSION_UNAVAILABLE_PREFIX)
+    ? message.slice(DESKTOP_REMOTE_SESSION_UNAVAILABLE_PREFIX.length)
+    : null
+}
 
 export interface UploadedProductImage {
   key: string
@@ -35,12 +63,17 @@ function getImageExtension(key: string): string {
   return lastDotIndex >= 0 ? normalizedKey.slice(lastDotIndex) : ''
 }
 
-function hasDesktopApiAuthToken(): boolean {
-  if (typeof localStorage === 'undefined') {
-    return false
+async function assertDesktopRemoteSessionReady(): Promise<void> {
+  const session = await getDesktopRemoteSessionState()
+
+  if (!session.apiConfigured) {
+    const config = await getDesktopApiConfig()
+    throw new Error(createDesktopApiNotConfiguredMessage(config.configPath || config.legacyConfigPath || 'config.json'))
   }
 
-  return Boolean(localStorage.getItem('auth_token'))
+  if (!session.hasAuthToken) {
+    throw new Error(createDesktopRemoteSessionUnavailableMessage(session.lastError))
+  }
 }
 
 export function isLegacyLocalImageKey(key: string): boolean {
@@ -99,13 +132,14 @@ export async function uploadProductImage(file: File): Promise<UploadedProductIma
   }
 
   if (isDesktop) {
-    if (!hasDesktopApiAuthToken()) {
-      throw new Error('No auth token available for API call')
-    }
+    await assertDesktopRemoteSessionReady()
 
     try {
       return await uploadProductImageToApi(file)
     } catch (error) {
+      if (isAuthExpiredError(error)) {
+        throw error
+      }
       console.error('Failed to upload product image through remote API in desktop mode:', error)
       throw new Error(PRODUCT_IMAGE_UPLOAD_FAILED_MESSAGE)
     }
@@ -126,8 +160,9 @@ export async function resolveProductImageUrls(keys: string[]): Promise<Record<st
     const localKeys = normalizedKeys.filter((key) => isLegacyLocalImageKey(key))
     const remoteKeys = normalizedKeys.filter((key) => isRemoteImageKey(key))
     const results: Record<string, string> = {}
+    const session = await getDesktopRemoteSessionState()
 
-    if (remoteKeys.length > 0 && hasDesktopApiAuthToken()) {
+    if (remoteKeys.length > 0 && session.isReady) {
       try {
         Object.assign(results, await resolveRemoteProductImageUrls(remoteKeys))
       } catch (error) {
@@ -162,14 +197,16 @@ export async function deleteProductImage(key: string): Promise<void> {
       return
     }
 
-    if (!hasDesktopApiAuthToken()) {
-      return
-    }
+    await assertDesktopRemoteSessionReady()
 
     try {
       await deleteRemoteProductImage(trimmedKey)
     } catch (error) {
+      if (isAuthExpiredError(error)) {
+        throw error
+      }
       console.error('Failed to delete remote product image in desktop mode:', error)
+      throw error
     }
     return
   }
