@@ -42,16 +42,19 @@ export function Button({
       'hover:bg-gray-50 hover:border-gray-400',
       'focus:ring-gray-500',
       'shadow-sm hover:shadow-md',
+      'dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-750 dark:hover:border-gray-600',
     ),
     ghost: clsx(
       'bg-transparent text-gray-700 border-transparent',
       'hover:bg-gray-100 hover:text-gray-900',
       'focus:ring-gray-500',
+      'dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100',
     ),
     outline: clsx(
       'bg-white text-gray-700 border-gray-300',
       'hover:bg-gray-50 hover:border-gray-400',
       'focus:ring-gray-500',
+      'dark:bg-transparent dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-800 dark:hover:border-gray-600',
     ),
     danger: clsx(
       'bg-red-500 text-white border-red-500',

@@ -84,7 +84,7 @@ export function Dialog({ isOpen, onClose, title, children, size = 'md', closeOnO
       <div class="pointer-events-none relative z-10 flex min-h-full items-center justify-center p-4">
         <div
           class={clsx(
-            'pointer-events-auto relative w-full bg-white rounded-lg shadow-xl',
+            'pointer-events-auto relative w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl',
             'transition-all duration-200 transform',
             isAnimating ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
             sizeClasses[size],
@@ -93,8 +93,8 @@ export function Dialog({ isOpen, onClose, title, children, size = 'md', closeOnO
           aria-modal="true"
         >
           {title && (
-            <div class="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 class="text-lg font-semibold text-gray-900">{title}</h3>
+            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
               <button
                 type="button"
                 onClick={onClose}
@@ -130,7 +130,7 @@ export function DialogConfirm({
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div class="space-y-4">
-        <p class="text-gray-700">{message}</p>
+        <p class="text-gray-700 dark:text-gray-300">{message}</p>
         <div class="flex justify-end space-x-3">
           <Button variant="secondary" onClick={onClose}>
             {cancelText}

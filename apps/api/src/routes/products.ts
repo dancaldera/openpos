@@ -34,6 +34,8 @@ export const productsRouter = new Hono()
 
 productsRouter.use('/*', authMiddleware)
 
+const productSelectClause = 'SELECT * FROM products'
+
 function normalizeBarcode(barcode?: string | null): string | null {
   if (!barcode) return null
 
@@ -43,6 +45,10 @@ function normalizeBarcode(barcode?: string | null): string | null {
     .replace(/\s+/g, '')
 
   return normalized.length > 0 ? normalized : null
+}
+
+function parseProductId(rawId: string) {
+  return Number(rawId)
 }
 
 function formatBarcodeForStorage(barcode?: string | null): string | null {
@@ -80,23 +86,24 @@ productsRouter.get('/', async (c) => {
   const limit = Math.min(100, Math.max(1, Number(c.req.query('limit') ?? '50')))
   const offset = (page - 1) * limit
 
-  let sql = 'SELECT * FROM products WHERE is_active = 1'
+  let whereClause = 'WHERE is_active = 1'
   const params: unknown[] = []
 
   if (search) {
-    sql += ' AND (name LIKE ? OR barcode LIKE ? OR (? IS NOT NULL AND barcode_normalized = ?))'
+    whereClause += ' AND (name LIKE ? OR barcode LIKE ? OR (? IS NOT NULL AND barcode_normalized = ?))'
     params.push(`%${search}%`, `%${search}%`, normalizedBarcode, normalizedBarcode)
   }
 
   if (category) {
-    sql += ' AND category = ?'
+    whereClause += ' AND category = ?'
     params.push(category)
   }
 
-  const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as count')
+  const countSql = `SELECT COUNT(*) as count FROM products ${whereClause.replace(/^WHERE /, 'WHERE ')}`
+  const productsSql = `${productSelectClause} ${whereClause} ORDER BY name ASC LIMIT ? OFFSET ?`
   const [countResult, products] = await Promise.all([
     query<{ count: number }>(countSql, params),
-    query<DatabaseProduct>(`${sql} ORDER BY name ASC LIMIT ? OFFSET ?`, [...params, limit, offset]),
+    query<DatabaseProduct>(productsSql, [...params, limit, offset]),
   ])
 
   const totalCount = countResult[0]?.count ?? 0
@@ -111,7 +118,7 @@ productsRouter.get('/', async (c) => {
 
 // GET /api/products/:id
 productsRouter.get('/:id', async (c) => {
-  const id = Number(c.req.param('id'))
+  const id = parseProductId(c.req.param('id'))
   const rows = await query<DatabaseProduct>('SELECT * FROM products WHERE id = ? LIMIT 1', [id])
   if (rows.length === 0) return c.json({ error: 'Product not found' }, 404)
   return c.json({ product: toProduct(rows[0]) })
@@ -152,7 +159,7 @@ productsRouter.post('/', async (c) => {
 
 // PUT /api/products/:id
 productsRouter.put('/:id', async (c) => {
-  const id = Number(c.req.param('id'))
+  const id = parseProductId(c.req.param('id'))
   const body = await c.req.json<Partial<DatabaseProduct>>()
   const now = new Date().toISOString()
   const barcode = formatBarcodeForStorage(body.barcode)
@@ -187,7 +194,7 @@ productsRouter.put('/:id', async (c) => {
 
 // DELETE /api/products/:id (soft delete)
 productsRouter.delete('/:id', async (c) => {
-  const id = Number(c.req.param('id'))
+  const id = parseProductId(c.req.param('id'))
   const now = new Date().toISOString()
   const result = await execute('UPDATE products SET is_active = 0, updated_at = ? WHERE id = ?', [now, id])
   if (result.rowsAffected === 0) return c.json({ error: 'Product not found' }, 404)

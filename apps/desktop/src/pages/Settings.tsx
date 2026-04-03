@@ -8,6 +8,9 @@ import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 export default function Settings() {
   const { t } = useTranslation()
+  const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
+  const sectionTitleClass = 'mb-6 text-xl font-semibold text-gray-900 dark:text-gray-100'
+  const helperTextClass = 'text-sm text-gray-500 dark:text-gray-400'
 
   const [greetMsg, setGreetMsg] = useState('')
   const [name, setName] = useState('')
@@ -109,10 +112,10 @@ export default function Settings() {
   if (isLoading) {
     return (
       <div class="max-w-6xl mx-auto px-6 py-4">
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class={`${panelClass} p-6`}>
           <div class="text-center py-8">
             <div class="w-8 h-8 bg-blue-600 rounded-full animate-spin border-2 border-transparent border-t-white mx-auto mb-4"></div>
-            <p class="text-gray-600">{t('common.loading')}</p>
+            <p class="text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
           </div>
         </div>
       </div>
@@ -124,8 +127,8 @@ export default function Settings() {
       <div class="space-y-6">
         <div class="flex justify-between items-center">
           <div>
-            <h2 class="text-2xl font-bold text-gray-900">{t('settings.title')}</h2>
-            <span class="text-gray-600">{t('settings.subtitle')}</span>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('settings.title')}</h2>
+            <span class="text-gray-600 dark:text-gray-400">{t('settings.subtitle')}</span>
           </div>
           <div class="flex gap-3">
             {hasChanges && (
@@ -142,9 +145,9 @@ export default function Settings() {
               variant="outline"
               onClick={() => setIsResetDialogOpen(true)}
               disabled={isSaving}
-              class="text-red-600 border-red-200 hover:bg-red-50"
+              class="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
             >
-              🔄 {t('settings.resetDefaults')}
+              {t('settings.resetDefaults')}
             </Button>
           </div>
         </div>
@@ -152,8 +155,8 @@ export default function Settings() {
         {localSettings && (
           <div class="space-y-8">
             {/* Company Information */}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 class="text-xl font-semibold text-gray-900 mb-6">🏢 {t('settings.companyInfo')}</h2>
+            <div class={`${panelClass} p-6`}>
+              <h2 class={sectionTitleClass}>{t('settings.companyInfo')}</h2>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Input
@@ -164,7 +167,7 @@ export default function Settings() {
                     placeholder={t('settings.companyName')}
                     class="mb-2"
                   />
-                  <span class="text-sm text-gray-500">{t('settings.companyNameDesc')}</span>
+                  <span class={helperTextClass}>{t('settings.companyNameDesc')}</span>
                 </div>
                 <div>
                   <Input
@@ -175,7 +178,7 @@ export default function Settings() {
                     placeholder={t('settings.appName')}
                     class="mb-2"
                   />
-                  <span class="text-sm text-gray-500">{t('settings.appNameDesc')}</span>
+                  <span class={helperTextClass}>{t('settings.appNameDesc')}</span>
                 </div>
                 <div>
                   <Input
@@ -186,7 +189,7 @@ export default function Settings() {
                     placeholder={t('common.description')}
                     class="mb-2"
                   />
-                  <span class="text-sm text-gray-500">{t('settings.descriptionDesc')}</span>
+                  <span class={helperTextClass}>{t('settings.descriptionDesc')}</span>
                 </div>
                 <div>
                   <Input
@@ -197,7 +200,7 @@ export default function Settings() {
                     placeholder={t('common.address')}
                     class="mb-2"
                   />
-                  <span class="text-sm text-gray-500">{t('settings.addressDesc')}</span>
+                  <span class={helperTextClass}>{t('settings.addressDesc')}</span>
                 </div>
                 <div>
                   <Input
@@ -208,7 +211,7 @@ export default function Settings() {
                     placeholder={t('common.phone')}
                     class="mb-2"
                   />
-                  <span class="text-sm text-gray-500">{t('settings.phoneDesc')}</span>
+                  <span class={helperTextClass}>{t('settings.phoneDesc')}</span>
                 </div>
                 <div>
                   <Input
@@ -220,7 +223,7 @@ export default function Settings() {
                     placeholder={t('common.email')}
                     class="mb-2"
                   />
-                  <span class="text-sm text-gray-500">{t('settings.emailDesc')}</span>
+                  <span class={helperTextClass}>{t('settings.emailDesc')}</span>
                 </div>
                 <div>
                   <Input
@@ -232,14 +235,14 @@ export default function Settings() {
                     placeholder="https://example.com"
                     class="mb-2"
                   />
-                  <span class="text-sm text-gray-500">{t('settings.websiteDesc')}</span>
+                  <span class={helperTextClass}>{t('settings.websiteDesc')}</span>
                 </div>
               </div>
             </div>
 
             {/* Tax Configuration */}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 class="text-xl font-semibold text-gray-900 mb-6">💰 {t('settings.taxSettings')}</h2>
+            <div class={`${panelClass} p-6`}>
+              <h2 class={sectionTitleClass}>{t('settings.taxSettings')}</h2>
               <div class="space-y-6">
                 <div class="flex items-center space-x-4">
                   <label class="flex items-center space-x-2 cursor-pointer">
@@ -248,9 +251,9 @@ export default function Settings() {
                       checked={localSettings.taxEnabled}
                       onChange={(e) => handleChange('taxEnabled', (e.target as HTMLInputElement).checked)}
                       disabled={isSaving}
-                      class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      class="h-5 w-5 rounded border-gray-300 bg-white text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
                     />
-                    <span class="font-medium">{t('settings.enableTax')}</span>
+                    <span class="font-medium text-gray-900 dark:text-gray-100">{t('settings.enableTax')}</span>
                   </label>
                 </div>
                 {localSettings.taxEnabled && (
@@ -267,11 +270,11 @@ export default function Settings() {
                         class="mb-2"
                         placeholder="10.0"
                       />
-                      <span class="text-sm text-gray-500">{t('settings.taxRateDesc')}</span>
+                      <span class={helperTextClass}>{t('settings.taxRateDesc')}</span>
                     </div>
                     <div class="flex items-center mt-6">
-                      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <span class="text-sm text-blue-700">
+                      <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
+                        <span class="text-sm text-blue-700 dark:text-blue-300">
                           {t('settings.currentTaxRate')}: <span class="font-bold">{localSettings.taxPercentage}%</span>
                         </span>
                       </div>
@@ -282,8 +285,8 @@ export default function Settings() {
             </div>
 
             {/* System Preferences */}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 class="text-xl font-semibold text-gray-900 mb-6">⚙️ {t('settings.systemSettings')}</h2>
+            <div class={`${panelClass} p-6`}>
+              <h2 class={sectionTitleClass}>{t('settings.systemSettings')}</h2>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Select
@@ -297,7 +300,7 @@ export default function Settings() {
                     }))}
                     class="mb-2"
                   />
-                  <span class="text-sm text-gray-500">{t('settings.currencyDesc')}</span>
+                  <span class={helperTextClass}>{t('settings.currencyDesc')}</span>
                 </div>
                 <div>
                   <LanguageSelector class="mb-2" />
@@ -306,13 +309,13 @@ export default function Settings() {
             </div>
 
             {/* Developer Tools */}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 class="text-xl font-semibold text-gray-900 mb-6">🛠️ {t('settings.developerTools')}</h2>
-              <span class="mb-4 text-gray-600">{t('settings.developerToolsDesc')}</span>
+            <div class={`${panelClass} p-6`}>
+              <h2 class={sectionTitleClass}>{t('settings.developerTools')}</h2>
+              <span class="mb-4 block text-gray-600 dark:text-gray-400">{t('settings.developerToolsDesc')}</span>
 
               <div class="space-y-4">
                 <div>
-                  <h2 class="text-lg font-medium text-gray-900">{t('settings.apiTesting')}</h2>
+                  <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{t('settings.apiTesting')}</h2>
                   <form
                     class="flex gap-4 mb-4"
                     onSubmit={(e) => {
@@ -332,7 +335,9 @@ export default function Settings() {
                   </form>
 
                   {greetMsg && (
-                    <p class="text-center text-lg font-medium text-green-600 bg-green-50 p-4 rounded-lg">{greetMsg}</p>
+                    <p class="rounded-lg border border-green-200 bg-green-50 p-4 text-center text-lg font-medium text-green-700 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300">
+                      {greetMsg}
+                    </p>
                   )}
                 </div>
               </div>
@@ -350,29 +355,29 @@ export default function Settings() {
       >
         <div>
           <div class="space-y-4">
-            <div class="flex items-center space-x-3 text-amber-600 bg-amber-50 p-4 rounded-lg border border-amber-200">
+            <div class="flex items-center space-x-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
               <span class="text-2xl">⚠️</span>
               <div>
                 <span class="font-semibold">{t('settings.resetConfirm')}</span>
-                <span class="text-sm text-amber-700">{t('settings.resetWarning')}</span>
+                <span class="block text-sm">{t('settings.resetWarning')}</span>
               </div>
             </div>
-            <span class="text-gray-700">{t('settings.resetDescription')}</span>
-            <ul class="list-disc list-inside text-sm text-gray-600 space-y-1 ml-4">
+            <span class="text-gray-700 dark:text-gray-300">{t('settings.resetDescription')}</span>
+            <ul class="ml-4 list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
               <li>{t('settings.resetItem1')}</li>
               <li>{t('settings.resetItem2')}</li>
               <li>{t('settings.resetItem3')}</li>
               <li>{t('settings.resetItem4')}</li>
               <li>{t('settings.resetItem5')}</li>
             </ul>
-            <span class="text-gray-700 font-medium">{t('settings.resetProceed')}</span>
+            <span class="font-medium text-gray-700 dark:text-gray-300">{t('settings.resetProceed')}</span>
           </div>
         </div>
-        <div>
+        <div class="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
           <Button variant="outline" onClick={() => setIsResetDialogOpen(false)} disabled={isSaving}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={handleResetToDefaults} disabled={isSaving} class="bg-red-600 hover:bg-red-700 text-white">
+          <Button onClick={handleResetToDefaults} disabled={isSaving} variant="danger">
             {isSaving ? t('settings.resetting') : t('settings.resetSettings')}
           </Button>
         </div>

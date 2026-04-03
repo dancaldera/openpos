@@ -39,7 +39,7 @@ export function Table({
       <div class="flow-root">
         <div {...props} class={clsx(className, '-mx-4 overflow-x-auto whitespace-nowrap')}>
           <div class={clsx('inline-block min-w-full align-middle', !bleed && 'sm:px-4')}>
-            <table class="min-w-full text-left text-sm/6 text-gray-900 relative">{children}</table>
+            <table class="min-w-full text-left text-sm/6 text-gray-900 dark:text-gray-100 relative">{children}</table>
           </div>
         </div>
       </div>
@@ -48,7 +48,7 @@ export function Table({
 }
 
 export function TableHead({ class: className = '', ...props }: JSX.HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead {...props} class={clsx(className, 'text-gray-500')} />
+  return <thead {...props} class={clsx(className, 'text-gray-500 dark:text-gray-400')} />
 }
 
 export function TableBody(props: JSX.HTMLAttributes<HTMLTableSectionElement>) {
@@ -89,9 +89,9 @@ export function TableRow({
           className,
           href &&
             'has-[[data-row-link][data-focus]]:outline-2 has-[[data-row-link][data-focus]]:-outline-offset-2 has-[[data-row-link][data-focus]]:outline-blue-500',
-          striped && 'even:bg-gray-100/50',
-          href && striped && 'hover:bg-gray-100/70',
-          href && !striped && 'hover:bg-gray-100/50',
+          striped && 'even:bg-gray-50/80 dark:even:bg-gray-800/40',
+          href && striped && 'hover:bg-gray-50 dark:hover:bg-gray-800/60',
+          href && !striped && 'hover:bg-gray-50/80 dark:hover:bg-gray-800/40',
         )}
       />
     </TableRowContext.Provider>
@@ -106,8 +106,8 @@ export function TableHeader({ class: className = '', ...props }: JSX.HTMLAttribu
       {...props}
       class={clsx(
         className,
-        'border-b border-b-gray-200 px-4 py-2 font-medium text-gray-900 first:pl-4 last:pr-4',
-        grid && 'border-l border-l-gray-200 first:border-l-0',
+        'border-b border-b-gray-200 dark:border-b-gray-700 px-4 py-2 font-medium text-gray-700 dark:text-gray-300 first:pl-4 last:pr-4',
+        grid && 'border-l border-l-gray-200 dark:border-l-gray-700 first:border-l-0',
         !bleed && 'sm:first:pl-2 sm:last:pr-2',
       )}
     />
@@ -131,9 +131,9 @@ export function TableCell({
       {...props}
       class={clsx(
         className,
-        'relative px-4 first:pl-4 last:pr-4 text-gray-900',
-        !striped && 'border-b border-gray-100',
-        grid && 'border-l border-l-gray-200 first:border-l-0',
+        'relative px-4 first:pl-4 last:pr-4 text-gray-900 dark:text-gray-100',
+        !striped && 'border-b border-gray-100 dark:border-gray-800',
+        grid && 'border-l border-l-gray-200 dark:border-l-gray-700 first:border-l-0',
         dense ? 'py-2.5' : 'py-3',
         !bleed && 'sm:first:pl-2 sm:last:pr-2',
       )}
