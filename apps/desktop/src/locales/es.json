@@ -718,7 +718,10 @@
     "serverError": "Error del servidor. Por favor inténtalo más tarde.",
     "validation": "Por favor verifica tu entrada e inténtalo de nuevo.",
     "timeout": "La solicitud expiró. Por favor inténtalo de nuevo.",
-    "missingAuthToken": "La autenticación expiró. Inicia sesión de nuevo."
+    "missingAuthToken": "La autenticación expiró. Inicia sesión de nuevo.",
+    "desktopApiNotConfigured": "La API del escritorio no está configurada. Define la URL del API en {{path}} e inicia sesión de nuevo.",
+    "remoteSessionUnavailable": "La sesión remota no está disponible. Cierra sesión e inicia sesión de nuevo.",
+    "remoteSessionUnavailableWithDetails": "La sesión remota no está disponible. {{details}}"
   },
   "success": {
     "saved": "Guardado correctamente",

@@ -4,7 +4,11 @@ const Database = require('better-sqlite3')
 const fs = require('node:fs')
 const path = require('node:path')
 const { spawn } = require('node:child_process')
-const { createPublicConnectionConfig, resolveDesktopConnectionConfig } = require('./config-resolver.cjs')
+const {
+  createPublicConnectionConfig,
+  resolveDesktopConnectionConfig,
+  resolveDesktopRuntimeConfigPath,
+} = require('./config-resolver.cjs')
 const { isLegacyLocalImageKey } = require('./product-image-keys.cjs')
 const { createSyncManager } = require('./sync-manager.cjs')
 
@@ -133,8 +137,20 @@ function setAppIcon() {
   }
 }
 
-function getConfigPath() {
+function getLegacyConfigPath() {
+  return path.join(app.getPath('home'), '.config', 'openpos-desktop', 'config.json')
+}
+
+function getUserDataConfigPath() {
   return path.join(app.getPath('userData'), 'config.json')
+}
+
+function getRuntimeConfigSelection() {
+  return resolveDesktopRuntimeConfigPath({
+    homeDir: app.getPath('home'),
+    userDataPath: app.getPath('userData'),
+    fileExists: (candidatePath) => fs.existsSync(candidatePath),
+  })
 }
 
 function getDbPath() {
@@ -374,12 +390,20 @@ function getDotEnvConfig() {
 }
 
 function getRuntimeConfig() {
-  return parseJsonFile(getConfigPath())
+  const selection = getRuntimeConfigSelection()
+  return {
+    config: selection.exists ? parseJsonFile(selection.path) : {},
+    configPath: selection.path,
+    configSource: selection.source,
+  }
 }
 
 function resolveConnectionConfig() {
+  const runtimeConfig = getRuntimeConfig()
   return resolveDesktopConnectionConfig({
-    runtimeConfig: getRuntimeConfig(),
+    runtimeConfig: runtimeConfig.config,
+    runtimeConfigSource: runtimeConfig.configSource,
+    configPath: runtimeConfig.configPath,
     processEnv: process.env,
     envConfig: getDotEnvConfig(),
     defaultApiUrl: isDev() ? 'http://localhost:3001' : undefined,
@@ -1035,8 +1059,14 @@ function registerIpcHandlers() {
     syncOrderAggregate(payload.orderId, payload.operation),
   )
   ipcMain.handle('desktop:config', () => {
-    const { apiUrl } = resolveConnectionConfig()
-    return { apiUrl }
+    const config = resolveConnectionConfig()
+    return {
+      apiUrl: config.api.url || '',
+      configPath: config.api.configPath || getLegacyConfigPath(),
+      configSource: config.api.source,
+      legacyConfigPath: getLegacyConfigPath(),
+      userDataConfigPath: getUserDataConfigPath(),
+    }
   })
   ipcMain.handle('desktop:open-external', (_event, url) => {
     ensureHttpsUrl(url)

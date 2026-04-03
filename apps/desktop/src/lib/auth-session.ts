@@ -1,4 +1,5 @@
 const DEFAULT_AUTH_EXPIRED_MESSAGE = 'Authentication expired. Please sign in again.'
+const DESKTOP_REMOTE_AUTH_STATUS_KEY = 'desktop_remote_auth_status'
 
 type SessionExpiredHandler = (message: string) => void
 
@@ -18,6 +19,7 @@ export function setSessionExpiredHandler(handler: SessionExpiredHandler | null):
 export function clearPersistedAuth(): void {
   localStorage.removeItem('pos_user')
   localStorage.removeItem('auth_token')
+  localStorage.removeItem(DESKTOP_REMOTE_AUTH_STATUS_KEY)
 }
 
 export function expireSession(message: string = DEFAULT_AUTH_EXPIRED_MESSAGE): never {

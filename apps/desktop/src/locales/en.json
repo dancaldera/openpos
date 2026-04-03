@@ -718,7 +718,10 @@
     "serverError": "Server error. Please try again later.",
     "validation": "Please check your input and try again.",
     "timeout": "Request timed out. Please try again.",
-    "missingAuthToken": "Authentication expired. Please sign in again."
+    "missingAuthToken": "Authentication expired. Please sign in again.",
+    "desktopApiNotConfigured": "Desktop API is not configured. Set the API URL in {{path}} and sign in again.",
+    "remoteSessionUnavailable": "Remote session is unavailable. Sign out and sign in again.",
+    "remoteSessionUnavailableWithDetails": "Remote session is unavailable. {{details}}"
   },
   "success": {
     "saved": "Successfully saved",

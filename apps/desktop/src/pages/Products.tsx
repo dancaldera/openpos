@@ -25,7 +25,10 @@ import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import { normalizeBarcode } from '../lib/barcodes'
 import {
+  DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE,
   deleteProductImage,
+  extractDesktopApiConfigPath,
+  extractDesktopRemoteSessionDetails,
   resolveProductImageUrls,
   uploadProductImage,
   validateProductImageFile,
@@ -78,8 +81,18 @@ interface EditProductModalProps {
 }
 
 function getErrorMessage(message: string, t: TranslateFunction): string {
-  if (message === 'No auth token available for API call') {
-    return t('errors.missingAuthToken')
+  const configPath = extractDesktopApiConfigPath(message)
+  if (configPath) {
+    return t('errors.desktopApiNotConfigured', { path: configPath })
+  }
+
+  const remoteSessionDetails = extractDesktopRemoteSessionDetails(message)
+  if (remoteSessionDetails) {
+    return t('errors.remoteSessionUnavailableWithDetails', { details: remoteSessionDetails })
+  }
+
+  if (message === DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE || message === 'No auth token available for API call') {
+    return t('errors.remoteSessionUnavailable')
   }
 
   if (message === 'Failed to upload product image.') {

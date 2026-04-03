@@ -1,4 +1,5 @@
 import { requestApiJson } from '../lib/api-client'
+import { getDesktopApiConfig } from '../lib/api-config'
 import { clearPersistedAuth, isAuthExpiredError } from '../lib/auth-session'
 import { execute, query } from '../lib/db-adapter'
 import { requireDesktopApi } from '../lib/desktop'
@@ -30,6 +31,129 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
     body: { password, hash },
   })
   return data.valid
+}
+
+export interface DesktopRemoteSessionState {
+  apiConfigured: boolean
+  hasAuthToken: boolean
+  isReady: boolean
+  lastError: string | null
+  configPath: string
+}
+
+const DESKTOP_REMOTE_AUTH_STATUS_KEY = 'desktop_remote_auth_status'
+
+interface PersistedDesktopRemoteAuthStatus {
+  apiConfigured: boolean
+  lastError: string | null
+  configPath: string
+}
+
+interface DesktopApiTokenResult {
+  token: string | null
+  error: string | null
+  apiConfigured: boolean
+  configPath: string
+}
+
+function readDesktopRemoteAuthStatus(): PersistedDesktopRemoteAuthStatus | null {
+  if (typeof localStorage === 'undefined') {
+    return null
+  }
+
+  const storedStatus = localStorage.getItem(DESKTOP_REMOTE_AUTH_STATUS_KEY)
+  if (!storedStatus) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(storedStatus) as Partial<PersistedDesktopRemoteAuthStatus>
+    return {
+      apiConfigured: Boolean(parsed.apiConfigured),
+      lastError: typeof parsed.lastError === 'string' ? parsed.lastError : null,
+      configPath: typeof parsed.configPath === 'string' ? parsed.configPath : '',
+    }
+  } catch {
+    localStorage.removeItem(DESKTOP_REMOTE_AUTH_STATUS_KEY)
+    return null
+  }
+}
+
+function persistDesktopRemoteAuthStatus(status: PersistedDesktopRemoteAuthStatus): void {
+  if (typeof localStorage === 'undefined') {
+    return
+  }
+
+  localStorage.setItem(DESKTOP_REMOTE_AUTH_STATUS_KEY, JSON.stringify(status))
+}
+
+export async function getDesktopRemoteSessionState(): Promise<DesktopRemoteSessionState> {
+  const config = isDesktop
+    ? await getDesktopApiConfig()
+    : {
+        apiUrl: import.meta.env.VITE_API_URL || '',
+        configPath: '',
+        configSource: 'bundled' as const,
+        legacyConfigPath: '',
+        userDataConfigPath: '',
+      }
+  const apiUrl = config.apiUrl
+  const hasAuthToken = typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('auth_token'))
+  const persistedStatus = isDesktop ? readDesktopRemoteAuthStatus() : null
+
+  return {
+    apiConfigured: Boolean(apiUrl),
+    hasAuthToken,
+    isReady: Boolean(apiUrl) && hasAuthToken,
+    lastError: hasAuthToken ? null : persistedStatus?.lastError || null,
+    configPath: config.configPath || config.legacyConfigPath || config.userDataConfigPath || '',
+  }
+}
+
+async function getDesktopApiToken(email: string, password: string): Promise<DesktopApiTokenResult> {
+  const config = await getDesktopApiConfig()
+  const apiUrl = config.apiUrl
+  const configPath = config.configPath || config.legacyConfigPath || config.userDataConfigPath || ''
+  if (!apiUrl) {
+    return {
+      token: null,
+      error: null,
+      apiConfigured: false,
+      configPath,
+    }
+  }
+
+  try {
+    const data = await requestApiJson<{ token: string }>('/api/auth/login', {
+      method: 'POST',
+      body: { email, password },
+    })
+
+    const token = typeof data.token === 'string' ? data.token.trim() : ''
+    if (!token) {
+      return {
+        token: null,
+        error: 'Remote API sign-in did not return a token.',
+        apiConfigured: true,
+        configPath,
+      }
+    }
+
+    return {
+      token,
+      error: null,
+      apiConfigured: true,
+      configPath,
+    }
+  } catch (error) {
+    console.warn('[AuthService] Desktop API sign-in failed:', error)
+    return {
+      token: null,
+      error: error instanceof Error ? error.message : 'Remote API sign-in failed.',
+      apiConfigured: true,
+      configPath,
+    }
+  }
 }
 
 export interface User {
@@ -102,12 +226,17 @@ export class AuthService {
     }
   }
 
-  async signIn(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
+  async signIn(
+    email: string,
+    password: string,
+  ): Promise<{ success: boolean; user?: User; error?: string; warning?: string }> {
     try {
+      const normalizedEmail = email.toLowerCase()
+
       if (!isDesktop) {
         const data = await requestApiJson<{ user: User; token: string }>('/api/auth/login', {
           method: 'POST',
-          body: { email: email.toLowerCase(), password },
+          body: { email: normalizedEmail, password },
         })
 
         // Store JWT token for subsequent API calls
@@ -124,7 +253,7 @@ export class AuthService {
 
       // Desktop mode: direct database access
       const users = await query<DatabaseUser>('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1', [
-        email.toLowerCase(),
+        normalizedEmail,
       ])
 
       if (users.length === 0) {
@@ -159,12 +288,24 @@ export class AuthService {
 
       await execute('UPDATE users SET last_login = ? WHERE id = ?', [new Date().toISOString(), dbUser.id])
 
+      localStorage.removeItem('auth_token')
+      const remoteAuthResult = await getDesktopApiToken(normalizedEmail, password)
+      if (remoteAuthResult.token) {
+        localStorage.setItem('auth_token', remoteAuthResult.token)
+      }
+      persistDesktopRemoteAuthStatus({
+        apiConfigured: remoteAuthResult.apiConfigured,
+        lastError: remoteAuthResult.token ? null : remoteAuthResult.error,
+        configPath: remoteAuthResult.configPath,
+      })
+
       this.currentUser = user
       localStorage.setItem('pos_user', JSON.stringify(user))
 
       return {
         success: true,
         user,
+        warning: remoteAuthResult.token ? undefined : remoteAuthResult.error || undefined,
       }
     } catch (error) {
       console.error('Sign in error:', error)

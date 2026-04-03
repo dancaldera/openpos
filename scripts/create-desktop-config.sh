@@ -11,6 +11,7 @@ usage() {
 Usage: create-desktop-config.sh [--path <config.json>] [--help]
 
 Creates the OpenPOS desktop runtime config file.
+The packaged desktop app reads this as its primary runtime config path.
 
 Examples:
   create-desktop-config.sh
@@ -139,6 +140,7 @@ setup_prompt_input
 
 echo "OpenPOS desktop config will be written to:"
 echo "  ${CONFIG_PATH}"
+echo "This is the primary runtime config path used by packaged desktop installs."
 echo
 echo "Leave any value blank to skip it."
 echo
