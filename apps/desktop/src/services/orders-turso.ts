@@ -2,6 +2,7 @@ import { execute, query, transaction } from '../lib/db-adapter'
 import { requireDesktopApi } from '../lib/desktop'
 import { isDesktop } from '../lib/platform'
 import { companySettingsService } from './company-settings-turso'
+import { invalidateDashboardStatsCache } from './dashboard-stats'
 import { type ProductVariant, productVariantsService } from './product-variants-turso'
 import { productService } from './products-turso'
 
@@ -386,6 +387,7 @@ export class OrderService {
 
       await transaction(statements)
       await this.syncDesktopOrderAggregate(orderId.toString(), 'UPSERT')
+      invalidateDashboardStatsCache('turso')
 
       const newOrder: Order = {
         id: orderId.toString(),
@@ -449,6 +451,7 @@ export class OrderService {
         [status, paymentMethod || currentOrder.paymentMethod, now, completedAt, parseInt(id, 10)],
       )
       await this.syncDesktopOrderAggregate(id, 'UPSERT')
+      invalidateDashboardStatsCache('turso')
 
       // Return updated order
       const updatedOrder = await this.getOrder(id)
@@ -483,6 +486,7 @@ export class OrderService {
         },
       ])
       await this.syncDesktopOrderAggregate(id, 'DELETE')
+      invalidateDashboardStatsCache('turso')
 
       return { success: true }
     } catch (error) {
@@ -988,6 +992,7 @@ export class OrderService {
 
       await transaction(statements)
       await this.syncDesktopOrderAggregate(orderId, 'UPSERT')
+      invalidateDashboardStatsCache('turso')
 
       // Return updated order
       const updatedOrder = await this.getOrder(orderId)
