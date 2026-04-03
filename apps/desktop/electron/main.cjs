@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, nativeImage } = require('electron')
+const { app, BrowserWindow, ipcMain, shell, nativeImage, Menu, nativeTheme } = require('electron')
 const bcrypt = require('bcryptjs')
 const Database = require('better-sqlite3')
 const fs = require('node:fs')
@@ -1009,7 +1009,17 @@ function printThermalReceipt(receiptData) {
 }
 
 function createWindow() {
+  const macOptions = process.platform === 'darwin' ? {
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 16, y: 18 },
+    vibrancy: 'sidebar',
+    visualEffectState: 'active',
+    transparent: true,
+    backgroundColor: '#00000000',
+  } : {}
+
   mainWindow = new BrowserWindow({
+    ...macOptions,
     width: 1200,
     height: 800,
     minWidth: 1024,
@@ -1155,8 +1165,88 @@ function registerIpcHandlers() {
   })
 }
 
+function buildAppMenu() {
+  const isMac = process.platform === 'darwin'
+
+  const template = [
+    ...(isMac ? [{
+      label: app.name,
+      submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        {
+          label: 'Settings...',
+          accelerator: 'Cmd+,',
+          click: () => { mainWindow?.webContents.send('navigate', 'settings') },
+        },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' },
+      ],
+    }] : []),
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        ...(isMac ? [
+          { type: 'separator' },
+          { role: 'front' },
+        ] : [
+          { role: 'close' },
+        ]),
+      ],
+    },
+  ]
+
+  return Menu.buildFromTemplate(template)
+}
+
+function registerThemeHandlers() {
+  ipcMain.handle('desktop:theme', () =>
+    nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+  )
+
+  nativeTheme.on('updated', () => {
+    const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+    mainWindow?.webContents.send('desktop:theme-changed', theme)
+  })
+}
+
 app.whenReady().then(() => {
   setAppIcon()
+  Menu.setApplicationMenu(buildAppMenu())
   ensureDatabase()
   syncManager = createSyncManager({
     getDatabase: ensureDatabase,
@@ -1164,6 +1254,7 @@ app.whenReady().then(() => {
     onFlushOrderQueue: flushOrderSyncQueueWithClient,
   })
   registerIpcHandlers()
+  registerThemeHandlers()
   createWindow()
   syncManager.start()
 

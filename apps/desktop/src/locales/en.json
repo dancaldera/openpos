@@ -90,7 +90,9 @@
     "passwordNoUppercase": "Password must contain an uppercase letter",
     "passwordNoLowercase": "Password must contain a lowercase letter",
     "passwordNoNumber": "Password must contain a number",
-    "passwordNoSpecial": "Password must contain a special character"
+    "passwordNoSpecial": "Password must contain a special character",
+    "signOutConfirmTitle": "Sign Out",
+    "signOutConfirmMessage": "Are you sure you want to sign out?"
   },
   "dashboard": {
     "title": "Dashboard",

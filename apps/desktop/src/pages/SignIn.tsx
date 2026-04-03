@@ -8,6 +8,7 @@ import { MailIcon, SpinnerIcon } from '../components/ui/icons'
 import { PasswordInput } from '../components/ui/PasswordInput'
 import { UpdateBadge } from '../components/ui/UpdateBadge'
 import { useAuth } from '../hooks/useAuth'
+import { usePlatform } from '../hooks/usePlatform'
 import { useTranslation } from '../hooks/useTranslation'
 import { APP_VERSION } from '../lib/app-version'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
@@ -16,12 +17,23 @@ export default function SignIn() {
   const { t } = useTranslation()
   const { signIn } = useAuth()
   const { appName } = appSettingsStore
+  const { isMac } = usePlatform()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const animationRef = useRef<number>(0)
+  const isDark = useRef(window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = (e: MediaQueryListEvent) => {
+      isDark.current = e.matches
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -30,8 +42,8 @@ export default function SignIn() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const gap = 16
-    const baseRadius = 1.5
+    const gap = 18
+    const baseRadius = 1.2
     const dots: { x: number; y: number; phase: number; speed: number }[] = []
 
     const resize = () => {
@@ -45,7 +57,7 @@ export default function SignIn() {
             x,
             y,
             phase: Math.random() * Math.PI * 2,
-            speed: 1.5 + Math.random() * 1.5,
+            speed: 1.2 + Math.random() * 1.2,
           })
         }
       }
@@ -57,21 +69,16 @@ export default function SignIn() {
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       const time = Date.now() / 1000
+      const dark = isDark.current
 
       for (const dot of dots) {
         const pulse = (Math.sin(time * dot.speed + dot.phase) + 1) / 2
         const radius = baseRadius + pulse * 0.3
-        const opacity = 0.2 + pulse * 0.4
-        const glowSize = 2 + pulse * 2
-
-        ctx.beginPath()
-        ctx.arc(dot.x, dot.y, glowSize, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(59, 130, 246, ${opacity * 0.2})`
-        ctx.fill()
+        const opacity = dark ? 0.08 + pulse * 0.18 : 0.15 + pulse * 0.3
 
         ctx.beginPath()
         ctx.arc(dot.x, dot.y, radius, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(99, 102, 241, ${opacity})`
+        ctx.fillStyle = dark ? `rgba(148, 163, 184, ${opacity})` : `rgba(99, 102, 241, ${opacity})`
         ctx.fill()
       }
 
@@ -108,16 +115,20 @@ export default function SignIn() {
   }
 
   return (
-    <div class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-blue-100">
-      <canvas ref={canvasRef} class="absolute inset-0" />
-      <div class="w-full max-w-md relative z-10">
-        <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-8">
-          <div class="text-center mb-8">
-            <h1 class="text-2xl font-bold text-gray-900">{appName.value}</h1>
-            <p class="text-sm text-gray-600 mt-2">{t('auth.signInToAccount')}</p>
+    <div class="drag-region min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-slate-100 dark:bg-gray-950">
+      <canvas ref={canvasRef} class="absolute inset-0 pointer-events-none" />
+
+      {/* Grabbable zone at top for macOS traffic lights */}
+      {isMac && <div class="drag-region absolute top-0 left-0 right-0 h-10 z-20" />}
+
+      <div class="no-drag w-full max-w-sm relative z-10">
+        <div class="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/60 dark:border-gray-700/60 p-8">
+          <div class="text-center mb-7">
+            <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{appName.value}</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('auth.signInToAccount')}</p>
           </div>
 
-          <Form onSubmit={handleSubmit} spacing="lg">
+          <Form onSubmit={handleSubmit} spacing="md">
             <Input
               label={t('auth.email')}
               type="email"
@@ -126,7 +137,6 @@ export default function SignIn() {
               placeholder="email@example.com"
               disabled={isLoading}
               required
-              size="lg"
               leftIcon={<MailIcon />}
             />
 
@@ -139,10 +149,10 @@ export default function SignIn() {
               required
             />
 
-            <Button type="submit" variant="primary" size="lg" disabled={isLoading} class="w-full">
+            <Button type="submit" variant="primary" size="lg" disabled={isLoading} class="w-full mt-1">
               {isLoading ? (
                 <>
-                  <SpinnerIcon class="animate-spin h-5 w-5 mr-2" />
+                  <SpinnerIcon class="animate-spin h-4 w-4 mr-2" />
                   {t('common.loading')}
                 </>
               ) : (
@@ -151,14 +161,14 @@ export default function SignIn() {
             </Button>
           </Form>
 
-          <div class="mt-8 pt-6 border-t border-gray-200 text-center">
-            <span class="text-xs text-gray-500">
-              v{APP_VERSION} • © 2025 • MIT License •{' '}
+          <div class="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800 text-center">
+            <span class="text-xs text-gray-400 dark:text-gray-500">
+              v{APP_VERSION} •{' '}
               <a
                 href="https://github.com/dancaldera/openpos"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="text-blue-600 hover:text-blue-800 hover:underline"
+                class="hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 GitHub
               </a>

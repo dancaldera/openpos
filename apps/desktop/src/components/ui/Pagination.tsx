@@ -53,13 +53,14 @@ export function Pagination({
   if (totalPages <= 1) return null
 
   return (
-    <div class="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg">
-      <div class="text-sm text-gray-700">
-        Showing <span class="font-medium">{startItem}</span> to <span class="font-medium">{endItem}</span> of{' '}
-        <span class="font-medium">{totalCount}</span> results
+    <div class="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg mt-2">
+      <div class="text-sm text-gray-600 dark:text-gray-400">
+        Showing <span class="font-medium text-gray-900 dark:text-gray-200">{startItem}</span> to{' '}
+        <span class="font-medium text-gray-900 dark:text-gray-200">{endItem}</span> of{' '}
+        <span class="font-medium text-gray-900 dark:text-gray-200">{totalCount}</span> results
       </div>
 
-      <div class="flex items-center space-x-2">
+      <div class="flex items-center gap-1">
         <Button
           variant="secondary"
           onClick={() => onPageChange(currentPage - 1)}
@@ -69,19 +70,19 @@ export function Pagination({
           Previous
         </Button>
 
-        <div class="flex items-center space-x-1">
+        <div class="flex items-center gap-1">
           {getVisiblePages().map((page, index) => {
             const key = typeof page === 'number' ? `page-${page}` : `ellipsis-${index}`
             return (
               <div key={key}>
                 {page === '...' ? (
-                  <span class="px-3 py-1 text-gray-500">...</span>
+                  <span class="px-2 py-1 text-gray-400 dark:text-gray-500">…</span>
                 ) : (
                   <Button
                     variant={currentPage === page ? 'primary' : 'ghost'}
                     onClick={() => onPageChange(page as number)}
                     disabled={isLoading}
-                    class="px-3 py-1 min-w-10"
+                    class="px-3 py-1 min-w-9"
                   >
                     {page}
                   </Button>

@@ -230,6 +230,8 @@ function getCustomerSecondaryInfo(customer: Customer) {
 
 function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerModalProps) {
   const { t } = useTranslation()
+  const panelClass = 'rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900'
+  const sectionTitleClass = 'mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100'
   const [formData, setFormData] = useState<CustomerFormData>(createEmptyFormData())
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -372,7 +374,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
     >
       <div>
         {error && (
-          <div class="bg-red-500/10 backdrop-blur-sm border border-red-400/20 text-red-700 px-4 py-3 rounded-xl mb-6">
+          <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
             <div class="flex items-center">
               <span class="text-red-500 mr-2">⚠️</span>
               {error}
@@ -380,10 +382,10 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
           </div>
         )}
 
-        <div class="backdrop-blur-lg bg-gradient-to-br from-indigo-50/60 to-purple-50/40 border border-indigo-200/50 rounded-2xl p-6 shadow-xl max-h-[70vh] overflow-y-auto">
+        <div class={`${panelClass} max-h-[70vh] overflow-y-auto`}>
           <form onSubmit={handleSubmit} class="space-y-6">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">👤 {t('customers.basicInformation')}</h3>
+              <h3 class={sectionTitleClass}>{t('customers.basicInformation')}</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label={isBusinessCustomer ? t('customers.contactFirstName') : t('customers.firstName')}
@@ -453,7 +455,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
             </div>
 
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">📞 {t('customers.contactInformation')}</h3>
+              <h3 class={sectionTitleClass}>{t('customers.contactInformation')}</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label={t('customers.email')}
@@ -500,7 +502,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
             </div>
 
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">📍 {t('customers.address')}</h3>
+              <h3 class={sectionTitleClass}>{t('customers.address')}</h3>
               <div class="grid grid-cols-1 gap-4">
                 <Input
                   label={t('customers.addressLine1')}
@@ -572,7 +574,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
             </div>
 
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">🧩 {t('customers.businessContext')}</h3>
+              <h3 class={sectionTitleClass}>{t('customers.businessContext')}</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Select
                   label={t('customers.businessProfile')}
@@ -671,7 +673,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
             </div>
 
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">💳 {t('customers.financialInformation')}</h3>
+              <h3 class={sectionTitleClass}>{t('customers.financialInformation')}</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label={t('customers.creditLimit')}
@@ -712,11 +714,13 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                           taxExempt: (e.target as HTMLInputElement).checked,
                         })
                       }
-                      class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      class="h-5 w-5 rounded border-gray-300 bg-white text-indigo-600 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900"
                     />
                     <div>
-                      <span class="text-sm font-medium text-gray-700">{t('customers.taxExempt')}</span>
-                      <p class="text-xs text-gray-500">{t('customers.taxExemptDescription')}</p>
+                      <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t('customers.taxExempt')}
+                      </span>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">{t('customers.taxExemptDescription')}</p>
                     </div>
                   </label>
                 </div>
@@ -725,7 +729,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
 
             <div>
               <Textarea
-                label={`📝 ${t('customers.internalNotes')}`}
+                label={t('customers.internalNotes')}
                 value={formData.notes}
                 onInput={(e) =>
                   setFormData({
@@ -751,18 +755,18 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                       isActive: (e.target as HTMLInputElement).checked,
                     })
                   }
-                  class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  class="h-5 w-5 rounded border-gray-300 bg-white text-indigo-600 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900"
                 />
                 <div>
-                  <span class="text-sm font-medium text-gray-700">{t('customers.active')}</span>
-                  <p class="text-xs text-gray-500">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.active')}</span>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
                     {formData.isActive ? t('customers.activeCustomerHelp') : t('customers.inactiveCustomerHelp')}
                   </p>
                 </div>
               </label>
             </div>
 
-            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+            <div class="flex justify-end space-x-3 border-t border-gray-200 pt-4 dark:border-gray-800">
               <Button variant="secondary" onClick={onClose} disabled={isLoading}>
                 {t('common.cancel')}
               </Button>
@@ -780,6 +784,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
 export default function Customers() {
   const { user, hasPermission } = useAuth()
   const { t } = useTranslation()
+  const panelClass = 'rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
 
   const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -795,10 +800,10 @@ export default function Customers() {
   if (!user || !hasPermission('users.view')) {
     return (
       <div class="flex items-center justify-center min-h-screen">
-        <div class="text-center space-y-4 p-8 backdrop-blur-lg bg-white/50 border border-gray-200/50 rounded-2xl shadow-xl max-w-md">
+        <div class={`${panelClass} max-w-md space-y-4 p-8 text-center`}>
           <div class="text-6xl">🔒</div>
-          <h2 class="text-2xl font-bold text-gray-900">{t('customers.accessDenied')}</h2>
-          <p class="text-gray-600">{t('customers.noPermission')}</p>
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('customers.accessDenied')}</h2>
+          <p class="text-gray-600 dark:text-gray-400">{t('customers.noPermission')}</p>
         </div>
       </div>
     )
@@ -859,28 +864,20 @@ export default function Customers() {
   }
 
   return (
-    <div class="space-y-6 p-8">
+    <div class="mx-auto max-w-6xl space-y-6 px-6 py-4">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900">{t('customers.title')}</h1>
-          <p class="text-gray-600 mt-1">{t('customers.subtitle')}</p>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('customers.title')}</h1>
+          <p class="mt-1 text-gray-600 dark:text-gray-400">{t('customers.subtitle')}</p>
         </div>
-        {hasPermission('users.create') && (
-          <Button onClick={handleAddCustomer}>
-            <span class="flex items-center space-x-2">
-              <span>➕</span>
-              <span>{t('customers.addCustomer')}</span>
-            </span>
-          </Button>
-        )}
+        {hasPermission('users.create') && <Button onClick={handleAddCustomer}>{t('customers.addCustomer')}</Button>}
       </div>
 
-      <div class="backdrop-blur-lg bg-white/50 border border-gray-200/50 rounded-2xl p-6 shadow-lg">
+      <div class={`${panelClass} p-6`}>
         <Input
           placeholder={t('customers.searchCustomers')}
           value={searchQuery}
           onInput={(e) => handleSearch((e.target as HTMLInputElement).value)}
-          class="bg-white/80"
         />
       </div>
 
@@ -888,13 +885,13 @@ export default function Customers() {
         <div class="flex items-center justify-center py-12">
           <div class="text-center space-y-3">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p class="text-gray-600">{t('customers.loadingCustomers')}</p>
+            <p class="text-gray-600 dark:text-gray-400">{t('customers.loadingCustomers')}</p>
           </div>
         </div>
       ) : customers.length === 0 ? (
-        <div class="backdrop-blur-lg bg-white/50 border border-gray-200/50 rounded-2xl p-12 shadow-lg text-center">
+        <div class={`${panelClass} p-12 text-center`}>
           <div class="text-6xl mb-4">👥</div>
-          <h3 class="text-xl font-semibold text-gray-900 mb-2">
+          <h3 class="mb-2 text-xl font-semibold text-gray-900 dark:text-gray-100">
             {searchQuery ? t('customers.noCustomersSearch', { query: searchQuery }) : t('customers.emptyCustomers')}
           </h3>
           {!searchQuery && hasPermission('users.create') && (
@@ -905,10 +902,10 @@ export default function Customers() {
         </div>
       ) : (
         <>
-          <div class="backdrop-blur-lg bg-white/50 border border-gray-200/50 rounded-2xl shadow-lg overflow-hidden">
-            <Table>
+          <div class={`${panelClass} overflow-hidden`}>
+            <Table striped>
               <TableHead>
-                <TableRow>
+                <TableRow class="bg-gray-50 dark:bg-gray-800/60">
                   <TableHeader>{t('customers.customerNumber')}</TableHeader>
                   <TableHeader>{t('customers.customerName')}</TableHeader>
                   <TableHeader>{t('customers.customerType')}</TableHeader>
@@ -927,44 +924,49 @@ export default function Customers() {
                   return (
                     <TableRow key={customer.id}>
                       <TableCell>
-                        <span class="font-mono text-sm text-indigo-600">{customer.customerNumber}</span>
+                        <span class="font-mono text-sm text-indigo-600 dark:text-indigo-300">
+                          {customer.customerNumber}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div class="font-medium text-gray-900">{getCustomerDisplayName(customer, t)}</div>
-                          {secondaryInfo && <div class="text-xs text-gray-500">{secondaryInfo}</div>}
+                          <div class="font-medium text-gray-900 dark:text-gray-100">
+                            {getCustomerDisplayName(customer, t)}
+                          </div>
+                          {secondaryInfo && <div class="text-xs text-gray-500 dark:text-gray-400">{secondaryInfo}</div>}
                         </div>
                       </TableCell>
                       <TableCell>
                         <span
-                          class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          class={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                             customer.customerType === 'business'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-blue-100 text-blue-800'
+                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/30 dark:text-purple-300'
+                              : 'bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-300'
                           }`}
                         >
-                          {customer.customerType === 'business' ? '🏢' : '👤'} {t(`customers.${customer.customerType}`)}
+                          {t(`customers.${customer.customerType}`)}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span class="text-gray-600">{customer.email || '-'}</span>
+                        <span class="text-gray-600 dark:text-gray-400">{customer.email || '-'}</span>
                       </TableCell>
                       <TableCell>
-                        <span class="text-gray-600">{customer.phone || '-'}</span>
+                        <span class="text-gray-600 dark:text-gray-400">{customer.phone || '-'}</span>
                       </TableCell>
                       <TableCell>
-                        <span class="font-semibold text-indigo-600">{customer.loyaltyPoints}</span>
+                        <span class="font-semibold text-indigo-600 dark:text-indigo-300">{customer.loyaltyPoints}</span>
                       </TableCell>
                       <TableCell>
-                        <span class="font-semibold text-gray-900">{customer.totalOrders}</span>
+                        <span class="font-semibold text-gray-900 dark:text-gray-100">{customer.totalOrders}</span>
                       </TableCell>
                       <TableCell>
                         <span
-                          class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            customer.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          class={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            customer.isActive
+                              ? 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
                           }`}
                         >
-                          {customer.isActive ? '✓' : '✗'}{' '}
                           {customer.isActive ? t('customers.active') : t('customers.inactive')}
                         </span>
                       </TableCell>
@@ -974,7 +976,7 @@ export default function Customers() {
                             <button
                               type="button"
                               onClick={() => handleEditCustomer(customer)}
-                              class="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
+                              class="text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-200"
                             >
                               {t('common.edit')}
                             </button>
@@ -983,7 +985,7 @@ export default function Customers() {
                             <button
                               type="button"
                               onClick={() => setCustomerToDelete(customer)}
-                              class="text-red-600 hover:text-red-800 font-medium text-sm"
+                              class="text-sm font-medium text-red-600 hover:text-red-800 dark:text-red-300 dark:hover:text-red-200"
                             >
                               {t('common.delete')}
                             </button>
@@ -1007,7 +1009,7 @@ export default function Customers() {
             />
           )}
 
-          <div class="text-center text-sm text-gray-600">
+          <div class="text-center text-sm text-gray-600 dark:text-gray-400">
             {t('customers.customersTotal', {
               count: totalCount,
               unit: totalCount === 1 ? t('customers.customer') : t('customers.customers'),

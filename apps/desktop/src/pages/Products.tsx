@@ -112,6 +112,7 @@ function getErrorMessage(message: string, t: TranslateFunction): string {
 
 function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }: EditProductModalProps) {
   const { t } = useTranslation()
+  const panelClass = 'rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900'
 
   const [formData, setFormData] = useState({
     name: '',
@@ -330,7 +331,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
     >
       <div>
         {error && (
-          <div class="bg-red-500/10 backdrop-blur-sm border border-red-400/20 text-red-700 px-4 py-3 rounded-xl mb-6">
+          <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
             <div class="flex items-center">
               <span class="text-red-500 mr-2">⚠️</span>
               {error}
@@ -338,12 +339,12 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
           </div>
         )}
 
-        <div class="backdrop-blur-lg bg-gradient-to-br from-indigo-50/60 to-purple-50/40 border border-indigo-200/50 rounded-2xl p-6 shadow-xl">
+        <div class={panelClass}>
           <form onSubmit={handleSubmit} class="space-y-6">
             <div class="grid grid-cols-2 gap-6">
               <div>
                 <Input
-                  label={`📦 ${t('products.productName')}`}
+                  label={t('products.productName')}
                   value={formData.name}
                   onInput={(e) =>
                     setFormData({
@@ -359,7 +360,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
 
               <div>
                 <Select
-                  label={`🏷️ ${t('products.category')}`}
+                  label={t('products.category')}
                   value={formData.category}
                   onChange={(e) =>
                     setFormData({
@@ -377,7 +378,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
 
             <div>
               <Textarea
-                label={`📝 ${t('products.description')}`}
+                label={t('products.description')}
                 value={formData.description}
                 onInput={(e) =>
                   setFormData({
@@ -393,7 +394,9 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
 
             <div>
               <div class="mb-2 flex items-center justify-between">
-                <div class="block text-sm font-medium text-gray-900">{`🖼️ ${t('products.productImage')}`}</div>
+                <div class="block text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {t('products.productImage')}
+                </div>
                 {(imagePreviewUrl || product?.image) && (
                   <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage} disabled={isLoading}>
                     {t('products.removeImage')}
@@ -401,13 +404,13 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                 )}
               </div>
 
-              <div class="rounded-2xl border border-dashed border-indigo-200 bg-white/70 p-4">
+              <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/60">
                 <div class="flex flex-col gap-4 md:flex-row md:items-center">
-                  <div class="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-sm">
+                  <div class="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                     {imagePreviewUrl ? (
                       <img src={imagePreviewUrl} alt={t('products.imagePreview')} class="h-full w-full object-cover" />
                     ) : (
-                      <div class="flex flex-col items-center gap-1 text-gray-400">
+                      <div class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500">
                         <span class="text-3xl">🖼️</span>
                         <span class="text-xs font-medium">{t('products.noImage')}</span>
                       </div>
@@ -415,17 +418,17 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                   </div>
 
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium text-gray-900">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {selectedImageFile ? t('products.changeImage') : t('products.uploadImage')}
                     </p>
-                    <p class="mt-1 text-xs text-gray-500">{t('products.imageHelp')}</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('products.imageHelp')}</p>
                     {selectedImageFile && (
-                      <p class="mt-2 text-xs font-medium text-indigo-700">
+                      <p class="mt-2 text-xs font-medium text-blue-700 dark:text-blue-300">
                         {t('products.imageSelected', { fileName: selectedImageFile.name })}
                       </p>
                     )}
 
-                    <label class="mt-3 inline-flex cursor-pointer items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100">
+                    <label class="mt-3 inline-flex cursor-pointer items-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300 dark:hover:bg-blue-950/50">
                       <span>
                         {selectedImageFile || imagePreviewUrl ? t('products.changeImage') : t('products.uploadImage')}
                       </span>
@@ -445,7 +448,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
             <div class="grid grid-cols-3 gap-4">
               <div>
                 <Input
-                  label={`💰 ${t('products.priceLabel')}`}
+                  label={t('products.priceLabel')}
                   type="number"
                   value={formData.price.toString()}
                   onInput={(e) =>
@@ -462,7 +465,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
 
               <div>
                 <Input
-                  label={`🏭 ${t('products.cost')}`}
+                  label={t('products.cost')}
                   type="number"
                   value={formData.cost.toString()}
                   onInput={(e) =>
@@ -479,7 +482,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
 
               <div>
                 <Input
-                  label={`📊 ${t('products.stockLabel')}`}
+                  label={t('products.stockLabel')}
                   type="number"
                   value={formData.stock.toString()}
                   onInput={(e) =>
@@ -498,7 +501,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
             <div class="grid grid-cols-2 gap-6">
               <div>
                 <Input
-                  label={`📊 ${t('products.barcodeOptional')}`}
+                  label={t('products.barcodeOptional')}
                   value={formData.barcode}
                   onInput={(e) =>
                     setFormData({
@@ -526,7 +529,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
 
               <div>
                 <Select
-                  label={`✅ ${t('products.status')}`}
+                  label={t('products.status')}
                   value={formData.isActive ? 'active' : 'inactive'}
                   onChange={(e) =>
                     setFormData({
@@ -537,11 +540,11 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                   options={[
                     {
                       value: 'active',
-                      label: `✅ ${t('products.activeStatus')}`,
+                      label: t('products.activeStatus'),
                     },
                     {
                       value: 'inactive',
-                      label: `⛔ ${t('products.inactiveStatus')}`,
+                      label: t('products.inactiveStatus'),
                     },
                   ]}
                   class="bg-white/80"
@@ -551,14 +554,16 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
 
             {/* Profit Margin Preview */}
             {formData.price > 0 && formData.cost > 0 && (
-              <div class="backdrop-blur-md bg-emerald-100/60 rounded-xl p-4 border border-emerald-200/50 shadow-md">
+              <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
                 <div class="flex justify-between items-center">
-                  <span class="font-semibold text-emerald-800">{t('products.profitMarginLabel')}</span>
-                  <span class="text-xl font-bold text-emerald-600">
+                  <span class="font-semibold text-emerald-800 dark:text-emerald-300">
+                    {t('products.profitMarginLabel')}
+                  </span>
+                  <span class="text-xl font-bold text-emerald-600 dark:text-emerald-300">
                     {(((formData.price - formData.cost) / formData.cost) * 100).toFixed(1)}%
                   </span>
                 </div>
-                <div class="text-sm text-emerald-700 mt-1">
+                <div class="mt-1 text-sm text-emerald-700 dark:text-emerald-300">
                   {t('products.profitPerUnit', { amount: `$${(formData.price - formData.cost).toFixed(2)}` })}
                 </div>
               </div>
@@ -567,7 +572,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+      <div class="flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
           {t('common.cancel')}
         </Button>
@@ -587,6 +592,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
 
 export default function Products() {
   const { t } = useTranslation()
+  const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
 
   const [products, setProducts] = useState<Product[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
@@ -865,15 +871,19 @@ export default function Products() {
   }
 
   const getStockColor = (stock: number) => {
-    if (stock === 0) return 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300'
-    if (stock < 10) return 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300'
-    return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300'
+    if (stock === 0) {
+      return 'border border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300'
+    }
+    if (stock < 10) {
+      return 'border border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-300'
+    }
+    return 'border border-green-200 bg-green-50 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300'
   }
 
   const getStatusColor = (isActive: boolean) => {
     return isActive
-      ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300 shadow-sm'
-      : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300 shadow-sm'
+      ? 'border border-green-200 bg-green-50 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300'
+      : 'border border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
   }
 
   const getStockIcon = (stock: number) => {
@@ -889,11 +899,11 @@ export default function Products() {
   if (!canManageProducts) {
     return (
       <div class="max-w-6xl mx-auto">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div class={`${panelClass} p-12`}>
           <div class="text-center">
             <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-3">{t('products.accessDenied')}</h3>
-            <p class="text-gray-600 max-w-md mx-auto">{t('products.noPermission')}</p>
+            <h3 class="mb-3 text-2xl font-bold text-gray-900 dark:text-gray-100">{t('products.accessDenied')}</h3>
+            <p class="mx-auto max-w-md text-gray-600 dark:text-gray-400">{t('products.noPermission')}</p>
           </div>
         </div>
       </div>
@@ -903,10 +913,10 @@ export default function Products() {
   if (isLoading) {
     return (
       <div class="max-w-6xl mx-auto">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div class={`${panelClass} p-12`}>
           <div class="text-center">
             <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white mx-auto mb-6 shadow-lg"></div>
-            <p class="text-gray-600 text-lg">{t('products.loadingCatalog')}</p>
+            <p class="text-lg text-gray-600 dark:text-gray-400">{t('products.loadingCatalog')}</p>
           </div>
         </div>
       </div>
@@ -917,18 +927,15 @@ export default function Products() {
     <div class="max-w-6xl mx-auto">
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">{t('products.title')}</h1>
-          <p class="text-gray-600">
+          <h1 class="mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">{t('products.title')}</h1>
+          <p class="text-gray-600 dark:text-gray-400">
             {totalCount} {t('products.productsTotal')}
             {totalPages > 1 && ` • ${t('products.pageXofY', { current: currentPage, total: totalPages })}`}
             {searchQuery && ` • ${t('products.searchingFor')} "${searchQuery}"`}
           </p>
         </div>
         {(hasPermission('products.create') || hasRole('admin') || hasRole('manager')) && (
-          <Button onClick={handleCreateProduct}>
-            <span class="mr-2">➕</span>
-            {t('products.addProduct')}
-          </Button>
+          <Button onClick={handleCreateProduct}>{t('products.addProduct')}</Button>
         )}
       </div>
 
@@ -975,12 +982,12 @@ export default function Products() {
                 }
               : undefined
           }
-          class="w-full bg-white text-gray-900 placeholder-gray-500"
+          class="w-full"
         />
       </div>
 
       {error && (
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 backdrop-blur-sm">
+        <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
           <div class="flex items-center">
             <span class="text-red-500 mr-2">⚠️</span>
             {error}
@@ -988,17 +995,17 @@ export default function Products() {
         </div>
       )}
 
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <Table dense>
+      <div class={`${panelClass} overflow-hidden`}>
+        <Table dense striped>
           <TableHead>
-            <TableRow class="bg-gray-50">
-              <TableHeader class="py-2 font-semibold text-gray-900">{t('common.name')}</TableHeader>
-              <TableHeader class="py-2 font-semibold text-gray-900">{t('products.category')}</TableHeader>
-              <TableHeader class="py-2 font-semibold text-gray-900">{t('common.price')}</TableHeader>
-              <TableHeader class="py-2 font-semibold text-gray-900">{t('products.costPrice')}</TableHeader>
-              <TableHeader class="py-2 font-semibold text-gray-900">{t('products.stock')}</TableHeader>
-              <TableHeader class="py-2 font-semibold text-gray-900">{t('common.status')}</TableHeader>
-              <TableHeader class="py-2 font-semibold text-gray-900">{t('common.actions')}</TableHeader>
+            <TableRow class="bg-gray-50 dark:bg-gray-800/60">
+              <TableHeader class="py-2 font-semibold">{t('common.name')}</TableHeader>
+              <TableHeader class="py-2 font-semibold">{t('products.category')}</TableHeader>
+              <TableHeader class="py-2 font-semibold">{t('common.price')}</TableHeader>
+              <TableHeader class="py-2 font-semibold">{t('products.costPrice')}</TableHeader>
+              <TableHeader class="py-2 font-semibold">{t('products.stock')}</TableHeader>
+              <TableHeader class="py-2 font-semibold">{t('common.status')}</TableHeader>
+              <TableHeader class="py-2 font-semibold">{t('common.actions')}</TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -1051,11 +1058,7 @@ export default function Products() {
 
               return (
                 <>
-                  <TableRow
-                    key={product.id}
-                    class="hover:bg-gray-50 transition-colors duration-200"
-                    style={`animation-delay: ${index * 50}ms`}
-                  >
+                  <TableRow key={product.id} style={`animation-delay: ${index * 50}ms`}>
                     <TableCell>
                       <div class="flex items-start gap-2.5">
                         <div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-sm text-white shadow-sm">
@@ -1071,12 +1074,12 @@ export default function Products() {
                         </div>
                         <div class="min-w-0 flex-1">
                           <div class="flex items-center gap-1.5">
-                            <span class="font-semibold text-gray-900 truncate">{product.name}</span>
+                            <span class="truncate font-semibold text-gray-900 dark:text-gray-100">{product.name}</span>
                             {isConfigurable && (
                               <button
                                 type="button"
                                 onClick={() => handleToggleExpand(product.id)}
-                                class="inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-800 transition-colors hover:bg-purple-200"
+                                class="inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-800 transition-colors hover:bg-purple-200 dark:border-purple-900/60 dark:bg-purple-950/30 dark:text-purple-300 dark:hover:bg-purple-950/50"
                               >
                                 🏷️ {variantCount} {t('variants.variants')}
                                 <span class={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
@@ -1086,10 +1089,12 @@ export default function Products() {
                             )}
                           </div>
                           {product.description && (
-                            <div class="mt-0.5 max-w-xs truncate text-xs text-gray-600">{product.description}</div>
+                            <div class="mt-0.5 max-w-xs truncate text-xs text-gray-600 dark:text-gray-400">
+                              {product.description}
+                            </div>
                           )}
                           {product.barcode && (
-                            <div class="mt-1 inline-flex w-fit items-center rounded-md bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-500">
+                            <div class="mt-1 inline-flex w-fit items-center rounded-md bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                               📊 {product.barcode}
                             </div>
                           )}
@@ -1097,7 +1102,7 @@ export default function Products() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div class="inline-flex items-center rounded-full border border-blue-300 bg-gradient-to-r from-blue-100 to-indigo-200 px-2 py-1 text-[11px] font-semibold text-blue-800">
+                      <div class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">
                         <span class="mr-1">{getCategoryIcon(product.category)}</span>
                         {getCategoryLabel(product.category, t)}
                       </div>
@@ -1105,11 +1110,11 @@ export default function Products() {
                     <TableCell>
                       {productWithVariants?.minPrice !== undefined && productWithVariants?.maxPrice !== undefined ? (
                         <div class="space-y-0.5">
-                          <div class="text-base font-bold text-emerald-600">
+                          <div class="text-base font-bold text-emerald-600 dark:text-emerald-300">
                             {formatCurrency(productWithVariants.minPrice)}
                           </div>
                           {productWithVariants.minPrice !== productWithVariants.maxPrice && (
-                            <div class="text-[11px] leading-tight text-gray-500">
+                            <div class="text-[11px] leading-tight text-gray-500 dark:text-gray-400">
                               {t('variants.priceRange', {
                                 min: formatCurrency(productWithVariants.minPrice),
                                 max: formatCurrency(productWithVariants.maxPrice),
@@ -1118,12 +1123,16 @@ export default function Products() {
                           )}
                         </div>
                       ) : (
-                        <div class="text-base font-bold text-emerald-600">{formatCurrency(product.price)}</div>
+                        <div class="text-base font-bold text-emerald-600 dark:text-emerald-300">
+                          {formatCurrency(product.price)}
+                        </div>
                       )}
                     </TableCell>
                     <TableCell>
-                      <div class="text-sm font-medium text-gray-700">{formatCurrency(product.cost)}</div>
-                      <div class="mt-0.5 text-[11px] leading-tight text-gray-500">
+                      <div class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {formatCurrency(product.cost)}
+                      </div>
+                      <div class="mt-0.5 text-[11px] leading-tight text-gray-500 dark:text-gray-400">
                         {t('products.profitMargin')}:{' '}
                         {(((product.price - product.cost) / product.cost) * 100).toFixed(1)}%
                       </div>
@@ -1161,7 +1170,7 @@ export default function Products() {
                             items={actionItems}
                             trigger={
                               <>
-                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700">
+                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200">
                                   <svg aria-hidden="true" viewBox="0 0 16 16" class="h-4 w-4 fill-current">
                                     <circle cx="3" cy="8" r="1.25" />
                                     <circle cx="8" cy="8" r="1.25" />
@@ -1179,11 +1188,11 @@ export default function Products() {
 
                   {/* Expandable variants row */}
                   {isExpanded && productWithVariants?.variants && (
-                    <TableRow key={`${product.id}-variants`} class="bg-gray-50">
+                    <TableRow key={`${product.id}-variants`} class="bg-gray-50 dark:bg-gray-800/40">
                       <TableCell colSpan={7} class="px-4 py-3">
                         <div class="space-y-2">
                           <div class="flex items-center justify-between">
-                            <h4 class="font-semibold text-gray-900">{t('variants.variants')}</h4>
+                            <h4 class="font-semibold text-gray-900 dark:text-gray-100">{t('variants.variants')}</h4>
                             <div class="flex gap-2">
                               <Button
                                 size="sm"
@@ -1193,14 +1202,14 @@ export default function Products() {
                                   setIsVariantModalOpen(true)
                                 }}
                               >
-                                ➕ {t('variants.addVariant')}
+                                {t('variants.addVariant')}
                               </Button>
                             </div>
                           </div>
                           {productWithVariants.variants.length === 0 ? (
-                            <div class="text-center py-8 bg-white rounded-lg">
+                            <div class="rounded-lg bg-white py-8 text-center dark:bg-gray-900">
                               <div class="text-4xl mb-2">📦</div>
-                              <p class="text-gray-600">{t('variants.noVariants')}</p>
+                              <p class="text-gray-600 dark:text-gray-400">{t('variants.noVariants')}</p>
                             </div>
                           ) : (
                             <div class="space-y-2">
@@ -1238,20 +1247,19 @@ export default function Products() {
       )}
 
       {products.length === 0 && (
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div class={`${panelClass} p-12`}>
           <div class="text-center">
             <div class="text-6xl mb-6">{searchQuery ? '🔍' : '📦'}</div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-3">
+            <h3 class="mb-3 text-2xl font-bold text-gray-900 dark:text-gray-100">
               {searchQuery ? t('products.noProducts') : t('products.noProducts')}
             </h3>
-            <p class="text-gray-600 mb-6 max-w-md mx-auto">
+            <p class="mx-auto mb-6 max-w-md text-gray-600 dark:text-gray-400">
               {searchQuery
                 ? t('products.noProductsSearch', { query: searchQuery })
                 : t('products.emptyProductsCatalog')}
             </p>
             {!searchQuery && (hasPermission('products.create') || hasRole('admin') || hasRole('manager')) && (
               <Button onClick={handleCreateProduct} class="mt-4">
-                <span class="mr-2">➕</span>
                 {t('products.addFirstProduct')}
               </Button>
             )}

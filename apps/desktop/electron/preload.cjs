@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('__OPENPOS_DESKTOP__', {
   isElectron: true,
+  platform: process.platform,
 })
 
 contextBridge.exposeInMainWorld('openposDesktop', {
@@ -41,6 +42,21 @@ contextBridge.exposeInMainWorld('openposDesktop', {
     save: (payload) => ipcRenderer.invoke('desktop:image-save', payload),
     resolve: (keys) => ipcRenderer.invoke('desktop:image-resolve', keys),
     delete: (key) => ipcRenderer.invoke('desktop:image-delete', key),
+  },
+  theme: {
+    get: () => ipcRenderer.invoke('desktop:theme'),
+    onChange: (cb) => {
+      const wrapped = (_event, theme) => cb(theme)
+      ipcRenderer.on('desktop:theme-changed', wrapped)
+      return () => { ipcRenderer.removeListener('desktop:theme-changed', wrapped) }
+    },
+  },
+  navigation: {
+    onNavigate: (cb) => {
+      const wrapped = (_event, page) => cb(page)
+      ipcRenderer.on('navigate', wrapped)
+      return () => { ipcRenderer.removeListener('navigate', wrapped) }
+    },
   },
   updates: {
     openReleasePage: (url) => ipcRenderer.invoke('desktop:open-external', url),

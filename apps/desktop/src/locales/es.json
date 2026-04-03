@@ -90,7 +90,9 @@
     "passwordNoUppercase": "La contraseña debe contener una letra mayúscula",
     "passwordNoLowercase": "La contraseña debe contener una letra minúscula",
     "passwordNoNumber": "La contraseña debe contener un número",
-    "passwordNoSpecial": "La contraseña debe contener un carácter especial"
+    "passwordNoSpecial": "La contraseña debe contener un carácter especial",
+    "signOutConfirmTitle": "Cerrar Sesión",
+    "signOutConfirmMessage": "¿Estás seguro de que quieres cerrar sesión?"
   },
   "dashboard": {
     "title": "Panel",
