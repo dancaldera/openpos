@@ -18,6 +18,45 @@ import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import { type Customer, customerService } from '../services/customers-turso'
 
+type TranslateFn = (key: string, params?: Record<string, string | number | boolean>) => string
+type BusinessProfile = 'general' | 'butcher' | 'optical' | 'medical' | 'grocery' | 'disposable' | 'other'
+type PreferredContactMethod = 'phone' | 'email' | 'whatsapp' | 'sms' | 'inPerson'
+type PreferredContactMethodValue = PreferredContactMethod | ''
+
+interface CustomerContextFields {
+  businessProfile: BusinessProfile
+  preferredContactMethod: PreferredContactMethodValue
+  referenceCode: string
+  serviceNotes: string
+}
+
+interface CustomerFormData {
+  firstName: string
+  lastName: string
+  companyName: string
+  email: string
+  phone: string
+  phoneSecondary: string
+  addressLine1: string
+  addressLine2: string
+  city: string
+  state: string
+  postalCode: string
+  country: string
+  customerType: 'individual' | 'business'
+  customerSegment: string
+  creditLimit: number
+  taxExempt: boolean
+  taxId: string
+  notes: string
+  isActive: boolean
+  businessProfile: BusinessProfile
+  preferredContactMethod: PreferredContactMethodValue
+  referenceCode: string
+  serviceNotes: string
+  tagsInput: string
+}
+
 interface EditCustomerModalProps {
   customer: Customer | null
   isOpen: boolean
@@ -25,10 +64,28 @@ interface EditCustomerModalProps {
   onSave: (customer: Customer) => void
 }
 
-function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerModalProps) {
-  const { t } = useTranslation()
+const BUSINESS_PROFILES: BusinessProfile[] = [
+  'general',
+  'butcher',
+  'optical',
+  'medical',
+  'grocery',
+  'disposable',
+  'other',
+]
 
-  const [formData, setFormData] = useState({
+const PREFERRED_CONTACT_METHODS: PreferredContactMethod[] = ['phone', 'email', 'whatsapp', 'sms', 'inPerson']
+
+const CUSTOMER_ERROR_TRANSLATIONS: Record<string, string> = {
+  'First name is required': 'customers.firstNameRequired',
+  'Last name is required': 'customers.lastNameRequired',
+  'Company name is required': 'customers.companyNameRequired',
+  'Invalid email format': 'customers.invalidEmail',
+  'Customer with this email already exists': 'customers.duplicateEmail',
+}
+
+function createEmptyFormData(): CustomerFormData {
+  return {
     firstName: '',
     lastName: '',
     companyName: '',
@@ -41,22 +98,149 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
     state: '',
     postalCode: '',
     country: 'US',
-    customerType: 'individual' as 'individual' | 'business',
+    customerType: 'individual',
     customerSegment: '',
     creditLimit: 0,
     taxExempt: false,
     taxId: '',
     notes: '',
     isActive: true,
-  })
+    businessProfile: 'general',
+    preferredContactMethod: '',
+    referenceCode: '',
+    serviceNotes: '',
+    tagsInput: '',
+  }
+}
+
+function trimToUndefined(value: string) {
+  const normalized = value.trim()
+  return normalized || undefined
+}
+
+function getSafeCustomFields(customFields?: Record<string, unknown>): Record<string, unknown> {
+  if (!customFields || typeof customFields !== 'object' || Array.isArray(customFields)) {
+    return {}
+  }
+
+  return customFields
+}
+
+function isBusinessProfile(value: unknown): value is BusinessProfile {
+  return typeof value === 'string' && BUSINESS_PROFILES.includes(value as BusinessProfile)
+}
+
+function isPreferredContactMethod(value: unknown): value is PreferredContactMethod {
+  return typeof value === 'string' && PREFERRED_CONTACT_METHODS.includes(value as PreferredContactMethod)
+}
+
+function parseCustomerContext(customFields?: Record<string, unknown>): CustomerContextFields {
+  const safeCustomFields = getSafeCustomFields(customFields)
+
+  return {
+    businessProfile: isBusinessProfile(safeCustomFields.businessProfile) ? safeCustomFields.businessProfile : 'general',
+    preferredContactMethod: isPreferredContactMethod(safeCustomFields.preferredContactMethod)
+      ? safeCustomFields.preferredContactMethod
+      : '',
+    referenceCode: typeof safeCustomFields.referenceCode === 'string' ? safeCustomFields.referenceCode : '',
+    serviceNotes: typeof safeCustomFields.serviceNotes === 'string' ? safeCustomFields.serviceNotes : '',
+  }
+}
+
+function parseTagsInput(tagsInput: string) {
+  const uniqueTags = new Set<string>()
+
+  for (const tag of tagsInput.split(',')) {
+    const normalizedTag = tag.trim()
+    if (normalizedTag) {
+      uniqueTags.add(normalizedTag)
+    }
+  }
+
+  return [...uniqueTags]
+}
+
+function buildCustomerCustomFields(
+  existingCustomFields: Record<string, unknown> | undefined,
+  contextFields: CustomerContextFields,
+) {
+  const nextCustomFields = { ...getSafeCustomFields(existingCustomFields) }
+
+  delete nextCustomFields.businessProfile
+  delete nextCustomFields.preferredContactMethod
+  delete nextCustomFields.referenceCode
+  delete nextCustomFields.serviceNotes
+
+  nextCustomFields.businessProfile = contextFields.businessProfile
+
+  if (contextFields.preferredContactMethod) {
+    nextCustomFields.preferredContactMethod = contextFields.preferredContactMethod
+  }
+
+  if (contextFields.referenceCode) {
+    nextCustomFields.referenceCode = contextFields.referenceCode
+  }
+
+  if (contextFields.serviceNotes) {
+    nextCustomFields.serviceNotes = contextFields.serviceNotes
+  }
+
+  return nextCustomFields
+}
+
+function getCustomerErrorMessage(error: string | undefined, t: TranslateFn) {
+  if (!error) {
+    return t('errors.generic')
+  }
+
+  return CUSTOMER_ERROR_TRANSLATIONS[error] ? t(CUSTOMER_ERROR_TRANSLATIONS[error]) : error
+}
+
+function getBusinessProfileContent(profile: BusinessProfile, t: TranslateFn) {
+  return {
+    helperText: t(`customers.businessProfiles.${profile}.helper`),
+    referencePlaceholder: t(`customers.businessProfiles.${profile}.referencePlaceholder`),
+    serviceNotesPlaceholder: t(`customers.businessProfiles.${profile}.serviceNotesPlaceholder`),
+  }
+}
+
+function getCustomerDisplayName(customer: Customer, t: TranslateFn) {
+  const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim()
+
+  if (customer.customerType === 'business') {
+    return customer.companyName || fullName || customer.customerNumber || t('customers.unnamedCustomer')
+  }
+
+  return fullName || customer.companyName || customer.customerNumber || t('customers.unnamedCustomer')
+}
+
+function getCustomerSecondaryInfo(customer: Customer) {
+  const secondaryItems: string[] = []
+
+  if (customer.customerSegment) {
+    secondaryItems.push(customer.customerSegment)
+  }
+
+  if (customer.tags?.length) {
+    secondaryItems.push(...customer.tags.slice(0, 2))
+  }
+
+  return secondaryItems.join(' • ')
+}
+
+function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerModalProps) {
+  const { t } = useTranslation()
+  const [formData, setFormData] = useState<CustomerFormData>(createEmptyFormData())
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     if (customer && isOpen) {
+      const customerContext = parseCustomerContext(customer.customFields)
+
       setFormData({
-        firstName: customer.firstName,
-        lastName: customer.lastName,
+        firstName: customer.firstName || '',
+        lastName: customer.lastName || '',
         companyName: customer.companyName || '',
         email: customer.email || '',
         phone: customer.phone || '',
@@ -74,87 +258,95 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
         taxId: customer.taxId || '',
         notes: customer.notes || '',
         isActive: customer.isActive,
+        businessProfile: customerContext.businessProfile,
+        preferredContactMethod: customerContext.preferredContactMethod,
+        referenceCode: customerContext.referenceCode,
+        serviceNotes: customerContext.serviceNotes,
+        tagsInput: customer.tags?.join(', ') || '',
       })
     } else if (isOpen) {
-      setFormData({
-        firstName: '',
-        lastName: '',
-        companyName: '',
-        email: '',
-        phone: '',
-        phoneSecondary: '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: '',
-        postalCode: '',
-        country: 'US',
-        customerType: 'individual',
-        customerSegment: '',
-        creditLimit: 0,
-        taxExempt: false,
-        taxId: '',
-        notes: '',
-        isActive: true,
-      })
+      setFormData(createEmptyFormData())
     }
+
     setError('')
   }, [customer, isOpen])
+
+  const isBusinessCustomer = formData.customerType === 'business'
+  const profileContent = getBusinessProfileContent(formData.businessProfile, t)
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
+    const firstName = formData.firstName.trim()
+    const lastName = formData.lastName.trim()
+    const companyName = formData.companyName.trim()
+
+    if (isBusinessCustomer) {
+      if (!companyName) {
+        setError(t('customers.companyNameRequired'))
+        setIsLoading(false)
+        return
+      }
+    } else {
+      if (!firstName) {
+        setError(t('customers.firstNameRequired'))
+        setIsLoading(false)
+        return
+      }
+
+      if (!lastName) {
+        setError(t('customers.lastNameRequired'))
+        setIsLoading(false)
+        return
+      }
+    }
+
+    const tags = parseTagsInput(formData.tagsInput)
+    const customFields = buildCustomerCustomFields(customer?.customFields, {
+      businessProfile: formData.businessProfile,
+      preferredContactMethod: formData.preferredContactMethod,
+      referenceCode: formData.referenceCode.trim(),
+      serviceNotes: formData.serviceNotes.trim(),
+    })
+
     try {
+      const customerPayload = {
+        firstName,
+        lastName,
+        companyName: trimToUndefined(companyName),
+        email: trimToUndefined(formData.email),
+        phone: trimToUndefined(formData.phone),
+        phoneSecondary: trimToUndefined(formData.phoneSecondary),
+        addressLine1: trimToUndefined(formData.addressLine1),
+        addressLine2: trimToUndefined(formData.addressLine2),
+        city: trimToUndefined(formData.city),
+        state: trimToUndefined(formData.state),
+        postalCode: trimToUndefined(formData.postalCode),
+        country: formData.country,
+        customerType: formData.customerType,
+        customerSegment: trimToUndefined(formData.customerSegment),
+        creditLimit: formData.creditLimit,
+        taxExempt: formData.taxExempt,
+        taxId: trimToUndefined(formData.taxId),
+        notes: trimToUndefined(formData.notes),
+        isActive: formData.isActive,
+        tags: tags.length > 0 ? tags : undefined,
+        customFields,
+      }
+
       let result: { success: boolean; customer?: Customer; error?: string }
+
       if (customer) {
-        result = await customerService.updateCustomer(customer.id, {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          companyName: formData.companyName || undefined,
-          email: formData.email || undefined,
-          phone: formData.phone || undefined,
-          phoneSecondary: formData.phoneSecondary || undefined,
-          addressLine1: formData.addressLine1 || undefined,
-          addressLine2: formData.addressLine2 || undefined,
-          city: formData.city || undefined,
-          state: formData.state || undefined,
-          postalCode: formData.postalCode || undefined,
-          country: formData.country,
-          customerType: formData.customerType,
-          customerSegment: formData.customerSegment || undefined,
-          creditLimit: formData.creditLimit,
-          taxExempt: formData.taxExempt,
-          taxId: formData.taxId || undefined,
-          notes: formData.notes || undefined,
-          isActive: formData.isActive,
-        })
+        result = await customerService.updateCustomer(customer.id, customerPayload)
       } else {
         result = await customerService.createCustomer({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          companyName: formData.companyName || undefined,
-          email: formData.email || undefined,
-          phone: formData.phone || undefined,
-          phoneSecondary: formData.phoneSecondary || undefined,
-          addressLine1: formData.addressLine1 || undefined,
-          addressLine2: formData.addressLine2 || undefined,
-          city: formData.city || undefined,
-          state: formData.state || undefined,
-          postalCode: formData.postalCode || undefined,
-          country: formData.country,
-          customerType: formData.customerType,
-          customerSegment: formData.customerSegment || undefined,
-          creditLimit: formData.creditLimit,
+          ...customerPayload,
           currentBalance: 0,
-          taxExempt: formData.taxExempt,
-          taxId: formData.taxId || undefined,
           loyaltyPoints: 0,
           totalPurchases: 0,
           totalOrders: 0,
-          notes: formData.notes || undefined,
-          isActive: formData.isActive,
         })
       }
 
@@ -162,7 +354,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
         onSave(result.customer)
         onClose()
       } else {
-        setError(result.error || t('errors.generic'))
+        setError(getCustomerErrorMessage(result.error, t))
       }
     } catch (_err) {
       setError(t('errors.generic'))
@@ -190,253 +382,326 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
 
         <div class="backdrop-blur-lg bg-gradient-to-br from-indigo-50/60 to-purple-50/40 border border-indigo-200/50 rounded-2xl p-6 shadow-xl max-h-[70vh] overflow-y-auto">
           <form onSubmit={handleSubmit} class="space-y-6">
-            {/* Basic Information */}
             <div>
               <h3 class="text-lg font-semibold text-gray-900 mb-4">👤 {t('customers.basicInformation')}</h3>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <Input
-                    label={t('customers.firstName')}
-                    value={formData.firstName}
-                    onInput={(e) =>
-                      setFormData({
-                        ...formData,
-                        firstName: (e.target as HTMLInputElement).value,
-                      })
-                    }
-                    required
-                    class="bg-white/80 text-gray-900"
-                    placeholder={t('customers.enterFirstName')}
-                  />
-                </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label={isBusinessCustomer ? t('customers.contactFirstName') : t('customers.firstName')}
+                  value={formData.firstName}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      firstName: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  required={!isBusinessCustomer}
+                  helperText={isBusinessCustomer ? t('customers.contactPersonOptional') : undefined}
+                  class="bg-white/80 text-gray-900"
+                  placeholder={
+                    isBusinessCustomer ? t('customers.enterContactFirstName') : t('customers.enterFirstName')
+                  }
+                />
 
-                <div>
-                  <Input
-                    label={t('customers.lastName')}
-                    value={formData.lastName}
-                    onInput={(e) =>
-                      setFormData({
-                        ...formData,
-                        lastName: (e.target as HTMLInputElement).value,
-                      })
-                    }
-                    required
-                    class="bg-white/80 text-gray-900"
-                    placeholder={t('customers.enterLastName')}
-                  />
-                </div>
+                <Input
+                  label={isBusinessCustomer ? t('customers.contactLastName') : t('customers.lastName')}
+                  value={formData.lastName}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      lastName: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  required={!isBusinessCustomer}
+                  helperText={isBusinessCustomer ? t('customers.contactPersonOptional') : undefined}
+                  class="bg-white/80 text-gray-900"
+                  placeholder={isBusinessCustomer ? t('customers.enterContactLastName') : t('customers.enterLastName')}
+                />
 
-                <div>
-                  <Select
-                    label={t('customers.customerType')}
-                    value={formData.customerType}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        customerType: (e.target as HTMLSelectElement).value as 'individual' | 'business',
-                      })
-                    }
-                    options={[
-                      { value: 'individual', label: t('customers.individual') },
-                      { value: 'business', label: t('customers.business') },
-                    ]}
-                    class="bg-white/80"
-                  />
-                </div>
+                <Input
+                  label={t('customers.companyName')}
+                  value={formData.companyName}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      companyName: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  required={isBusinessCustomer}
+                  helperText={
+                    isBusinessCustomer ? t('customers.companyNameBusinessHelp') : t('customers.companyNameOptionalHelp')
+                  }
+                  class="bg-white/80 text-gray-900"
+                  placeholder={t('customers.enterCompanyName')}
+                />
 
-                {formData.customerType === 'business' && (
-                  <div>
-                    <Input
-                      label={t('customers.companyName')}
-                      value={formData.companyName}
-                      onInput={(e) =>
-                        setFormData({
-                          ...formData,
-                          companyName: (e.target as HTMLInputElement).value,
-                        })
-                      }
-                      class="bg-white/80 text-gray-900"
-                      placeholder={t('customers.enterCompanyName')}
-                    />
-                  </div>
-                )}
+                <Select
+                  label={t('customers.customerType')}
+                  value={formData.customerType}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      customerType: (e.target as HTMLSelectElement).value as 'individual' | 'business',
+                    })
+                  }
+                  options={[
+                    { value: 'individual', label: t('customers.individual') },
+                    { value: 'business', label: t('customers.business') },
+                  ]}
+                  class="bg-white/80"
+                />
               </div>
             </div>
 
-            {/* Contact Information */}
             <div>
               <h3 class="text-lg font-semibold text-gray-900 mb-4">📞 {t('customers.contactInformation')}</h3>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <Input
-                    label={t('customers.email')}
-                    type="email"
-                    value={formData.email}
-                    onInput={(e) =>
-                      setFormData({
-                        ...formData,
-                        email: (e.target as HTMLInputElement).value,
-                      })
-                    }
-                    class="bg-white/80 text-gray-900"
-                    placeholder={t('customers.enterEmail')}
-                  />
-                </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label={t('customers.email')}
+                  type="email"
+                  value={formData.email}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      email: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  class="bg-white/80 text-gray-900"
+                  placeholder={t('customers.enterEmail')}
+                />
 
-                <div>
-                  <Input
-                    label={t('customers.phone')}
-                    type="tel"
-                    value={formData.phone}
-                    onInput={(e) =>
-                      setFormData({
-                        ...formData,
-                        phone: (e.target as HTMLInputElement).value,
-                      })
-                    }
-                    class="bg-white/80 text-gray-900"
-                    placeholder={t('customers.enterPhone')}
-                  />
-                </div>
+                <Input
+                  label={t('customers.phone')}
+                  type="tel"
+                  value={formData.phone}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      phone: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  class="bg-white/80 text-gray-900"
+                  placeholder={t('customers.enterPhone')}
+                />
 
-                <div>
-                  <Input
-                    label={t('customers.phoneSecondary')}
-                    type="tel"
-                    value={formData.phoneSecondary}
-                    onInput={(e) =>
-                      setFormData({
-                        ...formData,
-                        phoneSecondary: (e.target as HTMLInputElement).value,
-                      })
-                    }
-                    class="bg-white/80 text-gray-900"
-                    placeholder={t('customers.enterPhone')}
-                  />
-                </div>
+                <Input
+                  label={t('customers.phoneSecondary')}
+                  type="tel"
+                  value={formData.phoneSecondary}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      phoneSecondary: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  class="bg-white/80 text-gray-900"
+                  placeholder={t('customers.enterSecondaryPhone')}
+                />
               </div>
             </div>
 
-            {/* Address Information */}
             <div>
               <h3 class="text-lg font-semibold text-gray-900 mb-4">📍 {t('customers.address')}</h3>
               <div class="grid grid-cols-1 gap-4">
-                <div>
+                <Input
+                  label={t('customers.addressLine1')}
+                  value={formData.addressLine1}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      addressLine1: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  class="bg-white/80 text-gray-900"
+                  placeholder={t('customers.enterAddress')}
+                />
+
+                <Input
+                  label={t('customers.addressLine2')}
+                  value={formData.addressLine2}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      addressLine2: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  class="bg-white/80 text-gray-900"
+                  placeholder={t('customers.enterAddressLine2')}
+                />
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Input
-                    label={t('customers.addressLine1')}
-                    value={formData.addressLine1}
+                    label={t('customers.city')}
+                    value={formData.city}
                     onInput={(e) =>
                       setFormData({
                         ...formData,
-                        addressLine1: (e.target as HTMLInputElement).value,
+                        city: (e.target as HTMLInputElement).value,
                       })
                     }
                     class="bg-white/80 text-gray-900"
-                    placeholder={t('customers.enterAddress')}
+                    placeholder={t('customers.enterCity')}
                   />
-                </div>
 
-                <div>
                   <Input
-                    label={t('customers.addressLine2')}
-                    value={formData.addressLine2}
+                    label={t('customers.state')}
+                    value={formData.state}
                     onInput={(e) =>
                       setFormData({
                         ...formData,
-                        addressLine2: (e.target as HTMLInputElement).value,
+                        state: (e.target as HTMLInputElement).value,
                       })
                     }
                     class="bg-white/80 text-gray-900"
-                    placeholder={t('customers.enterAddress')}
+                    placeholder={t('customers.enterState')}
                   />
-                </div>
 
-                <div class="grid grid-cols-3 gap-4">
-                  <div>
-                    <Input
-                      label={t('customers.city')}
-                      value={formData.city}
-                      onInput={(e) =>
-                        setFormData({
-                          ...formData,
-                          city: (e.target as HTMLInputElement).value,
-                        })
-                      }
-                      class="bg-white/80 text-gray-900"
-                      placeholder={t('customers.enterCity')}
-                    />
-                  </div>
-
-                  <div>
-                    <Input
-                      label={t('customers.state')}
-                      value={formData.state}
-                      onInput={(e) =>
-                        setFormData({
-                          ...formData,
-                          state: (e.target as HTMLInputElement).value,
-                        })
-                      }
-                      class="bg-white/80 text-gray-900"
-                      placeholder={t('customers.enterState')}
-                    />
-                  </div>
-
-                  <div>
-                    <Input
-                      label={t('customers.postalCode')}
-                      value={formData.postalCode}
-                      onInput={(e) =>
-                        setFormData({
-                          ...formData,
-                          postalCode: (e.target as HTMLInputElement).value,
-                        })
-                      }
-                      class="bg-white/80 text-gray-900"
-                      placeholder={t('customers.enterPostalCode')}
-                    />
-                  </div>
+                  <Input
+                    label={t('customers.postalCode')}
+                    value={formData.postalCode}
+                    onInput={(e) =>
+                      setFormData({
+                        ...formData,
+                        postalCode: (e.target as HTMLInputElement).value,
+                      })
+                    }
+                    class="bg-white/80 text-gray-900"
+                    placeholder={t('customers.enterPostalCode')}
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Financial Information */}
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">🧩 {t('customers.businessContext')}</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select
+                  label={t('customers.businessProfile')}
+                  value={formData.businessProfile}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      businessProfile: (e.target as HTMLSelectElement).value as BusinessProfile,
+                    })
+                  }
+                  helperText={profileContent.helperText}
+                  options={BUSINESS_PROFILES.map((profile) => ({
+                    value: profile,
+                    label: t(`customers.businessProfiles.${profile}.label`),
+                  }))}
+                  class="bg-white/80"
+                />
+
+                <Select
+                  label={t('customers.preferredContactMethod')}
+                  value={formData.preferredContactMethod}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      preferredContactMethod: (e.target as HTMLSelectElement).value as PreferredContactMethodValue,
+                    })
+                  }
+                  helperText={t('customers.preferredContactMethodHelp')}
+                  placeholder={t('customers.selectPreferredContactMethod')}
+                  options={PREFERRED_CONTACT_METHODS.map((method) => ({
+                    value: method,
+                    label: t(`customers.contactMethods.${method}`),
+                  }))}
+                  class="bg-white/80"
+                />
+
+                <Input
+                  label={t('customers.customerSegment')}
+                  value={formData.customerSegment}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      customerSegment: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  helperText={t('customers.customerSegmentHelp')}
+                  class="bg-white/80 text-gray-900"
+                  placeholder={t('customers.enterCustomerSegment')}
+                />
+
+                <Input
+                  label={t('customers.referenceCode')}
+                  value={formData.referenceCode}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      referenceCode: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  helperText={t('customers.referenceCodeHelp')}
+                  class="bg-white/80 text-gray-900"
+                  placeholder={profileContent.referencePlaceholder}
+                />
+
+                <Input
+                  label={t('customers.tags')}
+                  value={formData.tagsInput}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      tagsInput: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  helperText={t('customers.tagsHelp')}
+                  class="bg-white/80 text-gray-900"
+                  placeholder={t('customers.enterTags')}
+                />
+
+                <div class="md:col-span-2">
+                  <Textarea
+                    label={t('customers.serviceNotes')}
+                    value={formData.serviceNotes}
+                    onInput={(e) =>
+                      setFormData({
+                        ...formData,
+                        serviceNotes: (e.target as HTMLTextAreaElement).value,
+                      })
+                    }
+                    rows={3}
+                    helperText={t(`customers.businessProfiles.${formData.businessProfile}.serviceNotesHelp`)}
+                    class="bg-white/80 text-gray-900"
+                    placeholder={profileContent.serviceNotesPlaceholder}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div>
               <h3 class="text-lg font-semibold text-gray-900 mb-4">💳 {t('customers.financialInformation')}</h3>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <Input
-                    label={t('customers.creditLimit')}
-                    type="number"
-                    value={formData.creditLimit.toString()}
-                    onInput={(e) =>
-                      setFormData({
-                        ...formData,
-                        creditLimit: parseFloat((e.target as HTMLInputElement).value) || 0,
-                      })
-                    }
-                    class="bg-white/80 text-gray-900"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label={t('customers.creditLimit')}
+                  type="number"
+                  value={formData.creditLimit.toString()}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      creditLimit: parseFloat((e.target as HTMLInputElement).value) || 0,
+                    })
+                  }
+                  class="bg-white/80 text-gray-900"
+                  min="0"
+                  step="0.01"
+                />
 
-                <div>
-                  <Input
-                    label={t('customers.taxId')}
-                    value={formData.taxId}
-                    onInput={(e) =>
-                      setFormData({
-                        ...formData,
-                        taxId: (e.target as HTMLInputElement).value,
-                      })
-                    }
-                    class="bg-white/80 text-gray-900"
-                    placeholder={t('customers.enterTaxId')}
-                  />
-                </div>
+                <Input
+                  label={t('customers.taxId')}
+                  value={formData.taxId}
+                  onInput={(e) =>
+                    setFormData({
+                      ...formData,
+                      taxId: (e.target as HTMLInputElement).value,
+                    })
+                  }
+                  class="bg-white/80 text-gray-900"
+                  placeholder={t('customers.enterTaxId')}
+                />
 
-                <div class="col-span-2">
+                <div class="md:col-span-2">
                   <label class="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -449,16 +714,18 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                       }
                       class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     />
-                    <span class="text-sm font-medium text-gray-700">{t('customers.taxExempt')}</span>
+                    <div>
+                      <span class="text-sm font-medium text-gray-700">{t('customers.taxExempt')}</span>
+                      <p class="text-xs text-gray-500">{t('customers.taxExemptDescription')}</p>
+                    </div>
                   </label>
                 </div>
               </div>
             </div>
 
-            {/* Notes */}
             <div>
               <Textarea
-                label={`📝 ${t('customers.notes')}`}
+                label={`📝 ${t('customers.internalNotes')}`}
                 value={formData.notes}
                 onInput={(e) =>
                   setFormData({
@@ -467,12 +734,12 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                   })
                 }
                 rows={3}
+                helperText={t('customers.internalNotesHelp')}
                 class="bg-white/80 text-gray-900"
-                placeholder={t('customers.enterNotes')}
+                placeholder={t('customers.enterInternalNotes')}
               />
             </div>
 
-            {/* Status */}
             <div>
               <label class="flex items-center space-x-3 cursor-pointer">
                 <input
@@ -489,13 +756,12 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                 <div>
                   <span class="text-sm font-medium text-gray-700">{t('customers.active')}</span>
                   <p class="text-xs text-gray-500">
-                    {formData.isActive ? t('customers.active') : t('customers.inactive')}
+                    {formData.isActive ? t('customers.activeCustomerHelp') : t('customers.inactiveCustomerHelp')}
                   </p>
                 </div>
               </label>
             </div>
 
-            {/* Action Buttons */}
             <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
               <Button variant="secondary" onClick={onClose} disabled={isLoading}>
                 {t('common.cancel')}
@@ -521,14 +787,11 @@ export default function Customers() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
-
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const itemsPerPage = 10
 
-  // Check permissions
   if (!user || !hasPermission('users.view')) {
     return (
       <div class="flex items-center justify-center min-h-screen">
@@ -555,8 +818,8 @@ export default function Customers() {
         setTotalPages(result.totalPages)
         setTotalCount(result.totalCount)
       }
-    } catch (error) {
-      console.error('Failed to load customers:', error)
+    } catch (loadError) {
+      console.error('Failed to load customers:', loadError)
     } finally {
       setIsLoading(false)
     }
@@ -576,7 +839,7 @@ export default function Customers() {
     setIsEditModalOpen(true)
   }
 
-  const handleSaveCustomer = () => {
+  const handleSaveCustomer = (_customer: Customer) => {
     loadCustomers()
   }
 
@@ -595,16 +858,8 @@ export default function Customers() {
     setCurrentPage(1)
   }
 
-  const getCustomerDisplayName = (customer: Customer) => {
-    if (customer.customerType === 'business' && customer.companyName) {
-      return customer.companyName
-    }
-    return `${customer.firstName} ${customer.lastName}`
-  }
-
   return (
     <div class="space-y-6 p-8">
-      {/* Header */}
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-3xl font-bold text-gray-900">{t('customers.title')}</h1>
@@ -620,7 +875,6 @@ export default function Customers() {
         )}
       </div>
 
-      {/* Search Bar */}
       <div class="backdrop-blur-lg bg-white/50 border border-gray-200/50 rounded-2xl p-6 shadow-lg">
         <Input
           placeholder={t('customers.searchCustomers')}
@@ -630,7 +884,6 @@ export default function Customers() {
         />
       </div>
 
-      {/* Customers Table */}
       {isLoading ? (
         <div class="flex items-center justify-center py-12">
           <div class="text-center space-y-3">
@@ -657,7 +910,7 @@ export default function Customers() {
               <TableHead>
                 <TableRow>
                   <TableHeader>{t('customers.customerNumber')}</TableHeader>
-                  <TableHeader>{t('customers.firstName')}</TableHeader>
+                  <TableHeader>{t('customers.customerName')}</TableHeader>
                   <TableHeader>{t('customers.customerType')}</TableHeader>
                   <TableHeader>{t('customers.email')}</TableHeader>
                   <TableHeader>{t('customers.phone')}</TableHeader>
@@ -668,83 +921,82 @@ export default function Customers() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {customers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell>
-                      <span class="font-mono text-sm text-indigo-600">{customer.customerNumber}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div class="font-medium text-gray-900">{getCustomerDisplayName(customer)}</div>
-                        {customer.customerType === 'business' && (
-                          <div class="text-xs text-gray-500">
-                            {customer.firstName} {customer.lastName}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          customer.customerType === 'business'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}
-                      >
-                        {customer.customerType === 'business' ? '🏢' : '👤'} {t(`customers.${customer.customerType}`)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span class="text-gray-600">{customer.email || '-'}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span class="text-gray-600">{customer.phone || '-'}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span class="font-semibold text-indigo-600">{customer.loyaltyPoints}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span class="font-semibold text-gray-900">{customer.totalOrders}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          customer.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {customer.isActive ? '✓' : '✗'}{' '}
-                        {customer.isActive ? t('customers.active') : t('customers.inactive')}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div class="flex items-center space-x-2">
-                        {hasPermission('users.edit') && (
-                          <button
-                            type="button"
-                            onClick={() => handleEditCustomer(customer)}
-                            class="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
-                          >
-                            {t('common.edit')}
-                          </button>
-                        )}
-                        {hasPermission('users.delete') && (
-                          <button
-                            type="button"
-                            onClick={() => setCustomerToDelete(customer)}
-                            class="text-red-600 hover:text-red-800 font-medium text-sm"
-                          >
-                            {t('common.delete')}
-                          </button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {customers.map((customer) => {
+                  const secondaryInfo = getCustomerSecondaryInfo(customer)
+
+                  return (
+                    <TableRow key={customer.id}>
+                      <TableCell>
+                        <span class="font-mono text-sm text-indigo-600">{customer.customerNumber}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div class="font-medium text-gray-900">{getCustomerDisplayName(customer, t)}</div>
+                          {secondaryInfo && <div class="text-xs text-gray-500">{secondaryInfo}</div>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            customer.customerType === 'business'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}
+                        >
+                          {customer.customerType === 'business' ? '🏢' : '👤'} {t(`customers.${customer.customerType}`)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span class="text-gray-600">{customer.email || '-'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span class="text-gray-600">{customer.phone || '-'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span class="font-semibold text-indigo-600">{customer.loyaltyPoints}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span class="font-semibold text-gray-900">{customer.totalOrders}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            customer.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {customer.isActive ? '✓' : '✗'}{' '}
+                          {customer.isActive ? t('customers.active') : t('customers.inactive')}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div class="flex items-center space-x-2">
+                          {hasPermission('users.edit') && (
+                            <button
+                              type="button"
+                              onClick={() => handleEditCustomer(customer)}
+                              class="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
+                            >
+                              {t('common.edit')}
+                            </button>
+                          )}
+                          {hasPermission('users.delete') && (
+                            <button
+                              type="button"
+                              onClick={() => setCustomerToDelete(customer)}
+                              class="text-red-600 hover:text-red-800 font-medium text-sm"
+                            >
+                              {t('common.delete')}
+                            </button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <Pagination
               currentPage={currentPage}
@@ -755,7 +1007,6 @@ export default function Customers() {
             />
           )}
 
-          {/* Summary */}
           <div class="text-center text-sm text-gray-600">
             {t('customers.customersTotal', {
               count: totalCount,
@@ -765,7 +1016,6 @@ export default function Customers() {
         </>
       )}
 
-      {/* Edit/Add Modal */}
       <EditCustomerModal
         customer={selectedCustomer}
         isOpen={isEditModalOpen}
@@ -773,7 +1023,6 @@ export default function Customers() {
         onSave={handleSaveCustomer}
       />
 
-      {/* Delete Confirmation */}
       <DialogConfirm
         isOpen={!!customerToDelete}
         onClose={() => setCustomerToDelete(null)}
