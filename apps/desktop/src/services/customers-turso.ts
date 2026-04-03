@@ -72,6 +72,32 @@ interface DatabaseCustomer {
   deleted_at?: string
 }
 
+function normalizeCustomerText(value?: string): string {
+  return value?.trim() ?? ''
+}
+
+function validateCustomerIdentity(
+  customerData: Pick<Customer, 'customerType' | 'firstName' | 'lastName' | 'companyName'>,
+) {
+  if (customerData.customerType === 'business') {
+    if (!normalizeCustomerText(customerData.companyName)) {
+      return 'Company name is required'
+    }
+
+    return null
+  }
+
+  if (!normalizeCustomerText(customerData.firstName)) {
+    return 'First name is required'
+  }
+
+  if (!normalizeCustomerText(customerData.lastName)) {
+    return 'Last name is required'
+  }
+
+  return null
+}
+
 export class CustomerService {
   private static instance: CustomerService
 
@@ -232,12 +258,9 @@ export class CustomerService {
   async createCustomer(
     customerData: Omit<Customer, 'id' | 'customerNumber' | 'createdAt' | 'updatedAt'>,
   ): Promise<{ success: boolean; customer?: Customer; error?: string }> {
-    if (!customerData.firstName.trim()) {
-      return { success: false, error: 'First name is required' }
-    }
-
-    if (!customerData.lastName.trim()) {
-      return { success: false, error: 'Last name is required' }
+    const validationError = validateCustomerIdentity(customerData)
+    if (validationError) {
+      return { success: false, error: validationError }
     }
 
     if (customerData.email) {
@@ -352,14 +375,6 @@ export class CustomerService {
     id: string,
     updates: Partial<Omit<Customer, 'id' | 'customerNumber' | 'createdAt'>>,
   ): Promise<{ success: boolean; customer?: Customer; error?: string }> {
-    if (updates.firstName !== undefined && !updates.firstName.trim()) {
-      return { success: false, error: 'First name is required' }
-    }
-
-    if (updates.lastName !== undefined && !updates.lastName.trim()) {
-      return { success: false, error: 'Last name is required' }
-    }
-
     if (updates.email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(updates.email)) {
@@ -375,6 +390,17 @@ export class CustomerService {
 
       if (existingCustomer.length === 0) {
         return { success: false, error: 'Customer not found' }
+      }
+
+      const validationError = validateCustomerIdentity({
+        customerType: updates.customerType ?? existingCustomer[0].customer_type,
+        firstName: updates.firstName ?? existingCustomer[0].first_name,
+        lastName: updates.lastName ?? existingCustomer[0].last_name,
+        companyName: updates.companyName ?? existingCustomer[0].company_name,
+      })
+
+      if (validationError) {
+        return { success: false, error: validationError }
       }
 
       // Check for duplicate email
@@ -582,10 +608,23 @@ export class CustomerService {
             OR LOWER(last_name) LIKE ?
             OR LOWER(company_name) LIKE ?
             OR LOWER(email) LIKE ?
+            OR LOWER(COALESCE(customer_segment, '')) LIKE ?
+            OR LOWER(COALESCE(tags, '')) LIKE ?
+            OR LOWER(COALESCE(custom_fields, '')) LIKE ?
             OR (phone IS NOT NULL AND phone LIKE ?)
             OR (customer_number IS NOT NULL AND customer_number LIKE ?))
          ORDER BY customer_number DESC`,
-        [searchTerm, searchTerm, searchTerm, searchTerm, `%${queryStr}%`, `%${queryStr}%`],
+        [
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          `%${queryStr}%`,
+          `%${queryStr}%`,
+        ],
       )
 
       return customers.map((customer) => this.convertDbCustomer(customer))
@@ -619,9 +658,22 @@ export class CustomerService {
             OR LOWER(last_name) LIKE ?
             OR LOWER(company_name) LIKE ?
             OR LOWER(email) LIKE ?
+            OR LOWER(COALESCE(customer_segment, '')) LIKE ?
+            OR LOWER(COALESCE(tags, '')) LIKE ?
+            OR LOWER(COALESCE(custom_fields, '')) LIKE ?
             OR (phone IS NOT NULL AND phone LIKE ?)
             OR (customer_number IS NOT NULL AND customer_number LIKE ?))`,
-        [searchTerm, searchTerm, searchTerm, searchTerm, `%${queryStr}%`, `%${queryStr}%`],
+        [
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          `%${queryStr}%`,
+          `%${queryStr}%`,
+        ],
       )
       const totalCount = countResult[0]?.count || 0
       const totalPages = Math.ceil(totalCount / limit)
@@ -634,10 +686,25 @@ export class CustomerService {
             OR LOWER(last_name) LIKE ?
             OR LOWER(company_name) LIKE ?
             OR LOWER(email) LIKE ?
+            OR LOWER(COALESCE(customer_segment, '')) LIKE ?
+            OR LOWER(COALESCE(tags, '')) LIKE ?
+            OR LOWER(COALESCE(custom_fields, '')) LIKE ?
             OR (phone IS NOT NULL AND phone LIKE ?)
             OR (customer_number IS NOT NULL AND customer_number LIKE ?))
          ORDER BY customer_number DESC LIMIT ? OFFSET ?`,
-        [searchTerm, searchTerm, searchTerm, searchTerm, `%${queryStr}%`, `%${queryStr}%`, limit, offset],
+        [
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          searchTerm,
+          `%${queryStr}%`,
+          `%${queryStr}%`,
+          limit,
+          offset,
+        ],
       )
 
       return {
