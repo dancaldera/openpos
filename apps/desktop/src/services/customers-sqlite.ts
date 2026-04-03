@@ -604,10 +604,10 @@ export class CustomerService {
 
       // Soft delete
       const now = new Date().toISOString()
-      const result = await db.execute('UPDATE customers SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL', [
-        now,
-        parseInt(id, 10),
-      ])
+      const result = await db.execute(
+        'UPDATE customers SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL',
+        [now, now, parseInt(id, 10)],
+      )
 
       if (result.rowsAffected === 0) {
         return { success: false, error: 'Customer not found' }
