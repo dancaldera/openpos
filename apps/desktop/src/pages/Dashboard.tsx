@@ -42,40 +42,32 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   if (isLoading) {
     return (
-      <div class="max-w-6xl mx-auto px-6 py-4">
+      <div class="max-w-5xl mx-auto">
         <div class="mb-6">
-          <h1 class="text-3xl font-bold text-gray-900 mb-2">{t('dashboard.title')}</h1>
-          <p class="text-gray-600">{t('common.loading')}</p>
+          <div class="h-7 bg-gray-200 dark:bg-gray-700 rounded-lg w-40 mb-2 animate-pulse" />
+          <div class="h-4 bg-gray-100 dark:bg-gray-800 rounded w-56 animate-pulse" />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              class="backdrop-blur-md bg-white/70 rounded-xl shadow-lg border border-white/40 p-6 animate-pulse"
+              class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 animate-pulse"
             >
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <div class="h-4 bg-gray-300/50 rounded-lg w-20 mb-3"></div>
-                  <div class="h-8 bg-gray-300/50 rounded-lg w-16"></div>
-                </div>
-                <div class="w-12 h-12 bg-gray-300/50 rounded-full"></div>
-              </div>
+              <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-3" />
+              <div class="h-7 bg-gray-200 dark:bg-gray-700 rounded w-28" />
             </div>
           ))}
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2].map((i) => (
             <div
               key={i}
-              class="backdrop-blur-md bg-white/70 rounded-xl shadow-lg border border-white/40 p-6 animate-pulse"
+              class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 animate-pulse"
             >
-              <div class="flex items-center justify-between mb-4">
-                <div class="h-4 bg-gray-300/50 rounded-lg w-24"></div>
-                <div class="w-8 h-8 bg-gray-300/50 rounded-full"></div>
-              </div>
-              <div class="h-8 bg-gray-300/50 rounded-lg w-20"></div>
+              <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-28 mb-3" />
+              <div class="h-7 bg-gray-200 dark:bg-gray-700 rounded w-16" />
             </div>
           ))}
         </div>
@@ -84,105 +76,78 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   }
 
   return (
-    <div class="max-w-6xl mx-auto px-6 py-4">
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">{t('dashboard.title')}</h1>
-        <p class="text-gray-600">{t('dashboard.subtitle')}</p>
+    <div class="max-w-5xl mx-auto">
+      <div class="mb-6">
+        <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.title')}</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t('dashboard.subtitle')}</p>
       </div>
 
-      {/* Main Stats Cards */}
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <div class="relative group backdrop-blur-md bg-gradient-to-br from-emerald-100/80 to-green-100/60 rounded-2xl shadow-xl border border-emerald-200/50 p-6 hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
-          <button
-            type="button"
-            class="absolute inset-0 rounded-2xl"
-            aria-label={t('dashboard.orders')}
-            onClick={() => onNavigate?.('orders')}
-          />
-          <div class="flex items-center justify-between">
-            <div class="flex-1">
-              <p class="text-sm font-semibold text-emerald-700 uppercase tracking-wide mb-2">
-                {t('dashboard.dailySales')}
-              </p>
-              <p class="text-3xl font-bold text-gray-900 drop-shadow-sm">{formatCurrency(stats.totalSales)}</p>
-              <p class="text-xs text-emerald-600 mt-1">{t('dashboard.completedPaid')}</p>
-            </div>
-            <div class="text-4xl opacity-80 group-hover:scale-110 transition-transform">💰</div>
-          </div>
-        </div>
+      {/* Main Stats */}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <button
+          type="button"
+          onClick={() => onNavigate?.('orders')}
+          class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all"
+        >
+          <p class="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-1">
+            {t('dashboard.dailySales')}
+          </p>
+          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(stats.totalSales)}</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.completedPaid')}</p>
+        </button>
 
-        <div class="relative group backdrop-blur-md bg-gradient-to-br from-blue-100/80 to-indigo-100/60 rounded-2xl shadow-xl border border-blue-200/50 p-6 hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
-          <button
-            type="button"
-            class="absolute inset-0 rounded-2xl"
-            aria-label={t('dashboard.orders')}
-            onClick={() => onNavigate?.('orders')}
-          />
-          <div class="flex items-center justify-between">
-            <div class="flex-1">
-              <p class="text-sm font-semibold text-blue-700 uppercase tracking-wide mb-2">{t('dashboard.orders')}</p>
-              <p class="text-3xl font-bold text-gray-900 drop-shadow-sm">{stats.ordersToday}</p>
-              <p class="text-xs text-blue-600 mt-1">{t('dashboard.totalOrdersDesc')}</p>
-            </div>
-            <div class="text-4xl opacity-80 group-hover:scale-110 transition-transform">📦</div>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => onNavigate?.('orders')}
+          class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all"
+        >
+          <p class="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">
+            {t('dashboard.orders')}
+          </p>
+          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.ordersToday}</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.totalOrdersDesc')}</p>
+        </button>
 
-        <div class="relative group backdrop-blur-md bg-gradient-to-br from-purple-100/80 to-pink-100/60 rounded-2xl shadow-xl border border-purple-200/50 p-6 hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
-          <button
-            type="button"
-            class="absolute inset-0 rounded-2xl"
-            aria-label={t('dashboard.orders')}
-            onClick={() => onNavigate?.('orders')}
-          />
-          <div class="flex items-center justify-between">
-            <div class="flex-1">
-              <p class="text-sm font-semibold text-purple-700 uppercase tracking-wide mb-2">
-                {t('dashboard.avgOrderValue')}
-              </p>
-              <p class="text-3xl font-bold text-gray-900 drop-shadow-sm">{formatCurrency(stats.averageOrderValue)}</p>
-              <p class="text-xs text-purple-600 mt-1">{t('dashboard.perOrder')}</p>
-            </div>
-            <div class="text-4xl opacity-80 group-hover:scale-110 transition-transform">📊</div>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => onNavigate?.('orders')}
+          class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all"
+        >
+          <p class="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-1">
+            {t('dashboard.avgOrderValue')}
+          </p>
+          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+            {formatCurrency(stats.averageOrderValue)}
+          </p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.perOrder')}</p>
+        </button>
       </div>
 
       {/* Secondary Stats */}
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="relative group backdrop-blur-md bg-gradient-to-br from-amber-100/80 to-orange-100/60 rounded-2xl shadow-xl border border-amber-200/50 p-6 hover:shadow-2xl transition-all duration-300 cursor-pointer">
-          <button
-            type="button"
-            class="absolute inset-0 rounded-2xl"
-            aria-label={t('dashboard.products')}
-            onClick={() => onNavigate?.('products')}
-          />
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center">
-              <div class="text-3xl mr-3 group-hover:scale-110 transition-transform">⚠️</div>
-              <p class="text-sm font-semibold text-amber-700 uppercase tracking-wide">{t('dashboard.lowStockAlert')}</p>
-            </div>
-          </div>
-          <p class="text-2xl font-bold text-gray-900 drop-shadow-sm">{stats.lowStockProducts}</p>
-          <p class="text-xs text-amber-600 mt-2">{t('dashboard.needsRestocking')}</p>
-        </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button
+          type="button"
+          onClick={() => onNavigate?.('products')}
+          class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all"
+        >
+          <p class="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-1">
+            {t('dashboard.lowStockAlert')}
+          </p>
+          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.lowStockProducts}</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.needsRestocking')}</p>
+        </button>
 
-        <div class="relative group backdrop-blur-md bg-gradient-to-br from-rose-100/80 to-red-100/60 rounded-2xl shadow-xl border border-rose-200/50 p-6 hover:shadow-2xl transition-all duration-300 cursor-pointer">
-          <button
-            type="button"
-            class="absolute inset-0 rounded-2xl"
-            aria-label={t('dashboard.orders')}
-            onClick={() => onNavigate?.('orders')}
-          />
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center">
-              <div class="text-3xl mr-3 group-hover:scale-110 transition-transform">⏳</div>
-              <p class="text-sm font-semibold text-rose-700 uppercase tracking-wide">{t('dashboard.pendingOrders')}</p>
-            </div>
-          </div>
-          <p class="text-2xl font-bold text-gray-900 drop-shadow-sm">{stats.pendingOrders}</p>
-          <p class="text-xs text-rose-600 mt-2">{t('dashboard.awaitingProcessing')}</p>
-        </div>
+        <button
+          type="button"
+          onClick={() => onNavigate?.('orders')}
+          class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all"
+        >
+          <p class="text-xs font-medium text-rose-600 dark:text-rose-400 uppercase tracking-wide mb-1">
+            {t('dashboard.pendingOrders')}
+          </p>
+          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.pendingOrders}</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.awaitingProcessing')}</p>
+        </button>
       </div>
     </div>
   )

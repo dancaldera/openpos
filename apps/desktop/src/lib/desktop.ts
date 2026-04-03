@@ -89,6 +89,13 @@ export interface DesktopApi {
     resolve(keys: string[]): Promise<Record<string, string>>
     delete(key: string): Promise<void>
   }
+  theme: {
+    get(): Promise<'dark' | 'light'>
+    onChange(cb: (theme: 'dark' | 'light') => void): () => void
+  }
+  navigation: {
+    onNavigate(cb: (page: string) => void): () => void
+  }
   updates: {
     openReleasePage(url: string): Promise<void>
     relaunch(): Promise<void>
@@ -99,9 +106,11 @@ export interface DesktopApi {
   }
 }
 
+type DesktopPlatform = 'darwin' | 'win32' | 'linux' | 'web'
+
 declare global {
   interface Window {
-    __OPENPOS_DESKTOP__?: { isElectron?: boolean }
+    __OPENPOS_DESKTOP__?: { isElectron?: boolean; platform?: DesktopPlatform }
     openposDesktop?: DesktopApi
   }
 }

@@ -1,1 +1,29 @@
 @import "tailwindcss";
+
+@theme {
+  --font-family-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Titlebar drag regions (macOS) */
+.drag-region { -webkit-app-region: drag; }
+.no-drag { -webkit-app-region: no-drag; }
+
+/* macOS translucent sidebar */
+.macos-sidebar {
+  background: rgba(30, 30, 30, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Dark mode translucent sidebar */
+@media (prefers-color-scheme: dark) {
+  .macos-sidebar {
+    background: rgba(20, 20, 20, 0.82);
+  }
+}
+
+/* Subtle scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.5); }

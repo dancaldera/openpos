@@ -29,6 +29,7 @@ interface EditUserModalProps {
 function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
   const { t } = useTranslation()
   const { hasRole } = useAuth()
+  const formPanelClass = 'rounded-xl border border-gray-200 bg-gray-50 p-6 dark:border-gray-800 dark:bg-gray-800/50'
 
   const [formData, setFormData] = useState({
     name: '',
@@ -106,11 +107,11 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title={user ? t('members.editMember') : t('members.addMember')}>
       <div>
-        <div class="bg-white border border-gray-200 rounded-xl p-6">
+        <div class={formPanelClass}>
           <form onSubmit={handleSubmit} class="space-y-6">
             <div>
               <Input
-                label={`👤 ${t('members.fullName')}`}
+                label={t('members.fullName')}
                 value={formData.name}
                 onInput={(e) =>
                   setFormData({
@@ -125,7 +126,7 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
 
             <div>
               <Input
-                label={`✉️ ${t('members.emailAddress')}`}
+                label={t('members.emailAddress')}
                 type="email"
                 value={formData.email}
                 onInput={(e) =>
@@ -141,7 +142,7 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
 
             <div>
               <Select
-                label={`👑 ${t('members.rolePermissions')}`}
+                label={t('members.rolePermissions')}
                 value={formData.role}
                 onChange={(e) =>
                   setFormData({
@@ -152,13 +153,13 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
                 options={
                   hasRole('admin')
                     ? [
-                        { value: 'user', label: `👤 ${t('members.user')} - ${t('members.basicAccess')}` },
-                        { value: 'manager', label: `👔 ${t('members.manager')} - ${t('members.extendedAccess')}` },
-                        { value: 'admin', label: `👑 ${t('members.admin')} - ${t('members.fullAccess')}` },
+                        { value: 'user', label: `${t('members.user')} - ${t('members.basicAccess')}` },
+                        { value: 'manager', label: `${t('members.manager')} - ${t('members.extendedAccess')}` },
+                        { value: 'admin', label: `${t('members.admin')} - ${t('members.fullAccess')}` },
                       ]
                     : [
-                        { value: 'user', label: `👤 ${t('members.user')} - ${t('members.basicAccess')}` },
-                        { value: 'manager', label: `👔 ${t('members.manager')} - ${t('members.extendedAccess')}` },
+                        { value: 'user', label: `${t('members.user')} - ${t('members.basicAccess')}` },
+                        { value: 'manager', label: `${t('members.manager')} - ${t('members.extendedAccess')}` },
                       ]
                 }
               />
@@ -167,7 +168,7 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
             {(!user || (user && hasRole('admin')) || (user && hasRole('manager') && user.role !== 'admin')) && (
               <div>
                 <PasswordInput
-                  label={`🔐 ${user ? t('members.resetPassword') : t('auth.password')}`}
+                  label={user ? t('members.resetPassword') : t('auth.password')}
                   value={formData.password}
                   onInput={(e) =>
                     setFormData({
@@ -186,7 +187,7 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+      <div class="flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
           {t('common.cancel')}
         </Button>
@@ -200,6 +201,7 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
 
 export default function Members() {
   const { t } = useTranslation()
+  const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
 
   const [users, setUsers] = useState<User[]>([])
   const [deletedUsers, setDeletedUsers] = useState<User[]>([])
@@ -327,13 +329,13 @@ export default function Members() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin':
-        return 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300 shadow-sm'
+        return 'border border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300'
       case 'manager':
-        return 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300 shadow-sm'
+        return 'border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300'
       case 'user':
-        return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300 shadow-sm'
+        return 'border border-green-200 bg-green-50 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300'
       default:
-        return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300 shadow-sm'
+        return 'border border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
     }
   }
 
@@ -353,11 +355,11 @@ export default function Members() {
   if (!canManageUsers) {
     return (
       <div class="max-w-6xl mx-auto">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div class={`${panelClass} p-12`}>
           <div class="text-center">
             <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
-            <h2 class="text-lg font-semibold mb-3 text-gray-900">{t('members.accessDenied')}</h2>
-            <p class="text-gray-600 max-w-md mx-auto">{t('members.noPermissionMembers')}</p>
+            <h2 class="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">{t('members.accessDenied')}</h2>
+            <p class="mx-auto max-w-md text-gray-600 dark:text-gray-400">{t('members.noPermissionMembers')}</p>
           </div>
         </div>
       </div>
@@ -367,10 +369,10 @@ export default function Members() {
   if (isLoading) {
     return (
       <div class="max-w-6xl mx-auto">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div class={`${panelClass} p-12`}>
           <div class="text-center">
             <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white mx-auto mb-6 shadow-lg"></div>
-            <p class="text-gray-600 text-lg">{t('members.loadingMembers')}</p>
+            <p class="text-lg text-gray-600 dark:text-gray-400">{t('members.loadingMembers')}</p>
           </div>
         </div>
       </div>
@@ -381,8 +383,8 @@ export default function Members() {
     <div class="max-w-6xl mx-auto">
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 mb-2">{t('members.teamMembers')}</h1>
-          <p class="text-gray-600">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('members.teamMembers')}</h1>
+          <p class="text-gray-600 dark:text-gray-400">
             {t('members.membersTotal', {
               count: totalCount,
               unit: totalCount === 1 ? t('members.member') : t('members.members'),
@@ -395,76 +397,77 @@ export default function Members() {
             <Button
               variant="outline"
               onClick={() => setShowDeletedUsers(!showDeletedUsers)}
-              class={showDeletedUsers ? 'bg-orange-50 border-orange-200 text-orange-700' : ''}
+              class={
+                showDeletedUsers
+                  ? 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/30 dark:text-orange-300'
+                  : ''
+              }
             >
-              {showDeletedUsers ? `👥 ${t('members.activeUsers')}` : `🗂️ ${t('members.archivedUsers')}`}
+              {showDeletedUsers ? t('members.activeUsers') : t('members.archivedUsers')}
               {deletedUsers.length > 0 && !showDeletedUsers && (
-                <span class="ml-2 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+                <span class="ml-2 rounded-full bg-orange-100 px-2 py-1 text-xs text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">
                   {deletedUsers.length}
                 </span>
               )}
             </Button>
           )}
           {(hasPermission('users.create') || hasRole('admin')) && (
-            <Button onClick={handleCreateUser}>
-              <span class="mr-2">➕</span>
-              {t('members.addMember')}
-            </Button>
+            <Button onClick={handleCreateUser}>{t('members.addMember')}</Button>
           )}
         </div>
       </div>
 
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <Table>
+      <div class={`${panelClass} overflow-hidden`}>
+        <Table striped>
           <TableHead>
-            <TableRow class="bg-gray-50">
-              <TableHeader class="font-semibold text-gray-900">{t('members.user')}</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">{t('members.role')}</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">
+            <TableRow class="bg-gray-50 dark:bg-gray-800/60">
+              <TableHeader class="font-semibold">{t('members.user')}</TableHeader>
+              <TableHeader class="font-semibold">{t('members.role')}</TableHeader>
+              <TableHeader class="font-semibold">
                 {showDeletedUsers ? t('members.archived') : t('members.created')}
               </TableHeader>
-              <TableHeader class="font-semibold text-gray-900">{t('members.lastLogin')}</TableHeader>
-              <TableHeader class="font-semibold text-gray-900">{t('members.actions')}</TableHeader>
+              <TableHeader class="font-semibold">{t('members.lastLogin')}</TableHeader>
+              <TableHeader class="font-semibold">{t('members.actions')}</TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
             {(showDeletedUsers ? deletedUsers : users).map((user, index) => (
               <TableRow
                 key={user.id}
-                class={`hover:bg-gray-50 transition-all duration-200 hover:shadow-sm ${
-                  showDeletedUsers ? 'bg-orange-50/50' : ''
-                }`}
+                class={showDeletedUsers ? 'bg-orange-50/50 dark:bg-orange-950/10' : ''}
                 style={`animation-delay: ${index * 50}ms`}
               >
                 <TableCell>
                   <div class="flex items-center">
                     <div
-                      class={`w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold mr-4 ${
+                      class={`mr-4 flex h-10 w-10 items-center justify-center rounded-full text-lg font-semibold ${
                         showDeletedUsers
-                          ? 'bg-gradient-to-br from-orange-500 to-red-600'
-                          : 'bg-gradient-to-br from-blue-500 to-purple-600'
+                          ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300'
+                          : 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
                       }`}
                     >
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div class="font-semibold text-gray-900 flex items-center gap-2">
+                      <div class="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
                         {user.name}
                         {showDeletedUsers && (
-                          <span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                          <span class="rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300">
                             Archived
                           </span>
                         )}
                       </div>
-                      <div class="text-sm text-gray-600">{user.email}</div>
+                      <div class="text-sm text-gray-600 dark:text-gray-400">{user.email}</div>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div
-                    class={`inline-flex items-center px-3 py-2 rounded-full text-xs font-semibold uppercase tracking-wide ${
-                      showDeletedUsers ? 'bg-gray-100 text-gray-600 border border-gray-300' : getRoleColor(user.role)
-                    } transition-all hover:scale-105`}
+                    class={`inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wide ${
+                      showDeletedUsers
+                        ? 'border border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                        : getRoleColor(user.role)
+                    }`}
                   >
                     <span class="mr-1 text-sm">{getRoleIcon(user.role)}</span>
                     {user.role === 'admin'
@@ -475,13 +478,13 @@ export default function Members() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div class="text-sm text-gray-600">
+                  <div class="text-sm text-gray-600 dark:text-gray-400">
                     <div>
                       {new Date(
                         showDeletedUsers ? (user.deletedAt ?? user.createdAt) : user.createdAt,
                       ).toLocaleDateString()}
                     </div>
-                    <div class="text-xs text-gray-500">
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
                       {new Date(
                         showDeletedUsers ? (user.deletedAt ?? user.createdAt) : user.createdAt,
                       ).toLocaleTimeString([], {
@@ -492,11 +495,11 @@ export default function Members() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div class="text-sm text-gray-600">
+                  <div class="text-sm text-gray-600 dark:text-gray-400">
                     {user.lastLogin ? (
                       <>
                         <div>{new Date(user.lastLogin).toLocaleDateString()}</div>
-                        <div class="text-xs text-gray-500">
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
                           {new Date(user.lastLogin).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -504,7 +507,7 @@ export default function Members() {
                         </div>
                       </>
                     ) : (
-                      <div class="text-gray-400 italic">{t('members.neverLoggedIn')}</div>
+                      <div class="italic text-gray-400 dark:text-gray-500">{t('members.neverLoggedIn')}</div>
                     )}
                   </div>
                 </TableCell>
@@ -517,9 +520,9 @@ export default function Members() {
                           size="sm"
                           variant="outline"
                           onClick={() => setRestoreConfirm(user.id)}
-                          class="text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300 transition-all hover:shadow-md"
+                          class="border-green-200 text-green-600 hover:bg-green-50 hover:border-green-300 dark:border-green-900/60 dark:text-green-300 dark:hover:bg-green-950/30"
                         >
-                          ↩️ {t('members.restore')}
+                          {t('members.restore')}
                         </Button>
                       )
                     ) : (
@@ -531,9 +534,9 @@ export default function Members() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleEditUser(user)}
-                              class="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all hover:shadow-md mr-2"
+                              class="mr-2 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 dark:border-blue-900/60 dark:text-blue-300 dark:hover:bg-blue-950/30"
                             >
-                              ✏️ {t('common.edit')}
+                              {t('common.edit')}
                             </Button>
                           )}
                         {(hasPermission('users.delete') || hasRole('admin')) &&
@@ -543,9 +546,9 @@ export default function Members() {
                               size="sm"
                               variant="outline"
                               onClick={() => setDeleteConfirm(user.id)}
-                              class="text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 transition-all hover:shadow-md"
+                              class="border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 dark:border-orange-900/60 dark:text-orange-300 dark:hover:bg-orange-950/30"
                             >
-                              📁 {t('members.archive')}
+                              {t('members.archive')}
                             </Button>
                           )}
                       </>
@@ -571,18 +574,17 @@ export default function Members() {
       )}
 
       {(showDeletedUsers ? deletedUsers : users).length === 0 && (
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div class={`${panelClass} p-12`}>
           <div class="text-center">
             <div class="text-6xl mb-6">{showDeletedUsers ? '🗂️' : '👥'}</div>
-            <h2 class="text-lg font-semibold mb-3 text-gray-900">
+            <h2 class="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
               {showDeletedUsers ? t('members.noArchivedUsers') : t('members.noMembers')}
             </h2>
-            <p class="text-gray-600 mb-6 max-w-md mx-auto">
+            <p class="mx-auto mb-6 max-w-md text-gray-600 dark:text-gray-400">
               {showDeletedUsers ? t('members.noArchivedUsersDesc') : t('members.emptyTeam')}
             </p>
             {(hasPermission('users.create') || hasRole('admin')) && !showDeletedUsers && (
               <Button onClick={handleCreateUser} class="mt-4">
-                <span class="mr-2">➕</span>
                 {t('members.addFirstMember')}
               </Button>
             )}

@@ -121,7 +121,7 @@ function App() {
   // Show loading spinner while checking authentication
   if (isStartupLoading || isLoading) {
     return (
-      <div class="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div class="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center">
         <div class="text-center">
           <div class="w-8 h-8 bg-blue-600 rounded-full animate-spin border-2 border-transparent border-t-white mx-auto mb-4"></div>
           <p class="text-gray-600">Loading...</p>
