@@ -107,7 +107,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
 
       <div class="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header: full-width drag region, content is no-drag */}
-        <header class="drag-region bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-800/60 shrink-0">
+        <header class="drag-region bg-white/80 dark:bg-gray-900/92 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-800/60 shrink-0">
           <div class="no-drag flex items-center justify-between px-6 py-3">
             <div>
               <h1 class="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight">

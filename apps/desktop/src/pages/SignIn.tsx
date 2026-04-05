@@ -78,7 +78,7 @@ export default function SignIn() {
 
         ctx.beginPath()
         ctx.arc(dot.x, dot.y, radius, 0, Math.PI * 2)
-        ctx.fillStyle = dark ? `rgba(148, 163, 184, ${opacity})` : `rgba(99, 102, 241, ${opacity})`
+        ctx.fillStyle = dark ? `rgba(163, 163, 163, ${opacity})` : `rgba(99, 102, 241, ${opacity})`
         ctx.fill()
       }
 
@@ -115,14 +115,14 @@ export default function SignIn() {
   }
 
   return (
-    <div class="drag-region min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-slate-100 dark:bg-gray-950">
+    <div class="drag-region min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gray-100 dark:bg-gray-950">
       <canvas ref={canvasRef} class="absolute inset-0 pointer-events-none" />
 
       {/* Grabbable zone at top for macOS traffic lights */}
       {isMac && <div class="drag-region absolute top-0 left-0 right-0 h-10 z-20" />}
 
       <div class="no-drag w-full max-w-sm relative z-10">
-        <div class="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/60 dark:border-gray-700/60 p-8">
+        <div class="bg-white/95 dark:bg-gray-900/97 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/60 dark:border-gray-700/60 p-8">
           <div class="text-center mb-7">
             <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{appName.value}</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('auth.signInToAccount')}</p>
