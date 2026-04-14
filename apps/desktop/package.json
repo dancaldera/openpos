@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@openpos/data": "workspace:*",
+    "@openpos/sync": "workspace:*",
     "@preact/signals": "^2.5.1",
     "@tailwindcss/vite": "^4.1.18",
     "@tursodatabase/serverless": "^0.2.4",

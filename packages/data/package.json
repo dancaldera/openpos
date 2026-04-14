@@ -7,14 +7,23 @@
   "types": "src/index.d.ts",
   "files": [
     "assets",
+    "drizzle",
+    "drizzle.config.js",
     "migrations",
     "src"
   ],
   "scripts": {
+    "drizzle:generate": "drizzle-kit generate --config drizzle.config.js",
+    "drizzle:push": "drizzle-kit push --config drizzle.config.js",
+    "drizzle:studio": "drizzle-kit studio --config drizzle.config.js",
     "migrate:remote": "bun run scripts/migrate-remote.ts",
     "build:bootstrap": "bun run scripts/build-bootstrap.ts"
   },
   "dependencies": {
-    "@tursodatabase/serverless": "^0.2.4"
+    "@openpos/db-core": "workspace:*",
+    "drizzle-orm": "^0.44.5"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.5"
   }
 }

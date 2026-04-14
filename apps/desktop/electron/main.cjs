@@ -10,7 +10,7 @@ const {
   resolveDesktopRuntimeConfigPath,
 } = require('./config-resolver.cjs')
 const { isLegacyLocalImageKey } = require('./product-image-keys.cjs')
-const { createSyncManager } = require('./sync-manager.cjs')
+const { createSyncManager, ensureLocalSyncSchema } = require('./sync-manager.cjs')
 
 const pkg = require('../package.json')
 
@@ -609,86 +609,8 @@ async function initializeFirstRun() {
   return initialSyncPromise
 }
 
-function tableHasColumn(database, tableName, columnName) {
-  return database.prepare(`PRAGMA table_info(${tableName})`).all().some((column) => column.name === columnName)
-}
-
 function ensureLegacyCompatibility(database) {
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS sync_outbox (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      table_name TEXT NOT NULL,
-      record_id TEXT NOT NULL,
-      operation TEXT NOT NULL CHECK (operation IN ('INSERT', 'UPDATE', 'DELETE')),
-      row_payload TEXT,
-      local_updated_at DATETIME,
-      base_remote_updated_at DATETIME,
-      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'synced', 'conflict', 'error')),
-      attempts INTEGER NOT NULL DEFAULT 0,
-      last_error TEXT,
-      synced_at DATETIME,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(table_name, record_id)
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_sync_outbox_status ON sync_outbox(status);
-    CREATE INDEX IF NOT EXISTS idx_sync_outbox_updated_at ON sync_outbox(updated_at);
-
-    CREATE TABLE IF NOT EXISTS sync_state (
-      table_name TEXT PRIMARY KEY,
-      last_pulled_at DATETIME,
-      last_sync_at DATETIME,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS order_sync_queue (
-      order_id TEXT PRIMARY KEY,
-      operation TEXT NOT NULL CHECK (operation IN ('UPSERT', 'DELETE')),
-      attempts INTEGER NOT NULL DEFAULT 0,
-      last_error TEXT,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `)
-
-  database.prepare(`DELETE FROM sync_outbox WHERE table_name IN ('orders', 'order_items')`).run()
-
-  if (!tableHasColumn(database, 'users', 'updated_at')) {
-    database.exec(`
-      ALTER TABLE users ADD COLUMN updated_at DATETIME;
-      UPDATE users SET updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP);
-    `)
-  }
-
-  if (!tableHasColumn(database, 'order_items', 'created_at')) {
-    database.exec(`
-      ALTER TABLE order_items ADD COLUMN created_at DATETIME;
-      UPDATE order_items SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP);
-    `)
-  }
-
-  if (!tableHasColumn(database, 'order_items', 'updated_at')) {
-    database.exec(`
-      ALTER TABLE order_items ADD COLUMN updated_at DATETIME;
-      UPDATE order_items SET updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP);
-    `)
-  }
-
-  database.exec(`
-    CREATE INDEX IF NOT EXISTS idx_users_updated_at ON users(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_products_updated_at ON products(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_customers_updated_at ON customers(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_company_settings_updated_at ON company_settings(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_orders_updated_at ON orders(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_order_items_updated_at ON order_items(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_product_attributes_updated_at ON product_attributes(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_product_variants_updated_at ON product_variants(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_product_variant_settings_updated_at ON product_variant_settings(updated_at);
-
-    CREATE TABLE IF NOT EXISTS sync_metadata (id INTEGER PRIMARY KEY, version INTEGER NOT NULL DEFAULT 0);
-    INSERT OR IGNORE INTO sync_metadata (id, version) VALUES (1, 0);
-  `)
+  ensureLocalSyncSchema(database)
 }
 
 async function getRemoteDbClient() {

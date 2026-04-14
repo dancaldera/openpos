@@ -1,44 +1,16 @@
-export type ReplicatedDeleteStrategy = 'soft' | 'hard'
+import type { ReplicatedTableConfig, ReplicatedDeleteStrategy } from '@openpos/db-core'
 
-export interface ReplicatedTableConfig {
-  tableName: string
-  primaryKey: string
-  columns: string[]
-  watermarkColumn: string
-  deleteStrategy: ReplicatedDeleteStrategy
-  pullOrder: number
-}
+export type { ReplicatedDeleteStrategy, ReplicatedTableConfig } from '@openpos/db-core'
 
-export interface SyncOutboxRow {
-  id: number
-  table_name: string
-  record_id: string
-  operation: 'INSERT' | 'UPDATE' | 'DELETE'
-  row_payload: string | null
-  local_updated_at: string | null
-  base_remote_updated_at: string | null
-  status: 'pending' | 'synced' | 'conflict' | 'error'
-  attempts: number
-  last_error: string | null
-  synced_at: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface SyncStateRow {
-  table_name: string
-  last_pulled_at: string | null
-  last_sync_at: string | null
-  updated_at: string
-}
-
-export interface SyncConflictResult {
-  tableName: string
-  recordId: string
-  reason: string
-  localUpdatedAt: string | null
-  remoteUpdatedAt: string | null
-}
-
+export const schema: Record<string, unknown>
+export const users: unknown
+export const products: unknown
+export const customers: unknown
+export const companySettings: unknown
+export const orders: unknown
+export const orderItems: unknown
+export const productAttributes: unknown
+export const productVariants: unknown
+export const productVariantSettings: unknown
 export const replicatedTables: ReplicatedTableConfig[]
 export const replicatedTablesByName: Record<string, ReplicatedTableConfig>

@@ -11,10 +11,10 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@openpos/db-core": "workspace:*",
     "@aws-sdk/client-s3": "^3.896.0",
     "@aws-sdk/s3-request-presigner": "^3.896.0",
     "@hono/node-server": "^1.13.7",
-    "@tursodatabase/serverless": "^0.2.4",
     "bcryptjs": "^3.0.2",
     "hono": "^4.7.11",
     "jsonwebtoken": "^9.0.2"

@@ -1,30 +1,21 @@
 #!/usr/bin/env bun
 
 import { mkdirSync, rmSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { Database } from 'bun:sqlite'
-import { loadBootstrapMigrations, packageRoot, splitStatements } from '../src/migrations'
-
-const outputPath = resolve(packageRoot, 'assets', 'openpos-bootstrap.sqlite')
+import { dirname } from 'node:path'
+const { runLocalMigrations } = require('@openpos/db-core')
+const { bootstrapDatabasePath, migrationsDir } = require('../src/project')
 
 async function main() {
-  mkdirSync(dirname(outputPath), { recursive: true })
-  rmSync(outputPath, { force: true })
+  mkdirSync(dirname(bootstrapDatabasePath), { recursive: true })
+  rmSync(bootstrapDatabasePath, { force: true })
 
-  const database = new Database(outputPath, { create: true, strict: false })
+  const result = runLocalMigrations({
+    fileName: bootstrapDatabasePath,
+    migrationsDir,
+  })
 
-  try {
-    for (const migration of loadBootstrapMigrations()) {
-      console.log(`apply bootstrap V${String(migration.version).padStart(3, '0')} ${migration.description}`)
-      for (const statement of splitStatements(migration.sql)) {
-        database.run(statement)
-      }
-    }
-  } finally {
-    database.close()
-  }
-
-  console.log(`Bootstrap database written to ${outputPath}`)
+  console.log(`Bootstrap database written to ${bootstrapDatabasePath}`)
+  console.log(`Applied ${result.appliedCount}, skipped ${result.skippedCount}`)
 }
 
 main().catch((error) => {

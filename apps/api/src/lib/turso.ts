@@ -1,13 +1,22 @@
 /**
  * Turso client singleton for the API server.
  *
- * Uses @tursodatabase/serverless which works in both Node.js and
- * Vercel/Cloudflare edge environments.
+ * Connection creation is delegated to the shared db-core package so
+ * OpenPOS and future projects use the same Turso/libSQL setup path.
  */
 
-import { connect, type Connection } from '@tursodatabase/serverless'
+import { createTursoDb } from '@openpos/db-core'
 
-let _client: Connection | null = null
+interface QueryableClient {
+  execute(sql: string, params?: unknown[]): Promise<{
+    columns: string[]
+    rows: Array<Record<string, unknown> | unknown[]>
+    lastInsertRowid?: number
+    rowsAffected?: number
+  }>
+}
+
+let _client: QueryableClient | null = null
 
 export interface TursoConfig {
   url?: string
@@ -26,7 +35,7 @@ export function getTursoConfig(): TursoConfig {
   }
 }
 
-export function getTursoClient(): Connection {
+export function getTursoClient(): QueryableClient {
   if (_client) return _client
 
   const { url, authToken, configured } = getTursoConfig()
@@ -38,7 +47,7 @@ export function getTursoClient(): Connection {
     )
   }
 
-  _client = connect({ url, authToken })
+  _client = createTursoDb({ url, authToken }).client as QueryableClient
   return _client
 }
 
@@ -46,10 +55,13 @@ export function getTursoClient(): Connection {
 export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
   const client = getTursoClient()
   const result = await client.execute(sql, params)
-  
-  // Convert array rows to objects with column names
+
   const columns = result.columns
-  return result.rows.map((row: unknown[]) => {
+  return result.rows.map((row: Record<string, unknown> | unknown[]) => {
+    if (!Array.isArray(row)) {
+      return row as T
+    }
+
     const obj: Record<string, unknown> = {}
     columns.forEach((col: string, i: number) => {
       obj[col] = row[i]
