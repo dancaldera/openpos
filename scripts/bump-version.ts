@@ -22,6 +22,13 @@ interface FileToUpdate {
 }
 
 const FILES_TO_UPDATE: FileToUpdate[] = [
+  // Root workspace
+  {
+    name: 'Root workspace',
+    path: resolve(repoRoot, 'package.json'),
+    pattern: /"version":\s*"[\d.]+"/,
+    replacement: (version: string) => `"version": "${version}"`,
+  },
   // Apps
   {
     name: 'Desktop app',
