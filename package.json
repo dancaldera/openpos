@@ -1,5 +1,6 @@
 {
   "name": "openpos",
+  "version": "0.6.1",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -24,9 +25,8 @@
     "config:desktop": "bash scripts/create-desktop-config.sh",
     "version:bump": "bun scripts/bump-version.ts",
     "check": "tsc -p scripts/tsconfig.json && bun run --cwd apps/desktop check && bun run --cwd apps/api check",
-    "test": "bun run test:scripts && bun run test:db-core && bun run test:data && bun run test:sync && bun run test:desktop && bun run test:api",
+    "test": "bun run test:scripts && bun run test:data && bun run test:sync && bun run test:desktop && bun run test:api",
     "test:scripts": "bun test scripts",
-    "test:db-core": "bun run --cwd packages/db-core test",
     "test:data": "bun test packages/data",
     "test:sync": "bun run --cwd packages/sync test",
     "test:desktop": "bun run --cwd apps/desktop test",

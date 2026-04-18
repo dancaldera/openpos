@@ -1,4 +1,4 @@
-const { buildReplicatedTableConfig, buildReplicatedTableMap } = require('@openpos/db-core')
+const { buildReplicatedTableConfig, buildReplicatedTableMap } = require('./internal/replicated-meta')
 const {
   companySettings,
   customers,

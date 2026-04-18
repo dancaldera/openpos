@@ -1,6 +1,6 @@
 const { resolve } = require('node:path')
 
-function defineProjectConfig(options) {
+function defineDrizzleConfig(options) {
   const config = {
     schema: options.schema,
     out: options.out,
@@ -27,6 +27,6 @@ function resolveProjectPaths(packageRoot, options = {}) {
 }
 
 module.exports = {
-  defineProjectConfig,
+  defineDrizzleConfig,
   resolveProjectPaths,
 }

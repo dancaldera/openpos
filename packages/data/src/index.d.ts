@@ -1,6 +1,6 @@
-import type { ReplicatedTableConfig, ReplicatedDeleteStrategy } from '@openpos/db-core'
+import type { ReplicatedTableConfig, ReplicatedDeleteStrategy } from './internal/types'
 
-export type { ReplicatedDeleteStrategy, ReplicatedTableConfig } from '@openpos/db-core'
+export type { ReplicatedDeleteStrategy, ReplicatedTableConfig } from './internal/types'
 
 export const schema: Record<string, unknown>
 export const users: unknown

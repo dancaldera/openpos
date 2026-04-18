@@ -20,7 +20,8 @@
     "build:bootstrap": "bun run scripts/build-bootstrap.ts"
   },
   "dependencies": {
-    "@openpos/db-core": "workspace:*",
+    "@dancaldera/libsql-bridge": "npm:@jsr/dancaldera__libsql-bridge",
+    "@libsql/client": "^0.15.15",
     "drizzle-orm": "^0.44.5"
   },
   "devDependencies": {

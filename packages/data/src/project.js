@@ -1,5 +1,5 @@
 const { resolve } = require('node:path')
-const { resolveProjectPaths } = require('@openpos/db-core')
+const { resolveProjectPaths } = require('./internal/project-paths')
 
 const packageRoot = resolve(__dirname, '..')
 const repoRoot = resolve(packageRoot, '../..')

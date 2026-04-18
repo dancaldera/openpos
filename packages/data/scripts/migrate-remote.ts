@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
 
-const { loadEnv, runTursoMigrations } = require('@openpos/db-core')
+import { createClient } from '@libsql/client'
+const { runRemoteMigrations } = require('@dancaldera/libsql-bridge')
+const { loadEnv } = require('../src/internal/env')
 const { devMigrationsDir, migrationsDir, repoRoot } = require('../src/project')
 
 async function main() {
@@ -17,16 +19,32 @@ async function main() {
     throw new Error('TURSO_AUTH_TOKEN is not set in .env.local')
   }
 
-  const result = await runTursoMigrations({
-    url,
-    authToken,
-    migrationsDir,
-    extraMigrationDirs: includeDevSeeds ? [devMigrationsDir] : [],
-  })
+  const client = createClient({ url, authToken })
+  const migrationsTable = '__drizzle_migrations'
 
-  console.log(`OpenPOS remote migrations (${includeDevSeeds ? 'schema + required + dev seeds' : 'schema + required seeds'})`)
-  console.log(`Found ${result.migrations.length} migration files`)
-  console.log(`Applied ${result.appliedCount}, skipped ${result.skippedCount}`)
+  try {
+    const schemaResult = await runRemoteMigrations(client, migrationsDir, migrationsTable)
+    let totalApplied = schemaResult.appliedCount
+    let totalSkipped = schemaResult.skippedCount
+    let totalFiles = schemaResult.migrations.length
+
+    if (includeDevSeeds) {
+      const devResult = await runRemoteMigrations(client, devMigrationsDir, migrationsTable)
+      totalApplied += devResult.appliedCount
+      totalSkipped += devResult.skippedCount
+      totalFiles += devResult.migrations.length
+    }
+
+    console.log(
+      `OpenPOS remote migrations (${includeDevSeeds ? 'schema + required + dev seeds' : 'schema + required seeds'})`,
+    )
+    console.log(`Found ${totalFiles} migration files`)
+    console.log(`Applied ${totalApplied}, skipped ${totalSkipped}`)
+  } finally {
+    if (typeof client.close === 'function') {
+      client.close()
+    }
+  }
 }
 
 main().catch((error) => {
