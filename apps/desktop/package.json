@@ -17,8 +17,9 @@
     "dev:web": "vite --config vite.web.config.ts",
     "build": "tsc && vite build",
     "build:desktop": "bun run prepare:bootstrap && bun run prepare:native && bun run build && electron-builder --dir",
-    "build:desktop:linux": "bun run build:desktop:linux:appimage",
+    "build:desktop:linux": "bun run prepare:bootstrap && bun run prepare:native && bun run build && electron-builder --linux",
     "build:desktop:linux:appimage": "bun run prepare:bootstrap && bun run prepare:native && bun run build && electron-builder --linux AppImage",
+    "build:desktop:linux:deb": "bun run prepare:bootstrap && bun run prepare:native && bun run build && electron-builder --linux deb",
     "build:web": "tsc && vite build --config vite.web.config.ts",
     "preview": "vite preview",
     "lint": "biome lint src",
@@ -70,7 +71,8 @@
     "linux": {
       "artifactName": "openpos-${arch}.${ext}",
       "target": [
-        "AppImage"
+        "AppImage",
+        "deb"
       ],
       "category": "Office",
       "executableName": "openpos",
