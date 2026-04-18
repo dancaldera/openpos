@@ -8,7 +8,7 @@ OpenPOS is a Bun workspace monorepo for a desktop-first point of sale system.
 
 ## Install on Linux
 
-Official Linux releases are distributed as AppImage only.
+Official Linux releases are distributed as AppImage and `.deb`.
 
 Install the latest release:
 
@@ -75,7 +75,8 @@ The desktop renderer runs on `http://localhost:1420` during development.
 ## Release Notes
 
 - GitHub release tags remain `v*.*.*`.
-- The release workflow publishes Linux AppImage artifacts only.
+- The release workflow currently publishes Linux `.AppImage` and `.deb` artifacts.
+- Local macOS maintainer release build: `bun run release:desktop:mac`
 - Local maintainer install test: `bash scripts/install-latest-appimage.sh --version <x.y.z>`
 
 ## License

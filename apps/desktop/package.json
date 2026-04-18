@@ -11,15 +11,16 @@
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
-    "prepare:native": "mkdir -p .cache/home && HOME=$PWD/.cache/home npm_config_devdir=$PWD/.cache/electron-gyp electron-builder install-app-deps",
+    "prepare:native": "mkdir -p .cache/home .cache/electron .cache/electron-builder .cache/electron-gyp && HOME=$PWD/.cache/home ELECTRON_CACHE=$PWD/.cache/electron ELECTRON_BUILDER_CACHE=$PWD/.cache/electron-builder npm_config_devdir=$PWD/.cache/electron-gyp electron-builder install-app-deps",
     "prepare:bootstrap": "bun run --cwd ../../packages/data build:bootstrap",
     "dev": "vite",
     "dev:web": "vite --config vite.web.config.ts",
     "build": "tsc && vite build",
-    "build:desktop": "bun run prepare:bootstrap && bun run prepare:native && bun run build && electron-builder --dir",
-    "build:desktop:linux": "bun run prepare:bootstrap && bun run prepare:native && bun run build && electron-builder --linux",
-    "build:desktop:linux:appimage": "bun run prepare:bootstrap && bun run prepare:native && bun run build && electron-builder --linux AppImage",
-    "build:desktop:linux:deb": "bun run prepare:bootstrap && bun run prepare:native && bun run build && electron-builder --linux deb",
+    "build:desktop": "bun run prepare:bootstrap && bun run prepare:native && bun run build && HOME=$PWD/.cache/home ELECTRON_CACHE=$PWD/.cache/electron ELECTRON_BUILDER_CACHE=$PWD/.cache/electron-builder npm_config_devdir=$PWD/.cache/electron-gyp electron-builder --dir",
+    "build:desktop:mac": "bun run prepare:bootstrap && bun run prepare:native && bun run build && HOME=$PWD/.cache/home ELECTRON_CACHE=$PWD/.cache/electron ELECTRON_BUILDER_CACHE=$PWD/.cache/electron-builder npm_config_devdir=$PWD/.cache/electron-gyp electron-builder --mac",
+    "build:desktop:linux": "bun run prepare:bootstrap && bun run prepare:native && bun run build && HOME=$PWD/.cache/home ELECTRON_CACHE=$PWD/.cache/electron ELECTRON_BUILDER_CACHE=$PWD/.cache/electron-builder npm_config_devdir=$PWD/.cache/electron-gyp electron-builder --linux",
+    "build:desktop:linux:appimage": "bun run prepare:bootstrap && bun run prepare:native && bun run build && HOME=$PWD/.cache/home ELECTRON_CACHE=$PWD/.cache/electron ELECTRON_BUILDER_CACHE=$PWD/.cache/electron-builder npm_config_devdir=$PWD/.cache/electron-gyp electron-builder --linux AppImage",
+    "build:desktop:linux:deb": "bun run prepare:bootstrap && bun run prepare:native && bun run build && HOME=$PWD/.cache/home ELECTRON_CACHE=$PWD/.cache/electron ELECTRON_BUILDER_CACHE=$PWD/.cache/electron-builder npm_config_devdir=$PWD/.cache/electron-gyp electron-builder --linux deb",
     "build:web": "tsc && vite build --config vite.web.config.ts",
     "preview": "vite preview",
     "lint": "biome lint src",
@@ -63,7 +64,11 @@
       "package.json"
     ],
     "mac": {
-      "icon": "electron/build/icons/icon.icns"
+      "icon": "electron/build/icons/icon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "win": {
       "icon": "electron/build/icons/icon.ico"
