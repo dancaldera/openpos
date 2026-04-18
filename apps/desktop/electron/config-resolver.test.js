@@ -7,17 +7,13 @@ const {
 } = require('./config-resolver.cjs')
 
 describe('getDesktopRuntimeConfigCandidates', () => {
-  it('returns legacy config first and userData second', () => {
+  it('returns the userData config path', () => {
     const result = getDesktopRuntimeConfigCandidates({
-      homeDir: '/home/ana',
       userDataPath: '/home/ana/.config/OpenPOS',
+      platform: 'linux',
     })
 
     expect(result).toEqual([
-      {
-        path: '/home/ana/.config/openpos-desktop/config.json',
-        source: 'legacy',
-      },
       {
         path: '/home/ana/.config/OpenPOS/config.json',
         source: 'userData',
@@ -25,40 +21,40 @@ describe('getDesktopRuntimeConfigCandidates', () => {
     ])
   })
 
-  it('deduplicates identical candidate paths', () => {
+  it('returns an empty list when userDataPath is missing', () => {
     const result = getDesktopRuntimeConfigCandidates({
-      homeDir: '/home/ana/.config',
-      userDataPath: '/home/ana/.config/openpos-desktop',
+      userDataPath: '',
+      platform: 'linux',
+    })
+
+    expect(result).toEqual([])
+  })
+
+  it('adds the macOS ~/.config fallback after userData', () => {
+    const result = getDesktopRuntimeConfigCandidates({
+      homeDir: '/Users/ana',
+      userDataPath: '/Users/ana/Library/Application Support/OpenPOS',
+      platform: 'darwin',
     })
 
     expect(result).toEqual([
       {
-        path: '/home/ana/.config/openpos-desktop/config.json',
-        source: 'legacy',
+        path: '/Users/ana/Library/Application Support/OpenPOS/config.json',
+        source: 'userData',
+      },
+      {
+        path: '/Users/ana/.config/OpenPOS/config.json',
+        source: 'fallback',
       },
     ])
   })
 })
 
 describe('resolveDesktopRuntimeConfigPath', () => {
-  it('prefers the documented legacy config path when both files exist', () => {
+  it('returns the userData config path when the file exists', () => {
     const result = resolveDesktopRuntimeConfigPath({
-      homeDir: '/home/ana',
       userDataPath: '/home/ana/.config/OpenPOS',
-      fileExists: () => true,
-    })
-
-    expect(result).toEqual({
-      path: '/home/ana/.config/openpos-desktop/config.json',
-      source: 'legacy',
-      exists: true,
-    })
-  })
-
-  it('falls back to the Electron userData config path when legacy is missing', () => {
-    const result = resolveDesktopRuntimeConfigPath({
-      homeDir: '/home/ana',
-      userDataPath: '/home/ana/.config/OpenPOS',
+      platform: 'linux',
       fileExists: (candidatePath) => candidatePath === '/home/ana/.config/OpenPOS/config.json',
     })
 
@@ -69,17 +65,46 @@ describe('resolveDesktopRuntimeConfigPath', () => {
     })
   })
 
-  it('returns the preferred legacy path when no runtime config file exists', () => {
+  it('returns the preferred userData path when no runtime config file exists', () => {
     const result = resolveDesktopRuntimeConfigPath({
-      homeDir: '/home/ana',
       userDataPath: '/home/ana/.config/OpenPOS',
+      platform: 'linux',
       fileExists: () => false,
     })
 
     expect(result).toEqual({
-      path: '/home/ana/.config/openpos-desktop/config.json',
-      source: 'legacy',
+      path: '/home/ana/.config/OpenPOS/config.json',
+      source: 'userData',
       exists: false,
+    })
+  })
+
+  it('returns an empty selection when userDataPath is unavailable', () => {
+    const result = resolveDesktopRuntimeConfigPath({
+      userDataPath: '',
+      platform: 'linux',
+      fileExists: () => false,
+    })
+
+    expect(result).toEqual({
+      path: '',
+      source: 'userData',
+      exists: false,
+    })
+  })
+
+  it('falls back to ~/.config/OpenPOS/config.json on macOS when userData is missing', () => {
+    const result = resolveDesktopRuntimeConfigPath({
+      homeDir: '/Users/ana',
+      userDataPath: '/Users/ana/Library/Application Support/OpenPOS',
+      platform: 'darwin',
+      fileExists: (candidatePath) => candidatePath === '/Users/ana/.config/OpenPOS/config.json',
+    })
+
+    expect(result).toEqual({
+      path: '/Users/ana/.config/OpenPOS/config.json',
+      source: 'fallback',
+      exists: true,
     })
   })
 })
@@ -92,8 +117,8 @@ describe('resolveDesktopConnectionConfig', () => {
         tursoAuthToken: 'runtime-token',
         apiUrl: 'https://runtime-api.example.com',
       },
-      runtimeConfigSource: 'legacy',
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
+      runtimeConfigSource: 'userData',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
       processEnv: {
         TURSO_DATABASE_URL: 'libsql://process-db',
         TURSO_AUTH_TOKEN: 'process-token',
@@ -116,8 +141,8 @@ describe('resolveDesktopConnectionConfig', () => {
       api: {
         url: 'https://runtime-api.example.com',
         configured: true,
-        source: 'legacy',
-        configPath: '/home/ana/.config/openpos-desktop/config.json',
+        source: 'userData',
+        configPath: '/home/ana/.config/OpenPOS/config.json',
       },
     })
   })
@@ -141,8 +166,8 @@ describe('resolveDesktopConnectionConfig', () => {
   it('reports env as the API source when VITE_API_URL comes from process env', () => {
     const result = resolveDesktopConnectionConfig({
       runtimeConfig: {},
-      runtimeConfigSource: 'legacy',
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
+      runtimeConfigSource: 'userData',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
       processEnv: {
         VITE_API_URL: 'https://process-api.example.com',
       },
@@ -153,7 +178,7 @@ describe('resolveDesktopConnectionConfig', () => {
       url: 'https://process-api.example.com',
       configured: true,
       source: 'env',
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
     })
   })
 })

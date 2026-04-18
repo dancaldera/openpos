@@ -2,9 +2,22 @@
 
 set -euo pipefail
 
-CONFIG_DIR="${HOME:-}/.config/openpos-desktop"
-CONFIG_PATH="${CONFIG_DIR}/config.json"
 PROMPT_FD=0
+
+default_config_path() {
+  case "$(uname -s)" in
+    Darwin)
+      printf '%s/Library/Application Support/OpenPOS/config.json' "${HOME:-}"
+      ;;
+    *)
+      local config_home="${XDG_CONFIG_HOME:-${HOME:-}/.config}"
+      printf '%s/OpenPOS/config.json' "$config_home"
+      ;;
+  esac
+}
+
+CONFIG_PATH="$(default_config_path)"
+CONFIG_DIR="$(dirname "$CONFIG_PATH")"
 
 usage() {
   cat <<'EOF'
@@ -15,7 +28,7 @@ The packaged desktop app reads this as its primary runtime config path.
 
 Examples:
   create-desktop-config.sh
-  create-desktop-config.sh --path "$HOME/.config/openpos-desktop/config.json"
+  create-desktop-config.sh --path "$HOME/.config/OpenPOS/config.json"
 EOF
 }
 

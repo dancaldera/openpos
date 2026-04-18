@@ -68,7 +68,9 @@ async function assertDesktopRemoteSessionReady(): Promise<void> {
 
   if (!session.apiConfigured) {
     const config = await getDesktopApiConfig()
-    throw new Error(createDesktopApiNotConfiguredMessage(config.configPath || config.legacyConfigPath || 'config.json'))
+    throw new Error(
+      createDesktopApiNotConfiguredMessage(config.configPath || config.userDataConfigPath || 'config.json'),
+    )
   }
 
   if (!session.hasAuthToken) {

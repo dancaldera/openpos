@@ -137,10 +137,6 @@ function setAppIcon() {
   }
 }
 
-function getLegacyConfigPath() {
-  return path.join(app.getPath('home'), '.config', 'openpos-desktop', 'config.json')
-}
-
 function getUserDataConfigPath() {
   return path.join(app.getPath('userData'), 'config.json')
 }
@@ -149,6 +145,7 @@ function getRuntimeConfigSelection() {
   return resolveDesktopRuntimeConfigPath({
     homeDir: app.getPath('home'),
     userDataPath: app.getPath('userData'),
+    platform: process.platform,
     fileExists: (candidatePath) => fs.existsSync(candidatePath),
   })
 }
@@ -994,9 +991,8 @@ function registerIpcHandlers() {
     const config = resolveConnectionConfig()
     return {
       apiUrl: config.api.url || '',
-      configPath: config.api.configPath || getLegacyConfigPath(),
+      configPath: config.api.configPath || getUserDataConfigPath(),
       configSource: config.api.source,
-      legacyConfigPath: getLegacyConfigPath(),
       userDataConfigPath: getUserDataConfigPath(),
     }
   })

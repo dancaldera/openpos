@@ -50,8 +50,7 @@ export interface DesktopUpdateStatusEvent {
 export interface DesktopRuntimeConfigSummary {
   apiUrl: string
   configPath: string
-  configSource: 'legacy' | 'userData' | 'env' | 'bundled'
-  legacyConfigPath: string
+  configSource: 'userData' | 'fallback' | 'env' | 'bundled'
   userDataConfigPath: string
 }
 

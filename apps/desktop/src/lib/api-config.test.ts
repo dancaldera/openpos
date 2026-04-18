@@ -28,9 +28,8 @@ describe('api-config', () => {
       openposDesktop: {
         getConfig: async () => ({
           apiUrl: 'https://runtime-api.example.com',
-          configPath: '/home/ana/.config/openpos-desktop/config.json',
-          configSource: 'legacy',
-          legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+          configPath: '/home/ana/.config/OpenPOS/config.json',
+          configSource: 'userData',
           userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
         }),
       },
@@ -44,9 +43,8 @@ describe('api-config', () => {
       openposDesktop: {
         getConfig: async () => ({
           apiUrl: 'https://runtime-api.example.com',
-          configPath: '/home/ana/.config/openpos-desktop/config.json',
-          configSource: 'legacy',
-          legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+          configPath: '/home/ana/.config/OpenPOS/config.json',
+          configSource: 'userData',
           userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
         }),
       },
@@ -60,9 +58,8 @@ describe('api-config', () => {
       openposDesktop: {
         getConfig: async () => ({
           apiUrl: 'https://runtime-api.example.com',
-          configPath: '/home/ana/.config/openpos-desktop/config.json',
-          configSource: 'legacy',
-          legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+          configPath: '/home/ana/.config/OpenPOS/config.json',
+          configSource: 'userData',
           userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
         }),
       },
@@ -70,9 +67,8 @@ describe('api-config', () => {
 
     await expect(getDesktopApiConfig()).resolves.toEqual({
       apiUrl: 'https://runtime-api.example.com',
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
-      configSource: 'legacy',
-      legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
+      configSource: 'userData',
       userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
     })
   })

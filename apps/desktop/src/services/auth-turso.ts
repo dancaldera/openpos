@@ -94,7 +94,6 @@ export async function getDesktopRemoteSessionState(): Promise<DesktopRemoteSessi
         apiUrl: import.meta.env.VITE_API_URL || '',
         configPath: '',
         configSource: 'bundled' as const,
-        legacyConfigPath: '',
         userDataConfigPath: '',
       }
   const apiUrl = config.apiUrl
@@ -106,14 +105,14 @@ export async function getDesktopRemoteSessionState(): Promise<DesktopRemoteSessi
     hasAuthToken,
     isReady: Boolean(apiUrl) && hasAuthToken,
     lastError: hasAuthToken ? null : persistedStatus?.lastError || null,
-    configPath: config.configPath || config.legacyConfigPath || config.userDataConfigPath || '',
+    configPath: config.configPath || config.userDataConfigPath || '',
   }
 }
 
 async function getDesktopApiToken(email: string, password: string): Promise<DesktopApiTokenResult> {
   const config = await getDesktopApiConfig()
   const apiUrl = config.apiUrl
-  const configPath = config.configPath || config.legacyConfigPath || config.userDataConfigPath || ''
+  const configPath = config.configPath || config.userDataConfigPath || ''
   if (!apiUrl) {
     return {
       token: null,

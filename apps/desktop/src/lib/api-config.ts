@@ -22,7 +22,6 @@ function buildFallbackDesktopConfig(): DesktopRuntimeConfigSummary {
     apiUrl: resolveApiBaseUrl(null),
     configPath: '',
     configSource: DEFAULT_CONFIG_SOURCE,
-    legacyConfigPath: '',
     userDataConfigPath: '',
   }
 }
@@ -37,7 +36,6 @@ export async function getDesktopApiConfig(): Promise<DesktopRuntimeConfigSummary
             apiUrl: resolveApiBaseUrl(config),
             configPath: config.configPath || '',
             configSource: config.configSource || DEFAULT_CONFIG_SOURCE,
-            legacyConfigPath: config.legacyConfigPath || '',
             userDataConfigPath: config.userDataConfigPath || '',
           }
         : buildFallbackDesktopConfig()

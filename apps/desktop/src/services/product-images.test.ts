@@ -34,9 +34,8 @@ const deleteImage = mock(async () => {})
 const getApiBaseUrl = mock(async () => 'https://api.example.com')
 const getDesktopApiConfig = mock(async () => ({
   apiUrl: 'https://api.example.com',
-  configPath: '/home/ana/.config/openpos-desktop/config.json',
-  configSource: 'legacy' as const,
-  legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+  configPath: '/home/ana/.config/OpenPOS/config.json',
+  configSource: 'userData' as const,
   userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
 }))
 const logError = mock(() => {})
@@ -94,9 +93,8 @@ describe('product image service desktop routing', () => {
     getApiBaseUrl.mockResolvedValue('https://api.example.com')
     getDesktopApiConfig.mockResolvedValue({
       apiUrl: 'https://api.example.com',
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
-      configSource: 'legacy',
-      legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
+      configSource: 'userData',
       userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
     })
   })
@@ -142,14 +140,13 @@ describe('product image service desktop routing', () => {
     getApiBaseUrl.mockResolvedValueOnce('')
     getDesktopApiConfig.mockResolvedValueOnce({
       apiUrl: '',
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
-      configSource: 'legacy',
-      legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
+      configSource: 'userData',
       userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
     })
 
     await expect(uploadProductImage(imageFile)).rejects.toThrow(
-      `${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::/home/ana/.config/openpos-desktop/config.json`,
+      `${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::/home/ana/.config/OpenPOS/config.json`,
     )
     expect(requestApiJson).not.toHaveBeenCalled()
   })
@@ -165,7 +162,7 @@ describe('product image service desktop routing', () => {
       JSON.stringify({
         apiConfigured: true,
         lastError: 'JWT_SECRET environment variable is not set',
-        configPath: '/home/ana/.config/openpos-desktop/config.json',
+        configPath: '/home/ana/.config/OpenPOS/config.json',
       }),
     )
 
@@ -271,14 +268,13 @@ describe('product image service desktop routing', () => {
     getApiBaseUrl.mockResolvedValueOnce('')
     getDesktopApiConfig.mockResolvedValueOnce({
       apiUrl: '',
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
-      configSource: 'legacy',
-      legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
+      configSource: 'userData',
       userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
     })
 
     await expect(deleteProductImage('products/2026/03/object.jpg')).rejects.toThrow(
-      `${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::/home/ana/.config/openpos-desktop/config.json`,
+      `${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::/home/ana/.config/OpenPOS/config.json`,
     )
     expect(requestApiJson).not.toHaveBeenCalled()
   })

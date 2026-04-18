@@ -35,9 +35,8 @@ const verifyPassword = mock(async () => true)
 const hashPassword = mock(async () => 'hashed-password')
 const getDesktopApiConfig = mock(async () => ({
   apiUrl: 'https://api.example.com',
-  configPath: '/home/ana/.config/openpos-desktop/config.json',
-  configSource: 'legacy' as const,
-  legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+  configPath: '/home/ana/.config/OpenPOS/config.json',
+  configSource: 'userData' as const,
   userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
 }))
 const warn = mock(() => {})
@@ -91,9 +90,8 @@ describe('AuthService.signIn desktop API token sync', () => {
     hashPassword.mockResolvedValue('hashed-password')
     getDesktopApiConfig.mockResolvedValue({
       apiUrl: 'https://api.example.com',
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
-      configSource: 'legacy',
-      legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
+      configSource: 'userData',
       userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
     })
   })
@@ -132,7 +130,7 @@ describe('AuthService.signIn desktop API token sync', () => {
       JSON.stringify({
         apiConfigured: true,
         lastError: null,
-        configPath: '/home/ana/.config/openpos-desktop/config.json',
+        configPath: '/home/ana/.config/OpenPOS/config.json',
       }),
     )
   })
@@ -167,7 +165,7 @@ describe('AuthService.signIn desktop API token sync', () => {
       JSON.stringify({
         apiConfigured: true,
         lastError: 'offline',
-        configPath: '/home/ana/.config/openpos-desktop/config.json',
+        configPath: '/home/ana/.config/OpenPOS/config.json',
       }),
     )
   })
@@ -188,9 +186,8 @@ describe('AuthService.signIn desktop API token sync', () => {
     ])
     getDesktopApiConfig.mockResolvedValueOnce({
       apiUrl: '',
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
-      configSource: 'legacy',
-      legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
+      configSource: 'userData',
       userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
     })
 
@@ -208,7 +205,7 @@ describe('AuthService.signIn desktop API token sync', () => {
       JSON.stringify({
         apiConfigured: false,
         lastError: null,
-        configPath: '/home/ana/.config/openpos-desktop/config.json',
+        configPath: '/home/ana/.config/OpenPOS/config.json',
       }),
     )
   })
@@ -230,9 +227,8 @@ describe('AuthService.signIn desktop API token sync', () => {
     getDesktopApiConfig.mockResolvedValueOnce({
       // @ts-expect-error testing malformed desktop config payload
       apiUrl: undefined,
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
-      configSource: 'legacy',
-      legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
+      configSource: 'userData',
       userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
     })
 
@@ -250,7 +246,7 @@ describe('AuthService.signIn desktop API token sync', () => {
       JSON.stringify({
         apiConfigured: false,
         lastError: null,
-        configPath: '/home/ana/.config/openpos-desktop/config.json',
+        configPath: '/home/ana/.config/OpenPOS/config.json',
       }),
     )
   })
@@ -262,7 +258,7 @@ describe('AuthService.signIn desktop API token sync', () => {
       JSON.stringify({
         apiConfigured: true,
         lastError: 'offline',
-        configPath: '/home/ana/.config/openpos-desktop/config.json',
+        configPath: '/home/ana/.config/OpenPOS/config.json',
       }),
     )
 
@@ -271,16 +267,15 @@ describe('AuthService.signIn desktop API token sync', () => {
       hasAuthToken: true,
       isReady: true,
       lastError: null,
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
     })
   })
 
   it('reports desktop remote session as unavailable when API config is missing', async () => {
     getDesktopApiConfig.mockResolvedValueOnce({
       apiUrl: '',
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
-      configSource: 'legacy',
-      legacyConfigPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
+      configSource: 'userData',
       userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
     })
 
@@ -289,7 +284,7 @@ describe('AuthService.signIn desktop API token sync', () => {
       hasAuthToken: false,
       isReady: false,
       lastError: null,
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
     })
   })
 
@@ -299,7 +294,7 @@ describe('AuthService.signIn desktop API token sync', () => {
       JSON.stringify({
         apiConfigured: true,
         lastError: 'JWT_SECRET environment variable is not set',
-        configPath: '/home/ana/.config/openpos-desktop/config.json',
+        configPath: '/home/ana/.config/OpenPOS/config.json',
       }),
     )
 
@@ -308,7 +303,7 @@ describe('AuthService.signIn desktop API token sync', () => {
       hasAuthToken: false,
       isReady: false,
       lastError: 'JWT_SECRET environment variable is not set',
-      configPath: '/home/ana/.config/openpos-desktop/config.json',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
     })
   })
 })

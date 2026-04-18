@@ -27,8 +27,15 @@ Make sure `~/.local/bin` is in your `PATH` if your shell does not already includ
 
 ## Desktop Runtime Config
 
-Linux packaged installs use `~/.config/openpos-desktop/config.json` as the primary runtime config path.
-For backward compatibility, the app also checks the Electron user-data config file if the primary path is missing.
+Packaged desktop installs read runtime config from Electron `userData` first.
+OpenPOS uses the Electron app name `OpenPOS`, so the production config file path is:
+
+- macOS: `~/Library/Application Support/OpenPOS/config.json`
+- Linux: `$XDG_CONFIG_HOME/OpenPOS/config.json`
+- Linux fallback when `XDG_CONFIG_HOME` is unset: `~/.config/OpenPOS/config.json`
+
+OpenPOS no longer falls back to `~/.config/openpos-desktop/config.json`.
+On macOS only, if the `userData` file is missing, the app also checks `~/.config/OpenPOS/config.json` as a compatibility fallback.
 
 Example:
 
@@ -50,7 +57,13 @@ Create the file interactively:
 bash scripts/create-desktop-config.sh
 ```
 
-This writes the primary runtime config file at `~/.config/openpos-desktop/config.json` and asks before overwriting an existing file.
+The script writes to the platform-appropriate production path by default and asks before overwriting an existing file.
+
+You can also override the location explicitly:
+
+```bash
+bash scripts/create-desktop-config.sh --path "$HOME/.config/OpenPOS/config.json"
+```
 
 ## Development
 

@@ -9,7 +9,7 @@ function normalizeString(value) {
   return trimmed ? trimmed : undefined
 }
 
-function getDesktopRuntimeConfigCandidates({ homeDir, userDataPath } = {}) {
+function getDesktopRuntimeConfigCandidates({ homeDir, userDataPath, platform = process.platform } = {}) {
   const candidates = []
   const seen = new Set()
 
@@ -26,23 +26,23 @@ function getDesktopRuntimeConfigCandidates({ homeDir, userDataPath } = {}) {
     })
   }
 
-  const normalizedHomeDir = normalizeString(homeDir)
-  if (normalizedHomeDir) {
-    const configBaseDir =
-      path.basename(normalizedHomeDir) === '.config' ? normalizedHomeDir : path.join(normalizedHomeDir, '.config')
-    registerCandidate(path.join(configBaseDir, 'openpos-desktop', 'config.json'), 'legacy')
-  }
-
   const normalizedUserDataPath = normalizeString(userDataPath)
   if (normalizedUserDataPath) {
     registerCandidate(path.join(normalizedUserDataPath, 'config.json'), 'userData')
   }
 
+  if (platform === 'darwin') {
+    const normalizedHomeDir = normalizeString(homeDir)
+    if (normalizedHomeDir) {
+      registerCandidate(path.join(normalizedHomeDir, '.config', 'OpenPOS', 'config.json'), 'fallback')
+    }
+  }
+
   return candidates
 }
 
-function resolveDesktopRuntimeConfigPath({ homeDir, userDataPath, fileExists = () => false } = {}) {
-  const candidates = getDesktopRuntimeConfigCandidates({ homeDir, userDataPath })
+function resolveDesktopRuntimeConfigPath({ homeDir, userDataPath, platform = process.platform, fileExists = () => false } = {}) {
+  const candidates = getDesktopRuntimeConfigCandidates({ homeDir, userDataPath, platform })
 
   for (const candidate of candidates) {
     if (fileExists(candidate.path)) {
@@ -57,7 +57,7 @@ function resolveDesktopRuntimeConfigPath({ homeDir, userDataPath, fileExists = (
   if (!preferredCandidate) {
     return {
       path: '',
-      source: 'legacy',
+      source: 'userData',
       exists: false,
     }
   }
@@ -70,7 +70,7 @@ function resolveDesktopRuntimeConfigPath({ homeDir, userDataPath, fileExists = (
 
 function resolveDesktopConnectionConfig({
   runtimeConfig = {},
-  runtimeConfigSource = 'legacy',
+  runtimeConfigSource = 'userData',
   configPath = '',
   processEnv = process.env,
   envConfig = {},
