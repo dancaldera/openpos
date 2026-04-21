@@ -1310,6 +1310,26 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
   }
 }
 
+function resetLocalDatabase(database) {
+  const tableNames = replicatedTables.map((t) => t.tableName)
+  database.pragma('foreign_keys = OFF')
+  try {
+    const resetTables = database.transaction(() => {
+      for (const tableName of tableNames) {
+        database.prepare(`DELETE FROM ${quoteIdentifier(tableName)}`).run()
+      }
+      database.prepare(`DELETE FROM sync_outbox`).run()
+      database.prepare(`DELETE FROM order_sync_queue`).run()
+      database.prepare(`DELETE FROM sync_state`).run()
+    })
+    resetTables()
+  } finally {
+    database.pragma('foreign_keys = ON')
+  }
+  logSync('local database reset', { clearedTables: tableNames })
+}
+
 module.exports = {
   createSyncManager,
+  resetLocalDatabase,
 }

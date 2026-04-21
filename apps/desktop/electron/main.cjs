@@ -10,7 +10,7 @@ const {
   resolveDesktopRuntimeConfigPath,
 } = require('./config-resolver.cjs')
 const { isLegacyLocalImageKey } = require('./product-image-keys.cjs')
-const { createSyncManager, ensureLocalSyncSchema } = require('./sync-manager.cjs')
+const { createSyncManager, ensureLocalSyncSchema, resetLocalDatabase } = require('./sync-manager.cjs')
 
 const pkg = require('../package.json')
 
@@ -982,6 +982,13 @@ function registerIpcHandlers() {
   ipcMain.handle('desktop:sync-status', () => syncManager.getStatusSnapshot())
   ipcMain.handle('desktop:sync-trigger', () => syncManager.triggerSync({ foreground: true }))
   ipcMain.handle('desktop:sync-conflicts', () => syncManager.getConflictSummary())
+  ipcMain.handle('desktop:sync-reset-local', async () => {
+    const database = ensureDatabase()
+    syncManager.stop()
+    resetLocalDatabase(database)
+    syncManager.start()
+    return syncManager.triggerSync({ foreground: true })
+  })
   ipcMain.handle('desktop:connectivity-status', () => getConnectivitySnapshot())
   ipcMain.handle('desktop:connectivity-refresh', () => getConnectivitySnapshot({ refresh: true }))
   ipcMain.handle('desktop:startup-status', () => getFirstRunStatus())

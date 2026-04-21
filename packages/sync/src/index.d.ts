@@ -77,6 +77,8 @@ export function createSyncManager(options: {
   getRemoteClient?: (config: SyncRemoteConfig) => Promise<unknown>
 }): SyncManager
 
+export function resetLocalDatabase(database: unknown): void
+
 export function ensureLocalSyncSchema(database: unknown): void
 
 export const replicatedTables: ReplicatedTableConfig[]

@@ -20,6 +20,8 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
+  const [isResetLocalDbDialogOpen, setIsResetLocalDbDialogOpen] = useState(false)
+  const [isResettingLocalDb, setIsResettingLocalDb] = useState(false)
 
   useEffect(() => {
     loadSettings()
@@ -96,6 +98,19 @@ export default function Settings() {
       toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleResetLocalDb = async () => {
+    try {
+      setIsResettingLocalDb(true)
+      await requireDesktopApi().sync.resetLocal()
+      toast.success(t('settings.resetLocalDbSuccess'))
+      setIsResetLocalDbDialogOpen(false)
+    } catch (err: unknown) {
+      toast.error((err as Error)?.message || t('errors.generic'))
+    } finally {
+      setIsResettingLocalDb(false)
     }
   }
 
@@ -315,6 +330,18 @@ export default function Settings() {
 
               <div class="space-y-4">
                 <div>
+                  <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{t('settings.resetLocalDb')}</h2>
+                  <p class={`${helperTextClass} mb-3`}>{t('settings.resetLocalDbDesc')}</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsResetLocalDbDialogOpen(true)}
+                    disabled={isResettingLocalDb}
+                    class="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
+                  >
+                    {isResettingLocalDb ? t('settings.resettingLocalDb') : t('settings.resetLocalDb')}
+                  </Button>
+                </div>
+                <div>
                   <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{t('settings.apiTesting')}</h2>
                   <form
                     class="flex gap-4 mb-4"
@@ -345,6 +372,35 @@ export default function Settings() {
           </div>
         )}
       </div>
+
+      {/* Reset Local Database Dialog */}
+      <Dialog
+        isOpen={isResetLocalDbDialogOpen}
+        onClose={() => setIsResetLocalDbDialogOpen(false)}
+        title={t('settings.resetLocalDb')}
+        size="md"
+      >
+        <div>
+          <div class="space-y-4">
+            <div class="flex items-center space-x-3 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+              <span class="text-2xl">⚠️</span>
+              <div>
+                <span class="font-semibold">{t('settings.resetLocalDbConfirm')}</span>
+                <span class="block text-sm">{t('settings.resetLocalDbWarning')}</span>
+              </div>
+            </div>
+            <span class="font-medium text-gray-700 dark:text-gray-300">{t('settings.resetLocalDbProceed')}</span>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+          <Button variant="outline" onClick={() => setIsResetLocalDbDialogOpen(false)} disabled={isResettingLocalDb}>
+            {t('common.cancel')}
+          </Button>
+          <Button onClick={handleResetLocalDb} disabled={isResettingLocalDb} variant="danger">
+            {isResettingLocalDb ? t('settings.resettingLocalDb') : t('settings.resetLocalDb')}
+          </Button>
+        </div>
+      </Dialog>
 
       {/* Reset Confirmation Dialog */}
       <Dialog

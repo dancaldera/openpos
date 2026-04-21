@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('openposDesktop', {
     getStatus: () => ipcRenderer.invoke('desktop:sync-status'),
     trigger: () => ipcRenderer.invoke('desktop:sync-trigger'),
     getConflicts: () => ipcRenderer.invoke('desktop:sync-conflicts'),
+    resetLocal: () => ipcRenderer.invoke('desktop:sync-reset-local'),
   },
   connectivity: {
     getStatus: () => ipcRenderer.invoke('desktop:connectivity-status'),

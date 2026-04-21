@@ -65,6 +65,7 @@ export interface DesktopApi {
     getStatus(): Promise<DesktopSyncStatusSnapshot>
     trigger(): Promise<DesktopSyncStatusSnapshot>
     getConflicts(): Promise<DesktopSyncConflict[]>
+    resetLocal(): Promise<DesktopSyncStatusSnapshot>
   }
   connectivity: {
     getStatus(): Promise<DesktopConnectivitySnapshot>
