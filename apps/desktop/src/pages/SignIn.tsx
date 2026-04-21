@@ -176,7 +176,7 @@ export default function SignIn() {
             <span class="text-xs text-gray-400 dark:text-gray-500">
               v{APP_VERSION} •{' '}
               <a
-                href="https://github.com/dancaldera/openpos"
+                href="https://github.com/dancaldera"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
