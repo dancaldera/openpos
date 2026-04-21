@@ -168,10 +168,15 @@ export const updateActions = {
       const api = getDesktopApi()
       if (!api) return false
 
-      const { version: currentVersion, platform, arch } = await api.getInfo()
+      const { version: currentVersion, platform, arch, githubToken } = await api.getInfo()
+
+      const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' }
+      if (githubToken) {
+        headers.Authorization = `Bearer ${githubToken}`
+      }
 
       const response = await fetch(GITHUB_RELEASES_URL, {
-        headers: { Accept: 'application/vnd.github.v3+json' },
+        headers,
         signal: AbortSignal.timeout(10_000),
       })
 

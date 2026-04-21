@@ -45,11 +45,23 @@ Example:
   "tursoAuthToken": "your-token-here",
   "apiUrl": "https://your-api.example.com",
   "printerCommand": "lp",
-  "printerArgs": []
+  "printerArgs": [],
+  "githubToken": "github_pat_xxxxxxxxxxxx"
 }
 ```
 
 Include only the fields needed for that install. Public GitHub releases must not embed `TURSO_AUTH_TOKEN`, `JWT_SECRET`, or other backend secrets.
+
+### `githubToken` — in-app update checks
+
+If the GitHub repository is private, the app needs a token to query the GitHub Releases API for updates. Add `githubToken` to `config.json` with a Personal Access Token (PAT) that has the following scope:
+
+| Token type | Required scope |
+|---|---|
+| Classic PAT | `repo` (read access to private repos) |
+| Fine-grained PAT | **Contents** → Read-only, scoped to the `OpenPOS` repository |
+
+Generate a token at <https://github.com/settings/tokens>. The token is only used for the read-only `/repos/{owner}/{repo}/releases/latest` endpoint — it is never sent anywhere else.
 
 Create the file interactively:
 

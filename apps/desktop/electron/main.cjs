@@ -964,13 +964,23 @@ function createWindow() {
 }
 
 function registerIpcHandlers() {
-  ipcMain.handle('desktop:info', () => ({
-    isDesktop: true,
-    isElectron: true,
-    version: pkg.version,
-    platform: process.platform,
-    arch: process.arch,
-  }))
+  ipcMain.handle('desktop:info', () => {
+    const runtimeConfig = getRuntimeConfig()
+    const githubToken =
+      runtimeConfig.config.githubToken ||
+      process.env.OPENPOS_GITHUB_TOKEN ||
+      getDotEnvConfig().OPENPOS_GITHUB_TOKEN ||
+      null
+
+    return {
+      isDesktop: true,
+      isElectron: true,
+      version: pkg.version,
+      platform: process.platform,
+      arch: process.arch,
+      githubToken,
+    }
+  })
 
   ipcMain.handle('desktop:greet', (_event, name) => `Hello, ${name}!!`)
   ipcMain.handle('desktop:hash-password', (_event, password) => bcrypt.hash(password, 12))

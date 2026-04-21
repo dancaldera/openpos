@@ -55,7 +55,14 @@ export interface DesktopRuntimeConfigSummary {
 }
 
 export interface DesktopApi {
-  getInfo(): Promise<{ isDesktop: boolean; isElectron: boolean; version: string; platform: string; arch: string }>
+  getInfo(): Promise<{
+    isDesktop: boolean
+    isElectron: boolean
+    version: string
+    platform: string
+    arch: string
+    githubToken: string | null
+  }>
   greet(name: string): Promise<string>
   hashPassword(password: string): Promise<string>
   verifyPassword(password: string, hash: string): Promise<boolean>
