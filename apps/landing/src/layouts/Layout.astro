@@ -6,7 +6,7 @@ interface Props {
   description?: string
 }
 
-const { title, description = "OpenPOS - A modern, open-source Point of Sale system with AI-powered features. Offline-first, cross-platform, and free forever." } = Astro.props
+const { title, description = "OpenPOS - A modern Point of Sale system with AI-powered features. Offline-first, cross-platform, and built for retailers." } = Astro.props
 ---
 
 <!doctype html>
@@ -28,14 +28,9 @@ const { title, description = "OpenPOS - A modern, open-source Point of Sale syst
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-
     <title>{title}</title>
   </head>
-  <body class="font-[Inter] antialiased bg-gray-900 text-white">
+  <body class="font-sans antialiased bg-gray-950 text-white">
     <slot />
   </body>
 </html>
