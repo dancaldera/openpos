@@ -15,7 +15,6 @@ import {
   TableRow,
 } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
-import { normalizeBarcode } from '../lib/barcodes'
 import { authService } from '../services/auth-turso'
 import { companySettingsService } from '../services/company-settings-turso'
 import { type Customer, customerService } from '../services/customers-turso'
@@ -102,7 +101,6 @@ export default function Orders() {
   const [taxEnabled, setTaxEnabled] = useState<boolean>(true)
   const [currencySymbol, setCurrencySymbol] = useState<string>('$')
   const [productSearch, setProductSearch] = useState('')
-  const [barcodeEntry, setBarcodeEntry] = useState('')
   const [editProductSearch, setEditProductSearch] = useState('')
   const [users, setUsers] = useState<{ [key: string]: string }>({}) // userId -> userName mapping
   const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'user' | null>(null)
@@ -424,42 +422,6 @@ export default function Orders() {
     toast.success(t('orders.itemAdded', { product: label, quantity }))
   }
 
-  const handleBarcodeSubmit = async () => {
-    const normalized = normalizeBarcode(barcodeEntry)
-    if (!normalized) {
-      return
-    }
-
-    try {
-      const resolved = await productService.findSellableByBarcode(normalized)
-      if (!resolved) {
-        toast.error(t('orders.barcodeNotFound'))
-        return
-      }
-
-      if (!resolved.isActive) {
-        toast.error(t('orders.barcodeInactive'))
-        return
-      }
-
-      if (resolved.stock <= 0) {
-        toast.error(t('orders.barcodeOutOfStock'))
-        return
-      }
-
-      addResolvedItemToOrder({
-        productId: resolved.productId,
-        productName: resolved.productName,
-        stock: resolved.stock,
-        variantId: resolved.variantId,
-        variantAttributes: resolved.variantAttributes,
-      })
-      setBarcodeEntry('')
-    } catch (_error) {
-      toast.error(t('orders.barcodeLookupFailed'))
-    }
-  }
-
   const handleCreateOrder = async () => {
     if (newOrder.items.length === 0) {
       toast.error(t('orders.addItemError'))
@@ -476,7 +438,6 @@ export default function Orders() {
         setAllOrders(newOrdersList)
         setOrders(newOrdersList)
         setIsCreateModalOpen(false)
-        setBarcodeEntry('')
         setNewOrder({
           items: [],
           customerId: '',
@@ -789,28 +750,27 @@ export default function Orders() {
   }
 
   return (
-    <div class="max-w-6xl mx-auto px-6 py-4">
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('orders.title')}</h1>
-          <p class="text-gray-600 dark:text-gray-400">
-            {totalCount} {totalCount === 1 ? t('orders.order') : t('orders.orders')}
-            {selectedDateFilter === 'today'
-              ? ` ${t('dates.today').toLowerCase()}`
-              : selectedDateFilter === 'yesterday'
-                ? ` ${t('dates.yesterday').toLowerCase()}`
-                : selectedDateFilter === 'all'
-                  ? ` ${t('common.total').toLowerCase()}`
-                  : ` on ${new Date(`${selectedDateFilter}T00:00:00`).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                    })}`}
-            {totalPages > 1 && ` • ${t('pagination.page')} ${currentPage} ${t('pagination.of')} ${totalPages}`}
-            {searchQuery && ` • ${filteredOrders.length} ${t('orders.found')}`}
-          </p>
-        </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>{t('orders.createOrder')}</Button>
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          {totalCount} {totalCount === 1 ? t('orders.order') : t('orders.orders')}
+          {selectedDateFilter === 'today'
+            ? ` ${t('dates.today').toLowerCase()}`
+            : selectedDateFilter === 'yesterday'
+              ? ` ${t('dates.yesterday').toLowerCase()}`
+              : selectedDateFilter === 'all'
+                ? ` ${t('common.total').toLowerCase()}`
+                : ` on ${new Date(`${selectedDateFilter}T00:00:00`).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })}`}
+          {totalPages > 1 && ` • ${t('pagination.page')} ${currentPage} ${t('pagination.of')} ${totalPages}`}
+          {searchQuery && ` • ${filteredOrders.length} ${t('orders.found')}`}
+        </p>
+        <Button class="w-full sm:w-auto" onClick={() => setIsCreateModalOpen(true)}>
+          {t('orders.createOrder')}
+        </Button>
       </div>
 
       {/* Print Status Message */}
@@ -827,7 +787,7 @@ export default function Orders() {
       )}
 
       <div class="mb-6 space-y-4">
-        <div class="flex gap-4">
+        <div class="flex flex-col sm:flex-row gap-3">
           <div class="flex-1">
             <Input
               type="search"
@@ -857,40 +817,42 @@ export default function Orders() {
               onRightIconClick={searchQuery ? () => setSearchQuery('') : undefined}
             />
           </div>
-          <div class="w-auto">
-            <Select
-              value={selectedDateFilter}
-              onChange={(e) => setSelectedDateFilter((e.target as HTMLSelectElement).value)}
-              options={getDateFilterOptions()}
-              class="w-auto min-w-0"
-            />
-          </div>
-          <div class="w-auto">
-            <Select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus((e.target as HTMLSelectElement).value as Order['status'] | 'all')}
-              options={[
-                { value: 'all', label: t('orders.allStatus') },
-                { value: 'pending', label: t('orders.pending') },
-                { value: 'paid', label: t('orders.paid') },
-                { value: 'completed', label: t('orders.completed') },
-                { value: 'cancelled', label: t('orders.cancelled') },
-              ]}
-              class="w-auto min-w-0"
-            />
-          </div>
-          <div class="flex w-auto items-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
-            <span class="mr-2">{t('orders.sortBy')}:</span>
-            <span class="font-medium capitalize">
-              {sortBy === 'date'
-                ? t('common.date')
-                : sortBy === 'total'
-                  ? t('common.total')
-                  : sortBy === 'status'
-                    ? t('common.status')
-                    : sortBy}
-            </span>
-            <span class="ml-1">{getSortIcon(sortBy)}</span>
+          <div class="flex gap-3 flex-wrap sm:flex-nowrap">
+            <div class="flex-1 sm:flex-none">
+              <Select
+                value={selectedDateFilter}
+                onChange={(e) => setSelectedDateFilter((e.target as HTMLSelectElement).value)}
+                options={getDateFilterOptions()}
+                class="w-full sm:w-auto min-w-0"
+              />
+            </div>
+            <div class="flex-1 sm:flex-none">
+              <Select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus((e.target as HTMLSelectElement).value as Order['status'] | 'all')}
+                options={[
+                  { value: 'all', label: t('orders.allStatus') },
+                  { value: 'pending', label: t('orders.pending') },
+                  { value: 'paid', label: t('orders.paid') },
+                  { value: 'completed', label: t('orders.completed') },
+                  { value: 'cancelled', label: t('orders.cancelled') },
+                ]}
+                class="w-full sm:w-auto min-w-0"
+              />
+            </div>
+            <div class="hidden sm:flex w-auto items-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
+              <span class="mr-2">{t('orders.sortBy')}:</span>
+              <span class="font-medium capitalize">
+                {sortBy === 'date'
+                  ? t('common.date')
+                  : sortBy === 'total'
+                    ? t('common.total')
+                    : sortBy === 'status'
+                      ? t('common.status')
+                      : sortBy}
+              </span>
+              <span class="ml-1">{getSortIcon(sortBy)}</span>
+            </div>
           </div>
         </div>
 
@@ -1134,7 +1096,6 @@ export default function Orders() {
         isOpen={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false)
-          setBarcodeEntry('')
         }}
         title={t('orders.createNewOrder')}
         size="full"
@@ -1143,81 +1104,55 @@ export default function Orders() {
           <div class="space-y-8">
             {/* Available Products */}
             <div>
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                <div>
-                  <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {t('orders.availableProducts')}
-                  </h3>
-                  <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{t('orders.clickToAdd')}</p>
-                </div>
-                <div class="flex items-center gap-3">
-                  <div class="w-72">
-                    <Input
-                      value={barcodeEntry}
-                      onInput={(e) => setBarcodeEntry((e.target as HTMLInputElement).value)}
-                      onKeyDown={(e) => {
-                        if ((e as KeyboardEvent).key === 'Enter') {
-                          e.preventDefault()
-                          void handleBarcodeSubmit()
-                        }
-                      }}
-                      label={t('orders.scanBarcode')}
-                      placeholder={t('orders.scanBarcodePlaceholder')}
-                      helperText={t('orders.scanBarcodeHelp')}
-                      class="text-sm"
-                    />
-                  </div>
-                  <div class="w-64">
-                    <Input
-                      type="search"
-                      placeholder={t('orders.searchProducts')}
-                      value={productSearch}
-                      onInput={(e) => setProductSearch((e.target as HTMLInputElement).value)}
-                      leftIcon={
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke-width="1.5"
-                          stroke="currentColor"
-                          role="img"
-                          aria-label="Search"
-                        >
-                          <title>Search</title>
+              <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('orders.availableProducts')}</h3>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{t('orders.clickToAdd')}</p>
+              </div>
+              <div class="flex flex-col sm:flex-row gap-3 mb-2">
+                <div class="flex-1">
+                  <Input
+                    type="search"
+                    placeholder={t('orders.searchProducts')}
+                    value={productSearch}
+                    onInput={(e) => setProductSearch((e.target as HTMLInputElement).value)}
+                    leftIcon={
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        role="img"
+                        aria-label="Search"
+                      >
+                        <title>Search</title>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+                        />
+                      </svg>
+                    }
+                    rightIcon={
+                      productSearch ? (
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Clear search">
+                          <title>Clear search</title>
                           <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
                           />
                         </svg>
-                      }
-                      rightIcon={
-                        productSearch ? (
-                          <svg
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            role="img"
-                            aria-label="Clear search"
-                          >
-                            <title>Clear search</title>
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        ) : undefined
-                      }
-                      onRightIconClick={productSearch ? () => setProductSearch('') : undefined}
-                      class="text-sm"
-                    />
-                  </div>
-                  <div class="text-sm text-gray-500 dark:text-gray-400">
-                    {filteredProducts.length} {t('orders.of')} {products.length} {t('products.title').toLowerCase()}
-                  </div>
+                      ) : undefined
+                    }
+                    onRightIconClick={productSearch ? () => setProductSearch('') : undefined}
+                    class="text-sm"
+                  />
                 </div>
+              </div>
+              <div class="mb-3 text-sm text-gray-500 dark:text-gray-400">
+                {filteredProducts.length} {t('orders.of')} {products.length} {t('products.title').toLowerCase()}
               </div>
               <div class={`${panelClass} max-h-96 overflow-y-auto p-6`}>
                 {filteredProducts.length === 0 ? (
@@ -1384,12 +1319,14 @@ export default function Orders() {
                     return product ? (
                       <div
                         key={`${item.productId}-${item.variantId || 'simple'}`}
-                        class="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
+                        class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
                       >
-                        <div class="flex flex-1 items-start gap-3">
+                        <div class="flex flex-1 items-start gap-3 min-w-0">
                           <ProductVisual product={product} name={product.name} imageUrl={getProductImageUrl(product)} />
-                          <div class="flex-1">
-                            <div class="mb-1 font-semibold text-gray-900 dark:text-gray-100">{product.name}</div>
+                          <div class="flex-1 min-w-0">
+                            <div class="mb-1 font-semibold text-gray-900 dark:text-gray-100 truncate">
+                              {product.name}
+                            </div>
                             {variantAttributes && (
                               <div class="mb-2 text-xs text-purple-700 dark:text-purple-300">
                                 {Object.entries(variantAttributes).map(([k, v]) => (
@@ -1408,7 +1345,7 @@ export default function Orders() {
                             </div>
                           </div>
                         </div>
-                        <div class="flex items-center space-x-2">
+                        <div class="flex items-center gap-2 flex-shrink-0">
                           <Button
                             size="sm"
                             variant="outline"
@@ -1423,7 +1360,7 @@ export default function Orders() {
                           >
                             −
                           </Button>
-                          <div class="w-12 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-lg font-bold dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">
+                          <div class="w-10 rounded border border-blue-200 bg-blue-50 px-1 py-1 text-center text-lg font-bold dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">
                             {item.quantity}
                           </div>
                           <Button
@@ -1439,7 +1376,7 @@ export default function Orders() {
                             size="sm"
                             variant="danger"
                             onClick={() => removeItemFromOrder(item.productId, item.variantId)}
-                            class="w-8 h-8 p-0 flex items-center justify-center ml-2"
+                            class="w-8 h-8 p-0 flex items-center justify-center ml-1"
                           >
                             ×
                           </Button>
@@ -1553,7 +1490,7 @@ export default function Orders() {
             </div>
 
             {/* Action Buttons */}
-            <div class="flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
               <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)} disabled={isLoading}>
                 {t('common.cancel')}
               </Button>
@@ -1582,65 +1519,53 @@ export default function Orders() {
           <div class="space-y-6">
             {/* Available Products for Editing */}
             <div>
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div>
-                  <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {t('orders.availableProducts')}
-                  </h3>
-                  <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{t('orders.clickToAdd')}</p>
-                </div>
-                <div class="flex items-center gap-3">
-                  <div class="w-64">
-                    <Input
-                      type="search"
-                      placeholder={t('orders.searchProducts')}
-                      value={editProductSearch}
-                      onInput={(e) => setEditProductSearch((e.target as HTMLInputElement).value)}
-                      leftIcon={
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke-width="1.5"
-                          stroke="currentColor"
-                          role="img"
-                          aria-label="Search"
-                        >
-                          <title>Search</title>
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-                          />
-                        </svg>
-                      }
-                      rightIcon={
-                        editProductSearch ? (
-                          <svg
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            role="img"
-                            aria-label="Clear search"
-                          >
-                            <title>Clear search</title>
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        ) : undefined
-                      }
-                      onRightIconClick={editProductSearch ? () => setEditProductSearch('') : undefined}
-                      class="text-sm"
-                    />
-                  </div>
-                  <div class="text-sm text-gray-500 dark:text-gray-400">
-                    {filteredEditProducts.length} {t('orders.of')} {products.length} {t('products.title').toLowerCase()}
-                  </div>
-                </div>
+              <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('orders.availableProducts')}</h3>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{t('orders.clickToAdd')}</p>
+              </div>
+              <div class="mb-2">
+                <Input
+                  type="search"
+                  placeholder={t('orders.searchProducts')}
+                  value={editProductSearch}
+                  onInput={(e) => setEditProductSearch((e.target as HTMLInputElement).value)}
+                  leftIcon={
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      stroke="currentColor"
+                      role="img"
+                      aria-label="Search"
+                    >
+                      <title>Search</title>
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+                      />
+                    </svg>
+                  }
+                  rightIcon={
+                    editProductSearch ? (
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Clear search">
+                        <title>Clear search</title>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    ) : undefined
+                  }
+                  onRightIconClick={editProductSearch ? () => setEditProductSearch('') : undefined}
+                  class="text-sm"
+                />
+              </div>
+              <div class="mb-3 text-sm text-gray-500 dark:text-gray-400">
+                {filteredEditProducts.length} {t('orders.of')} {products.length} {t('products.title').toLowerCase()}
               </div>
               <div class={`${panelClass} max-h-96 overflow-y-auto p-6`}>
                 {filteredEditProducts.length === 0 ? (
@@ -1720,16 +1645,16 @@ export default function Orders() {
                     return product ? (
                       <div
                         key={item.productId}
-                        class="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
+                        class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
                       >
-                        <div class="flex-1">
-                          <div class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{product.name}</div>
+                        <div class="flex-1 min-w-0">
+                          <div class="mb-1 font-semibold text-gray-900 dark:text-gray-100 truncate">{product.name}</div>
                           <div class="inline-block rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">
                             {formatCurrency(product.price)} × {item.quantity} ={' '}
                             <span class="font-bold text-blue-600">{formatCurrency(product.price * item.quantity)}</span>
                           </div>
                         </div>
-                        <div class="flex items-center space-x-2">
+                        <div class="flex items-center gap-2 flex-shrink-0">
                           <Button
                             size="sm"
                             variant="outline"
@@ -1738,7 +1663,7 @@ export default function Orders() {
                           >
                             −
                           </Button>
-                          <div class="w-12 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-lg font-bold dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">
+                          <div class="w-10 rounded border border-blue-200 bg-blue-50 px-1 py-1 text-center text-lg font-bold dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">
                             {item.quantity}
                           </div>
                           <Button
@@ -1754,7 +1679,7 @@ export default function Orders() {
                             size="sm"
                             variant="danger"
                             onClick={() => removeItemFromEditOrder(item.productId)}
-                            class="w-8 h-8 p-0 flex items-center justify-center ml-2"
+                            class="w-8 h-8 p-0 flex items-center justify-center ml-1"
                           >
                             ×
                           </Button>
@@ -1836,7 +1761,7 @@ export default function Orders() {
           </div>
         </div>
 
-        <div class="flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
           <Button
             type="button"
             variant="outline"
@@ -1868,9 +1793,9 @@ export default function Orders() {
           <div>
             <div class="space-y-6">
               {/* Order Header */}
-              <div class="flex items-start justify-between border-b border-gray-200 pb-4 dark:border-gray-800">
+              <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-gray-200 pb-4 dark:border-gray-800">
                 <div>
-                  <div class="flex items-center space-x-3 mb-2">
+                  <div class="flex flex-wrap items-center gap-2 mb-2">
                     <div
                       class={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-wide ${getStatusColor(selectedOrder.status)}`}
                     >
@@ -1917,7 +1842,7 @@ export default function Orders() {
                     </div>
                   )}
                 </div>
-                <div class="text-right">
+                <div class="sm:text-right">
                   <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">
                     {formatCurrency(taxEnabled ? selectedOrder.total : selectedOrder.subtotal)}
                   </div>
@@ -1932,7 +1857,7 @@ export default function Orders() {
                   {selectedOrder.items.map((item, index) => (
                     <div
                       key={`${item.productId}-${item.variantId || 'simple'}-${index}`}
-                      class="flex items-center justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50"
+                      class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50"
                     >
                       <div class="flex min-w-0 flex-1 items-start gap-3">
                         <ProductVisual
@@ -1942,7 +1867,7 @@ export default function Orders() {
                           sizeClass="h-12 w-12"
                         />
                         <div class="min-w-0 flex-1">
-                          <div class="font-semibold text-gray-900 dark:text-gray-100">{item.productName}</div>
+                          <div class="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.productName}</div>
                           {item.variantAttributes && (
                             <div class="mt-1 text-xs text-purple-700 dark:text-purple-300">
                               {Object.entries(item.variantAttributes).map(([k, v]) => (
@@ -1955,31 +1880,25 @@ export default function Orders() {
                               ))}
                             </div>
                           )}
-                          <div class="text-sm text-gray-600 dark:text-gray-400">
-                            {t('orders.productId')}: {item.productId}
-                            {item.variantId && (
-                              <span class="ml-2 text-purple-700 dark:text-purple-300">
-                                {t('variants.variant')} ID: {item.variantId}
-                              </span>
-                            )}
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between sm:justify-end gap-4 flex-shrink-0">
+                        <div class="text-center">
+                          <div class="font-semibold text-gray-900 dark:text-gray-100">×{item.quantity}</div>
+                          <div class="text-xs text-gray-500 dark:text-gray-400">{t('common.quantity')}</div>
+                        </div>
+                        <div class="text-right">
+                          <div class="font-semibold text-gray-900 dark:text-gray-100">
+                            {formatCurrency(item.unitPrice)}
                           </div>
+                          <div class="text-xs text-gray-500 dark:text-gray-400">{t('orders.unitPrice')}</div>
                         </div>
-                      </div>
-                      <div class="text-center mx-4">
-                        <div class="font-semibold text-gray-900 dark:text-gray-100">×{item.quantity}</div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">{t('common.quantity')}</div>
-                      </div>
-                      <div class="text-right">
-                        <div class="font-semibold text-gray-900 dark:text-gray-100">
-                          {formatCurrency(item.unitPrice)}
+                        <div class="text-right">
+                          <div class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                            {formatCurrency(item.totalPrice)}
+                          </div>
+                          <div class="text-xs text-gray-500 dark:text-gray-400">{t('orders.itemTotal')}</div>
                         </div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">{t('orders.unitPrice')}</div>
-                      </div>
-                      <div class="text-right ml-4 min-w-0">
-                        <div class="text-lg font-bold text-gray-900 dark:text-gray-100">
-                          {formatCurrency(item.totalPrice)}
-                        </div>
-                        <div class="text-sm text-gray-500 dark:text-gray-400">{t('orders.itemTotal')}</div>
                       </div>
                     </div>
                   ))}
@@ -2035,7 +1954,7 @@ export default function Orders() {
               )}
 
               {/* Order Actions */}
-              <div class="flex flex-wrap items-center gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+              <div class="flex flex-wrap items-center gap-2 border-t border-gray-200 pt-4 dark:border-gray-800">
                 <Button
                   size="sm"
                   onClick={() => handleThermalPrint(selectedOrder)}

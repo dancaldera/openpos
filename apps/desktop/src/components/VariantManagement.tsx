@@ -173,7 +173,7 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
 
         <form onSubmit={handleSubmit} class="space-y-6">
           {/* SKU & Barcode */}
-          <div class="grid grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <Input
                 label={t('variants.sku')}
@@ -212,7 +212,7 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
           </div>
 
           {/* Price, Cost, Stock */}
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <Input
                 label={`💰 ${t('variants.variantPrice')}`}
@@ -305,7 +305,7 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
         </form>
       </div>
 
-      <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 border-t border-gray-200">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
           {t('common.cancel')}
         </Button>
@@ -501,7 +501,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
               </div>
             )}
 
-            <div class="flex justify-end gap-3">
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
               <Button variant="outline" onClick={onClose}>
                 {t('common.cancel')}
               </Button>
@@ -535,7 +535,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
                 </div>
               </div>
 
-              <div class="grid grid-cols-3 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Input
                     label={`💰 ${t('variants.variantPrice')}`}
@@ -572,7 +572,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
               </div>
             </div>
 
-            <div class="flex justify-end gap-3">
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
               <Button variant="outline" onClick={() => setCurrentStep(1)} disabled={isGenerating}>
                 {t('common.previous')}
               </Button>
@@ -666,7 +666,7 @@ export function VariantSettingsModal({ productId, isOpen, onClose, onSaved }: Va
                 <p class="text-gray-600">{t('variants.noAttributesAvailable')}</p>
               </div>
             ) : (
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {attributes.map((attr) => {
                   const isSelected = selectedAttributeIds.includes(attr.id)
                   return (
@@ -710,7 +710,7 @@ export function VariantSettingsModal({ productId, isOpen, onClose, onSaved }: Va
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 border-t border-gray-200">
         <Button variant="outline" onClick={onClose} disabled={isConverting}>
           {t('common.cancel')}
         </Button>

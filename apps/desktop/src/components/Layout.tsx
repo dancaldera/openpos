@@ -29,6 +29,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
   const { appName } = appSettingsStore
   const { isMac } = usePlatform()
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
   useEffect(() => {
     const api = getDesktopApi()
@@ -96,6 +97,8 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
       <Sidebar
         title={appName.value}
         isMac={isMac}
+        mobileOpen={isMobileSidebarOpen}
+        onMobileClose={() => setIsMobileSidebarOpen(false)}
         items={menuItems.map((item) => ({
           id: item.id,
           label: item.label,
@@ -108,20 +111,35 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
       <div class="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header: full-width drag region, content is no-drag */}
         <header class="drag-region bg-white/80 dark:bg-gray-900/92 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-800/60 shrink-0">
-          <div class="no-drag flex items-center justify-between px-6 py-3">
-            <div>
-              <h1 class="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight">
-                {currentItem?.label}
-              </h1>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{currentItem?.description}</p>
+          <div class="no-drag flex items-center justify-between px-4 md:px-6 py-3 gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              {/* Hamburger — mobile only */}
+              <button
+                type="button"
+                onClick={() => setIsMobileSidebarOpen(true)}
+                class="md:hidden p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+                aria-label="Open menu"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div class="min-w-0">
+                <h1 class="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">
+                  {currentItem?.label}
+                </h1>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">
+                  {currentItem?.description}
+                </p>
+              </div>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 md:gap-3 flex-shrink-0">
               <div class="flex items-center gap-2">
-                <div class="w-7 h-7 bg-gray-400 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-semibold text-white">
+                <div class="w-7 h-7 bg-gray-400 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0">
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
-                <div class="flex flex-col items-start leading-tight">
+                <div class="hidden sm:flex flex-col items-start leading-tight">
                   <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{user?.name || 'User'}</span>
                   <span class="text-xs text-gray-500 dark:text-gray-400">{user?.email}</span>
                 </div>
@@ -142,7 +160,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
         </header>
 
         <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-950">
-          <div class="container mx-auto px-6 py-6">{children}</div>
+          <div class="container mx-auto px-4 md:px-6 py-4 md:py-6">{children}</div>
         </main>
       </div>
 

@@ -341,7 +341,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
 
         <div class={panelClass}>
           <form onSubmit={handleSubmit} class="space-y-6">
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
                 <Input
                   label={t('products.productName')}
@@ -445,7 +445,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
               </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Input
                   label={t('products.priceLabel')}
@@ -498,7 +498,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
                 <Input
                   label={t('products.barcodeOptional')}
@@ -572,7 +572,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
           {t('common.cancel')}
         </Button>
@@ -925,17 +925,16 @@ export default function Products() {
 
   return (
     <div class="max-w-6xl mx-auto">
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h1 class="mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">{t('products.title')}</h1>
-          <p class="text-gray-600 dark:text-gray-400">
-            {totalCount} {t('products.productsTotal')}
-            {totalPages > 1 && ` • ${t('products.pageXofY', { current: currentPage, total: totalPages })}`}
-            {searchQuery && ` • ${t('products.searchingFor')} "${searchQuery}"`}
-          </p>
-        </div>
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          {totalCount} {t('products.productsTotal')}
+          {totalPages > 1 && ` • ${t('products.pageXofY', { current: currentPage, total: totalPages })}`}
+          {searchQuery && ` • ${t('products.searchingFor')} "${searchQuery}"`}
+        </p>
         {(hasPermission('products.create') || hasRole('admin') || hasRole('manager')) && (
-          <Button onClick={handleCreateProduct}>{t('products.addProduct')}</Button>
+          <Button class="w-full sm:w-auto" onClick={handleCreateProduct}>
+            {t('products.addProduct')}
+          </Button>
         )}
       </div>
 

@@ -187,7 +187,7 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
           {t('common.cancel')}
         </Button>
@@ -381,18 +381,15 @@ export default function Members() {
 
   return (
     <div class="max-w-6xl mx-auto">
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('members.teamMembers')}</h1>
-          <p class="text-gray-600 dark:text-gray-400">
-            {t('members.membersTotal', {
-              count: totalCount,
-              unit: totalCount === 1 ? t('members.member') : t('members.members'),
-            })}
-            {totalPages > 1 && ` • ${t('members.pageXofY', { current: currentPage, total: totalPages })}`}
-          </p>
-        </div>
-        <div class="flex gap-3">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          {t('members.membersTotal', {
+            count: totalCount,
+            unit: totalCount === 1 ? t('members.member') : t('members.members'),
+          })}
+          {totalPages > 1 && ` • ${t('members.pageXofY', { current: currentPage, total: totalPages })}`}
+        </p>
+        <div class="flex flex-wrap gap-3">
           {(hasPermission('users.delete') || hasRole('admin')) && (
             <Button
               variant="outline"

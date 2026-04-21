@@ -1,7 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact'
-import { useState } from 'preact/hooks'
+import { useEffect } from 'preact/hooks'
 import { clsx } from '../../lib/utils'
-import { ChevronLeftIcon } from './icons'
 
 interface SidebarItem {
   id: string
@@ -16,9 +15,9 @@ interface SidebarProps {
   items?: SidebarItem[]
   title?: string
   width?: 'sm' | 'md' | 'lg'
-  collapsible?: boolean
-  defaultCollapsed?: boolean
-  footer?: ComponentChildren | ((args: { isCollapsed: boolean }) => ComponentChildren)
+  mobileOpen?: boolean
+  onMobileClose?: () => void
+  footer?: ComponentChildren | ((args: Record<string, never>) => ComponentChildren)
   class?: string
   isMac?: boolean
 }
@@ -27,44 +26,44 @@ export function Sidebar({
   items = [],
   title = 'Titanic POS',
   width = 'md',
-  collapsible = false,
-  defaultCollapsed = false,
+  mobileOpen = false,
+  onMobileClose,
   footer,
   class: className = '',
   isMac = false,
   ...props
 }: SidebarProps & Omit<JSX.DetailedHTMLProps<JSX.HTMLAttributes<HTMLDivElement>, HTMLDivElement>, 'class'>) {
-  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed)
-
   const widths = {
-    sm: isCollapsed ? 'w-16' : 'w-48',
-    md: isCollapsed ? 'w-16' : 'w-64',
-    lg: isCollapsed ? 'w-16' : 'w-80',
+    sm: 'w-48',
+    md: 'w-64',
+    lg: 'w-80',
   }
 
-  return (
-    <div
-      class={clsx(
-        widths[width],
-        isMac ? 'macos-sidebar' : 'bg-gray-900',
-        'text-white border-r border-white/10',
-        'flex flex-col transition-all duration-300',
-        className,
-      )}
-      {...props}
-    >
+  useEffect(() => {
+    if (!mobileOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onMobileClose?.()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [mobileOpen, onMobileClose])
+
+  const navContent = () => (
+    <>
       {/* Header */}
-      <div class={clsx('p-4 border-b border-white/10', isMac && 'pt-10')}>
+      <div class={clsx('p-4', isMac && !mobileOpen && 'pt-10')}>
         <div class="flex items-center justify-between">
-          {!isCollapsed && <h1 class="text-xl font-bold text-white/90">{title}</h1>}
-          {collapsible && (
+          <h1 class="text-xl font-bold text-gray-900 dark:text-white/90">{title}</h1>
+          {mobileOpen && (
             <button
               type="button"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              class="p-2 rounded-lg hover:bg-white/10 transition-colors"
-              aria-label="Toggle sidebar"
+              onClick={onMobileClose}
+              class="ml-auto p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-200/70 dark:text-white/60 dark:hover:text-white dark:hover:bg-white/10 transition-colors"
+              aria-label="Close menu"
             >
-              <ChevronLeftIcon class={clsx('w-4 h-4 transition-transform', isCollapsed && 'rotate-180')} />
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           )}
         </div>
@@ -77,24 +76,24 @@ export function Sidebar({
             <li key={item.id}>
               <button
                 type="button"
-                onClick={item.onClick}
+                onClick={() => {
+                  item.onClick?.()
+                  onMobileClose?.()
+                }}
                 class={clsx(
-                  'w-full flex items-center px-3 py-2 rounded-lg transition-colors',
-                  'hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20',
-                  item.active ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white',
-                  isCollapsed ? 'justify-center' : 'gap-3',
+                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
+                  'focus:outline-none focus:ring-2 focus:ring-gray-400/40 dark:focus:ring-white/20',
+                  item.active
+                    ? 'bg-gray-200 text-gray-900 dark:bg-white/15 dark:text-white'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/70 dark:text-white/60 dark:hover:text-white dark:hover:bg-white/10',
                 )}
               >
                 <span class="w-5 h-5 flex-shrink-0">{item.icon}</span>
-                {!isCollapsed && (
-                  <>
-                    <span class="flex-1 text-left text-sm font-medium">{item.label}</span>
-                    {item.badge && (
-                      <span class="bg-red-500/80 text-white text-xs rounded-full px-2 py-0.5 min-w-5 text-center">
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
+                <span class="flex-1 text-left text-sm font-medium">{item.label}</span>
+                {item.badge && (
+                  <span class="bg-red-500/80 text-white text-xs rounded-full px-2 py-0.5 min-w-5 text-center">
+                    {item.badge}
+                  </span>
                 )}
               </button>
             </li>
@@ -104,10 +103,49 @@ export function Sidebar({
 
       {/* Footer */}
       {footer && (
-        <div class="p-4 border-t border-white/10">
-          {typeof footer === 'function' ? footer({ isCollapsed }) : footer}
+        <div class="p-4 border-t border-gray-200 dark:border-white/10">
+          {typeof footer === 'function' ? footer({}) : footer}
         </div>
       )}
-    </div>
+    </>
+  )
+
+  const baseColors = isMac
+    ? 'macos-sidebar text-gray-900 dark:text-white'
+    : 'bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white'
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <div
+        class={clsx(
+          widths[width],
+          baseColors,
+          'border-r border-gray-200 dark:border-white/10',
+          'hidden md:flex flex-col transition-all duration-300',
+          className,
+        )}
+        {...props}
+      >
+        {navContent()}
+      </div>
+
+      {/* Mobile overlay + drawer */}
+      {mobileOpen && (
+        <div class="fixed inset-0 z-40 md:hidden" aria-modal="true" role="dialog">
+          <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onMobileClose} aria-hidden="true" />
+          <div
+            class={clsx(
+              'absolute left-0 top-0 bottom-0 w-72',
+              baseColors,
+              'border-r border-gray-200 dark:border-white/10 flex flex-col',
+              'animate-[slideInLeft_200ms_ease-out]',
+            )}
+          >
+            {navContent()}
+          </div>
+        </div>
+      )}
+    </>
   )
 }

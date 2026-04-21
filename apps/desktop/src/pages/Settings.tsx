@@ -126,7 +126,7 @@ export default function Settings() {
 
   if (isLoading) {
     return (
-      <div class="max-w-6xl mx-auto px-6 py-4">
+      <div class="max-w-6xl mx-auto">
         <div class={`${panelClass} p-6`}>
           <div class="text-center py-8">
             <div class="w-8 h-8 bg-blue-600 rounded-full animate-spin border-2 border-transparent border-t-white mx-auto mb-4"></div>
@@ -138,14 +138,10 @@ export default function Settings() {
   }
 
   return (
-    <div class="max-w-6xl mx-auto px-6 py-4">
+    <div class="max-w-6xl mx-auto">
       <div class="space-y-6">
-        <div class="flex justify-between items-center">
-          <div>
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('settings.title')}</h2>
-            <span class="text-gray-600 dark:text-gray-400">{t('settings.subtitle')}</span>
-          </div>
-          <div class="flex gap-3">
+        <div class="flex flex-col sm:flex-row sm:justify-end sm:items-center gap-3">
+          <div class="flex flex-wrap gap-3">
             {hasChanges && (
               <>
                 <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
@@ -392,7 +388,7 @@ export default function Settings() {
             <span class="font-medium text-gray-700 dark:text-gray-300">{t('settings.resetLocalDbProceed')}</span>
           </div>
         </div>
-        <div class="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+        <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
           <Button variant="outline" onClick={() => setIsResetLocalDbDialogOpen(false)} disabled={isResettingLocalDb}>
             {t('common.cancel')}
           </Button>
@@ -429,7 +425,7 @@ export default function Settings() {
             <span class="font-medium text-gray-700 dark:text-gray-300">{t('settings.resetProceed')}</span>
           </div>
         </div>
-        <div class="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+        <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
           <Button variant="outline" onClick={() => setIsResetDialogOpen(false)} disabled={isSaving}>
             {t('common.cancel')}
           </Button>

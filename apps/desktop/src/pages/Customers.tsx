@@ -766,7 +766,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
               </label>
             </div>
 
-            <div class="flex justify-end space-x-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
               <Button variant="secondary" onClick={onClose} disabled={isLoading}>
                 {t('common.cancel')}
               </Button>
@@ -864,13 +864,13 @@ export default function Customers() {
   }
 
   return (
-    <div class="mx-auto max-w-6xl space-y-6 px-6 py-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('customers.title')}</h1>
-          <p class="mt-1 text-gray-600 dark:text-gray-400">{t('customers.subtitle')}</p>
-        </div>
-        {hasPermission('users.create') && <Button onClick={handleAddCustomer}>{t('customers.addCustomer')}</Button>}
+    <div class="mx-auto max-w-6xl space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+        {hasPermission('users.create') && (
+          <Button class="w-full sm:w-auto" onClick={handleAddCustomer}>
+            {t('customers.addCustomer')}
+          </Button>
+        )}
       </div>
 
       <div class={`${panelClass} p-6`}>

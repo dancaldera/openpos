@@ -126,7 +126,7 @@ export default function Analytics() {
 
   if (!isAdmin) {
     return (
-      <div class="max-w-6xl mx-auto px-6 py-4">
+      <div class="max-w-6xl mx-auto">
         <div class={`${panelClass} p-12`}>
           <div class="text-center">
             <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
@@ -140,7 +140,7 @@ export default function Analytics() {
 
   if (isLoading) {
     return (
-      <div class="max-w-6xl mx-auto px-6 py-4">
+      <div class="max-w-6xl mx-auto">
         <div class={`${panelClass} p-12`}>
           <div class="text-center">
             <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white mx-auto mb-6 shadow-lg"></div>
@@ -152,13 +152,9 @@ export default function Analytics() {
   }
 
   return (
-    <div class="max-w-6xl mx-auto px-6 py-4">
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('analytics.dashboardTitle')}</h1>
-          <p class="text-gray-600 dark:text-gray-400">{t('analytics.subtitle')}</p>
-        </div>
-        <Button onClick={loadAnalytics} disabled={isLoading}>
+    <div class="max-w-6xl mx-auto">
+      <div class="flex justify-end mb-6">
+        <Button class="w-full sm:w-auto" onClick={loadAnalytics} disabled={isLoading}>
           {t('analytics.refreshData')}
         </Button>
       </div>

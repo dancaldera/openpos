@@ -77,11 +77,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   return (
     <div class="max-w-5xl mx-auto">
-      <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{t('dashboard.title')}</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t('dashboard.subtitle')}</p>
-      </div>
-
       {/* Main Stats */}
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         <button
