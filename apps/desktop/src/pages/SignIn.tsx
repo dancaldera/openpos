@@ -10,8 +10,8 @@ import { UpdateBadge } from '../components/ui/UpdateBadge'
 import { useAuth } from '../hooks/useAuth'
 import { usePlatform } from '../hooks/usePlatform'
 import { useTranslation } from '../hooks/useTranslation'
-import { APP_VERSION } from '../lib/app-version'
 import { getApiBaseUrl } from '../lib/api-config'
+import { APP_VERSION } from '../lib/app-version'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 export default function SignIn() {
@@ -193,7 +193,8 @@ export default function SignIn() {
               </a>
               {isDemoHost && (
                 <>
-                  {' '}•{' '}
+                  {' '}
+                  •{' '}
                   <button
                     type="button"
                     onClick={fillDemo}
