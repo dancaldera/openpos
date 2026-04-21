@@ -11,6 +11,7 @@ import { useAuth } from '../hooks/useAuth'
 import { usePlatform } from '../hooks/usePlatform'
 import { useTranslation } from '../hooks/useTranslation'
 import { APP_VERSION } from '../lib/app-version'
+import { getApiBaseUrl } from '../lib/api-config'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 export default function SignIn() {
@@ -21,6 +22,24 @@ export default function SignIn() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [isDemoHost, setIsDemoHost] = useState(false)
+
+  useEffect(() => {
+    getApiBaseUrl().then((url) => {
+      try {
+        const host = new URL(url).hostname
+        setIsDemoHost(host === 'demo.openpos.xyz')
+      } catch {
+        setIsDemoHost(false)
+      }
+    })
+  }, [])
+
+  const fillDemo = () => {
+    setEmail('manager@openpos.xyz')
+    setPassword('Manager123!')
+  }
+
   const [isLoading, setIsLoading] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const animationRef = useRef<number>(0)
@@ -172,6 +191,19 @@ export default function SignIn() {
               >
                 GitHub
               </a>
+              {isDemoHost && (
+                <>
+                  {' '}•{' '}
+                  <button
+                    type="button"
+                    onClick={fillDemo}
+                    class="bg-gradient-to-r from-gray-300 via-indigo-400 to-gray-300 dark:from-gray-600 dark:via-indigo-500 dark:to-gray-600 bg-[length:200%_auto] animate-[shimmer_4s_linear_infinite] [background-clip:text] [-webkit-background-clip:text] [color:transparent] text-xs cursor-pointer"
+                    title="Fill demo credentials"
+                  >
+                    demo
+                  </button>
+                </>
+              )}
             </span>
           </div>
         </div>

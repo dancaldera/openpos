@@ -38,3 +38,8 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.3); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 128, 0.5); }
+
+@keyframes shimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
