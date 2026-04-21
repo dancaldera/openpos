@@ -1,4 +1,6 @@
-const { replicatedTables, replicatedTablesByName } = require('@openpos/data')
+const { readdirSync, readFileSync } = require('node:fs')
+const { resolve } = require('node:path')
+const { replicatedTables, replicatedTablesByName, migrationsDir } = require('@openpos/data')
 
 const DEFAULT_WATERMARK = '1970-01-01T00:00:00.000Z'
 const OUTBOX_ACTIVE_STATUSES = ['pending', 'error', 'conflict']
@@ -20,6 +22,51 @@ function quoteIdentifier(identifier) {
 
 function quoteColumns(columns) {
   return columns.map((column) => quoteIdentifier(column)).join(', ')
+}
+
+function splitSqlStatements(sql) {
+  return sql
+    .split(';')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+}
+
+async function applyRemoteMigrations(client, dir) {
+  const MIGRATIONS_TABLE = '__drizzle_migrations'
+  await client.execute(
+    `CREATE TABLE IF NOT EXISTS ${quoteIdentifier(MIGRATIONS_TABLE)} (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  )
+  const result = await client.execute(`SELECT name FROM ${quoteIdentifier(MIGRATIONS_TABLE)} ORDER BY id ASC`)
+  const applied = new Set(
+    result.rows.map((row) => String(Array.isArray(row) ? row[0] : row.name)),
+  )
+
+  let files
+  try {
+    files = readdirSync(dir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort((a, b) => a.localeCompare(b))
+  } catch {
+    return { appliedCount: 0, skippedCount: 0 }
+  }
+
+  let appliedCount = 0
+  let skippedCount = 0
+  for (const file of files) {
+    const name = file.replace(/\.sql$/, '')
+    if (applied.has(name)) {
+      skippedCount += 1
+      continue
+    }
+    const sql = readFileSync(resolve(dir, file), 'utf-8').trim()
+    for (const statement of splitSqlStatements(sql)) {
+      await client.execute(statement)
+    }
+    await client.execute(`INSERT INTO ${quoteIdentifier(MIGRATIONS_TABLE)} (name) VALUES (?)`, [name])
+    appliedCount += 1
+  }
+
+  return { appliedCount, skippedCount }
 }
 
 function normalizeComparableValue(value) {
@@ -215,7 +262,18 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
         return
       }
     } catch {
-      // Table does not exist yet.
+      // Table does not exist yet — run migrations first.
+    }
+
+    try {
+      logSync('running remote migrations', { migrationsDir })
+      const result = await applyRemoteMigrations(client, migrationsDir)
+      logSync('remote migrations applied', result)
+    } catch (error) {
+      logSync('failed to apply remote migrations', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return
     }
 
     try {

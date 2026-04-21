@@ -14,6 +14,9 @@ const { createSyncManager, ensureLocalSyncSchema } = require('./sync-manager.cjs
 
 const pkg = require('../package.json')
 
+// Ensure userData resolves to 'OpenPOS' in dev mode, not the npm package name
+app.setName('OpenPOS')
+
 let mainWindow = null
 let db = null
 let syncManager = null
