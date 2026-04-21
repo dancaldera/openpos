@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
-import { Button, Dialog, Input, LanguageSelector, Select } from '../components/ui'
+import { Button, Dialog, Input, LanguageSelector, PageLoader, Select } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
 import { requireDesktopApi } from '../lib/desktop'
 import { type CompanySettings, companySettingsService, SUPPORTED_CURRENCIES } from '../services/company-settings-turso'
@@ -125,16 +125,7 @@ export default function Settings() {
   }
 
   if (isLoading) {
-    return (
-      <div class="max-w-6xl mx-auto">
-        <div class={`${panelClass} p-6`}>
-          <div class="text-center py-8">
-            <div class="w-8 h-8 bg-blue-600 rounded-full animate-spin border-2 border-transparent border-t-white mx-auto mb-4"></div>
-            <p class="text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <PageLoader message={t('common.loading')} />
   }
 
   return (

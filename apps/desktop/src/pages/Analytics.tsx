@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
-import { Button, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui'
+import {
+  Button,
+  PageLoader,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import {
@@ -139,16 +149,7 @@ export default function Analytics() {
   }
 
   if (isLoading) {
-    return (
-      <div class="max-w-6xl mx-auto">
-        <div class={`${panelClass} p-12`}>
-          <div class="text-center">
-            <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white mx-auto mb-6 shadow-lg"></div>
-            <p class="text-gray-600 dark:text-gray-400 text-lg">{t('analytics.loadingAnalytics')}</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <PageLoader message={t('analytics.loadingAnalytics')} />
   }
 
   return (

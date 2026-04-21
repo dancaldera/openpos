@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogConfirm,
   Input,
+  PageLoader,
   Pagination,
   Select,
   Table,
@@ -739,14 +740,7 @@ export default function Orders() {
   }
 
   if (isLoading) {
-    return (
-      <div class={`${panelClass} p-6`}>
-        <div class="text-center py-8">
-          <div class="w-8 h-8 bg-blue-600 rounded-full animate-spin border-2 border-transparent border-t-white mx-auto mb-4"></div>
-          <p class="text-gray-600 dark:text-gray-400">{t('orders.loadingOrders')}</p>
-        </div>
-      </div>
-    )
+    return <PageLoader message={t('orders.loadingOrders')} />
   }
 
   return (

@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogConfirm,
   Input,
+  PageLoader,
   Pagination,
   PasswordInput,
   Select,
@@ -367,16 +368,7 @@ export default function Members() {
   }
 
   if (isLoading) {
-    return (
-      <div class="max-w-6xl mx-auto">
-        <div class={`${panelClass} p-12`}>
-          <div class="text-center">
-            <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white mx-auto mb-6 shadow-lg"></div>
-            <p class="text-lg text-gray-600 dark:text-gray-400">{t('members.loadingMembers')}</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <PageLoader message={t('members.loadingMembers')} />
   }
 
   return (

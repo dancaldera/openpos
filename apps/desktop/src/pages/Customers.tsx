@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogConfirm,
   Input,
+  PageLoader,
   Pagination,
   Select,
   Table,
@@ -882,12 +883,7 @@ export default function Customers() {
       </div>
 
       {isLoading ? (
-        <div class="flex items-center justify-center py-12">
-          <div class="text-center space-y-3">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p class="text-gray-600 dark:text-gray-400">{t('customers.loadingCustomers')}</p>
-          </div>
-        </div>
+        <PageLoader message={t('customers.loadingCustomers')} />
       ) : customers.length === 0 ? (
         <div class={`${panelClass} p-12 text-center`}>
           <div class="text-6xl mb-4">👥</div>

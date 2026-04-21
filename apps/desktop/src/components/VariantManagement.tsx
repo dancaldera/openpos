@@ -8,6 +8,7 @@ import {
   productVariantsService,
 } from '../services/product-variants-turso'
 import { Button, Dialog, ErrorAlert, Input, Select } from './ui'
+import { SpinnerIcon } from './ui/icons'
 
 interface ProductVariantRowProps {
   variant: ProductVariant
@@ -413,7 +414,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
     return (
       <Dialog isOpen={isOpen} onClose={onClose} title={t('variants.variantGenerator')} size="lg">
         <div class="flex justify-center py-8">
-          <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-spin border-4 border-transparent border-t-white"></div>
+          <SpinnerIcon class="h-7 w-7 animate-spin text-gray-400" />
         </div>
       </Dialog>
     )

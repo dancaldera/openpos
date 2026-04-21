@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
+import { DashboardSkeleton } from '../components/ui/PageLoader'
 import { useTranslation } from '../hooks/useTranslation'
 import { dashboardService } from '../services/dashboard-turso'
 
@@ -41,38 +42,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   }
 
   if (isLoading) {
-    return (
-      <div class="max-w-5xl mx-auto">
-        <div class="mb-6">
-          <div class="h-7 bg-gray-200 dark:bg-gray-700 rounded-lg w-40 mb-2 animate-pulse" />
-          <div class="h-4 bg-gray-100 dark:bg-gray-800 rounded w-56 animate-pulse" />
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 animate-pulse"
-            >
-              <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-3" />
-              <div class="h-7 bg-gray-200 dark:bg-gray-700 rounded w-28" />
-            </div>
-          ))}
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2].map((i) => (
-            <div
-              key={i}
-              class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 animate-pulse"
-            >
-              <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-28 mb-3" />
-              <div class="h-7 bg-gray-200 dark:bg-gray-700 rounded w-16" />
-            </div>
-          ))}
-        </div>
-      </div>
-    )
+    return <DashboardSkeleton />
   }
 
   return (
