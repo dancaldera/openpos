@@ -10,7 +10,6 @@ import { UpdateBadge } from '../components/ui/UpdateBadge'
 import { useAuth } from '../hooks/useAuth'
 import { usePlatform } from '../hooks/usePlatform'
 import { useTranslation } from '../hooks/useTranslation'
-import { getApiBaseUrl } from '../lib/api-config'
 import { APP_VERSION } from '../lib/app-version'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
@@ -25,14 +24,7 @@ export default function SignIn() {
   const [isDemoHost, setIsDemoHost] = useState(false)
 
   useEffect(() => {
-    getApiBaseUrl().then((url) => {
-      try {
-        const host = new URL(url).hostname
-        setIsDemoHost(host === 'demo.openpos.xyz')
-      } catch {
-        setIsDemoHost(false)
-      }
-    })
+    setIsDemoHost(window.location.hostname === 'demo.openpos.xyz')
   }, [])
 
   const fillDemo = () => {
