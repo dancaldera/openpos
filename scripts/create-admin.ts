@@ -8,7 +8,7 @@
 
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
-import { createInterface } from 'node:readline/promises'
+
 import { fileURLToPath } from 'node:url'
 import { connect } from '@tursodatabase/serverless'
 import bcrypt from 'bcryptjs'
@@ -16,8 +16,8 @@ import bcrypt from 'bcryptjs'
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(scriptDir, '..')
 
-function loadEnv(): Record<string, string> {
-  const content = readFileSync(resolve(repoRoot, '.env.local'), 'utf-8')
+function loadEnv(path: string): Record<string, string> {
+  const content = readFileSync(path, 'utf-8')
   const env: Record<string, string> = {}
   for (const line of content.split('\n')) {
     const trimmed = line.trim()
@@ -30,41 +30,34 @@ function loadEnv(): Record<string, string> {
 }
 
 async function main() {
-  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  const envPath = resolve(repoRoot, 'apps/api/.env')
 
-  console.log('Create Admin User\n')
+  const email = process.argv[2] || 'admin@danpos.com'
+  const name = process.argv[3] || 'Admin User'
+  const password = process.argv[4] || 'admin123'
 
-  const email = await rl.question('Email [admin@danpos.com]: ')
-  const name = await rl.question('Name [Admin User]: ')
-  const password = await rl.question('Password [admin123]: ')
-  rl.close()
-
-  const finalEmail = email.trim() || 'admin@danpos.com'
-  const finalName = name.trim() || 'Admin User'
-  const finalPassword = password.trim() || 'admin123'
-
-  const { TURSO_DATABASE_URL: url, TURSO_AUTH_TOKEN: token } = loadEnv()
+  const { TURSO_DATABASE_URL: url, TURSO_AUTH_TOKEN: token } = loadEnv(envPath)
   if (!url || !token) {
-    console.error('Error: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN required in .env.local')
+    console.error('Error: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN required in apps/api/.env')
     process.exit(1)
   }
 
   const client = connect({ url, authToken: token })
 
-  const existing = await client.execute('SELECT id FROM users WHERE email = ? LIMIT 1', [finalEmail.toLowerCase()])
+  const existing = await client.execute('SELECT id FROM users WHERE email = ? LIMIT 1', [email.toLowerCase()])
   if (existing.rows.length > 0) {
-    console.error(`Error: User already exists: ${finalEmail}`)
+    console.error(`Error: User already exists: ${email}`)
     process.exit(1)
   }
 
-  const hash = await bcrypt.hash(finalPassword, 12)
+  const hash = await bcrypt.hash(password, 12)
   await client.execute(
     `INSERT INTO users (email, password, name, role, permissions, created_at, password_hashed)
      VALUES (?, ?, ?, 'admin', '["*"]', ?, 1)`,
-    [finalEmail.toLowerCase(), hash, finalName, new Date().toISOString()],
+    [email.toLowerCase(), hash, name, new Date().toISOString()],
   )
 
-  console.log(`\n✅ Created: ${finalEmail}`)
+  console.log(`\n✅ Created: ${email}`)
 }
 
 main().catch((err) => {
