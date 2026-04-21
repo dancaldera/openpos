@@ -114,6 +114,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
   let hardDeleteCycleCounter = 0
   let remoteInfrastructureEnsured = false
   let lastKnownVersion = null
+  let idleCycleCount = 0
   const remoteSchemaCache = new Map()
   const status = {
     status: 'offline',
@@ -911,6 +912,8 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
       includeHardDeleteCounts: runHardDeletes,
     })
 
+    const hadActivity = changedTables.size > 0 || status.pendingWrites > 0 || status.conflictedWrites > 0
+
     if (changedTables.size > 0) {
       await pullRemoteChanges(database, client, changedTables)
     } else {
@@ -919,7 +922,9 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     if (runHardDeletes && remoteCounts.size > 0) {
       await runHardDeleteReconciliation(database, client, remoteCounts)
     }
-    await repairMissingProductImages(database, client)
+    if (hadActivity) {
+      await repairMissingProductImages(database, client)
+    }
     logSync('remote pull phase completed')
     await flushOutbox(database, client)
     logSync('outbox flush completed')
@@ -940,8 +945,16 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     status.lastError = null
     status.lastCheckedAt = new Date().toISOString()
     status.lastSyncedAt = status.lastCheckedAt
+
+    if (hadActivity) {
+      idleCycleCount = 0
+    } else {
+      idleCycleCount++
+    }
+
     logSync('sync finished successfully', {
       lastSyncedAt: status.lastSyncedAt,
+      idleCycles: idleCycleCount,
     })
 
     return getStatusSnapshot(database)
@@ -972,8 +985,20 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     return syncPromise
   }
 
-  async function heartbeat() {
-    return triggerSync({ foreground: false })
+  function getAdaptiveInterval(baseIntervalMs) {
+    // Back off when idle: 0-2 idle cycles → base, 3-5 → 2×, 6+ → 4×, max 60s
+    if (idleCycleCount >= 6) return Math.min(baseIntervalMs * 4, 60_000)
+    if (idleCycleCount >= 3) return Math.min(baseIntervalMs * 2, 60_000)
+    return baseIntervalMs
+  }
+
+  async function heartbeat(baseIntervalMs) {
+    const result = await triggerSync({ foreground: false })
+    if (pollTimer && baseIntervalMs) {
+      clearInterval(pollTimer)
+      pollTimer = setInterval(() => void heartbeat(baseIntervalMs), getAdaptiveInterval(baseIntervalMs))
+    }
+    return result
   }
 
   function start(intervalMs = 15_000) {
@@ -981,10 +1006,8 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
       return
     }
 
-    void heartbeat()
-    pollTimer = setInterval(() => {
-      void heartbeat()
-    }, intervalMs)
+    // Schedule first tick; heartbeat reschedules itself adaptively after each run
+    pollTimer = setTimeout(() => void heartbeat(intervalMs), 0)
   }
 
   function stop() {
@@ -992,6 +1015,10 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
       clearInterval(pollTimer)
       pollTimer = null
     }
+  }
+
+  function resetIdleBackoff() {
+    idleCycleCount = 0
   }
 
   function getConflictSummary(database = getDatabase()) {
@@ -1296,6 +1323,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     }
 
     refreshCounts(database)
+    resetIdleBackoff()
   }
 
   return {
