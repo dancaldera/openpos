@@ -56,6 +56,7 @@ interface DatabaseCompanySettings {
   phone?: string
   email?: string
   website?: string
+  receipt_footer?: string
   created_at: string
   updated_at: string
 }
@@ -93,6 +94,7 @@ export class CompanySettingsService {
       phone: dbSettings.phone,
       email: dbSettings.email,
       website: dbSettings.website,
+      receiptFooter: dbSettings.receipt_footer,
       createdAt: dbSettings.created_at,
       updatedAt: dbSettings.updated_at,
     }

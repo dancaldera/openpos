@@ -731,7 +731,9 @@ export default function Orders() {
     } catch (error: unknown) {
       clearTimeout(timeoutId)
       console.error('Print error:', error)
-      toast.error(t('orders.printError'))
+      const printErrorMessage = error instanceof Error ? error.message : String(error)
+      setPrintStatus(`Print failed: ${printErrorMessage}`)
+      toast.error(printErrorMessage || t('orders.printError'))
     } finally {
       setIsPrinting(false)
       // Clear status after 3 seconds

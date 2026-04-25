@@ -44,13 +44,24 @@ Example:
   "tursoDatabaseUrl": "libsql://your-db.turso.io",
   "tursoAuthToken": "your-token-here",
   "apiUrl": "https://your-api.example.com",
-  "printerCommand": "lp",
-  "printerArgs": [],
   "githubToken": "github_pat_xxxxxxxxxxxx"
 }
 ```
 
 Include only the fields needed for that install. Public GitHub releases must not embed `TURSO_AUTH_TOKEN`, `JWT_SECRET`, or other backend secrets.
+
+On macOS and Linux, receipt printing uses the native `lp -o raw` command and sends formatted ESC/POS receipt bytes to the operating system's default printer. macOS includes `lp` by default. On Linux, install CUPS if `lp` is missing:
+
+```bash
+sudo apt install cups
+```
+
+Verify the system printing path:
+
+```bash
+lpstat -d
+printf "OpenPOS print test\n\n\n" | lp -o raw
+```
 
 ### `githubToken` — in-app update checks
 

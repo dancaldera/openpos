@@ -876,23 +876,35 @@ function runTransaction(statements) {
 }
 
 function resolvePrinterConfig() {
-  const runtimeConfig = getRuntimeConfig()
-  const command = process.env.OPENPOS_PRINTER_COMMAND || runtimeConfig.printerCommand || 'lp'
-  const args = Array.isArray(runtimeConfig.printerArgs) ? runtimeConfig.printerArgs : []
-
-  return { command, args }
+  return { command: 'lp', args: ['-o', 'raw'] }
 }
 
 function printThermalReceipt(receiptData) {
   return new Promise((resolve, reject) => {
-    if (!receiptData || !String(receiptData).trim()) {
+    const receiptPayload = parseReceiptPayload(receiptData)
+    if (!receiptPayload) {
       reject(new Error('Receipt data cannot be empty'))
       return
     }
 
+    if (!['darwin', 'linux'].includes(process.platform)) {
+      reject(new Error(`Native receipt printing is not supported on ${process.platform}`))
+      return
+    }
+
+    let receiptText
+    let receiptBuffer
+    try {
+      receiptText = renderReceiptText(receiptPayload)
+      receiptBuffer = createEscposReceiptBuffer(receiptText)
+    } catch (error) {
+      reject(error)
+      return
+    }
+
     const { command, args } = resolvePrinterConfig()
-    const resolvedArgs = args.map((arg) => (arg === '{data}' ? receiptData : arg))
-    const writesToStdin = !resolvedArgs.includes(receiptData)
+    const resolvedArgs = args.map((arg) => (arg === '{data}' ? receiptText : arg))
+    const writesToStdin = !resolvedArgs.includes(receiptText)
 
     const child = spawn(command, resolvedArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -915,7 +927,7 @@ function printThermalReceipt(receiptData) {
 
     child.on('close', (code) => {
       if (code === 0) {
-        resolve(stdout.trim() || `Printer command "${command}" completed successfully`)
+        resolve(stdout.trim() || `Receipt sent to printer command "${command}"`)
         return
       }
 
@@ -923,11 +935,115 @@ function printThermalReceipt(receiptData) {
     })
 
     if (writesToStdin) {
-      child.stdin.write(receiptData)
+      child.stdin.write(receiptBuffer)
     }
 
     child.stdin.end()
   })
+}
+
+function parseReceiptPayload(receiptData) {
+  if (!receiptData || !String(receiptData).trim()) {
+    return null
+  }
+
+  if (typeof receiptData === 'object') {
+    return receiptData
+  }
+
+  try {
+    return JSON.parse(receiptData)
+  } catch (error) {
+    throw new Error(`Receipt data must be valid JSON: ${error.message}`)
+  }
+}
+
+function createEscposReceiptBuffer(receiptText) {
+  return Buffer.concat([
+    Buffer.from([0x1b, 0x40]), // Initialize printer.
+    Buffer.from(receiptText, 'utf8'),
+    Buffer.from('\n\n\n', 'utf8'),
+    Buffer.from([0x1d, 0x56, 0x00]), // Full cut.
+  ])
+}
+
+function renderReceiptText(receiptData) {
+  if (!receiptData || typeof receiptData !== 'object') {
+    throw new Error('Receipt data is required')
+  }
+
+  if (!Array.isArray(receiptData.items)) {
+    throw new Error('Receipt items must be an array')
+  }
+
+  const width = 42
+  const line = '-'.repeat(width)
+  const storeInfo = receiptData.storeInfo || {
+    name: receiptData.title || 'Receipt',
+    address: receiptData.address,
+    phone: receiptData.phone,
+  }
+  const currencySymbol = receiptData.currencySymbol || '$'
+  const taxRate = Number(receiptData.taxRate || 0)
+  const lines = [
+    centerText(storeInfo.name || receiptData.title || 'Receipt', width),
+    storeInfo.appName && storeInfo.appName !== storeInfo.name ? centerText(storeInfo.appName, width) : '',
+    storeInfo.address,
+    storeInfo.phone ? `Phone: ${storeInfo.phone}` : '',
+    storeInfo.email,
+    storeInfo.website,
+    receiptData.orderId ? `Order: ${receiptData.orderId}` : '',
+    line,
+    formatReceiptRow('Item', 'Qty', 'Total', width),
+    line,
+    ...receiptData.items.map((item) =>
+      formatReceiptRow(
+        String(item?.name || ''),
+        String(item?.quantity || 0),
+        formatCurrency(Number(item?.total ?? item?.price ?? 0), currencySymbol),
+        width,
+      ),
+    ),
+    line,
+    formatAmountLine('Subtotal', Number(receiptData.subtotal || 0), currencySymbol, width),
+    taxRate > 0 ? formatAmountLine(`Tax (${taxRate}%)`, Number(receiptData.tax || 0), currencySymbol, width) : '',
+    formatAmountLine('Total', Number(receiptData.total || 0), currencySymbol, width),
+    line,
+    receiptData.footer || 'Thank you for your purchase!',
+    line,
+    `Date: ${receiptData.date || new Date().toLocaleDateString()}`,
+    `Time: ${receiptData.time || new Date().toLocaleTimeString()}`,
+  ]
+
+  return lines.filter(Boolean).join('\n')
+}
+
+function formatReceiptRow(name, quantity, total, width) {
+  const qtyWidth = 5
+  const totalWidth = 12
+  const nameWidth = width - qtyWidth - totalWidth - 2
+  const safeName = truncate(name, nameWidth)
+  return `${safeName.padEnd(nameWidth)} ${quantity.padStart(qtyWidth)} ${total.padStart(totalWidth)}`
+}
+
+function formatAmountLine(label, amount, currencySymbol, width) {
+  const value = formatCurrency(amount, currencySymbol)
+  return `${label}:`.padEnd(width - value.length) + value
+}
+
+function formatCurrency(amount, currencySymbol) {
+  return `${currencySymbol}${Number(amount || 0).toFixed(2)}`
+}
+
+function centerText(text, width) {
+  const trimmed = String(text || '').trim()
+  if (trimmed.length >= width) return trimmed
+  const leftPadding = Math.floor((width - trimmed.length) / 2)
+  return `${' '.repeat(leftPadding)}${trimmed}`
+}
+
+function truncate(value, maxLength) {
+  return value.length > maxLength ? `${value.slice(0, Math.max(0, maxLength - 3))}...` : value
 }
 
 function createWindow() {

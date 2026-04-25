@@ -91,7 +91,6 @@ write_config() {
   TURSO_DATABASE_URL="$turso_database_url" \
   TURSO_AUTH_TOKEN="$turso_auth_token" \
   API_URL="$api_url" \
-  PRINTER_COMMAND="$printer_command" \
   CONFIG_PATH="$CONFIG_PATH" \
   python3 <<'PY'
 import json
@@ -108,11 +107,6 @@ if os.environ["TURSO_AUTH_TOKEN"].strip():
 
 if os.environ["API_URL"].strip():
     config["apiUrl"] = os.environ["API_URL"].strip()
-
-if os.environ["PRINTER_COMMAND"].strip():
-    config["printerCommand"] = os.environ["PRINTER_COMMAND"].strip()
-
-config["printerArgs"] = []
 
 config_path = Path(os.environ["CONFIG_PATH"])
 config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -165,7 +159,6 @@ fi
 prompt_value turso_database_url "Turso database URL"
 prompt_value turso_auth_token "Turso auth token" true
 prompt_value api_url "API URL"
-prompt_value printer_command "Printer command"
 
 write_config
 
