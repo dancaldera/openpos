@@ -25,7 +25,10 @@ import { companySettingsService } from '../services/company-settings-turso'
 export default function Analytics() {
   const { t } = useTranslation()
   const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
-  const metricCardClass = 'rounded-xl border p-6 transition-colors'
+  const metricCardClass = 'rounded-xl border p-3 transition-colors sm:p-6'
+  const metricValueClass = 'text-xl font-semibold sm:text-2xl'
+  const metricLabelClass = 'mt-1 text-xs sm:text-sm'
+  const metricIconClass = 'text-xl sm:text-2xl'
 
   const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null)
   const [salesByMembers, setSalesByMembers] = useState<SalesByMember[]>([])
@@ -215,28 +218,28 @@ export default function Analytics() {
 
       {/* Key Metrics */}
       {metrics && (
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <div class="mb-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
           <div class={`${metricCardClass} bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900/60`}>
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-2xl font-semibold text-blue-700 dark:text-blue-300">
+                <div class={`${metricValueClass} text-blue-700 dark:text-blue-300`}>
                   {formatCurrency(metrics.totalRevenue)}
                 </div>
-                <div class="mt-1 text-sm text-blue-700 dark:text-blue-300">{t('analytics.totalRevenue')}</div>
+                <div class={`${metricLabelClass} text-blue-700 dark:text-blue-300`}>{t('analytics.totalRevenue')}</div>
               </div>
-              <div class="text-blue-300 dark:text-blue-500 text-2xl">💰</div>
+              <div class={`${metricIconClass} text-blue-300 dark:text-blue-500`}>💰</div>
             </div>
           </div>
 
           <div class={`${metricCardClass} bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900/60`}>
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-2xl font-semibold text-green-700 dark:text-green-300">
+                <div class={`${metricValueClass} text-green-700 dark:text-green-300`}>
                   {formatCurrency(metrics.totalProfit)}
                 </div>
-                <div class="mt-1 text-sm text-green-700 dark:text-green-300">{t('analytics.totalProfit')}</div>
+                <div class={`${metricLabelClass} text-green-700 dark:text-green-300`}>{t('analytics.totalProfit')}</div>
               </div>
-              <div class="text-green-300 dark:text-green-500 text-2xl">💵</div>
+              <div class={`${metricIconClass} text-green-300 dark:text-green-500`}>💵</div>
             </div>
           </div>
 
@@ -245,10 +248,12 @@ export default function Analytics() {
           >
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-2xl font-semibold text-purple-700 dark:text-purple-300">{metrics.completedOrders}</div>
-                <div class="mt-1 text-sm text-purple-700 dark:text-purple-300">{t('analytics.completedOrders')}</div>
+                <div class={`${metricValueClass} text-purple-700 dark:text-purple-300`}>{metrics.completedOrders}</div>
+                <div class={`${metricLabelClass} text-purple-700 dark:text-purple-300`}>
+                  {t('analytics.completedOrders')}
+                </div>
               </div>
-              <div class="text-purple-300 dark:text-purple-500 text-2xl">✅</div>
+              <div class={`${metricIconClass} text-purple-300 dark:text-purple-500`}>✅</div>
             </div>
           </div>
 
@@ -257,12 +262,14 @@ export default function Analytics() {
           >
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-2xl font-semibold text-orange-700 dark:text-orange-300">
+                <div class={`${metricValueClass} text-orange-700 dark:text-orange-300`}>
                   {formatCurrency(metrics.averageOrderValue)}
                 </div>
-                <div class="mt-1 text-sm text-orange-700 dark:text-orange-300">{t('analytics.averageOrderValue')}</div>
+                <div class={`${metricLabelClass} text-orange-700 dark:text-orange-300`}>
+                  {t('analytics.averageOrderValue')}
+                </div>
               </div>
-              <div class="text-orange-300 dark:text-orange-500 text-2xl">📊</div>
+              <div class={`${metricIconClass} text-orange-300 dark:text-orange-500`}>📊</div>
             </div>
           </div>
         </div>

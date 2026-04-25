@@ -81,7 +81,7 @@ export default function Orders() {
   const { t } = useTranslation()
   const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
   const mutedPanelClass = 'rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50'
-  const softMetricClass = 'rounded-xl border p-5'
+  const softMetricClass = 'rounded-xl border p-3 sm:p-5'
 
   const [orders, setOrders] = useState<Order[]>([])
   const [allOrders, setAllOrders] = useState<Order[]>([])
@@ -121,6 +121,7 @@ export default function Orders() {
     paid: 0,
     cancelled: 0,
   })
+  const canManageOrderLifecycle = currentUserRole === 'admin' || currentUserRole === 'manager'
 
   // Variant state
   const [productsWithVariants, setProductsWithVariants] = useState<Record<string, ProductWithVariants>>({})
@@ -462,6 +463,11 @@ export default function Orders() {
   }
 
   const handleUpdateStatus = async (orderId: string, status: Order['status']) => {
+    if ((status === 'cancelled' || status === 'completed') && !canManageOrderLifecycle) {
+      toast.error('Only managers and admins can cancel or complete orders')
+      return
+    }
+
     try {
       const result = await orderService.updateOrderStatus(orderId, status)
       if (result.success && result.order) {
@@ -486,6 +492,11 @@ export default function Orders() {
   }
 
   const handleDeleteOrder = async (orderId: string) => {
+    if (!canManageOrderLifecycle) {
+      toast.error('Only managers and admins can delete orders')
+      return
+    }
+
     try {
       const result = await orderService.deleteOrder(orderId)
       if (result.success) {
@@ -853,43 +864,49 @@ export default function Orders() {
         </div>
 
         {/* Order Statistics */}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
           <div
             class={`${softMetricClass} border-yellow-200 bg-yellow-50 dark:border-yellow-900/60 dark:bg-yellow-950/30`}
           >
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-2xl font-semibold text-yellow-800 dark:text-yellow-300">{orderStats.pending}</div>
-                <div class="text-sm text-yellow-800 dark:text-yellow-300">{t('orders.pendingOrders')}</div>
+                <div class="text-xl font-semibold text-yellow-800 sm:text-2xl dark:text-yellow-300">
+                  {orderStats.pending}
+                </div>
+                <div class="text-xs text-yellow-800 sm:text-sm dark:text-yellow-300">{t('orders.pendingOrders')}</div>
               </div>
-              <div class="text-yellow-300 dark:text-yellow-500 text-2xl">⏳</div>
+              <div class="text-xl text-yellow-300 sm:text-2xl dark:text-yellow-500">⏳</div>
             </div>
           </div>
           <div class={`${softMetricClass} border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/30`}>
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-2xl font-semibold text-green-800 dark:text-green-300">{orderStats.completed}</div>
-                <div class="text-sm text-green-800 dark:text-green-300">{t('orders.completed')}</div>
+                <div class="text-xl font-semibold text-green-800 sm:text-2xl dark:text-green-300">
+                  {orderStats.completed}
+                </div>
+                <div class="text-xs text-green-800 sm:text-sm dark:text-green-300">{t('orders.completed')}</div>
               </div>
-              <div class="text-green-300 dark:text-green-500 text-2xl">✅</div>
+              <div class="text-xl text-green-300 sm:text-2xl dark:text-green-500">✅</div>
             </div>
           </div>
           <div class={`${softMetricClass} border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/30`}>
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-2xl font-semibold text-blue-800 dark:text-blue-300">{orderStats.paid}</div>
-                <div class="text-sm text-blue-800 dark:text-blue-300">{t('orders.paidOrders')}</div>
+                <div class="text-xl font-semibold text-blue-800 sm:text-2xl dark:text-blue-300">{orderStats.paid}</div>
+                <div class="text-xs text-blue-800 sm:text-sm dark:text-blue-300">{t('orders.paidOrders')}</div>
               </div>
-              <div class="text-blue-300 dark:text-blue-500 text-2xl">💳</div>
+              <div class="text-xl text-blue-300 sm:text-2xl dark:text-blue-500">💳</div>
             </div>
           </div>
           <div class={`${softMetricClass} border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30`}>
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-2xl font-semibold text-red-800 dark:text-red-300">{orderStats.cancelled}</div>
-                <div class="text-sm text-red-800 dark:text-red-300">{t('orders.cancelled')}</div>
+                <div class="text-xl font-semibold text-red-800 sm:text-2xl dark:text-red-300">
+                  {orderStats.cancelled}
+                </div>
+                <div class="text-xs text-red-800 sm:text-sm dark:text-red-300">{t('orders.cancelled')}</div>
               </div>
-              <div class="text-red-300 dark:text-red-500 text-2xl">❌</div>
+              <div class="text-xl text-red-300 sm:text-2xl dark:text-red-500">❌</div>
             </div>
           </div>
         </div>
@@ -1150,7 +1167,7 @@ export default function Orders() {
               <div class="mb-3 text-sm text-gray-500 dark:text-gray-400">
                 {filteredProducts.length} {t('orders.of')} {products.length} {t('products.title').toLowerCase()}
               </div>
-              <div class={`${panelClass} max-h-96 overflow-y-auto p-6`}>
+              <div class={`${panelClass} max-h-96 overflow-y-auto p-4 sm:p-6`}>
                 {filteredProducts.length === 0 ? (
                   <div class="text-center py-12">
                     <div class="text-6xl mb-4">🔍</div>
@@ -1302,7 +1319,7 @@ export default function Orders() {
             {newOrder.items.length > 0 && (
               <div>
                 <h3 class="mb-6 text-lg font-semibold text-gray-900 dark:text-gray-100">{t('orders.orderSummary')}</h3>
-                <div class={`${mutedPanelClass} space-y-4 p-6`}>
+                <div class={`${mutedPanelClass} space-y-3 p-4 sm:space-y-4 sm:p-6`}>
                   {newOrder.items.map((item) => {
                     const product = getProductById(item.productId)
                     const variant = item.variantId
@@ -1382,7 +1399,7 @@ export default function Orders() {
                   })}
 
                   {/* Order Totals */}
-                  <div class="border-t border-gray-200 pt-6 mt-6">
+                  <div class="mt-4 border-t border-gray-200 pt-4 sm:mt-6 sm:pt-6">
                     {(() => {
                       const subtotal = newOrder.items.reduce((total, item) => {
                         const product = products.find((p) => p.id === item.productId)
@@ -1396,8 +1413,8 @@ export default function Orders() {
                       const total = subtotal + tax
 
                       return (
-                        <div class={`${panelClass} p-5`}>
-                          <div class="space-y-4">
+                        <div class={`${panelClass} p-4 sm:p-5`}>
+                          <div class="space-y-3 sm:space-y-4">
                             <div class="flex justify-between text-gray-700 dark:text-gray-300">
                               <span class="font-medium">{t('common.subtotal')}:</span>
                               <span class="font-semibold">{formatCurrency(subtotal)}</span>
@@ -1415,8 +1432,8 @@ export default function Orders() {
                                 {t('orders.taxDisabled')}
                               </div>
                             )}
-                            <div class="border-t border-gray-200 pt-4 dark:border-gray-800">
-                              <div class="flex justify-between rounded-lg bg-blue-50 px-4 py-3 text-xl font-bold text-gray-900 dark:bg-blue-950/30 dark:text-gray-100">
+                            <div class="border-t border-gray-200 pt-3 sm:pt-4 dark:border-gray-800">
+                              <div class="flex justify-between rounded-lg bg-blue-50 px-3 py-2 text-lg font-bold text-gray-900 sm:px-4 sm:py-3 sm:text-xl dark:bg-blue-950/30 dark:text-gray-100">
                                 <span>{t('common.total')}:</span>
                                 <span class="text-blue-600 dark:text-blue-300">{formatCurrency(total)}</span>
                               </div>
@@ -1563,7 +1580,7 @@ export default function Orders() {
               <div class="mb-3 text-sm text-gray-500 dark:text-gray-400">
                 {filteredEditProducts.length} {t('orders.of')} {products.length} {t('products.title').toLowerCase()}
               </div>
-              <div class={`${panelClass} max-h-96 overflow-y-auto p-6`}>
+              <div class={`${panelClass} max-h-96 overflow-y-auto p-4 sm:p-6`}>
                 {filteredEditProducts.length === 0 ? (
                   <div class="text-center py-12">
                     <div class="text-6xl mb-4">🔍</div>
@@ -1635,7 +1652,7 @@ export default function Orders() {
                 <h3 class="mb-6 text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {t('orders.updatedOrderSummary')}
                 </h3>
-                <div class={`${mutedPanelClass} space-y-4 p-6`}>
+                <div class={`${mutedPanelClass} space-y-3 p-4 sm:space-y-4 sm:p-6`}>
                   {editOrderItems.map((item) => {
                     const product = products.find((p) => p.id === item.productId)
                     return product ? (
@@ -1685,7 +1702,7 @@ export default function Orders() {
                   })}
 
                   {/* Updated Order Totals */}
-                  <div class="border-t border-gray-200 pt-6 mt-6">
+                  <div class="mt-4 border-t border-gray-200 pt-4 sm:mt-6 sm:pt-6">
                     {(() => {
                       const subtotal = editOrderItems.reduce((total, item) => {
                         const product = products.find((p) => p.id === item.productId)
@@ -1695,8 +1712,8 @@ export default function Orders() {
                       const total = subtotal + tax
 
                       return (
-                        <div class={`${panelClass} p-5`}>
-                          <div class="space-y-4">
+                        <div class={`${panelClass} p-4 sm:p-5`}>
+                          <div class="space-y-3 sm:space-y-4">
                             <div class="flex justify-between text-gray-700 dark:text-gray-300">
                               <span class="font-medium">{t('common.subtotal')}:</span>
                               <span class="font-semibold">{formatCurrency(subtotal)}</span>
@@ -1714,8 +1731,8 @@ export default function Orders() {
                                 {t('orders.taxDisabled')}
                               </div>
                             )}
-                            <div class="border-t border-gray-200 pt-4 dark:border-gray-800">
-                              <div class="flex justify-between rounded-lg bg-blue-50 px-4 py-3 text-xl font-bold text-gray-900 dark:bg-blue-950/30 dark:text-gray-100">
+                            <div class="border-t border-gray-200 pt-3 sm:pt-4 dark:border-gray-800">
+                              <div class="flex justify-between rounded-lg bg-blue-50 px-3 py-2 text-lg font-bold text-gray-900 sm:px-4 sm:py-3 sm:text-xl dark:bg-blue-950/30 dark:text-gray-100">
                                 <span>{t('orders.newTotal')}:</span>
                                 <span class="text-blue-600 dark:text-blue-300">{formatCurrency(total)}</span>
                               </div>
@@ -1980,20 +1997,22 @@ export default function Orders() {
                     >
                       {t('orders.markAsPaid')}
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        handleUpdateStatus(selectedOrder.id, 'cancelled')
-                        setSelectedOrder(null)
-                      }}
-                      class="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
-                    >
-                      {t('orders.cancelOrder')}
-                    </Button>
+                    {canManageOrderLifecycle && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          handleUpdateStatus(selectedOrder.id, 'cancelled')
+                          setSelectedOrder(null)
+                        }}
+                        class="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
+                      >
+                        {t('orders.cancelOrder')}
+                      </Button>
+                    )}
                   </>
                 )}
-                {selectedOrder.status === 'paid' && (
+                {selectedOrder.status === 'paid' && canManageOrderLifecycle && (
                   <Button
                     size="sm"
                     onClick={() => {
@@ -2005,7 +2024,7 @@ export default function Orders() {
                     {t('orders.markComplete')}
                   </Button>
                 )}
-                {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
+                {canManageOrderLifecycle && (
                   <Button
                     size="sm"
                     variant="outline"

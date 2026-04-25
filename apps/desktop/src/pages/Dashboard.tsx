@@ -10,6 +10,9 @@ interface DashboardProps {
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const { t } = useTranslation()
+  const statCardClass =
+    'text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 sm:p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all'
+  const statValueClass = 'text-xl font-semibold text-gray-900 sm:text-2xl dark:text-gray-100'
 
   const [stats, setStats] = useState({
     totalSales: 0,
@@ -48,69 +51,51 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   return (
     <div class="max-w-5xl mx-auto">
       {/* Main Stats */}
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-        <button
-          type="button"
-          onClick={() => onNavigate?.('orders')}
-          class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all"
-        >
+      <div class="mb-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+        <button type="button" onClick={() => onNavigate?.('orders')} class={statCardClass}>
           <p class="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-1">
             {t('dashboard.dailySales')}
           </p>
-          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(stats.totalSales)}</p>
+          <p class={statValueClass}>{formatCurrency(stats.totalSales)}</p>
           <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.completedPaid')}</p>
         </button>
 
-        <button
-          type="button"
-          onClick={() => onNavigate?.('orders')}
-          class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all"
-        >
+        <button type="button" onClick={() => onNavigate?.('orders')} class={statCardClass}>
           <p class="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">
             {t('dashboard.orders')}
           </p>
-          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.ordersToday}</p>
+          <p class={statValueClass}>{stats.ordersToday}</p>
           <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.totalOrdersDesc')}</p>
         </button>
 
         <button
           type="button"
           onClick={() => onNavigate?.('orders')}
-          class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all"
+          class={`${statCardClass} col-span-2 lg:col-span-1`}
         >
           <p class="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-1">
             {t('dashboard.avgOrderValue')}
           </p>
-          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-            {formatCurrency(stats.averageOrderValue)}
-          </p>
+          <p class={statValueClass}>{formatCurrency(stats.averageOrderValue)}</p>
           <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.perOrder')}</p>
         </button>
       </div>
 
       {/* Secondary Stats */}
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
-          type="button"
-          onClick={() => onNavigate?.('products')}
-          class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all"
-        >
+      <div class="grid grid-cols-2 gap-3 sm:gap-4">
+        <button type="button" onClick={() => onNavigate?.('products')} class={statCardClass}>
           <p class="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-1">
             {t('dashboard.lowStockAlert')}
           </p>
-          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.lowStockProducts}</p>
+          <p class={statValueClass}>{stats.lowStockProducts}</p>
           <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.needsRestocking')}</p>
         </button>
 
-        <button
-          type="button"
-          onClick={() => onNavigate?.('orders')}
-          class="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all"
-        >
+        <button type="button" onClick={() => onNavigate?.('orders')} class={statCardClass}>
           <p class="text-xs font-medium text-rose-600 dark:text-rose-400 uppercase tracking-wide mb-1">
             {t('dashboard.pendingOrders')}
           </p>
-          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.pendingOrders}</p>
+          <p class={statValueClass}>{stats.pendingOrders}</p>
           <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.awaitingProcessing')}</p>
         </button>
       </div>
