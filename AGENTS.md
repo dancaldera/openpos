@@ -29,6 +29,10 @@ The repo uses Bun’s test runner. Keep tests next to the code they cover and na
 
 Recent history favors short imperative subjects such as `Add Debian package to Linux release`, with `chore:` prefixes for maintenance or version bumps. Keep commits scoped to one change. PRs should explain the user-visible impact, note config or migration changes, link related issues, and include screenshots for desktop or landing UI changes.
 
+## Release Instructions
+
+Use `docs/RELEASE.md` as the source of truth. Releases are tag-driven through `.github/workflows/release.yml`; push a `vX.Y.Z` tag only after package versions match `X.Y.Z`. Bump versions with `bun run version:bump X.Y.Z`, review the four changed package files, run `bun run check`, commit with `chore: bump version to vX.Y.Z`, then create and push the `vX.Y.Z` tag. Do not edit versions manually unless the bump script cannot run, and do not commit generated files from `apps/desktop/dist-electron/`.
+
 ## Security & Configuration Tips
 
 Do not commit secrets or production tokens. Desktop runtime config belongs in the platform-specific Electron `userData` path, not in tracked files. When changing schema or seed data, update the corresponding files under `packages/data/migrations/` and mention any required migration step in the PR.
