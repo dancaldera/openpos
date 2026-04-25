@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'bun:test'
 import type { CompanySettings } from './company-settings-turso'
 import type { Order } from './orders-turso'
-import { formatReceiptData, renderReceiptHtml, renderReceiptText } from './print-service'
+import {
+  formatReceiptAppFooter,
+  formatReceiptData,
+  RECEIPT_APP_PHONE,
+  renderReceiptHtml,
+  renderReceiptText,
+} from './print-service'
 
 const settings: CompanySettings = {
   id: '1',
@@ -70,9 +76,13 @@ describe('print receipt helpers', () => {
     expect(text).toContain('Phone: 555-0100')
     expect(text).toContain('MX$116.00')
     expect(text).toContain('Gracias por su compra')
+    expect(text).toContain(formatReceiptAppFooter('OpenPOS', 'Version', 'Support'))
 
     expect(html).toContain('Caldera Market')
+    expect(html).not.toContain('<div>OpenPOS</div>')
     expect(html).toContain('https://example.com')
     expect(html).toContain('MX$116.00')
+    expect(html).toContain(RECEIPT_APP_PHONE)
+    expect(html).toContain('app-footer')
   })
 })

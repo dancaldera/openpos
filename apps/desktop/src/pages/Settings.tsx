@@ -6,6 +6,8 @@ import { requireDesktopApi } from '../lib/desktop'
 import { type CompanySettings, companySettingsService, SUPPORTED_CURRENCIES } from '../services/company-settings-turso'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
+const FIXED_APP_NAME = 'OpenPOS'
+
 export default function Settings() {
   const { t } = useTranslation()
   const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
@@ -31,8 +33,9 @@ export default function Settings() {
     try {
       setIsLoading(true)
       const companySettings = await companySettingsService.getSettings()
-      setSettings(companySettings)
-      setLocalSettings(companySettings)
+      const fixedSettings = { ...companySettings, appName: FIXED_APP_NAME }
+      setSettings(fixedSettings)
+      setLocalSettings(fixedSettings)
       setHasChanges(false)
     } catch (err: unknown) {
       toast.error((err as Error)?.message || t('errors.generic'))
@@ -52,13 +55,17 @@ export default function Settings() {
 
     try {
       setIsSaving(true)
-      const result = await companySettingsService.updateSettings(localSettings)
+      const result = await companySettingsService.updateSettings({
+        ...localSettings,
+        appName: FIXED_APP_NAME,
+      })
 
       if (result.success && result.settings) {
-        setSettings(result.settings)
-        setLocalSettings(result.settings)
-        appSettingsStore.appName.value = result.settings.appName
-        appSettingsStore.companyName.value = result.settings.name
+        const fixedSettings = { ...result.settings, appName: FIXED_APP_NAME }
+        setSettings(fixedSettings)
+        setLocalSettings(fixedSettings)
+        appSettingsStore.appName.value = FIXED_APP_NAME
+        appSettingsStore.companyName.value = fixedSettings.name
         setHasChanges(false)
         toast.success(t('settings.settingsUpdated'))
       } else {
@@ -84,10 +91,11 @@ export default function Settings() {
       const result = await companySettingsService.resetToDefaults()
 
       if (result.success && result.settings) {
-        setSettings(result.settings)
-        setLocalSettings(result.settings)
-        appSettingsStore.appName.value = result.settings.appName
-        appSettingsStore.companyName.value = result.settings.name
+        const fixedSettings = { ...result.settings, appName: FIXED_APP_NAME }
+        setSettings(fixedSettings)
+        setLocalSettings(fixedSettings)
+        appSettingsStore.appName.value = FIXED_APP_NAME
+        appSettingsStore.companyName.value = fixedSettings.name
         setHasChanges(false)
         toast.success(t('success.updated'))
         setIsResetDialogOpen(false)
@@ -170,17 +178,6 @@ export default function Settings() {
                     class="mb-2"
                   />
                   <span class={helperTextClass}>{t('settings.companyNameDesc')}</span>
-                </div>
-                <div>
-                  <Input
-                    label={t('settings.appName')}
-                    value={localSettings.appName}
-                    onInput={(e) => handleChange('appName', (e.target as HTMLInputElement).value)}
-                    disabled={isSaving}
-                    placeholder={t('settings.appName')}
-                    class="mb-2"
-                  />
-                  <span class={helperTextClass}>{t('settings.appNameDesc')}</span>
                 </div>
                 <div>
                   <Input

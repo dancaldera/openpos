@@ -17,10 +17,15 @@ import {
 } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
 import { authService } from '../services/auth-turso'
-import { companySettingsService } from '../services/company-settings-turso'
+import { type CompanySettings, companySettingsService } from '../services/company-settings-turso'
 import { type Customer, customerService } from '../services/customers-turso'
 import { type Order, orderService } from '../services/orders-turso'
-import { formatReceiptData, printThermalReceipt } from '../services/print-service'
+import {
+  formatReceiptAppFooter,
+  formatReceiptData,
+  type PrintReceiptData,
+  printThermalReceipt,
+} from '../services/print-service'
 import { resolveProductImageUrls } from '../services/product-images'
 import { type Product, type ProductWithVariants, productService } from '../services/products-turso'
 import { userService } from '../services/users-turso'
@@ -77,6 +82,127 @@ function ProductVisual({
   )
 }
 
+interface ReceiptPreviewProps {
+  receiptData: PrintReceiptData
+  labels: {
+    title: string
+    order: string
+    date: string
+    time: string
+    item: string
+    qty: string
+    subtotal: string
+    tax: string
+    total: string
+    phone: string
+    support: string
+    version: string
+  }
+}
+
+function ReceiptPreview({ receiptData, labels }: ReceiptPreviewProps) {
+  const storeInfo = receiptData.storeInfo
+  const appFooter = formatReceiptAppFooter(storeInfo.appName, labels.version, labels.support)
+  const optionalStoreRows = [
+    storeInfo.address,
+    storeInfo.phone ? `${labels.phone}: ${storeInfo.phone}` : '',
+    storeInfo.email,
+    storeInfo.website,
+  ].filter(Boolean)
+  const formatPreviewCurrency = (amount: number) => `${receiptData.currencySymbol}${Number(amount || 0).toFixed(2)}`
+
+  return (
+    <div>
+      <h4 class="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">{labels.title}</h4>
+      <div class="rounded-lg border border-gray-200 bg-gray-100 p-4 dark:border-gray-800 dark:bg-gray-950/40">
+        <div class="mx-auto w-full max-w-[320px] rounded-sm bg-white px-5 py-5 font-mono text-[12px] leading-snug text-gray-950 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">
+          <div class="text-center">
+            <div class="text-base font-bold leading-tight">{storeInfo.name || receiptData.title}</div>
+            {optionalStoreRows.map((row) => (
+              <div key={row} class="break-words">
+                {row}
+              </div>
+            ))}
+          </div>
+
+          <div class="my-3 border-t border-dashed border-gray-500" />
+
+          <div class="space-y-1">
+            {receiptData.orderId && (
+              <div class="flex justify-between gap-3">
+                <span>{labels.order}</span>
+                <span class="text-right">{receiptData.orderId}</span>
+              </div>
+            )}
+            <div class="flex justify-between gap-3">
+              <span>{labels.date}</span>
+              <span class="text-right">{receiptData.date}</span>
+            </div>
+            <div class="flex justify-between gap-3">
+              <span>{labels.time}</span>
+              <span class="text-right">{receiptData.time}</span>
+            </div>
+          </div>
+
+          <div class="my-3 border-t border-dashed border-gray-500" />
+
+          <div class="grid grid-cols-[minmax(0,1fr)_36px_82px] gap-2 border-b border-dashed border-gray-500 pb-1 font-bold">
+            <span>{labels.item}</span>
+            <span class="text-right">{labels.qty}</span>
+            <span class="text-right">{labels.total}</span>
+          </div>
+          <div class="space-y-2 py-2">
+            {receiptData.items.map((item, index) => (
+              <div key={`${item.name}-${index}`} class="grid grid-cols-[minmax(0,1fr)_36px_82px] gap-2">
+                <span class="break-words">{item.name}</span>
+                <span class="text-right">{item.quantity}</span>
+                <span class="text-right">{formatPreviewCurrency(item.total)}</span>
+              </div>
+            ))}
+          </div>
+
+          <div class="my-3 border-t border-dashed border-gray-500" />
+
+          <div class="ml-auto w-full max-w-[220px] space-y-1">
+            <div class="flex justify-between gap-3">
+              <span>{labels.subtotal}</span>
+              <span>{formatPreviewCurrency(receiptData.subtotal)}</span>
+            </div>
+            {receiptData.taxRate > 0 && (
+              <div class="flex justify-between gap-3">
+                <span>
+                  {labels.tax} ({receiptData.taxRate}%)
+                </span>
+                <span>{formatPreviewCurrency(receiptData.tax)}</span>
+              </div>
+            )}
+            <div class="flex justify-between gap-3 border-t border-dashed border-gray-500 pt-1 text-base font-bold">
+              <span>{labels.total}</span>
+              <span>{formatPreviewCurrency(receiptData.total)}</span>
+            </div>
+          </div>
+
+          {receiptData.footer && (
+            <>
+              <div class="my-3 border-t border-dashed border-gray-500" />
+              <div class="whitespace-pre-wrap text-center">{receiptData.footer}</div>
+            </>
+          )}
+          <div class="mt-3 border-t border-dashed border-gray-500 pt-2 text-center text-[10px] leading-tight text-gray-600 whitespace-pre-wrap">
+            {appFooter}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface PrintPreviewOptions {
+  showTaxes: boolean
+  showStoreInfo: boolean
+  showFooter: boolean
+}
+
 export default function Orders() {
   const { t } = useTranslation()
   const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
@@ -101,6 +227,7 @@ export default function Orders() {
   const [taxRate, setTaxRate] = useState<number>(0.1)
   const [taxEnabled, setTaxEnabled] = useState<boolean>(true)
   const [currencySymbol, setCurrencySymbol] = useState<string>('$')
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null)
   const [productSearch, setProductSearch] = useState('')
   const [editProductSearch, setEditProductSearch] = useState('')
   const [users, setUsers] = useState<{ [key: string]: string }>({}) // userId -> userName mapping
@@ -108,6 +235,12 @@ export default function Orders() {
   const [isPrinting, setIsPrinting] = useState(false)
   const [printStatus, setPrintStatus] = useState<string | null>(null)
   const [lastPrintTime, setLastPrintTime] = useState<number>(0)
+  const [printPreviewOrder, setPrintPreviewOrder] = useState<Order | null>(null)
+  const [printPreviewOptions, setPrintPreviewOptions] = useState<PrintPreviewOptions>({
+    showTaxes: true,
+    showStoreInfo: true,
+    showFooter: true,
+  })
   const [resolvedImageUrls, setResolvedImageUrls] = useState<Record<string, string>>({})
 
   // Pagination state
@@ -270,6 +403,7 @@ export default function Orders() {
       }
       setProductsWithVariants(variantsMap)
       setCustomers(customersData.filter((c) => c.isActive))
+      setCompanySettings(settings)
       setTaxEnabled(settings.taxEnabled)
       setTaxRate(settings.taxEnabled ? settings.taxPercentage / 100 : 0)
       setCurrencySymbol(settings.currencySymbol)
@@ -696,7 +830,41 @@ export default function Orders() {
     setCurrentPage(page)
   }
 
-  const handleThermalPrint = async (order: Order) => {
+  const buildReceiptData = (order: Order, options: PrintPreviewOptions): PrintReceiptData | null => {
+    if (!companySettings) {
+      return null
+    }
+
+    const receiptData = formatReceiptData(order, companySettings)
+    const shouldShowTaxes = options.showTaxes && companySettings.taxEnabled && receiptData.taxRate > 0
+
+    return {
+      ...receiptData,
+      tax: shouldShowTaxes ? receiptData.tax : 0,
+      taxRate: shouldShowTaxes ? receiptData.taxRate : 0,
+      footer: options.showFooter ? receiptData.footer : '',
+      supportLabel: t('orders.support'),
+      appVersionLabel: t('orders.appVersion'),
+      storeInfo: {
+        ...receiptData.storeInfo,
+        address: options.showStoreInfo ? receiptData.storeInfo.address : undefined,
+        phone: options.showStoreInfo ? receiptData.storeInfo.phone : undefined,
+        email: options.showStoreInfo ? receiptData.storeInfo.email : undefined,
+        website: options.showStoreInfo ? receiptData.storeInfo.website : undefined,
+      },
+    }
+  }
+
+  const openPrintPreview = (order: Order) => {
+    setPrintPreviewOptions({
+      showTaxes: Boolean(companySettings?.taxEnabled && (order.tax > 0 || companySettings.taxPercentage > 0)),
+      showStoreInfo: true,
+      showFooter: true,
+    })
+    setPrintPreviewOrder(order)
+  }
+
+  const handleThermalPrint = async (order: Order, receiptDataOverride?: PrintReceiptData) => {
     if (isPrinting) return // Prevent concurrent prints
 
     // Add debounce protection (2 seconds between prints)
@@ -722,21 +890,17 @@ export default function Orders() {
         throw new Error('Invalid order data')
       }
 
-      // Get company settings for printing
-      const settings = await companySettingsService.getSettings()
+      const receiptData = receiptDataOverride || buildReceiptData(order, printPreviewOptions)
 
-      // Validate settings
-      if (!settings) {
+      if (!receiptData) {
         throw new Error('Could not load company settings')
       }
-
-      // Format receipt data
-      const receiptData = formatReceiptData(order, settings)
 
       // Send to printer
       const response = await printThermalReceipt(receiptData)
 
       clearTimeout(timeoutId)
+      setPrintPreviewOrder(null)
       toast.success(t('orders.printSuccess'))
       console.log('Print response:', response)
     } catch (error: unknown) {
@@ -751,6 +915,8 @@ export default function Orders() {
       setTimeout(() => setPrintStatus(null), 3000)
     }
   }
+
+  const printPreviewReceipt = printPreviewOrder ? buildReceiptData(printPreviewOrder, printPreviewOptions) : null
 
   if (isLoading) {
     return <PageLoader message={t('orders.loadingOrders')} />
@@ -1970,7 +2136,7 @@ export default function Orders() {
               <div class="flex flex-wrap items-center gap-2 border-t border-gray-200 pt-4 dark:border-gray-800">
                 <Button
                   size="sm"
-                  onClick={() => handleThermalPrint(selectedOrder)}
+                  onClick={() => openPrintPreview(selectedOrder)}
                   disabled={isPrinting}
                   class="bg-purple-600 hover:bg-purple-700 text-white"
                 >
@@ -2046,6 +2212,106 @@ export default function Orders() {
           </div>
         </Dialog>
       )}
+
+      {/* Print Preview Modal */}
+      <Dialog
+        isOpen={!!printPreviewOrder}
+        onClose={() => setPrintPreviewOrder(null)}
+        title={t('orders.ticketPreview')}
+        size="lg"
+      >
+        <div class="space-y-5">
+          <div class="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)]">
+            <div class="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50">
+              <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('orders.printOptions')}</h4>
+              <label class="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={printPreviewOptions.showTaxes}
+                  disabled={!companySettings?.taxEnabled}
+                  onChange={(e) =>
+                    setPrintPreviewOptions({
+                      ...printPreviewOptions,
+                      showTaxes: (e.target as HTMLInputElement).checked,
+                    })
+                  }
+                  class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                />
+                <span>
+                  <span class="block font-medium">{t('orders.showTaxes')}</span>
+                  {!companySettings?.taxEnabled && (
+                    <span class="block text-xs text-gray-500 dark:text-gray-400">{t('orders.taxesDisabled')}</span>
+                  )}
+                </span>
+              </label>
+              <label class="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={printPreviewOptions.showStoreInfo}
+                  onChange={(e) =>
+                    setPrintPreviewOptions({
+                      ...printPreviewOptions,
+                      showStoreInfo: (e.target as HTMLInputElement).checked,
+                    })
+                  }
+                  class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span class="font-medium">{t('orders.showStoreInfo')}</span>
+              </label>
+              <label class="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={printPreviewOptions.showFooter}
+                  onChange={(e) =>
+                    setPrintPreviewOptions({
+                      ...printPreviewOptions,
+                      showFooter: (e.target as HTMLInputElement).checked,
+                    })
+                  }
+                  class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span class="font-medium">{t('orders.showFooter')}</span>
+              </label>
+            </div>
+
+            {printPreviewReceipt && (
+              <ReceiptPreview
+                receiptData={printPreviewReceipt}
+                labels={{
+                  title: t('orders.ticketPreview'),
+                  order: t('orders.order'),
+                  date: t('common.date'),
+                  time: t('common.time'),
+                  item: t('orders.item'),
+                  qty: t('common.quantity'),
+                  subtotal: t('common.subtotal'),
+                  tax: t('common.tax'),
+                  total: t('common.total'),
+                  phone: t('common.phone'),
+                  support: t('orders.support'),
+                  version: t('orders.appVersion'),
+                }}
+              />
+            )}
+          </div>
+
+          <div class="flex flex-wrap justify-end gap-2 border-t border-gray-200 pt-4 dark:border-gray-800">
+            <Button size="sm" variant="outline" onClick={() => setPrintPreviewOrder(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() =>
+                printPreviewOrder && printPreviewReceipt && handleThermalPrint(printPreviewOrder, printPreviewReceipt)
+              }
+              disabled={isPrinting || !printPreviewReceipt}
+              class="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {isPrinting ? t('orders.printing') : t('orders.printReceipt')}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
 
       <DialogConfirm
         isOpen={!!deleteConfirm}

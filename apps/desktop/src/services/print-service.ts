@@ -1,7 +1,10 @@
+import { APP_VERSION } from '../lib/app-version'
 import { requireDesktopApi } from '../lib/desktop'
 import { isDesktop } from '../lib/platform'
 import type { CompanySettings } from './company-settings-turso'
 import type { Order, OrderItem } from './orders-turso'
+
+export const RECEIPT_APP_PHONE = '+523322633323'
 
 export interface PrintReceiptItem {
   name: string
@@ -33,6 +36,8 @@ export interface PrintReceiptData {
   date: string
   time: string
   orderId?: string
+  supportLabel?: string
+  appVersionLabel?: string
 }
 
 export async function printThermalReceipt(receiptData: PrintReceiptData): Promise<string> {
@@ -49,6 +54,14 @@ export async function printThermalReceipt(receiptData: PrintReceiptData): Promis
     console.error('Print service error:', error)
     throw new Error(`Print command failed: ${getErrorMessage(error)}`)
   }
+}
+
+export function formatReceiptAppFooter(
+  appName = 'OpenPOS',
+  appVersionLabel = 'Version',
+  supportLabel = 'Support',
+): string {
+  return `${appName} | ${appVersionLabel} ${APP_VERSION}\n${supportLabel}: ${RECEIPT_APP_PHONE}`
 }
 
 export function formatReceiptData(order: Order, settings: CompanySettings, customTaxRate?: number): PrintReceiptData {
@@ -88,15 +101,17 @@ export function formatReceiptData(order: Order, settings: CompanySettings, custo
     date: new Date(order.createdAt).toLocaleDateString(),
     time: new Date(order.createdAt).toLocaleTimeString(),
     orderId: order.id,
+    supportLabel: 'Support',
+    appVersionLabel: 'Version',
   }
 }
 
 export function renderReceiptText(receiptData: PrintReceiptData, width = 42): string {
   const line = '-'.repeat(width)
   const storeInfo = receiptData.storeInfo
+  const appFooter = formatReceiptAppFooter(storeInfo.appName, receiptData.appVersionLabel, receiptData.supportLabel)
   const lines = [
     centerText(storeInfo.name || receiptData.title || 'Receipt', width),
-    storeInfo.appName && storeInfo.appName !== storeInfo.name ? centerText(storeInfo.appName, width) : '',
     storeInfo.address,
     storeInfo.phone ? `Phone: ${storeInfo.phone}` : '',
     storeInfo.email,
@@ -116,6 +131,7 @@ export function renderReceiptText(receiptData: PrintReceiptData, width = 42): st
     formatAmountLine('Total', receiptData.total, receiptData.currencySymbol, width),
     line,
     receiptData.footer,
+    centerText(appFooter, width),
     line,
     `Date: ${receiptData.date}`,
     `Time: ${receiptData.time}`,
@@ -126,6 +142,7 @@ export function renderReceiptText(receiptData: PrintReceiptData, width = 42): st
 
 export function renderReceiptHtml(receiptData: PrintReceiptData): string {
   const storeInfo = receiptData.storeInfo
+  const appFooter = formatReceiptAppFooter(storeInfo.appName, receiptData.appVersionLabel, receiptData.supportLabel)
   const optionalStoreRows = [
     storeInfo.address,
     storeInfo.phone ? `Phone: ${storeInfo.phone}` : '',
@@ -155,13 +172,13 @@ export function renderReceiptHtml(receiptData: PrintReceiptData): string {
     .totals { margin-left: auto; width: 48mm; }
     .total-row { font-weight: 700; font-size: 14px; }
     .footer { margin-top: 4mm; text-align: center; white-space: pre-wrap; }
+    .app-footer { margin-top: 2mm; padding-top: 2mm; border-top: 1px dashed #111; text-align: center; font-size: 9px; line-height: 1.2; white-space: pre-wrap; }
   </style>
 </head>
 <body>
   <main class="receipt">
     <header class="center">
       <div class="store-name">${escapeHtml(storeInfo.name || receiptData.title)}</div>
-      ${storeInfo.appName && storeInfo.appName !== storeInfo.name ? `<div>${escapeHtml(storeInfo.appName)}</div>` : ''}
       ${optionalStoreRows.map((row) => `<div>${escapeHtml(row)}</div>`).join('')}
     </header>
     <section class="meta">
@@ -197,7 +214,8 @@ export function renderReceiptHtml(receiptData: PrintReceiptData): string {
         <tr class="total-row"><td>Total</td><td class="amount">${escapeHtml(formatCurrency(receiptData.total, receiptData.currencySymbol))}</td></tr>
       </tbody>
     </table>
-    <div class="footer">${escapeHtml(receiptData.footer)}</div>
+    ${receiptData.footer ? `<div class="footer">${escapeHtml(receiptData.footer)}</div>` : ''}
+    <div class="app-footer">${escapeHtml(appFooter)}</div>
   </main>
 </body>
 </html>`
