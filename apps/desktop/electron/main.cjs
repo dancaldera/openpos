@@ -327,8 +327,12 @@ async function restartFromInstalledAppImage() {
 }
 
 function getBootstrapDbPath() {
-  const packageRoot = path.dirname(require.resolve('@openpos/data/package.json'))
-  return path.join(packageRoot, 'assets', 'openpos-bootstrap.sqlite')
+  try {
+    const packageRoot = path.dirname(require.resolve('@openpos/data/package.json'))
+    return path.join(packageRoot, 'assets', 'openpos-bootstrap.sqlite')
+  } catch {
+    return null
+  }
 }
 
 function parseJsonFile(filePath) {
@@ -823,12 +827,15 @@ function ensureDatabase() {
   logStartup('ensuring local database', { dbPath })
   if (!fs.existsSync(dbPath)) {
     const bootstrapDbPath = getBootstrapDbPath()
-    if (!fs.existsSync(bootstrapDbPath)) {
-      throw new Error(`Bootstrap database not found at ${bootstrapDbPath}`)
+    if (!bootstrapDbPath || !fs.existsSync(bootstrapDbPath)) {
+      throw new Error(
+        `Bootstrap database not found at ${bootstrapDbPath ?? '@openpos/data/assets/openpos-bootstrap.sqlite'}. ` +
+        `If running from source, run "bun run prepare:bootstrap" first.`
+      )
     }
 
     logStartup('creating local database from bootstrap', { bootstrapDbPath, dbPath })
-    fs.copyFileSync(bootstrapDbPath, dbPath)
+    fs.writeFileSync(dbPath, fs.readFileSync(bootstrapDbPath))
   }
 
   db = new Database(dbPath)

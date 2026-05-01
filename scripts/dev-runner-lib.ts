@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import type { ChildProcess } from 'node:child_process'
 
 export const API_PORT = 3001
@@ -51,6 +53,13 @@ export async function runDesktopMode(
   dependencies: DesktopModeDependencies,
 ): Promise<void> {
   const desktopEnv = buildDesktopDevEnvironment(runtime.env)
+
+  const rootDir = dirname(runtime.desktopDir)
+  const bootstrapDbPath = join(rootDir, 'packages', 'data', 'assets', 'openpos-bootstrap.sqlite')
+  if (!existsSync(bootstrapDbPath)) {
+    console.log('Bootstrap database missing, building it now...')
+    await dependencies.runCommand('bun', ['run', 'build:bootstrap'], join(rootDir, 'packages', 'data'))
+  }
 
   await dependencies.runCommand('bun', ['run', 'prepare:native'], runtime.desktopDir)
   await dependencies.ensureElectronBinaryInstalled(runtime.desktopDir)
