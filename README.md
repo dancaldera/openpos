@@ -44,6 +44,7 @@ Example:
   "tursoDatabaseUrl": "libsql://your-db.turso.io",
   "tursoAuthToken": "your-token-here",
   "apiUrl": "https://your-api.example.com",
+  "thermalPrinterName": "Thermal_80mm",
   "githubToken": "github_pat_xxxxxxxxxxxx"
 }
 ```
@@ -62,6 +63,13 @@ Verify the system printing path:
 lpstat -d
 printf "OpenPOS print test\n\n\n" | lp -o raw
 ```
+
+If the system has no default printer, either set one with `lpoptions -d <printer>` or add
+`thermalPrinterName` to the OpenPOS `config.json`. You can list available destinations with
+`lpstat -v`.
+
+For macOS setup details, including USB ESC/POS printers, CUPS queues, and raw
+printing tests, see [Thermal Receipt Printing on macOS](docs/THERMAL_PRINTING_MACOS.md).
 
 ### `githubToken` — in-app update checks
 

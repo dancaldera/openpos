@@ -391,6 +391,7 @@
     "itemTotal": "Item Total",
     "printReceipt": "Print Receipt",
     "printing": "Printing...",
+    "receiptFooter": "Thank you for your purchase!",
     "confirmDelete": "Confirm Delete",
     "deleteConfirmMessage": "Are you sure you want to delete this order? This action cannot be undone.",
     "selectCustomerPlaceholder": "Select a customer or leave blank for walk-in",

@@ -6,6 +6,14 @@ import type { Order, OrderItem } from './orders-turso'
 
 export const RECEIPT_APP_PHONE = '+523322633323'
 
+function obfuscateOrderId(orderId: string): string {
+  try {
+    return btoa(orderId).replace(/=+$/, '').slice(0, 8)
+  } catch {
+    return orderId.slice(0, 8)
+  }
+}
+
 export interface PrintReceiptItem {
   name: string
   quantity: number
@@ -38,6 +46,16 @@ export interface PrintReceiptData {
   orderId?: string
   supportLabel?: string
   appVersionLabel?: string
+  supportPhone?: string
+  taxEnabled?: boolean
+  locale?: string
+  itemLabel?: string
+  qtyLabel?: string
+  totalLabel?: string
+  subtotalLabel?: string
+  taxLabel?: string
+  orderLabel?: string
+  footerLabel?: string
 }
 
 export async function printThermalReceipt(receiptData: PrintReceiptData): Promise<string> {
@@ -60,11 +78,17 @@ export function formatReceiptAppFooter(
   appName = 'OpenPOS',
   appVersionLabel = 'Version',
   supportLabel = 'Support',
+  supportPhone = RECEIPT_APP_PHONE,
 ): string {
-  return `${appName} | ${appVersionLabel} ${APP_VERSION}\n${supportLabel}: ${RECEIPT_APP_PHONE}`
+  return `${appName} | ${appVersionLabel} ${APP_VERSION}\n${supportLabel}: ${supportPhone}`
 }
 
-export function formatReceiptData(order: Order, settings: CompanySettings, customTaxRate?: number): PrintReceiptData {
+export function formatReceiptData(
+  order: Order,
+  settings: CompanySettings,
+  customTaxRate?: number,
+  footerLabel?: string,
+): PrintReceiptData {
   // Calculate values with custom tax if provided
   const baseSubtotal = order?.subtotal || 0
   const taxRate = customTaxRate !== undefined ? customTaxRate / 100 : (settings?.taxPercentage || 0) / 100
@@ -97,44 +121,72 @@ export function formatReceiptData(order: Order, settings: CompanySettings, custo
     tax: taxAmount,
     taxRate: customTaxRate !== undefined ? customTaxRate : settings?.taxPercentage || 0,
     total: total,
-    footer: settings?.receiptFooter || 'Thank you for your purchase!',
-    date: new Date(order.createdAt).toLocaleDateString(),
-    time: new Date(order.createdAt).toLocaleTimeString(),
-    orderId: order.id,
+    footer: settings?.receiptFooter || footerLabel || 'Thank you for your purchase!',
+    date: new Date(order.createdAt).toLocaleDateString(settings?.language),
+    time: new Date(order.createdAt).toLocaleTimeString(settings?.language),
+    orderId: obfuscateOrderId(order.id),
     supportLabel: 'Support',
     appVersionLabel: 'Version',
+    supportPhone: RECEIPT_APP_PHONE,
+    taxEnabled: settings?.taxEnabled ?? false,
+    locale: settings?.language,
+    footerLabel,
   }
 }
 
 export function renderReceiptText(receiptData: PrintReceiptData, width = 42): string {
   const line = '-'.repeat(width)
   const storeInfo = receiptData.storeInfo
-  const appFooter = formatReceiptAppFooter(storeInfo.appName, receiptData.appVersionLabel, receiptData.supportLabel)
+  const appFooter = formatReceiptAppFooter(
+    storeInfo.appName,
+    receiptData.appVersionLabel,
+    receiptData.supportLabel,
+    receiptData.supportPhone,
+  )
+  const appFooterLines = appFooter.split('\n')
+
   const lines = [
     centerText(storeInfo.name || receiptData.title || 'Receipt', width),
-    storeInfo.address,
-    storeInfo.phone ? `Phone: ${storeInfo.phone}` : '',
-    storeInfo.email,
-    storeInfo.website,
-    receiptData.orderId ? `Order: ${receiptData.orderId}` : '',
+    storeInfo.address ? centerText(storeInfo.address, width) : '',
+    storeInfo.phone ? centerText(storeInfo.phone, width) : '',
+    storeInfo.email ? centerText(storeInfo.email, width) : '',
+    storeInfo.website ? centerText(storeInfo.website, width) : '',
     line,
-    formatReceiptRow('Item', 'Qty', 'Total', width),
+    formatReceiptRow(
+      (receiptData.itemLabel || 'Item').toUpperCase(),
+      (receiptData.qtyLabel || 'Qty').toUpperCase(),
+      (receiptData.totalLabel || 'Total').toUpperCase(),
+      width,
+    ),
     line,
     ...receiptData.items.map((item) =>
       formatReceiptRow(item.name, String(item.quantity), formatCurrency(item.total, receiptData.currencySymbol), width),
     ),
     line,
-    formatAmountLine('Subtotal', receiptData.subtotal, receiptData.currencySymbol, width),
-    receiptData.taxRate > 0
-      ? formatAmountLine(`Tax (${receiptData.taxRate}%)`, receiptData.tax, receiptData.currencySymbol, width)
+    receiptData.taxEnabled
+      ? formatAmountLine(
+          receiptData.subtotalLabel || 'Subtotal',
+          receiptData.subtotal,
+          receiptData.currencySymbol,
+          width,
+        )
       : '',
-    formatAmountLine('Total', receiptData.total, receiptData.currencySymbol, width),
+    receiptData.taxEnabled && receiptData.taxRate > 0
+      ? formatAmountLine(
+          `${receiptData.taxLabel || 'Tax'} (${receiptData.taxRate}%)`,
+          receiptData.tax,
+          receiptData.currencySymbol,
+          width,
+        )
+      : '',
+    formatAmountLine(receiptData.totalLabel || 'Total', receiptData.total, receiptData.currencySymbol, width),
     line,
-    receiptData.footer,
-    centerText(appFooter, width),
+    centerText(receiptData.footer || receiptData.footerLabel || 'Thank you for your purchase!', width),
     line,
-    `Date: ${receiptData.date}`,
-    `Time: ${receiptData.time}`,
+    receiptData.orderId ? centerText(`${receiptData.orderLabel || 'Order'}: ${receiptData.orderId}`, width) : '',
+    receiptData.date ? centerText(receiptData.date, width) : '',
+    receiptData.time ? centerText(receiptData.time, width) : '',
+    ...appFooterLines.map((l) => centerText(l, width)),
   ]
 
   return lines.filter((lineItem): lineItem is string => Boolean(lineItem)).join('\n')
@@ -143,12 +195,7 @@ export function renderReceiptText(receiptData: PrintReceiptData, width = 42): st
 export function renderReceiptHtml(receiptData: PrintReceiptData): string {
   const storeInfo = receiptData.storeInfo
   const appFooter = formatReceiptAppFooter(storeInfo.appName, receiptData.appVersionLabel, receiptData.supportLabel)
-  const optionalStoreRows = [
-    storeInfo.address,
-    storeInfo.phone ? `Phone: ${storeInfo.phone}` : '',
-    storeInfo.email,
-    storeInfo.website,
-  ].filter(Boolean)
+  const optionalStoreRows = [storeInfo.address, storeInfo.phone, storeInfo.email, storeInfo.website].filter(Boolean)
 
   return `<!doctype html>
 <html>
@@ -181,14 +228,9 @@ export function renderReceiptHtml(receiptData: PrintReceiptData): string {
       <div class="store-name">${escapeHtml(storeInfo.name || receiptData.title)}</div>
       ${optionalStoreRows.map((row) => `<div>${escapeHtml(row)}</div>`).join('')}
     </header>
-    <section class="meta">
-      ${receiptData.orderId ? `<div>Order: ${escapeHtml(receiptData.orderId)}</div>` : ''}
-      <div>Date: ${escapeHtml(receiptData.date)}</div>
-      <div>Time: ${escapeHtml(receiptData.time)}</div>
-    </section>
     <div class="rule"></div>
     <table>
-      <thead><tr><th>Item</th><th class="qty">Qty</th><th class="amount">Total</th></tr></thead>
+      <thead><tr><th>${escapeHtml((receiptData.itemLabel || 'Item').toUpperCase())}</th><th class="qty">${escapeHtml((receiptData.qtyLabel || 'Qty').toUpperCase())}</th><th class="amount">${escapeHtml((receiptData.totalLabel || 'Total').toUpperCase())}</th></tr></thead>
       <tbody>
         ${receiptData.items
           .map(
@@ -203,18 +245,27 @@ export function renderReceiptHtml(receiptData: PrintReceiptData): string {
     <div class="rule"></div>
     <table class="totals">
       <tbody>
-        <tr><td>Subtotal</td><td class="amount">${escapeHtml(formatCurrency(receiptData.subtotal, receiptData.currencySymbol))}</td></tr>
         ${
-          receiptData.taxRate > 0
-            ? `<tr><td>Tax (${receiptData.taxRate}%)</td><td class="amount">${escapeHtml(
+          receiptData.taxEnabled
+            ? `<tr><td>${escapeHtml(receiptData.subtotalLabel || 'Subtotal')}</td><td class="amount">${escapeHtml(formatCurrency(receiptData.subtotal, receiptData.currencySymbol))}</td></tr>`
+            : ''
+        }
+        ${
+          receiptData.taxEnabled && receiptData.taxRate > 0
+            ? `<tr><td>${escapeHtml(receiptData.taxLabel || 'Tax')} (${receiptData.taxRate}%)</td><td class="amount">${escapeHtml(
                 formatCurrency(receiptData.tax, receiptData.currencySymbol),
               )}</td></tr>`
             : ''
         }
-        <tr class="total-row"><td>Total</td><td class="amount">${escapeHtml(formatCurrency(receiptData.total, receiptData.currencySymbol))}</td></tr>
+        <tr class="total-row"><td>${escapeHtml(receiptData.totalLabel || 'Total')}</td><td class="amount">${escapeHtml(formatCurrency(receiptData.total, receiptData.currencySymbol))}</td></tr>
       </tbody>
     </table>
     ${receiptData.footer ? `<div class="footer">${escapeHtml(receiptData.footer)}</div>` : ''}
+    <div class="meta" style="text-align: center; margin-top: 2mm;">
+      ${receiptData.orderId ? `<div>${escapeHtml(receiptData.orderLabel || 'Order')}: ${escapeHtml(receiptData.orderId)}</div>` : ''}
+      <div>${escapeHtml(receiptData.date)}</div>
+      <div>${escapeHtml(receiptData.time)}</div>
+    </div>
     <div class="app-footer">${escapeHtml(appFooter)}</div>
   </main>
 </body>

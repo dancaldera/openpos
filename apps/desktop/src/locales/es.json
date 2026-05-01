@@ -391,6 +391,7 @@
     "notes": "Notas",
     "printReceipt": "Imprimir Recibo",
     "printing": "Imprimiendo...",
+    "receiptFooter": "¡Gracias por su compra!",
     "confirmDelete": "Confirmar Eliminar",
     "deleteConfirmMessage": "¿Estás seguro de que quieres eliminar esta orden? Esta acción no se puede deshacer.",
     "selectCustomerPlaceholder": "Selecciona un cliente o deja en blanco para cliente de paso",

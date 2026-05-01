@@ -9,6 +9,7 @@ const {
   resolveDesktopConnectionConfig,
   resolveDesktopRuntimeConfigPath,
 } = require('./config-resolver.cjs')
+const { formatPrinterCommandError, resolvePrinterConfig } = require('./printer-config.cjs')
 const { isLegacyLocalImageKey } = require('./product-image-keys.cjs')
 const { createSyncManager, ensureLocalSyncSchema, resetLocalDatabase } = require('./sync-manager.cjs')
 
@@ -875,10 +876,6 @@ function runTransaction(statements) {
   }
 }
 
-function resolvePrinterConfig() {
-  return { command: 'lp', args: ['-o', 'raw'] }
-}
-
 function printThermalReceipt(receiptData) {
   return new Promise((resolve, reject) => {
     const receiptPayload = parseReceiptPayload(receiptData)
@@ -902,7 +899,12 @@ function printThermalReceipt(receiptData) {
       return
     }
 
-    const { command, args } = resolvePrinterConfig()
+    const runtimeConfig = getRuntimeConfig()
+    const { command, args, printerName } = resolvePrinterConfig({
+      runtimeConfig: runtimeConfig.config,
+      processEnv: process.env,
+      envConfig: getDotEnvConfig(),
+    })
     const resolvedArgs = args.map((arg) => (arg === '{data}' ? receiptText : arg))
     const writesToStdin = !resolvedArgs.includes(receiptText)
 
@@ -931,7 +933,16 @@ function printThermalReceipt(receiptData) {
         return
       }
 
-      reject(new Error(stderr.trim() || `Printer command "${command}" failed with exit code ${code ?? 'unknown'}`))
+      reject(
+        new Error(
+          formatPrinterCommandError({
+            command,
+            code,
+            stderr,
+            printerName,
+          }),
+        ),
+      )
     })
 
     if (writesToStdin) {
@@ -958,11 +969,22 @@ function parseReceiptPayload(receiptData) {
   }
 }
 
+function normalizePrinterText(text) {
+  if (!text) return ''
+  return String(text)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/¡/g, '!')
+    .replace(/¿/g, '?')
+}
+
 function createEscposReceiptBuffer(receiptText) {
+  const normalized = normalizePrinterText(receiptText)
   return Buffer.concat([
     Buffer.from([0x1b, 0x40]), // Initialize printer.
-    Buffer.from(receiptText, 'utf8'),
-    Buffer.from('\n\n\n', 'utf8'),
+    Buffer.from(normalized, 'utf8'),
+    Buffer.from('\n', 'utf8'),
+    Buffer.from([0x1b, 0x64, 0x06]), // Feed 6 lines before cutting.
     Buffer.from([0x1d, 0x56, 0x00]), // Full cut.
   ])
 }
@@ -985,16 +1007,26 @@ function renderReceiptText(receiptData) {
   }
   const currencySymbol = receiptData.currencySymbol || '$'
   const taxRate = Number(receiptData.taxRate || 0)
+  const appFooter = formatReceiptAppFooter(
+    storeInfo.appName,
+    receiptData.appVersionLabel,
+    receiptData.supportLabel,
+    receiptData.supportPhone,
+  )
+  const appFooterLines = appFooter.split('\n')
+
+  const itemLabel = String(receiptData.itemLabel || 'Item').toUpperCase()
+  const qtyLabel = String(receiptData.qtyLabel || 'Qty').toUpperCase()
+  const totalLabel = String(receiptData.totalLabel || 'Total').toUpperCase()
+
   const lines = [
     centerText(storeInfo.name || receiptData.title || 'Receipt', width),
-    storeInfo.appName && storeInfo.appName !== storeInfo.name ? centerText(storeInfo.appName, width) : '',
-    storeInfo.address,
-    storeInfo.phone ? `Phone: ${storeInfo.phone}` : '',
-    storeInfo.email,
-    storeInfo.website,
-    receiptData.orderId ? `Order: ${receiptData.orderId}` : '',
+    storeInfo.address ? centerText(storeInfo.address, width) : '',
+    storeInfo.phone ? centerText(storeInfo.phone, width) : '',
+    storeInfo.email ? centerText(storeInfo.email, width) : '',
+    storeInfo.website ? centerText(storeInfo.website, width) : '',
     line,
-    formatReceiptRow('Item', 'Qty', 'Total', width),
+    formatReceiptRow(itemLabel, qtyLabel, totalLabel, width),
     line,
     ...receiptData.items.map((item) =>
       formatReceiptRow(
@@ -1005,14 +1037,31 @@ function renderReceiptText(receiptData) {
       ),
     ),
     line,
-    formatAmountLine('Subtotal', Number(receiptData.subtotal || 0), currencySymbol, width),
-    taxRate > 0 ? formatAmountLine(`Tax (${taxRate}%)`, Number(receiptData.tax || 0), currencySymbol, width) : '',
-    formatAmountLine('Total', Number(receiptData.total || 0), currencySymbol, width),
+    receiptData.taxEnabled
+      ? formatAmountLine(receiptData.subtotalLabel || 'Subtotal', Number(receiptData.subtotal || 0), currencySymbol, width)
+      : '',
+    receiptData.taxEnabled && taxRate > 0
+      ? formatAmountLine(
+          `${receiptData.taxLabel || 'Tax'} (${taxRate}%)`,
+          Number(receiptData.tax || 0),
+          currencySymbol,
+          width,
+        )
+      : '',
+    formatAmountLine(receiptData.totalLabel || 'Total', Number(receiptData.total || 0), currencySymbol, width),
     line,
-    receiptData.footer || 'Thank you for your purchase!',
+    centerText(receiptData.footer || receiptData.footerLabel || 'Thank you for your purchase!', width),
     line,
-    `Date: ${receiptData.date || new Date().toLocaleDateString()}`,
-    `Time: ${receiptData.time || new Date().toLocaleTimeString()}`,
+    receiptData.orderId
+      ? centerText(`${receiptData.orderLabel || 'Order'}: ${receiptData.orderId}`, width)
+      : '',
+    receiptData.date
+      ? centerText(receiptData.date, width)
+      : centerText(new Date().toLocaleDateString(receiptData.locale), width),
+    receiptData.time
+      ? centerText(receiptData.time, width)
+      : centerText(new Date().toLocaleTimeString(receiptData.locale), width),
+    ...appFooterLines.map((l) => centerText(l, width)),
   ]
 
   return lines.filter(Boolean).join('\n')
@@ -1044,6 +1093,11 @@ function centerText(text, width) {
 
 function truncate(value, maxLength) {
   return value.length > maxLength ? `${value.slice(0, Math.max(0, maxLength - 3))}...` : value
+}
+
+function formatReceiptAppFooter(appName, appVersionLabel, supportLabel, supportPhone) {
+  const version = pkg.version || '1.0.0'
+  return `${appName || 'OpenPOS'} | ${appVersionLabel || 'Version'} ${version}\n${supportLabel || 'Support'}: ${supportPhone || '+523322633323'}`
 }
 
 function createWindow() {

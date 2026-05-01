@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { CompanySettings } from './company-settings-turso'
 import type { Order } from './orders-turso'
-import {
-  formatReceiptAppFooter,
-  formatReceiptData,
-  RECEIPT_APP_PHONE,
-  renderReceiptHtml,
-  renderReceiptText,
-} from './print-service'
+import { formatReceiptData, RECEIPT_APP_PHONE, renderReceiptHtml, renderReceiptText } from './print-service'
 
 const settings: CompanySettings = {
   id: '1',
@@ -64,6 +58,9 @@ describe('print receipt helpers', () => {
     expect(receipt.currencySymbol).toBe('MX$')
     expect(receipt.footer).toBe('Gracias por su compra')
     expect(receipt.total).toBe(116)
+    expect(receipt.supportPhone).toBe(RECEIPT_APP_PHONE)
+    expect(receipt.orderId).not.toBe(order.id)
+    expect(receipt.orderId).toBe(btoa(order.id).replace(/=+$/, '').slice(0, 8))
   })
 
   it('renders store information and totals in text and html receipts', () => {
@@ -73,10 +70,14 @@ describe('print receipt helpers', () => {
 
     expect(text).toContain('Caldera Market')
     expect(text).toContain('Av. Principal 123')
-    expect(text).toContain('Phone: 555-0100')
+    expect(text).toContain('555-0100')
     expect(text).toContain('MX$116.00')
     expect(text).toContain('Gracias por su compra')
-    expect(text).toContain(formatReceiptAppFooter('OpenPOS', 'Version', 'Support'))
+    expect(text).toContain('OpenPOS | Version 0.7.5')
+    expect(text).toContain('Support: +523322633323')
+    expect(text).toContain('ITEM')
+    expect(text).toContain('QTY')
+    expect(text).toContain('TOTAL')
 
     expect(html).toContain('Caldera Market')
     expect(html).not.toContain('<div>OpenPOS</div>')
@@ -84,5 +85,26 @@ describe('print receipt helpers', () => {
     expect(html).toContain('MX$116.00')
     expect(html).toContain(RECEIPT_APP_PHONE)
     expect(html).toContain('app-footer')
+    expect(html).toContain('ITEM')
+    expect(html).toContain('QTY')
+    expect(html).toContain('TOTAL')
+  })
+
+  it('hides subtotal and tax when taxes are disabled', () => {
+    const noTaxSettings = { ...settings, taxEnabled: false }
+    const receipt = formatReceiptData(order, noTaxSettings)
+    const text = renderReceiptText(receipt)
+    const html = renderReceiptHtml(receipt)
+
+    expect(receipt.taxEnabled).toBe(false)
+    expect(text).not.toContain('Subtotal')
+    expect(text).not.toContain('Tax')
+    expect(text).toContain('Total')
+    expect(text).toContain('MX$100.00')
+
+    expect(html).not.toContain('<td>Subtotal</td>')
+    expect(html).not.toContain('Tax')
+    expect(html).toContain('<td>Total</td>')
+    expect(html).toContain('MX$100.00')
   })
 })
