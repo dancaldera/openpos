@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import {
   Button,
   Dialog,
@@ -599,6 +599,8 @@ export default function Products() {
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [productsWithVariants, setProductsWithVariants] = useState<Record<string, ProductWithVariants>>({})
   const [isLoading, setIsLoading] = useState(true)
+  const [isSearching, setIsSearching] = useState(false)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
   const [error, setError] = useState('')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -625,6 +627,11 @@ export default function Products() {
 
   useEffect(() => {
     loadProducts()
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
   }, [])
 
   const syncResolvedImageUrls = async (productList: Product[]) => {
@@ -648,7 +655,7 @@ export default function Products() {
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
     if (searchQuery.trim()) {
-      handleSearch(searchQuery, page)
+      performSearch(searchQuery, page)
     } else {
       loadProducts(page)
     }
@@ -682,15 +689,10 @@ export default function Products() {
     }
   }
 
-  const handleSearch = async (query: string, page: number = 1) => {
-    setSearchQuery(query)
-    if (query.trim() === '') {
-      await loadProducts(page)
-      return
-    }
-
+  const performSearch = async (query: string, page: number) => {
     try {
-      setIsLoading(true)
+      setIsSearching(true)
+      setError('')
       const searchResults = await productService.searchProductsPaginated(query, page, pageSize)
       setProducts(searchResults.products)
       setTotalCount(searchResults.totalCount)
@@ -700,8 +702,28 @@ export default function Products() {
     } catch (_err) {
       setError(t('errors.generic'))
     } finally {
-      setIsLoading(false)
+      setIsSearching(false)
     }
+  }
+
+  const handleSearchInput = (e: Event) => {
+    const query = (e.target as HTMLInputElement).value
+    setSearchQuery(query)
+    setCurrentPage(1)
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    if (query.trim() === '') {
+      loadProducts(1)
+      return
+    }
+
+    setIsSearching(true)
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(query, 1)
+    }, 300)
   }
 
   const handleCreateProduct = () => {
@@ -751,7 +773,7 @@ export default function Products() {
   const handleSaveProduct = async (_savedProduct: Product, options?: { warning?: string }) => {
     // Reload data to reflect changes with proper pagination
     if (searchQuery.trim()) {
-      await handleSearch(searchQuery, currentPage)
+      await performSearch(searchQuery, currentPage)
     } else {
       await loadProducts(currentPage)
     }
@@ -859,7 +881,7 @@ export default function Products() {
       if (result.success) {
         // Reload products
         if (searchQuery.trim()) {
-          await handleSearch(searchQuery, currentPage)
+          await performSearch(searchQuery, currentPage)
         } else {
           await loadProducts(currentPage)
         }
@@ -911,7 +933,7 @@ export default function Products() {
     )
   }
 
-  if (isLoading) {
+  if (isLoading && products.length === 0) {
     return <PageLoader message={t('products.loadingCatalog')} />
   }
 
@@ -935,10 +957,7 @@ export default function Products() {
           type="search"
           placeholder={t('products.searchProducts')}
           value={searchQuery}
-          onInput={(e) => {
-            setCurrentPage(1)
-            handleSearch((e.target as HTMLInputElement).value, 1)
-          }}
+          onInput={handleSearchInput}
           leftIcon={
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -958,7 +977,17 @@ export default function Products() {
             </svg>
           }
           rightIcon={
-            searchQuery ? (
+            isSearching ? (
+              <svg class="animate-spin" fill="none" viewBox="0 0 24 24" role="img" aria-label="Searching">
+                <title>Searching</title>
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            ) : searchQuery ? (
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label="Clear search">
                 <title>Clear search</title>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -968,8 +997,10 @@ export default function Products() {
           onRightIconClick={
             searchQuery
               ? () => {
+                  setSearchQuery('')
                   setCurrentPage(1)
-                  handleSearch('', 1)
+                  if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+                  loadProducts(1)
                 }
               : undefined
           }
@@ -1305,7 +1336,7 @@ export default function Products() {
             onSaved={async () => {
               // Reload products
               if (searchQuery.trim()) {
-                await handleSearch(searchQuery, currentPage)
+                await performSearch(searchQuery, currentPage)
               } else {
                 await loadProducts(currentPage)
               }

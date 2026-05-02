@@ -770,7 +770,7 @@ export default function Orders() {
     }
   }
 
-  if (isLoading) {
+  if (isLoading && orders.length === 0) {
     return <PageLoader message={t('orders.loadingOrders')} />
   }
 

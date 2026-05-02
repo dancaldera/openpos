@@ -37,7 +37,7 @@ export const SUPPORTED_CURRENCIES = [
   { symbol: 'C$', name: 'Canadian Dollar (CAD)' },
   { symbol: 'A$', name: 'Australian Dollar (AUD)' },
   { symbol: '₽', name: 'Russian Ruble (RUB)' },
-  { symbol: '¥', name: 'Chinese Yuan (CNY)' },
+  { symbol: 'CN¥', name: 'Chinese Yuan (CNY)' },
   { symbol: '₩', name: 'South Korean Won (KRW)' },
   { symbol: 'MX$', name: 'Mexican Peso (MXN)' },
 ] as const
