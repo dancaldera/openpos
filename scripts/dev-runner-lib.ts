@@ -9,6 +9,7 @@ export const PORT_WAIT_TIMEOUT_MS = 30_000
 export const DEFAULT_DESKTOP_DEV_API_URL = `http://localhost:${API_PORT}`
 
 export interface DesktopModeRuntime {
+  rootDir: string
   desktopDir: string
   apiDir: string
   env?: NodeJS.ProcessEnv
@@ -54,17 +55,17 @@ export async function runDesktopMode(
 ): Promise<void> {
   const desktopEnv = buildDesktopDevEnvironment(runtime.env)
 
-  const rootDir = dirname(runtime.desktopDir)
+  const rootDir = runtime.rootDir
   const bootstrapDbPath = join(rootDir, 'packages', 'data', 'assets', 'openpos-bootstrap.sqlite')
   if (!existsSync(bootstrapDbPath)) {
     console.log('Bootstrap database missing, building it now...')
-    await dependencies.runCommand('bun', ['run', 'build:bootstrap'], join(rootDir, 'packages', 'data'))
+    await dependencies.runCommand(process.execPath, ['run', 'build:bootstrap'], join(rootDir, 'packages', 'data'))
   }
 
-  await dependencies.runCommand('bun', ['run', 'prepare:native'], runtime.desktopDir)
+  await dependencies.runCommand(process.execPath, ['run', 'prepare:native'], runtime.desktopDir)
   await dependencies.ensureElectronBinaryInstalled(runtime.desktopDir)
 
-  const apiProcess = dependencies.spawnLongRunning('bun', ['run', 'dev'], runtime.apiDir, desktopEnv)
+  const apiProcess = dependencies.spawnLongRunning(process.execPath, ['run', 'dev'], runtime.apiDir, desktopEnv)
   const apiExit = createExitTracker('api', apiProcess, dependencies.waitForChildExit)
 
   try {
@@ -75,7 +76,7 @@ export async function runDesktopMode(
     return
   }
 
-  const viteProcess = dependencies.spawnLongRunning('bun', ['run', 'dev'], runtime.desktopDir, desktopEnv)
+  const viteProcess = dependencies.spawnLongRunning(process.execPath, ['run', 'dev'], runtime.desktopDir, desktopEnv)
   const viteExit = createExitTracker('vite', viteProcess, dependencies.waitForChildExit)
 
   try {

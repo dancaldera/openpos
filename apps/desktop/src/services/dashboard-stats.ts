@@ -25,6 +25,11 @@ export const DASHBOARD_STATS_TTL_MS = 30_000
 export function invalidateDashboardStatsCache(cacheKey?: string): void {
   if (cacheKey) {
     dashboardStatsCache.delete(cacheKey)
+    for (const key of dashboardStatsCache.keys()) {
+      if (key.startsWith(`${cacheKey}:`)) {
+        dashboardStatsCache.delete(key)
+      }
+    }
     return
   }
 
@@ -95,14 +100,21 @@ export async function loadDashboardStats(
   options: LoadDashboardStatsOptions = {},
 ): Promise<DashboardStats> {
   const now = options.now ?? Date.now()
-  const cachedEntry = dashboardStatsCache.get(cacheKey)
+  const referenceDate = options.referenceDate ?? new Date(now)
+  const scopedCacheKey = [
+    cacheKey,
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    referenceDate.getDate(),
+  ].join(':')
+  const cachedEntry = dashboardStatsCache.get(scopedCacheKey)
 
   if (cachedEntry && cachedEntry.expiresAt > now) {
     return cachedEntry.stats
   }
 
-  const stats = await fetchDashboardStats(runQuery, options.referenceDate ?? new Date(now))
-  dashboardStatsCache.set(cacheKey, {
+  const stats = await fetchDashboardStats(runQuery, referenceDate)
+  dashboardStatsCache.set(scopedCacheKey, {
     stats,
     expiresAt: now + DASHBOARD_STATS_TTL_MS,
   })

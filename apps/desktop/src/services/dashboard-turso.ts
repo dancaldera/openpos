@@ -28,6 +28,10 @@ export interface InventoryStatus {
   inStock: number
 }
 
+interface GetDashboardStatsOptions {
+  referenceDate?: Date
+}
+
 export class DashboardService {
   private static instance: DashboardService
 
@@ -42,9 +46,9 @@ export class DashboardService {
     invalidateDashboardStatsCacheEntry('turso')
   }
 
-  async getDashboardStats(): Promise<DashboardStats> {
+  async getDashboardStats(options: GetDashboardStatsOptions = {}): Promise<DashboardStats> {
     try {
-      return await loadDashboardStats('turso', query)
+      return await loadDashboardStats('turso', query, { referenceDate: options.referenceDate })
     } catch (error) {
       console.error('Dashboard stats error:', error)
       throw new Error('Failed to fetch dashboard statistics')

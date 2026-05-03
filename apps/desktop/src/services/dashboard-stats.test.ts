@@ -82,11 +82,49 @@ describe('dashboard stats helpers', () => {
     })
     const second = await loadDashboardStats('dashboard-test', runQuery, {
       now: 1_000 + DASHBOARD_STATS_TTL_MS - 1,
-      referenceDate: new Date(2026, 3, 4, 9, 0, 0, 0),
+      referenceDate: new Date(2026, 3, 3, 10, 0, 0, 0),
     })
 
     expect(first).toEqual(second)
     expect(queryMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('keeps cached stats scoped to each calendar day', async () => {
+    const queryMock = mock(async (sql: string, params?: unknown[]) => {
+      if (sql.includes('orders_today')) {
+        return [
+          {
+            total_sales: params?.[0] === new Date(2026, 3, 4).toISOString() ? 90 : 45,
+            orders_today: 2,
+            average_order_value: 22.5,
+          },
+        ]
+      }
+
+      if (sql.includes('low_stock_products')) {
+        return [{ low_stock_products: 1 }]
+      }
+
+      if (sql.includes('pending_orders')) {
+        return [{ pending_orders: 5 }]
+      }
+
+      throw new Error(`Unexpected query: ${sql}`)
+    })
+    const runQuery = async <T>(sql: string, params?: unknown[]) => queryMock(sql, params) as Promise<T[]>
+
+    const first = await loadDashboardStats('dashboard-test', runQuery, {
+      now: 1_000,
+      referenceDate: new Date(2026, 3, 3, 9, 0, 0, 0),
+    })
+    const second = await loadDashboardStats('dashboard-test', runQuery, {
+      now: 1_001,
+      referenceDate: new Date(2026, 3, 4, 9, 0, 0, 0),
+    })
+
+    expect(first.totalSales).toBe(45)
+    expect(second.totalSales).toBe(90)
+    expect(queryMock).toHaveBeenCalledTimes(6)
   })
 
   it('refreshes cached stats once the TTL expires', async () => {

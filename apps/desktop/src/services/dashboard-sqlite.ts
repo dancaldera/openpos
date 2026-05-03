@@ -28,6 +28,10 @@ export interface InventoryStatus {
   inStock: number
 }
 
+interface GetDashboardStatsOptions {
+  referenceDate?: Date
+}
+
 export class DashboardService {
   private static instance: DashboardService
 
@@ -42,11 +46,13 @@ export class DashboardService {
     invalidateDashboardStatsCacheEntry('sqlite')
   }
 
-  async getDashboardStats(): Promise<DashboardStats> {
+  async getDashboardStats(options: GetDashboardStatsOptions = {}): Promise<DashboardStats> {
     try {
       const db = await Database.load('sqlite:postpos.db')
 
-      return await loadDashboardStats('sqlite', (sql, params = []) => db.select(sql, params))
+      return await loadDashboardStats('sqlite', (sql, params = []) => db.select(sql, params), {
+        referenceDate: options.referenceDate,
+      })
     } catch (error) {
       console.error('Dashboard stats error:', error)
       throw new Error('Failed to fetch dashboard statistics')

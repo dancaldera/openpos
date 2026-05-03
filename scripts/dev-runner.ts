@@ -229,6 +229,7 @@ async function main(): Promise<void> {
     case 'dev:desktop':
       await runDesktopModeWithApi(
         {
+          rootDir,
           desktopDir,
           apiDir,
           env: process.env,
@@ -245,13 +246,13 @@ async function main(): Promise<void> {
       )
       return
     case 'dev:desktop:web':
-      await runSingleProcessMode('bun', ['run', 'dev:web'], desktopDir)
+      await runSingleProcessMode(process.execPath, ['run', 'dev:web'], desktopDir)
       return
     case 'dev:api':
-      await runSingleProcessMode('bun', ['run', 'dev'], apiDir)
+      await runSingleProcessMode(process.execPath, ['run', 'dev'], apiDir)
       return
     case 'dev:landing':
-      await runSingleProcessMode('bun', ['run', 'dev'], landingDir)
+      await runSingleProcessMode(process.execPath, ['run', 'dev'], landingDir)
       return
   }
 }

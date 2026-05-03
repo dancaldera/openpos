@@ -61,6 +61,14 @@ export function ChevronLeftIcon({ class: className, ...props }: IconProps) {
   )
 }
 
+export function ChevronRightIcon({ class: className, ...props }: IconProps) {
+  return (
+    <svg class={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  )
+}
+
 export function EyeIcon({ class: className, 'aria-label': ariaLabel, ...props }: IconProps) {
   return (
     <svg

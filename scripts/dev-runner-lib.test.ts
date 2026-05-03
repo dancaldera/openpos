@@ -69,6 +69,7 @@ describe('runDesktopMode', () => {
 
     await runDesktopMode(
       {
+        rootDir: '/workspace',
         desktopDir: '/workspace/apps/desktop',
         apiDir: '/workspace/apps/api',
         env: {},
