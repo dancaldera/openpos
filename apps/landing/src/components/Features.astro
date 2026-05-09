@@ -5,99 +5,83 @@ const features = [
   {
     icon: 'offline',
     title: 'Offline-First',
-    description: 'Works without internet connection. All your data stays local and syncs automatically when you\'re back online.',
-    color: 'blue'
+    description: 'Works without internet connection. All your data stays local and syncs automatically when you are back online.',
   },
   {
     icon: 'sync',
     title: 'Real-Time Sync',
-    description: 'Automatic cloud synchronization powered by Turso. Your data is always up-to-date across all devices.',
-    color: 'green'
+    description: 'Automatic cloud synchronization powered by Turso. Your data stays up to date across every device.',
   },
   {
     icon: 'desktop',
     title: 'Cross-Platform Desktop',
     description: 'Native apps for Linux, macOS, and Windows. One codebase, all platforms, consistent experience.',
-    color: 'purple'
   },
   {
     icon: 'language',
     title: 'Multi-Language',
-    description: 'Full support for English and Spanish. Easily extendable to more languages for global reach.',
-    color: 'cyan'
+    description: 'Full support for English and Spanish, with an architecture that can grow into more languages.',
   },
   {
     icon: 'users',
     title: 'Role-Based Access',
-    description: 'Three user roles: Admin, Manager, and User. Fine-grained permissions for secure team management.',
-    color: 'orange'
+    description: 'Admin, Manager, and User roles keep team operations structured and permission-aware.',
   },
   {
     icon: 'variants',
     title: 'Product Variants',
-    description: 'Advanced variant management with attributes, pricing, and stock levels. Perfect for complex catalogs.',
-    color: 'pink'
+    description: 'Advanced variant management with attributes, pricing, and stock levels for complex catalogs.',
   },
   {
     icon: 'barcode',
     title: 'Barcode Scanning',
-    description: 'Quick product lookup with barcode scanner support. Fast checkout for high-volume retail.',
-    color: 'blue'
+    description: 'Quick product lookup with barcode scanner support for fast, high-volume checkout.',
   },
   {
     icon: 'analytics',
     title: 'Analytics Dashboard',
-    description: 'Business insights at a glance. Track sales, top products, and team performance in real-time.',
-    color: 'purple'
+    description: 'Track sales, top products, and team performance with clear operational reporting.',
   },
   {
     icon: 'loyalty',
     title: 'Customer Loyalty',
-    description: 'Built-in points system and purchase tracking. Reward your best customers automatically.',
-    color: 'green'
+    description: 'Built-in points and purchase tracking help reward your best customers automatically.',
   },
   {
     icon: 'print',
     title: 'Receipt Printing',
-    description: 'Thermal printer support with customizable receipts. Professional output for every transaction.',
-    color: 'orange'
-  }
+    description: 'Thermal printer support with customizable receipts for professional checkout output.',
+  },
 ]
 ---
 
-<section id="features" class="py-24 bg-gray-950">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <!-- Section header -->
-    <div class="text-center mb-16">
-      <span class="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-sm font-medium mb-6">
-        Features
-      </span>
-      <h2 class="text-4xl md:text-5xl font-bold text-white mb-6">
-        Everything You Need to <span class="text-blue-500">Sell</span>
+<section id="features" class="bg-canvas px-4 py-20 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-[1200px]">
+    <div class="mx-auto mb-16 max-w-3xl text-center md:mx-0 md:text-left">
+      <p class="text-caption font-medium tracking-[0.011em] text-graphite">Features</p>
+      <h2 class="mt-4 text-heading-lg font-semibold leading-[1.21] tracking-[-0.01em] text-void sm:text-display sm:leading-[1.16] sm:tracking-[-1.44px]">
+        Everything you need to sell
       </h2>
-      <p class="text-xl text-gray-400 max-w-3xl mx-auto">
-        A complete POS solution with all the features modern retailers demand.
-        No subscriptions, no hidden fees.
+      <p class="mt-5 text-base leading-[1.65] text-graphite sm:text-[18px]">
+        A complete POS solution with the features modern retailers need. No subscriptions, no hidden fees.
       </p>
     </div>
 
-    <!-- Features grid -->
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {features.map(feature => (
         <FeatureCard {...feature} />
       ))}
     </div>
 
-    <!-- Bottom CTA -->
     <div class="mt-16 text-center">
-      <p class="text-gray-500 mb-4">And many more features in development</p>
+      <p class="mb-5 text-sm text-graphite">And many more features in development</p>
       <a
         href="https://demo.openpos.xyz"
-        class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors duration-150 shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40"
+        class="inline-flex items-center gap-2 rounded-buttons bg-void px-5 py-3 text-sm font-medium text-canvas shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
       >
-        Explore All Features
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        Explore all features
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 12h14m0 0-5-5m5 5-5 5" />
         </svg>
       </a>
     </div>

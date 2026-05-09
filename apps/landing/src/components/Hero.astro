@@ -1,219 +1,41 @@
 ---
-const particles = Array.from({ length: 40 }, (_, i) => ({
-  id: i,
-  size: Math.random() * 3 + 1,
-  x: Math.random() * 100,
-  y: Math.random() * 100,
-  driftX: (Math.random() - 0.5) * 80,
-  driftY: (Math.random() - 0.5) * 80,
-  duration: Math.random() * 10 + 8,
-  delay: Math.random() * 8,
-  opacity: Math.random() * 0.5 + 0.1,
-}))
+const chips = ['Offline-first', 'Real-time sync', 'Cross-platform']
 ---
 
-<section class="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden">
-  <!-- Deep dark base -->
-  <div class="absolute inset-0 bg-gray-950"></div>
+<section class="flex min-h-[calc(100vh-64px)] items-center bg-canvas px-4 pb-24 pt-32 sm:px-6 lg:px-8">
+  <div class="mx-auto flex max-w-[760px] flex-col items-center text-center">
+    <p class="mb-6 text-caption font-medium tracking-[0.011em] text-graphite">
+      AI-powered point of sale
+    </p>
 
-  <!-- Aurora gradient mesh -->
-  <div class="absolute inset-0 overflow-hidden">
-    <div class="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-gradient-to-br from-blue-600/15 via-cyan-500/10 to-transparent rounded-full blur-[120px] animate-aurora"></div>
-    <div class="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-gradient-to-tl from-purple-600/15 via-blue-500/10 to-transparent rounded-full blur-[120px] animate-aurora-reverse"></div>
-    <div class="absolute top-[30%] right-[20%] w-[30%] h-[30%] bg-gradient-to-bl from-cyan-400/8 to-transparent rounded-full blur-[80px] animate-aurora" style="animation-delay: -5s;"></div>
-  </div>
-
-  <!-- Perspective grid floor -->
-  <div class="absolute bottom-0 left-0 right-0 h-[50%] overflow-hidden">
-    <div class="absolute inset-0 animate-grid-float" style="transform-origin: center top;">
-      <div class="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.06)_1px,transparent_1px)] bg-[size:60px_60px]" style="transform: perspective(500px) rotateX(60deg); transform-origin: center top; mask-image: linear-gradient(to top, rgba(0,0,0,0.6), transparent 80%);"></div>
-    </div>
-  </div>
-
-  <!-- Light beams -->
-  <div class="absolute inset-0 overflow-hidden pointer-events-none">
-    <div class="absolute top-0 left-[20%] w-[1px] h-[100%] bg-gradient-to-b from-transparent via-blue-400/20 to-transparent animate-beam" style="animation-delay: 0s;"></div>
-    <div class="absolute top-0 left-[50%] w-[1px] h-[100%] bg-gradient-to-b from-transparent via-purple-400/15 to-transparent animate-beam" style="animation-delay: 2s;"></div>
-    <div class="absolute top-0 left-[80%] w-[1px] h-[100%] bg-gradient-to-b from-transparent via-cyan-400/15 to-transparent animate-beam" style="animation-delay: 4s;"></div>
-  </div>
-
-  <!-- Floating particles -->
-  <div class="absolute inset-0 overflow-hidden pointer-events-none">
-    {particles.map(p => (
-      <div
-        class="absolute rounded-full bg-blue-400"
-        style={`
-          width: ${p.size}px;
-          height: ${p.size}px;
-          left: ${p.x}%;
-          top: ${p.y}%;
-          --drift-x: ${p.driftX};
-          --drift-y: ${p.driftY};
-          opacity: ${p.opacity};
-          animation: particle-float ${p.duration}s ease-in-out infinite;
-          animation-delay: -${p.delay}s;
-        `}
-      />
-    ))}
-  </div>
-
-  <!-- Orbit rings -->
-  <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-    <div class="relative w-[600px] h-[600px] sm:w-[700px] sm:h-[700px] lg:w-[800px] lg:h-[800px]">
-      <!-- Outer ring -->
-      <div class="absolute inset-0 rounded-full border border-blue-500/[0.07]"></div>
-      <!-- Middle ring -->
-      <div class="absolute inset-[15%] rounded-full border border-purple-500/[0.08]"></div>
-      <!-- Inner ring -->
-      <div class="absolute inset-[30%] rounded-full border border-cyan-500/[0.06]"></div>
-
-      <!-- Orbiting dots -->
-      <div class="absolute inset-0" style="--orbit-radius: 300px; --orbit-duration: 25s;">
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div class="animate-orbit" style="--orbit-radius: 300px; --orbit-duration: 25s;">
-            <div class="w-2 h-2 bg-blue-400 rounded-full shadow-[0_0_12px_rgba(59,130,246,0.8)]"></div>
-          </div>
-        </div>
-      </div>
-      <div class="absolute inset-0" style="--orbit-radius: 245px; --orbit-duration: 20s;">
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div class="animate-orbit" style="--orbit-radius: 245px; --orbit-duration: 20s; animation-delay: -7s;">
-            <div class="w-1.5 h-1.5 bg-purple-400 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.8)]"></div>
-          </div>
-        </div>
-      </div>
-      <div class="absolute inset-0" style="--orbit-radius: 200px; --orbit-duration: 18s;">
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div class="animate-orbit" style="--orbit-radius: 200px; --orbit-duration: 18s; animation-delay: -12s;">
-            <div class="w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.8)]"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Mouse-follow spotlight -->
-  <div id="hero-spotlight" class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-500" style="background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(59,130,246,0.06), transparent 40%);"></div>
-
-  <!-- Content -->
-  <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-    <!-- Badge with glow -->
-    <div class="mb-10 animate-scale-in">
-      <span class="inline-flex items-center gap-2.5 px-5 py-2.5 bg-blue-500/[0.08] border border-blue-500/20 rounded-full text-blue-400 text-sm font-medium backdrop-blur-sm animate-glow-pulse">
-        <span class="relative flex h-2 w-2">
-          <span class="absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75 animate-ping"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-400"></span>
-        </span>
-        AI-Powered Point of Sale
-      </span>
-    </div>
-
-    <!-- Main headline with gradient shimmer -->
-    <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold text-white mb-8 tracking-tight leading-[0.95] animate-slide-up">
-      <span class="block">The Future of</span>
-      <span class="block mt-2 bg-gradient-to-r from-blue-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent animate-shimmer bg-[length:200%_auto]">
-        Retail Intelligence
-      </span>
+    <h1 class="max-w-[720px] text-[40px] font-semibold leading-[1.16] tracking-[-1.2px] text-void sm:text-display sm:tracking-[-1.44px]">
+      OpenPOS
+      <span class="block">The intelligent point of sale for modern retailers.</span>
     </h1>
 
-    <!-- Subheadline -->
-    <p class="text-lg sm:text-xl md:text-2xl text-gray-400 mb-6 font-medium animate-slide-up-delayed max-w-2xl mx-auto leading-relaxed">
-      Smart. Fast. Offline-First.
-      <br class="hidden sm:block" />
-      <span class="text-gray-500">The POS system that thinks ahead.</span>
+    <p class="mt-6 max-w-[640px] text-base leading-[1.65] text-graphite sm:text-[18px]">
+      A modern, offline-first POS system for retailers who need fast checkout, real-time sync,
+      cross-platform desktop support, and an AI-ready foundation.
     </p>
 
-    <!-- Description -->
-    <p class="text-base text-gray-500 mb-14 max-w-xl mx-auto animate-scale-in leading-relaxed">
-      A modern, cross-platform POS system with AI-powered features on the horizon.
-      Built for retailers who demand more from their software.
-    </p>
-
-    <!-- CTA Buttons -->
-    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center animate-scale-in-2">
-      <a
-        href="https://demo.openpos.xyz"
-        class="group relative inline-flex items-center gap-3 px-8 py-4 bg-blue-600 text-white font-semibold rounded-xl transition-all duration-300 hover:bg-blue-500 hover:shadow-[0_0_40px_rgba(59,130,246,0.4)] hover:scale-[1.02]"
-      >
-        <div class="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl -z-10"></div>
-        <span>Get Started Free</span>
-        <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+    <a
+      href="https://demo.openpos.xyz"
+      class="mt-10 flex w-full max-w-[640px] items-center justify-between rounded-input border border-fog-border bg-canvas py-2 pl-6 pr-2 text-left text-sm font-medium text-void transition-colors hover:bg-chalk focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void sm:pl-8"
+    >
+      <span class="text-graphite">Try the live demo</span>
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-buttons bg-void text-canvas shadow-sm">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 12h14m0 0-5-5m5 5-5 5" />
         </svg>
-      </a>
-
-      <a
-        href="https://demo.openpos.xyz"
-        class="group inline-flex items-center gap-2 px-6 py-4 border border-gray-700/80 hover:border-gray-500 text-gray-300 hover:text-white font-medium rounded-xl transition-all duration-300 hover:bg-white/[0.03] backdrop-blur-sm"
-      >
-        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>Watch Demo</span>
-      </a>
-    </div>
-
-    <!-- Tech stack badges -->
-    <div class="mt-20 flex flex-wrap justify-center gap-3 text-sm animate-scale-in-3">
-      <span class="flex items-center gap-2 px-4 py-2 bg-gray-900/60 rounded-lg border border-gray-800/80 backdrop-blur-sm hover:border-blue-500/20 hover:bg-gray-900/80 transition-colors duration-300 cursor-default">
-        <svg class="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M14.25 2.26l-.08-.04-.01.02C13.46 2.09 12.74 2 12 2 6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10c0-4.75-3.31-8.72-7.75-9.74zM19.41 9h-3.1c-.31-1.33-.75-2.56-1.29-3.63 1.84.63 3.37 1.91 4.39 3.63zM12 4.03c.73 1.04 1.37 2.39 1.81 3.97h-3.62c.44-1.58 1.08-2.93 1.81-3.97zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.33 2h3.1c.31 1.33.75 2.56 1.29 3.63-1.84-.63-3.37-1.9-4.39-3.63zM7.69 9H4.59c1.02-1.72 2.55-3 4.39-3.63-.54 1.07-.98 2.3-1.29 3.63zM12 19.97c-.73-1.04-1.37-2.39-1.81-3.97h3.62c-.44 1.58-1.08 2.93-1.81 3.97zM14.17 14H9.83c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.35c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.18 5.63c.54-1.07.98-2.3 1.29-3.63h3.1c-1.02 1.72-2.55 3-4.39 3.63zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/>
-        </svg>
-        <span class="text-gray-400">Offline-First</span>
       </span>
-      <span class="flex items-center gap-2 px-4 py-2 bg-gray-900/60 rounded-lg border border-gray-800/80 backdrop-blur-sm hover:border-green-500/20 hover:bg-gray-900/80 transition-colors duration-300 cursor-default">
-        <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        <span class="text-gray-400">Real-Time Sync</span>
-      </span>
-      <span class="flex items-center gap-2 px-4 py-2 bg-gray-900/60 rounded-lg border border-gray-800/80 backdrop-blur-sm hover:border-purple-500/20 hover:bg-gray-900/80 transition-colors duration-300 cursor-default">
-        <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-        <span class="text-gray-400">Cross-Platform</span>
-      </span>
-      <span class="flex items-center gap-2 px-4 py-2 bg-gray-900/60 rounded-lg border border-gray-800/80 backdrop-blur-sm hover:border-cyan-500/20 hover:bg-gray-900/80 transition-colors duration-300 cursor-default">
-        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-        </svg>
-        <span class="text-gray-400">Multi-Language</span>
-      </span>
-    </div>
-  </div>
+    </a>
 
-  <!-- Bottom gradient fade -->
-  <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-950 to-transparent z-10 pointer-events-none"></div>
-
-  <!-- Scroll indicator -->
-  <div class="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 animate-scale-in-4">
-    <div class="flex flex-col items-center gap-2 text-gray-600">
-      <span class="text-xs tracking-widest uppercase">Scroll</span>
-      <div class="w-5 h-8 border border-gray-700 rounded-full flex justify-center pt-1.5">
-        <div class="w-1 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-      </div>
+    <div class="mt-6 flex flex-wrap justify-center gap-2">
+      {chips.map(chip => (
+        <span class="rounded-softbutton bg-chalk px-4 py-2 text-sm font-medium text-void">
+          {chip}
+        </span>
+      ))}
     </div>
   </div>
 </section>
-
-<script>
-  const section = document.querySelector('section')
-  const spotlight = document.getElementById('hero-spotlight')
-
-  if (section && spotlight) {
-    section.addEventListener('mouseenter', () => {
-      spotlight.style.opacity = '1'
-    })
-    section.addEventListener('mouseleave', () => {
-      spotlight.style.opacity = '0'
-    })
-    section.addEventListener('mousemove', (e) => {
-      const rect = section.getBoundingClientRect()
-      const x = ((e.clientX - rect.left) / rect.width) * 100
-      const y = ((e.clientY - rect.top) / rect.height) * 100
-      spotlight.style.setProperty('--mouse-x', `${x}%`)
-      spotlight.style.setProperty('--mouse-y', `${y}%`)
-    })
-  }
-</script>

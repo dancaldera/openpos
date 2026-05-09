@@ -1,120 +1,62 @@
 ---
-
+const roadmapItems = [
+  {
+    title: 'Smart inventory predictions',
+    description: 'AI analyzes sales patterns to predict stock needs and flag items that may need attention.',
+    label: 'Predictive analytics',
+  },
+  {
+    title: 'Voice commands',
+    description: 'Natural language workflows for common tasks like checking sales, adding items, and finding products.',
+    label: 'Natural language processing',
+  },
+  {
+    title: 'Automated insights',
+    description: 'Daily business recommendations that surface trends, risks, and opportunities without dashboard hunting.',
+    label: 'Machine learning',
+  },
+  {
+    title: 'Smart customer insights',
+    description: 'Customer segmentation, loyalty signals, and behavior patterns designed for practical retail decisions.',
+    label: 'Customer intelligence',
+  },
+]
 ---
 
-<section id="ai-roadmap" class="relative py-24 overflow-hidden">
-  <!-- Background gradient -->
-  <div class="absolute inset-0 bg-gradient-to-b from-gray-950 via-gray-900/50 to-gray-950"></div>
-
-  <!-- Animated glow orbs -->
-  <div class="absolute top-1/2 left-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-3xl animate-pulse-slow"></div>
-  <div class="absolute top-1/3 right-0 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-3xl animate-pulse-slow-delayed"></div>
-
-  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <!-- Section header -->
-    <div class="text-center mb-16">
-      <span class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-full text-purple-400 text-sm font-medium mb-6">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-        Coming Soon
-      </span>
-      <h2 class="text-4xl md:text-5xl font-bold text-white mb-6">
-        The Future of Retail is <span class="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">Intelligent</span>
+<section id="ai-roadmap" class="bg-canvas px-4 py-20 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-[1200px]">
+    <div class="mx-auto mb-16 max-w-3xl text-center">
+      <p class="text-caption font-medium tracking-[0.011em] text-graphite">Coming soon</p>
+      <h2 class="mt-4 text-heading-lg font-semibold leading-[1.21] tracking-[-0.01em] text-void sm:text-display sm:leading-[1.16] sm:tracking-[-1.44px]">
+        AI roadmap
       </h2>
-      <p class="text-xl text-gray-400 max-w-3xl mx-auto">
-        We're building the next generation of POS with AI-powered features that will transform how you run your business.
+      <p class="mt-5 text-base leading-[1.65] text-graphite sm:text-[18px]">
+        AI features are planned around inventory, voice workflows, business insights, and customer intelligence.
       </p>
     </div>
 
-    <!-- AI Feature cards -->
-    <div class="grid md:grid-cols-2 gap-6 lg:gap-8">
-      <!-- Smart Inventory Predictions -->
-      <div class="group relative p-8 bg-gradient-to-br from-gray-900/50 to-gray-950/50 rounded-2xl border border-gray-700/50 hover:border-purple-500/50 transition-colors duration-150 overflow-hidden">
-        <div class="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-150"></div>
-        <div class="relative z-10">
-          <div class="w-14 h-14 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
-            <svg class="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <h3 class="text-xl font-bold text-white mb-3">Smart Inventory Predictions</h3>
-          <p class="text-gray-400 mb-4">AI analyzes your sales patterns to predict stock needs. Never run out of your best sellers again.</p>
-          <div class="flex items-center gap-2 text-sm text-purple-400">
-            <span class="w-1.5 h-1.5 bg-purple-400 rounded-full"></span>
-            Predictive Analytics
-          </div>
-        </div>
-      </div>
-
-      <!-- Voice Commands -->
-      <div class="group relative p-8 bg-gradient-to-br from-gray-900/50 to-gray-950/50 rounded-2xl border border-gray-700/50 hover:border-blue-500/50 transition-colors duration-150 overflow-hidden">
-        <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-150"></div>
-        <div class="relative z-10">
-          <div class="w-14 h-14 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
-            <svg class="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-          </div>
-          <h3 class="text-xl font-bold text-white mb-3">Voice Commands</h3>
-          <p class="text-gray-400 mb-4">"Show me today's sales" or "Add 2 coffees to order" — control your POS hands-free.</p>
-          <div class="flex items-center gap-2 text-sm text-blue-400">
-            <span class="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
-            Natural Language Processing
-          </div>
-        </div>
-      </div>
-
-      <!-- Automated Insights -->
-      <div class="group relative p-8 bg-gradient-to-br from-gray-900/50 to-gray-950/50 rounded-2xl border border-gray-700/50 hover:border-cyan-500/50 transition-colors duration-150 overflow-hidden">
-        <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-150"></div>
-        <div class="relative z-10">
-          <div class="w-14 h-14 bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
-            <svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-          </div>
-          <h3 class="text-xl font-bold text-white mb-3">Automated Insights</h3>
-          <p class="text-gray-400 mb-4">AI-powered business recommendations delivered daily. Know what's working and what needs attention.</p>
-          <div class="flex items-center gap-2 text-sm text-cyan-400">
-            <span class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></span>
-            Machine Learning
-          </div>
-        </div>
-      </div>
-
-      <!-- Smart Customer Insights -->
-      <div class="group relative p-8 bg-gradient-to-br from-gray-900/50 to-gray-950/50 rounded-2xl border border-gray-700/50 hover:border-green-500/50 transition-colors duration-150 overflow-hidden">
-        <div class="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-150"></div>
-        <div class="relative z-10">
-          <div class="w-14 h-14 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
-            <svg class="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <h3 class="text-xl font-bold text-white mb-3">Smart Customer Insights</h3>
-          <p class="text-gray-400 mb-4">Understand your customers better with AI-powered segmentation, loyalty predictions, and personalized recommendations.</p>
-          <div class="flex items-center gap-2 text-sm text-green-400">
-            <span class="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
-            Customer Intelligence
-          </div>
-        </div>
-      </div>
+    <div class="grid gap-4 md:grid-cols-2">
+      {roadmapItems.map(item => (
+        <article class="rounded-cards border border-fog-border bg-canvas p-8 transition-colors hover:bg-chalk">
+          <p class="text-caption font-medium tracking-[0.011em] text-graphite">{item.label}</p>
+          <h3 class="mt-4 text-heading font-semibold leading-[1.26] text-void">{item.title}</h3>
+          <p class="mt-3 text-sm leading-relaxed text-graphite sm:text-base">{item.description}</p>
+        </article>
+      ))}
     </div>
 
-    <!-- Bottom CTA -->
     <div class="mt-16 text-center">
-      <p class="text-gray-500 mb-4">Be the first to know when AI features launch</p>
+      <p class="mb-5 text-sm text-graphite">Be the first to know when AI features launch</p>
       <a
-        href="https://github.com/dancaldera"
+        href="https://github.com/dancaldera/openpos"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600/10 to-blue-600/10 border border-purple-500/30 hover:border-purple-500/50 text-purple-400 hover:text-purple-300 font-medium rounded-xl transition-colors duration-150"
+        class="inline-flex items-center gap-2 rounded-buttons border border-fog-border px-5 py-3 text-sm font-medium text-void transition-colors hover:bg-chalk focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        Watch the repository
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 17L17 7m0 0H9m8 0v8" />
         </svg>
-        Watch the Repository
       </a>
     </div>
   </div>

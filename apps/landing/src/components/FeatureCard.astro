@@ -3,64 +3,28 @@ interface Props {
   icon: string
   title: string
   description: string
-  color?: 'blue' | 'purple' | 'cyan' | 'green' | 'orange' | 'pink'
 }
 
-const { icon, title, description, color = 'blue' } = Astro.props
-
-const colorClasses = {
-  blue: {
-    bg: 'bg-blue-500/10 group-hover:bg-blue-500/20',
-    text: 'text-blue-400',
-    border: 'group-hover:border-blue-500/30'
-  },
-  purple: {
-    bg: 'bg-purple-500/10 group-hover:bg-purple-500/20',
-    text: 'text-purple-400',
-    border: 'group-hover:border-purple-500/30'
-  },
-  cyan: {
-    bg: 'bg-cyan-500/10 group-hover:bg-cyan-500/20',
-    text: 'text-cyan-400',
-    border: 'group-hover:border-cyan-500/30'
-  },
-  green: {
-    bg: 'bg-green-500/10 group-hover:bg-green-500/20',
-    text: 'text-green-400',
-    border: 'group-hover:border-green-500/30'
-  },
-  orange: {
-    bg: 'bg-orange-500/10 group-hover:bg-orange-500/20',
-    text: 'text-orange-400',
-    border: 'group-hover:border-orange-500/30'
-  },
-  pink: {
-    bg: 'bg-pink-500/10 group-hover:bg-pink-500/20',
-    text: 'text-pink-400',
-    border: 'group-hover:border-pink-500/30'
-  }
-}
+const { icon, title, description } = Astro.props
 
 const icons: Record<string, string> = {
-  offline: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" /></svg>`,
-  sync: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>`,
-  desktop: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>`,
-  language: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>`,
-  users: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>`,
-  variants: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>`,
-  barcode: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>`,
-  analytics: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>`,
-  loyalty: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`,
-  print: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>`
+  offline: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M18.364 5.636a9 9 0 010 12.728m0 0L15.535 15.535m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072M8.464 15.536a5 5 0 01-1.414-2.83M5.636 18.364a9 9 0 01-2.167-9.238M12.707 12.707a1 1 0 01-1.414-1.414M3 3l18 18" /></svg>`,
+  sync: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h5M20 20v-5h-5M5.64 15.5a7 7 0 0011.71 2.85M18.36 8.5A7 7 0 006.65 5.65" /></svg>`,
+  desktop: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 5h16v11H4zM9 20h6M12 16v4" /></svg>`,
+  language: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 5h10M9 3v2m1.2 9a15.5 15.5 0 01-4.8-5M6 14a15.4 15.4 0 005-8M14 21l4-9 4 9m-6.6-3h5.2" /></svg>`,
+  users: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11a4 4 0 10-8 0m8 0a4 4 0 11-8 0m8 0v1a4 4 0 01-8 0v-1M4 21a8 8 0 0116 0" /></svg>`,
+  variants: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 7h14M5 12h14M5 17h14M8 5v4m8 1v4m-5 1v4" /></svg>`,
+  barcode: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7V5h2M18 5h2v2M20 17v2h-2M6 19H4v-2M7 8v8m3-8v8m3-8v8m4-8v8" /></svg>`,
+  analytics: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 19V9m7 10V5m7 14v-7M4 19h16" /></svg>`,
+  loyalty: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 21s-7-4.35-7-10a4 4 0 017-2.65A4 4 0 0119 11c0 5.65-7 10-7 10z" /></svg>`,
+  print: `<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 8V4h10v4M7 17H5a2 2 0 01-2-2v-4h18v4a2 2 0 01-2 2h-2M7 14h10v6H7z" /></svg>`,
 }
-
-const colors = colorClasses[color]
 ---
 
-<div class={`group p-6 bg-gray-900/30 rounded-xl border border-gray-700/50 ${colors.border} transition-colors duration-150 hover:bg-gray-900/50`}>
-  <div class={`w-12 h-12 ${colors.bg} rounded-lg flex items-center justify-center mb-4 ${colors.text} transition-colors duration-150`}>
+<article class="group rounded-cards border border-fog-border bg-canvas p-6 transition-colors hover:bg-chalk">
+  <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-softbutton bg-chalk text-void">
     <Fragment set:html={icons[icon] || icons.offline} />
   </div>
-  <h3 class="text-lg font-semibold text-white mb-2">{title}</h3>
-  <p class="text-gray-400 text-sm leading-relaxed">{description}</p>
-</div>
+  <h3 class="text-[18px] font-semibold leading-tight text-void">{title}</h3>
+  <p class="mt-3 text-sm leading-relaxed text-graphite">{description}</p>
+</article>

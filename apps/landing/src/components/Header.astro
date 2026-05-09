@@ -2,83 +2,97 @@
 const navLinks = [
   { label: 'Features', href: '#features' },
   { label: 'AI Roadmap', href: '#ai-roadmap' },
+  { label: 'How it works', href: '#how-it-works' },
 ]
 ---
 
-<header class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-gray-950/80 border-b border-white/5">
-  <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex items-center justify-between h-16">
-      <!-- Logo -->
-      <a href="/" class="flex items-center gap-2 group">
-        <img src="/favicon.svg" alt="OpenPOS Logo" class="w-10 h-10 group-hover:scale-110 transition-transform" />
-        <span class="text-xl font-bold text-white">
-          Open<span class="text-blue-500">POS</span>
+<header class="fixed inset-x-0 top-0 z-50 border-b border-fog-border bg-canvas">
+  <nav class="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8" aria-label="Main navigation">
+    <div class="flex h-16 items-center justify-between">
+      <a
+        href="/"
+        class="inline-flex items-center gap-2 rounded-links text-[17px] font-semibold tracking-[-0.01em] text-void focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
+      >
+        <span class="flex h-8 w-8 items-center justify-center rounded-buttons border border-fog-border text-caption font-semibold">
+          OP
         </span>
+        <span>OpenPOS</span>
       </a>
 
-      <!-- Desktop Navigation -->
-      <div class="hidden md:flex items-center gap-8">
+      <div class="hidden items-center gap-6 md:flex">
         {navLinks.map(link => (
           <a
             href={link.href}
-            class="text-gray-400 hover:text-white transition-colors text-sm font-medium"
+            class="rounded-links text-sm font-medium text-void underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
           >
             {link.label}
           </a>
         ))}
+      </div>
+
+      <div class="hidden items-center gap-3 md:flex">
         <a
-          href="https://github.com/dancaldera"
+          href="https://github.com/dancaldera/openpos"
           target="_blank"
           rel="noopener noreferrer"
-          class="text-gray-400 hover:text-white transition-colors"
+          class="inline-flex items-center justify-center rounded-buttons border border-fog-border px-4 py-2 text-sm font-medium text-void transition-colors hover:bg-chalk focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
         >
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
-          </svg>
+          GitHub
         </a>
-      </div>
-
-      <!-- CTA Button -->
-      <div class="flex items-center gap-4">
         <a
           href="https://demo.openpos.xyz"
-          class="hidden sm:inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors duration-150 shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40"
+          class="inline-flex items-center justify-center gap-2 rounded-buttons bg-void px-4 py-2 text-sm font-medium text-canvas shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
         >
           Try Demo
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 17L17 7m0 0H9m8 0v8" />
           </svg>
         </a>
-
-        <!-- Mobile menu button -->
-        <button
-          id="mobile-menu-btn"
-          class="md:hidden p-2 text-gray-400 hover:text-white"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
       </div>
+
+      <button
+        id="mobile-menu-btn"
+        type="button"
+        class="inline-flex h-10 w-10 items-center justify-center rounded-buttons border border-fog-border text-void transition-colors hover:bg-chalk focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void md:hidden"
+        aria-label="Toggle navigation"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+      >
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
     </div>
 
-    <!-- Mobile Navigation -->
-    <div id="mobile-menu" class="hidden md:hidden pb-4">
-      <div class="flex flex-col gap-4 pt-4 border-t border-white/5">
+    <div id="mobile-menu" class="hidden border-t border-fog-border py-4 md:hidden" aria-hidden="true">
+      <div class="flex flex-col gap-4">
         {navLinks.map(link => (
           <a
             href={link.href}
-            class="text-gray-400 hover:text-white transition-colors text-sm font-medium"
+            class="rounded-links text-sm font-medium text-void underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
           >
             {link.label}
           </a>
         ))}
-        <a
-          href="https://demo.openpos.xyz"
-          class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors duration-150"
-        >
-          Try Demo
-        </a>
+        <div class="flex flex-col gap-3 pt-2">
+          <a
+            href="https://github.com/dancaldera/openpos"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center justify-center rounded-buttons border border-fog-border px-4 py-2 text-sm font-medium text-void transition-colors hover:bg-chalk focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
+          >
+            GitHub
+          </a>
+          <a
+            href="https://demo.openpos.xyz"
+            class="inline-flex items-center justify-center gap-2 rounded-buttons bg-void px-4 py-2 text-sm font-medium text-canvas shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
+          >
+            Try Demo
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 17L17 7m0 0H9m8 0v8" />
+            </svg>
+          </a>
+        </div>
       </div>
     </div>
   </nav>
@@ -89,6 +103,10 @@ const navLinks = [
   const mobileMenu = document.getElementById('mobile-menu')
 
   menuBtn?.addEventListener('click', () => {
-    mobileMenu?.classList.toggle('hidden')
+    const isOpen = menuBtn.getAttribute('aria-expanded') === 'true'
+
+    menuBtn.setAttribute('aria-expanded', String(!isOpen))
+    mobileMenu?.classList.toggle('hidden', isOpen)
+    mobileMenu?.setAttribute('aria-hidden', String(isOpen))
   })
 </script>
