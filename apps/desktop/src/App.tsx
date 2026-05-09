@@ -161,9 +161,9 @@ function App() {
         return <Settings />
       default:
         return (
-          <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold mb-4 capitalize">{currentPage}</h3>
-            <p class="text-gray-600">This page is under construction.</p>
+          <div class="bg-canvas rounded-cards border border-fog-border p-6">
+            <h3 class="text-lg font-semibold mb-4 capitalize text-void">{currentPage}</h3>
+            <p class="text-graphite">This page is under construction.</p>
           </div>
         )
     }

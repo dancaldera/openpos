@@ -59,8 +59,8 @@ export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
       {isOpen && (
         <div
           class={clsx(
-            'absolute z-50 mt-2 w-48 rounded-md shadow-lg',
-            'bg-white border border-gray-200 focus:outline-none',
+            'absolute z-50 mt-2 w-48 rounded-cards shadow-sm',
+            'bg-canvas border border-fog-border focus:outline-none',
             align === 'left' ? 'left-0' : 'right-0',
           )}
           role="menu"
@@ -68,7 +68,7 @@ export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
           <div class="py-1">
             {items.map((item) => {
               if (item.separator) {
-                return <hr key={item.id} class="my-1 border-gray-200" />
+                return <hr key={item.id} class="my-1 border-fog-border" />
               }
 
               return (
@@ -84,9 +84,9 @@ export function Dropdown({ trigger, items, align = 'right' }: DropdownProps) {
                   disabled={item.disabled}
                   class={clsx(
                     'w-full px-4 py-2 text-left text-sm flex items-center space-x-2',
-                    'hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                    'hover:bg-chalk focus:outline-none focus:ring-2 focus:ring-void',
                     item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
-                    item.variant === 'danger' ? 'text-red-600 hover:text-red-700' : 'text-gray-700',
+                    item.variant === 'danger' ? 'text-void' : 'text-graphite',
                   )}
                   role="menuitem"
                 >

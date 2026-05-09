@@ -39,9 +39,9 @@ export const disabledClasses = 'opacity-50 cursor-not-allowed'
  */
 export function inputBaseClasses(disabled: boolean): string {
   return clsx(
-    'w-full rounded-xl border transition-colors duration-150',
+    'w-full rounded-input border transition-colors duration-150',
     focusRingClasses,
-    disabled ? clsx(disabledClasses, 'bg-gray-100 dark:bg-gray-800') : 'bg-white dark:bg-gray-900',
+    disabled ? clsx(disabledClasses, 'bg-chalk') : 'bg-canvas',
   )
 }
 
@@ -50,17 +50,8 @@ export function inputBaseClasses(disabled: boolean): string {
  */
 export function inputStateClasses(error?: string): string {
   return error
-    ? clsx(
-        'border-red-500 text-red-900 placeholder-red-300',
-        'focus:ring-red-500 focus:border-red-500',
-        'dark:text-red-300 dark:placeholder-red-700',
-      )
-    : clsx(
-        'border-gray-300 text-gray-900 placeholder-gray-500',
-        'focus:ring-blue-500 focus:border-blue-500',
-        'hover:border-gray-400',
-        'dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500 dark:hover:border-gray-600',
-      )
+    ? clsx('border-void text-void placeholder-ash', 'focus:ring-void focus:border-void')
+    : clsx('border-fog-border text-void placeholder-graphite', 'focus:ring-void focus:border-void', 'hover:border-void')
 }
 
 /**

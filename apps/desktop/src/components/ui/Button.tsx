@@ -23,45 +23,19 @@ export function Button({
 }: ButtonProps & Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'class'>) {
   const baseClasses = clsx(
     // Base layout and interactions
-    'inline-flex items-center justify-center rounded-xl font-medium',
+    'inline-flex items-center justify-center rounded-buttons font-medium',
     'border transition-colors duration-150',
     // Focus states
-    'focus:outline-none focus:ring-2 focus:ring-offset-2',
+    'focus:outline-none focus:ring-2 focus:ring-void focus:ring-offset-2',
     disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
   )
 
   const variants = {
-    primary: clsx(
-      'bg-blue-600 text-white border-blue-600',
-      'hover:bg-blue-700 hover:border-blue-700',
-      'focus:ring-blue-500',
-      'shadow-sm hover:shadow-md',
-    ),
-    secondary: clsx(
-      'bg-white text-gray-700 border-gray-300',
-      'hover:bg-gray-50 hover:border-gray-400',
-      'focus:ring-gray-500',
-      'shadow-sm hover:shadow-md',
-      'dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-750 dark:hover:border-gray-600',
-    ),
-    ghost: clsx(
-      'bg-transparent text-gray-700 border-transparent',
-      'hover:bg-gray-100 hover:text-gray-900',
-      'focus:ring-gray-500',
-      'dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100',
-    ),
-    outline: clsx(
-      'bg-white text-gray-700 border-gray-300',
-      'hover:bg-gray-50 hover:border-gray-400',
-      'focus:ring-gray-500',
-      'dark:bg-transparent dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-800 dark:hover:border-gray-600',
-    ),
-    danger: clsx(
-      'bg-red-500 text-white border-red-500',
-      'hover:bg-red-600 hover:border-red-600',
-      'focus:ring-red-500',
-      'shadow-sm hover:shadow-md',
-    ),
+    primary: clsx('bg-void text-canvas border-void', 'shadow-sm'),
+    secondary: clsx('bg-canvas text-void border-fog-border', 'hover:bg-chalk', 'shadow-sm'),
+    ghost: clsx('bg-transparent text-void border-transparent', 'hover:bg-chalk'),
+    outline: clsx('bg-canvas text-void border-fog-border', 'hover:bg-chalk'),
+    danger: clsx('bg-void text-canvas border-void', 'shadow-sm'),
   }
 
   const sizes = {

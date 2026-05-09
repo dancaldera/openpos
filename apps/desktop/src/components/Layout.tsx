@@ -93,7 +93,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
   const currentItem = menuItems.find((item) => item.id === currentPage)
 
   return (
-    <div class="flex h-screen bg-gray-100 dark:bg-gray-950">
+    <div class="flex h-screen bg-canvas text-void">
       <Sidebar
         title={appName.value}
         isMac={isMac}
@@ -110,14 +110,14 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
 
       <div class="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header: full-width drag region, content is no-drag */}
-        <header class="drag-region bg-white/80 dark:bg-gray-900/92 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-800/60 shrink-0">
+        <header class="drag-region bg-canvas border-b border-fog-border shrink-0">
           <div class="no-drag flex items-center justify-between px-4 md:px-6 py-3 gap-3">
             <div class="flex items-center gap-3 min-w-0">
               {/* Hamburger — mobile only */}
               <button
                 type="button"
                 onClick={() => setIsMobileSidebarOpen(true)}
-                class="md:hidden p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+                class="md:hidden p-1.5 rounded-buttons text-graphite hover:bg-chalk hover:text-void transition-colors flex-shrink-0"
                 aria-label="Open menu"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -125,33 +125,29 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
                 </svg>
               </button>
               <div class="min-w-0">
-                <h1 class="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">
-                  {currentItem?.label}
-                </h1>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 hidden sm:block">
-                  {currentItem?.description}
-                </p>
+                <h1 class="text-base font-semibold text-void leading-tight truncate">{currentItem?.label}</h1>
+                <p class="text-xs text-graphite mt-0.5 hidden sm:block">{currentItem?.description}</p>
               </div>
             </div>
 
             <div class="flex items-center gap-2 md:gap-3 flex-shrink-0">
               <div class="flex items-center gap-2">
-                <div class="w-7 h-7 bg-gray-400 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0">
+                <div class="w-7 h-7 bg-chalk border border-fog-border rounded-buttons flex items-center justify-center text-xs font-semibold text-void flex-shrink-0">
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
                 <div class="hidden sm:flex flex-col items-start leading-tight">
-                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{user?.name || 'User'}</span>
-                  <span class="text-xs text-gray-500 dark:text-gray-400">{user?.email}</span>
+                  <span class="text-sm font-medium text-void">{user?.name || 'User'}</span>
+                  <span class="text-xs text-graphite">{user?.email}</span>
                 </div>
               </div>
 
-              <div class="h-6 w-px bg-gray-200 dark:bg-gray-700" />
+              <div class="h-6 w-px bg-fog-border" />
 
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsSignOutDialogOpen(true)}
-                class="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/50"
+                class="border-fog-border text-void hover:bg-chalk"
               >
                 {t('navigation.signOut')}
               </Button>
@@ -159,7 +155,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
           </div>
         </header>
 
-        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-950">
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-canvas">
           <div class="container mx-auto px-4 md:px-6 py-4 md:py-6">{children}</div>
         </main>
       </div>

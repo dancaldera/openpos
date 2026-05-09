@@ -30,7 +30,7 @@ interface EditUserModalProps {
 function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
   const { t } = useTranslation()
   const { hasRole } = useAuth()
-  const formPanelClass = 'rounded-xl border border-gray-200 bg-gray-50 p-6 dark:border-gray-800 dark:bg-gray-800/50'
+  const formPanelClass = 'rounded-cards border border-fog-border bg-chalk p-6 '
 
   const [formData, setFormData] = useState({
     name: '',
@@ -188,7 +188,7 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
         </div>
       </div>
 
-      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-fog-border pt-6 ">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
           {t('common.cancel')}
         </Button>
@@ -202,7 +202,7 @@ function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalProps) {
 
 export default function Members() {
   const { t } = useTranslation()
-  const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
+  const panelClass = 'rounded-cards border border-fog-border bg-canvas '
 
   const [users, setUsers] = useState<User[]>([])
   const [deletedUsers, setDeletedUsers] = useState<User[]>([])
@@ -330,13 +330,13 @@ export default function Members() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin':
-        return 'border border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300'
+        return 'border border-fog-border bg-chalk text-void '
       case 'manager':
-        return 'border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300'
+        return 'border border-fog-border bg-chalk text-void '
       case 'user':
-        return 'border border-green-200 bg-green-50 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300'
+        return 'border border-fog-border bg-chalk text-void '
       default:
-        return 'border border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+        return 'border border-fog-border bg-chalk text-void '
     }
   }
 
@@ -358,9 +358,9 @@ export default function Members() {
       <div class="max-w-6xl mx-auto">
         <div class={`${panelClass} p-12`}>
           <div class="text-center">
-            <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
-            <h2 class="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">{t('members.accessDenied')}</h2>
-            <p class="mx-auto max-w-md text-gray-600 dark:text-gray-400">{t('members.noPermissionMembers')}</p>
+            <div class="text-6xl mb-6 drop-shadow-sm">🔒</div>
+            <h2 class="mb-3 text-lg font-semibold text-void ">{t('members.accessDenied')}</h2>
+            <p class="mx-auto max-w-md text-graphite ">{t('members.noPermissionMembers')}</p>
           </div>
         </div>
       </div>
@@ -374,7 +374,7 @@ export default function Members() {
   return (
     <div class="max-w-6xl mx-auto">
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
+        <p class="text-sm text-graphite ">
           {t('members.membersTotal', {
             count: totalCount,
             unit: totalCount === 1 ? t('members.member') : t('members.members'),
@@ -386,17 +386,11 @@ export default function Members() {
             <Button
               variant="outline"
               onClick={() => setShowDeletedUsers(!showDeletedUsers)}
-              class={
-                showDeletedUsers
-                  ? 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/30 dark:text-orange-300'
-                  : ''
-              }
+              class={showDeletedUsers ? 'border-fog-border bg-chalk text-void ' : ''}
             >
               {showDeletedUsers ? t('members.activeUsers') : t('members.archivedUsers')}
               {deletedUsers.length > 0 && !showDeletedUsers && (
-                <span class="ml-2 rounded-full bg-orange-100 px-2 py-1 text-xs text-orange-700 dark:bg-orange-950/40 dark:text-orange-300">
-                  {deletedUsers.length}
-                </span>
+                <span class="ml-2 rounded-full bg-chalk px-2 py-1 text-xs text-void ">{deletedUsers.length}</span>
               )}
             </Button>
           )}
@@ -409,7 +403,7 @@ export default function Members() {
       <div class={`${panelClass} overflow-hidden`}>
         <Table striped>
           <TableHead>
-            <TableRow class="bg-gray-50 dark:bg-gray-800/60">
+            <TableRow class="bg-chalk ">
               <TableHeader class="font-semibold">{t('members.user')}</TableHeader>
               <TableHeader class="font-semibold">{t('members.role')}</TableHeader>
               <TableHeader class="font-semibold">
@@ -423,39 +417,33 @@ export default function Members() {
             {(showDeletedUsers ? deletedUsers : users).map((user, index) => (
               <TableRow
                 key={user.id}
-                class={showDeletedUsers ? 'bg-orange-50/50 dark:bg-orange-950/10' : ''}
+                class={showDeletedUsers ? 'bg-chalk ' : ''}
                 style={`animation-delay: ${index * 50}ms`}
               >
                 <TableCell>
                   <div class="flex items-center">
                     <div
                       class={`mr-4 flex h-10 w-10 items-center justify-center rounded-full text-lg font-semibold ${
-                        showDeletedUsers
-                          ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300'
-                          : 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                        showDeletedUsers ? 'bg-chalk text-void ' : 'bg-chalk text-void '
                       }`}
                     >
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div class="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100">
+                      <div class="flex items-center gap-2 font-semibold text-void ">
                         {user.name}
                         {showDeletedUsers && (
-                          <span class="rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300">
-                            Archived
-                          </span>
+                          <span class="rounded-full bg-chalk px-2 py-1 text-xs font-medium text-void ">Archived</span>
                         )}
                       </div>
-                      <div class="text-sm text-gray-600 dark:text-gray-400">{user.email}</div>
+                      <div class="text-sm text-graphite ">{user.email}</div>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div
                     class={`inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wide ${
-                      showDeletedUsers
-                        ? 'border border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                        : getRoleColor(user.role)
+                      showDeletedUsers ? 'border border-fog-border bg-chalk text-graphite ' : getRoleColor(user.role)
                     }`}
                   >
                     <span class="mr-1 text-sm">{getRoleIcon(user.role)}</span>
@@ -467,13 +455,13 @@ export default function Members() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div class="text-sm text-gray-600 dark:text-gray-400">
+                  <div class="text-sm text-graphite ">
                     <div>
                       {new Date(
                         showDeletedUsers ? (user.deletedAt ?? user.createdAt) : user.createdAt,
                       ).toLocaleDateString()}
                     </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                    <div class="text-xs text-graphite ">
                       {new Date(
                         showDeletedUsers ? (user.deletedAt ?? user.createdAt) : user.createdAt,
                       ).toLocaleTimeString([], {
@@ -484,11 +472,11 @@ export default function Members() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div class="text-sm text-gray-600 dark:text-gray-400">
+                  <div class="text-sm text-graphite ">
                     {user.lastLogin ? (
                       <>
                         <div>{new Date(user.lastLogin).toLocaleDateString()}</div>
-                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                        <div class="text-xs text-graphite ">
                           {new Date(user.lastLogin).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -496,7 +484,7 @@ export default function Members() {
                         </div>
                       </>
                     ) : (
-                      <div class="italic text-gray-400 dark:text-gray-500">{t('members.neverLoggedIn')}</div>
+                      <div class="italic text-graphite ">{t('members.neverLoggedIn')}</div>
                     )}
                   </div>
                 </TableCell>
@@ -509,7 +497,7 @@ export default function Members() {
                           size="sm"
                           variant="outline"
                           onClick={() => setRestoreConfirm(user.id)}
-                          class="border-green-200 text-green-600 hover:bg-green-50 hover:border-green-300 dark:border-green-900/60 dark:text-green-300 dark:hover:bg-green-950/30"
+                          class="border-fog-border text-void hover:bg-chalk hover:border-fog-border "
                         >
                           {t('members.restore')}
                         </Button>
@@ -523,7 +511,7 @@ export default function Members() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleEditUser(user)}
-                              class="mr-2 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 dark:border-blue-900/60 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                              class="mr-2 border-fog-border text-void hover:bg-chalk hover:border-fog-border "
                             >
                               {t('common.edit')}
                             </Button>
@@ -535,7 +523,7 @@ export default function Members() {
                               size="sm"
                               variant="outline"
                               onClick={() => setDeleteConfirm(user.id)}
-                              class="border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 dark:border-orange-900/60 dark:text-orange-300 dark:hover:bg-orange-950/30"
+                              class="border-fog-border text-void hover:bg-chalk hover:border-fog-border "
                             >
                               {t('members.archive')}
                             </Button>
@@ -566,10 +554,10 @@ export default function Members() {
         <div class={`${panelClass} p-12`}>
           <div class="text-center">
             <div class="text-6xl mb-6">{showDeletedUsers ? '🗂️' : '👥'}</div>
-            <h2 class="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <h2 class="mb-3 text-lg font-semibold text-void ">
               {showDeletedUsers ? t('members.noArchivedUsers') : t('members.noMembers')}
             </h2>
-            <p class="mx-auto mb-6 max-w-md text-gray-600 dark:text-gray-400">
+            <p class="mx-auto mb-6 max-w-md text-graphite ">
               {showDeletedUsers ? t('members.noArchivedUsersDesc') : t('members.emptyTeam')}
             </p>
             {(hasPermission('users.create') || hasRole('admin')) && !showDeletedUsers && (

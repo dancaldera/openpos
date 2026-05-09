@@ -10,9 +10,9 @@ const FIXED_APP_NAME = 'OpenPOS'
 
 export default function Settings() {
   const { t } = useTranslation()
-  const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
-  const sectionTitleClass = 'mb-6 text-xl font-semibold text-gray-900 dark:text-gray-100'
-  const helperTextClass = 'text-sm text-gray-500 dark:text-gray-400'
+  const panelClass = 'rounded-cards border border-fog-border bg-canvas '
+  const sectionTitleClass = 'mb-6 text-xl font-semibold text-void '
+  const helperTextClass = 'text-sm text-graphite '
 
   const [greetMsg, setGreetMsg] = useState('')
   const [name, setName] = useState('')
@@ -155,7 +155,7 @@ export default function Settings() {
               variant="outline"
               onClick={() => setIsResetDialogOpen(true)}
               disabled={isSaving}
-              class="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
+              class="text-void border-fog-border hover:bg-chalk "
             >
               {t('settings.resetDefaults')}
             </Button>
@@ -250,9 +250,9 @@ export default function Settings() {
                       checked={localSettings.taxEnabled}
                       onChange={(e) => handleChange('taxEnabled', (e.target as HTMLInputElement).checked)}
                       disabled={isSaving}
-                      class="h-5 w-5 rounded border-gray-300 bg-white text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
+                      class="h-5 w-5 rounded border-fog-border bg-canvas text-void focus:ring-2 focus:ring-void "
                     />
-                    <span class="font-medium text-gray-900 dark:text-gray-100">{t('settings.enableTax')}</span>
+                    <span class="font-medium text-void ">{t('settings.enableTax')}</span>
                   </label>
                 </div>
                 {localSettings.taxEnabled && (
@@ -272,8 +272,8 @@ export default function Settings() {
                       <span class={helperTextClass}>{t('settings.taxRateDesc')}</span>
                     </div>
                     <div class="flex items-center mt-6">
-                      <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
-                        <span class="text-sm text-blue-700 dark:text-blue-300">
+                      <div class="rounded-cards border border-fog-border bg-chalk p-4 ">
+                        <span class="text-sm text-void ">
                           {t('settings.currentTaxRate')}: <span class="font-bold">{localSettings.taxPercentage}%</span>
                         </span>
                       </div>
@@ -310,23 +310,23 @@ export default function Settings() {
             {/* Developer Tools */}
             <div class={`${panelClass} p-6`}>
               <h2 class={sectionTitleClass}>{t('settings.developerTools')}</h2>
-              <span class="mb-4 block text-gray-600 dark:text-gray-400">{t('settings.developerToolsDesc')}</span>
+              <span class="mb-4 block text-graphite ">{t('settings.developerToolsDesc')}</span>
 
               <div class="space-y-4">
                 <div>
-                  <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{t('settings.resetLocalDb')}</h2>
+                  <h2 class="text-lg font-medium text-void ">{t('settings.resetLocalDb')}</h2>
                   <p class={`${helperTextClass} mb-3`}>{t('settings.resetLocalDbDesc')}</p>
                   <Button
                     variant="outline"
                     onClick={() => setIsResetLocalDbDialogOpen(true)}
                     disabled={isResettingLocalDb}
-                    class="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
+                    class="text-void border-fog-border hover:bg-chalk "
                   >
                     {isResettingLocalDb ? t('settings.resettingLocalDb') : t('settings.resetLocalDb')}
                   </Button>
                 </div>
                 <div>
-                  <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">{t('settings.apiTesting')}</h2>
+                  <h2 class="text-lg font-medium text-void ">{t('settings.apiTesting')}</h2>
                   <form
                     class="flex gap-4 mb-4"
                     onSubmit={(e) => {
@@ -346,7 +346,7 @@ export default function Settings() {
                   </form>
 
                   {greetMsg && (
-                    <p class="rounded-lg border border-green-200 bg-green-50 p-4 text-center text-lg font-medium text-green-700 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300">
+                    <p class="rounded-cards border border-fog-border bg-chalk p-4 text-center text-lg font-medium text-void ">
                       {greetMsg}
                     </p>
                   )}
@@ -366,17 +366,17 @@ export default function Settings() {
       >
         <div>
           <div class="space-y-4">
-            <div class="flex items-center space-x-3 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+            <div class="flex items-center space-x-3 rounded-cards border border-fog-border bg-chalk p-4 text-void ">
               <span class="text-2xl">⚠️</span>
               <div>
                 <span class="font-semibold">{t('settings.resetLocalDbConfirm')}</span>
                 <span class="block text-sm">{t('settings.resetLocalDbWarning')}</span>
               </div>
             </div>
-            <span class="font-medium text-gray-700 dark:text-gray-300">{t('settings.resetLocalDbProceed')}</span>
+            <span class="font-medium text-void ">{t('settings.resetLocalDbProceed')}</span>
           </div>
         </div>
-        <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+        <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-fog-border pt-6 ">
           <Button variant="outline" onClick={() => setIsResetLocalDbDialogOpen(false)} disabled={isResettingLocalDb}>
             {t('common.cancel')}
           </Button>
@@ -395,25 +395,25 @@ export default function Settings() {
       >
         <div>
           <div class="space-y-4">
-            <div class="flex items-center space-x-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+            <div class="flex items-center space-x-3 rounded-cards border border-fog-border bg-chalk p-4 text-void ">
               <span class="text-2xl">⚠️</span>
               <div>
                 <span class="font-semibold">{t('settings.resetConfirm')}</span>
                 <span class="block text-sm">{t('settings.resetWarning')}</span>
               </div>
             </div>
-            <span class="text-gray-700 dark:text-gray-300">{t('settings.resetDescription')}</span>
-            <ul class="ml-4 list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+            <span class="text-void ">{t('settings.resetDescription')}</span>
+            <ul class="ml-4 list-disc list-inside space-y-1 text-sm text-graphite ">
               <li>{t('settings.resetItem1')}</li>
               <li>{t('settings.resetItem2')}</li>
               <li>{t('settings.resetItem3')}</li>
               <li>{t('settings.resetItem4')}</li>
               <li>{t('settings.resetItem5')}</li>
             </ul>
-            <span class="font-medium text-gray-700 dark:text-gray-300">{t('settings.resetProceed')}</span>
+            <span class="font-medium text-void ">{t('settings.resetProceed')}</span>
           </div>
         </div>
-        <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+        <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-fog-border pt-6 ">
           <Button variant="outline" onClick={() => setIsResetDialogOpen(false)} disabled={isSaving}>
             {t('common.cancel')}
           </Button>

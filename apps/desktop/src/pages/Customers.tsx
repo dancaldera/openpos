@@ -231,8 +231,8 @@ function getCustomerSecondaryInfo(customer: Customer) {
 
 function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerModalProps) {
   const { t } = useTranslation()
-  const panelClass = 'rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900'
-  const sectionTitleClass = 'mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100'
+  const panelClass = 'rounded-cards border border-fog-border bg-canvas p-6 '
+  const sectionTitleClass = 'mb-4 text-lg font-semibold text-void '
   const [formData, setFormData] = useState<CustomerFormData>(createEmptyFormData())
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -375,9 +375,9 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
     >
       <div>
         {error && (
-          <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+          <div class="mb-6 rounded-cards border border-fog-border bg-chalk px-4 py-3 text-void ">
             <div class="flex items-center">
-              <span class="text-red-500 mr-2">⚠️</span>
+              <span class="text-void mr-2">⚠️</span>
               {error}
             </div>
           </div>
@@ -399,7 +399,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                   }
                   required={!isBusinessCustomer}
                   helperText={isBusinessCustomer ? t('customers.contactPersonOptional') : undefined}
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={
                     isBusinessCustomer ? t('customers.enterContactFirstName') : t('customers.enterFirstName')
                   }
@@ -416,7 +416,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                   }
                   required={!isBusinessCustomer}
                   helperText={isBusinessCustomer ? t('customers.contactPersonOptional') : undefined}
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={isBusinessCustomer ? t('customers.enterContactLastName') : t('customers.enterLastName')}
                 />
 
@@ -433,7 +433,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                   helperText={
                     isBusinessCustomer ? t('customers.companyNameBusinessHelp') : t('customers.companyNameOptionalHelp')
                   }
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={t('customers.enterCompanyName')}
                 />
 
@@ -450,7 +450,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                     { value: 'individual', label: t('customers.individual') },
                     { value: 'business', label: t('customers.business') },
                   ]}
-                  class="bg-white/80"
+                  class="bg-canvas"
                 />
               </div>
             </div>
@@ -468,7 +468,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                       email: (e.target as HTMLInputElement).value,
                     })
                   }
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={t('customers.enterEmail')}
                 />
 
@@ -482,7 +482,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                       phone: (e.target as HTMLInputElement).value,
                     })
                   }
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={t('customers.enterPhone')}
                 />
 
@@ -496,7 +496,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                       phoneSecondary: (e.target as HTMLInputElement).value,
                     })
                   }
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={t('customers.enterSecondaryPhone')}
                 />
               </div>
@@ -514,7 +514,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                       addressLine1: (e.target as HTMLInputElement).value,
                     })
                   }
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={t('customers.enterAddress')}
                 />
 
@@ -527,7 +527,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                       addressLine2: (e.target as HTMLInputElement).value,
                     })
                   }
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={t('customers.enterAddressLine2')}
                 />
 
@@ -541,7 +541,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                         city: (e.target as HTMLInputElement).value,
                       })
                     }
-                    class="bg-white/80 text-gray-900"
+                    class="bg-canvas text-void"
                     placeholder={t('customers.enterCity')}
                   />
 
@@ -554,7 +554,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                         state: (e.target as HTMLInputElement).value,
                       })
                     }
-                    class="bg-white/80 text-gray-900"
+                    class="bg-canvas text-void"
                     placeholder={t('customers.enterState')}
                   />
 
@@ -567,7 +567,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                         postalCode: (e.target as HTMLInputElement).value,
                       })
                     }
-                    class="bg-white/80 text-gray-900"
+                    class="bg-canvas text-void"
                     placeholder={t('customers.enterPostalCode')}
                   />
                 </div>
@@ -591,7 +591,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                     value: profile,
                     label: t(`customers.businessProfiles.${profile}.label`),
                   }))}
-                  class="bg-white/80"
+                  class="bg-canvas"
                 />
 
                 <Select
@@ -609,7 +609,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                     value: method,
                     label: t(`customers.contactMethods.${method}`),
                   }))}
-                  class="bg-white/80"
+                  class="bg-canvas"
                 />
 
                 <Input
@@ -622,7 +622,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                     })
                   }
                   helperText={t('customers.customerSegmentHelp')}
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={t('customers.enterCustomerSegment')}
                 />
 
@@ -636,7 +636,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                     })
                   }
                   helperText={t('customers.referenceCodeHelp')}
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={profileContent.referencePlaceholder}
                 />
 
@@ -650,7 +650,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                     })
                   }
                   helperText={t('customers.tagsHelp')}
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={t('customers.enterTags')}
                 />
 
@@ -666,7 +666,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                     }
                     rows={3}
                     helperText={t(`customers.businessProfiles.${formData.businessProfile}.serviceNotesHelp`)}
-                    class="bg-white/80 text-gray-900"
+                    class="bg-canvas text-void"
                     placeholder={profileContent.serviceNotesPlaceholder}
                   />
                 </div>
@@ -686,7 +686,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                       creditLimit: parseFloat((e.target as HTMLInputElement).value) || 0,
                     })
                   }
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   min="0"
                   step="0.01"
                 />
@@ -700,7 +700,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                       taxId: (e.target as HTMLInputElement).value,
                     })
                   }
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={t('customers.enterTaxId')}
                 />
 
@@ -715,13 +715,11 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                           taxExempt: (e.target as HTMLInputElement).checked,
                         })
                       }
-                      class="h-5 w-5 rounded border-gray-300 bg-white text-indigo-600 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900"
+                      class="h-5 w-5 rounded border-fog-border bg-canvas text-void focus:ring-void "
                     />
                     <div>
-                      <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {t('customers.taxExempt')}
-                      </span>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">{t('customers.taxExemptDescription')}</p>
+                      <span class="text-sm font-medium text-void ">{t('customers.taxExempt')}</span>
+                      <p class="text-xs text-graphite ">{t('customers.taxExemptDescription')}</p>
                     </div>
                   </label>
                 </div>
@@ -740,7 +738,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                 }
                 rows={3}
                 helperText={t('customers.internalNotesHelp')}
-                class="bg-white/80 text-gray-900"
+                class="bg-canvas text-void"
                 placeholder={t('customers.enterInternalNotes')}
               />
             </div>
@@ -756,18 +754,18 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
                       isActive: (e.target as HTMLInputElement).checked,
                     })
                   }
-                  class="h-5 w-5 rounded border-gray-300 bg-white text-indigo-600 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900"
+                  class="h-5 w-5 rounded border-fog-border bg-canvas text-void focus:ring-void "
                 />
                 <div>
-                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{t('customers.active')}</span>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                  <span class="text-sm font-medium text-void ">{t('customers.active')}</span>
+                  <p class="text-xs text-graphite ">
                     {formData.isActive ? t('customers.activeCustomerHelp') : t('customers.inactiveCustomerHelp')}
                   </p>
                 </div>
               </label>
             </div>
 
-            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-fog-border pt-4 ">
               <Button variant="secondary" onClick={onClose} disabled={isLoading}>
                 {t('common.cancel')}
               </Button>
@@ -785,7 +783,7 @@ function EditCustomerModal({ customer, isOpen, onClose, onSave }: EditCustomerMo
 export default function Customers() {
   const { user, hasPermission } = useAuth()
   const { t } = useTranslation()
-  const panelClass = 'rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
+  const panelClass = 'rounded-cards border border-fog-border bg-canvas '
 
   const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -803,8 +801,8 @@ export default function Customers() {
       <div class="flex items-center justify-center min-h-screen">
         <div class={`${panelClass} max-w-md space-y-4 p-8 text-center`}>
           <div class="text-6xl">🔒</div>
-          <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('customers.accessDenied')}</h2>
-          <p class="text-gray-600 dark:text-gray-400">{t('customers.noPermission')}</p>
+          <h2 class="text-2xl font-bold text-void ">{t('customers.accessDenied')}</h2>
+          <p class="text-graphite ">{t('customers.noPermission')}</p>
         </div>
       </div>
     )
@@ -887,7 +885,7 @@ export default function Customers() {
       ) : customers.length === 0 ? (
         <div class={`${panelClass} p-12 text-center`}>
           <div class="text-6xl mb-4">👥</div>
-          <h3 class="mb-2 text-xl font-semibold text-gray-900 dark:text-gray-100">
+          <h3 class="mb-2 text-xl font-semibold text-void ">
             {searchQuery ? t('customers.noCustomersSearch', { query: searchQuery }) : t('customers.emptyCustomers')}
           </h3>
           {!searchQuery && hasPermission('users.create') && (
@@ -901,7 +899,7 @@ export default function Customers() {
           <div class={`${panelClass} overflow-hidden`}>
             <Table striped>
               <TableHead>
-                <TableRow class="bg-gray-50 dark:bg-gray-800/60">
+                <TableRow class="bg-chalk ">
                   <TableHeader>{t('customers.customerNumber')}</TableHeader>
                   <TableHeader>{t('customers.customerName')}</TableHeader>
                   <TableHeader>{t('customers.customerType')}</TableHeader>
@@ -920,47 +918,39 @@ export default function Customers() {
                   return (
                     <TableRow key={customer.id}>
                       <TableCell>
-                        <span class="font-mono text-sm text-indigo-600 dark:text-indigo-300">
-                          {customer.customerNumber}
-                        </span>
+                        <span class="font-mono text-sm text-void ">{customer.customerNumber}</span>
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div class="font-medium text-gray-900 dark:text-gray-100">
-                            {getCustomerDisplayName(customer, t)}
-                          </div>
-                          {secondaryInfo && <div class="text-xs text-gray-500 dark:text-gray-400">{secondaryInfo}</div>}
+                          <div class="font-medium text-void ">{getCustomerDisplayName(customer, t)}</div>
+                          {secondaryInfo && <div class="text-xs text-graphite ">{secondaryInfo}</div>}
                         </div>
                       </TableCell>
                       <TableCell>
                         <span
                           class={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            customer.customerType === 'business'
-                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/30 dark:text-purple-300'
-                              : 'bg-blue-100 text-blue-800 dark:bg-blue-950/30 dark:text-blue-300'
+                            customer.customerType === 'business' ? 'bg-chalk text-void ' : 'bg-chalk text-void '
                           }`}
                         >
                           {t(`customers.${customer.customerType}`)}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span class="text-gray-600 dark:text-gray-400">{customer.email || '-'}</span>
+                        <span class="text-graphite ">{customer.email || '-'}</span>
                       </TableCell>
                       <TableCell>
-                        <span class="text-gray-600 dark:text-gray-400">{customer.phone || '-'}</span>
+                        <span class="text-graphite ">{customer.phone || '-'}</span>
                       </TableCell>
                       <TableCell>
-                        <span class="font-semibold text-indigo-600 dark:text-indigo-300">{customer.loyaltyPoints}</span>
+                        <span class="font-semibold text-void ">{customer.loyaltyPoints}</span>
                       </TableCell>
                       <TableCell>
-                        <span class="font-semibold text-gray-900 dark:text-gray-100">{customer.totalOrders}</span>
+                        <span class="font-semibold text-void ">{customer.totalOrders}</span>
                       </TableCell>
                       <TableCell>
                         <span
                           class={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            customer.isActive
-                              ? 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300'
-                              : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                            customer.isActive ? 'bg-chalk text-void ' : 'bg-chalk text-void '
                           }`}
                         >
                           {customer.isActive ? t('customers.active') : t('customers.inactive')}
@@ -972,7 +962,7 @@ export default function Customers() {
                             <button
                               type="button"
                               onClick={() => handleEditCustomer(customer)}
-                              class="text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-200"
+                              class="text-sm font-medium text-void hover:text-void "
                             >
                               {t('common.edit')}
                             </button>
@@ -981,7 +971,7 @@ export default function Customers() {
                             <button
                               type="button"
                               onClick={() => setCustomerToDelete(customer)}
-                              class="text-sm font-medium text-red-600 hover:text-red-800 dark:text-red-300 dark:hover:text-red-200"
+                              class="text-sm font-medium text-void hover:text-void "
                             >
                               {t('common.delete')}
                             </button>
@@ -1005,7 +995,7 @@ export default function Customers() {
             />
           )}
 
-          <div class="text-center text-sm text-gray-600 dark:text-gray-400">
+          <div class="text-center text-sm text-graphite ">
             {t('customers.customersTotal', {
               count: totalCount,
               unit: totalCount === 1 ? t('customers.customer') : t('customers.customers'),

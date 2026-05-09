@@ -42,7 +42,7 @@ interface PasswordInputProps {
 
 function RequirementItem({ met, text }: { met: boolean; text: string }) {
   return (
-    <li class={clsx('flex items-center gap-1.5 text-xs', met ? 'text-green-600' : 'text-gray-400')}>
+    <li class={clsx('flex items-center gap-1.5 text-xs', met ? 'text-void' : 'text-graphite')}>
       <span class={clsx('text-sm', met ? 'opacity-100' : 'opacity-50')}>{met ? '✓' : '○'}</span>
       <span>{text}</span>
     </li>
@@ -97,8 +97,8 @@ export function PasswordInput({
             <RequirementItem met={strength.hasNumber} text={t('members.passwordNumber')} />
             <RequirementItem met={strength.hasSpecial} text={t('members.passwordSpecial')} />
           </ul>
-          {value && !isValid && <p class="text-xs text-amber-600 mt-2">{t('members.passwordRequirementsHint')}</p>}
-          {value && isValid && <p class="text-xs text-green-600 mt-2">{t('members.passwordValid')}</p>}
+          {value && !isValid && <p class="text-xs text-void mt-2">{t('members.passwordRequirementsHint')}</p>}
+          {value && isValid && <p class="text-xs text-void mt-2">{t('members.passwordValid')}</p>}
         </div>
       )}
     </div>

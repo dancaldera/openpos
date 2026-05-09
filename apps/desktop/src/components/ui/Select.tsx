@@ -81,7 +81,7 @@ export function Select({
 
         {!multiple && (
           <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-            <ChevronDownIcon class={clsx('w-4 h-4', disabled ? 'text-gray-400' : 'text-gray-600')} />
+            <ChevronDownIcon class={clsx('w-4 h-4', disabled ? 'text-ash' : 'text-graphite')} />
           </span>
         )}
       </div>

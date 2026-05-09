@@ -65,7 +65,7 @@ export function Input({
       <div class="relative">
         {leftIcon && (
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <div class={clsx('h-5 w-5 text-gray-400', iconWrapperClasses)}>{leftIcon}</div>
+            <div class={clsx('h-5 w-5 text-graphite', iconWrapperClasses)}>{leftIcon}</div>
           </div>
         )}
 
@@ -89,14 +89,14 @@ export function Input({
             {onRightIconClick ? (
               <button
                 type="button"
-                class="cursor-pointer text-gray-400 hover:text-gray-600 transition-colors"
+                class="cursor-pointer text-graphite hover:text-void transition-colors"
                 onClick={onRightIconClick}
                 aria-label="Right icon action"
               >
                 <div class={clsx('h-4 w-4', iconWrapperClasses)}>{rightIcon}</div>
               </button>
             ) : (
-              <div class="pointer-events-none text-gray-400">
+              <div class="pointer-events-none text-graphite">
                 <div class={clsx('h-4 w-4', iconWrapperClasses)}>{rightIcon}</div>
               </div>
             )}

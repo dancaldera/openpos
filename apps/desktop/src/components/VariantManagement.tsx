@@ -20,23 +20,23 @@ export function ProductVariantRow({ variant, onEdit, onDelete }: ProductVariantR
   const { t } = useTranslation()
 
   const getStockColor = (stock: number) => {
-    if (stock === 0) return 'from-red-100 to-red-200 text-red-800 border-red-300'
-    if (stock < 10) return 'from-yellow-100 to-yellow-200 text-yellow-800 border-yellow-300'
-    return 'from-green-100 to-green-200 text-green-800 border-green-300'
+    if (stock === 0) return '  text-void border-fog-border'
+    if (stock < 10) return '  text-void border-fog-border'
+    return '  text-void border-fog-border'
   }
 
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`
 
   return (
-    <div class="grid grid-cols-12 gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all">
+    <div class="grid grid-cols-12 gap-4 p-4 bg-chalk rounded-cards hover:bg-chalk transition-all">
       {/* Attributes */}
       <div class="col-span-4">
-        <div class="text-xs text-gray-500 mb-1">{t('variants.attributes')}</div>
+        <div class="text-xs text-graphite mb-1">{t('variants.attributes')}</div>
         <div class="flex flex-wrap gap-1">
           {Object.entries(variant.attributes).map(([key, value]) => (
             <span
               key={key}
-              class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200"
+              class="inline-flex items-center px-2 py-1 rounded-cards text-xs font-medium bg-chalk text-void border border-fog-border"
             >
               <span class="capitalize">{key}:</span> {value}
             </span>
@@ -46,21 +46,21 @@ export function ProductVariantRow({ variant, onEdit, onDelete }: ProductVariantR
 
       {/* SKU */}
       <div class="col-span-2">
-        <div class="text-xs text-gray-500 mb-1">{t('variants.sku')}</div>
-        <div class="text-sm font-mono text-gray-900">{variant.sku || '-'}</div>
+        <div class="text-xs text-graphite mb-1">{t('variants.sku')}</div>
+        <div class="text-sm font-mono text-void">{variant.sku || '-'}</div>
       </div>
 
       {/* Price */}
       <div class="col-span-2">
-        <div class="text-xs text-gray-500 mb-1">{t('variants.variantPrice')}</div>
-        <div class="text-sm font-bold text-emerald-600">{formatCurrency(variant.price)}</div>
+        <div class="text-xs text-graphite mb-1">{t('variants.variantPrice')}</div>
+        <div class="text-sm font-bold text-void">{formatCurrency(variant.price)}</div>
       </div>
 
       {/* Stock */}
       <div class="col-span-2">
-        <div class="text-xs text-gray-500 mb-1">{t('variants.variantStock')}</div>
+        <div class="text-xs text-graphite mb-1">{t('variants.variantStock')}</div>
         <div
-          class={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${getStockColor(variant.stock)} border shadow-sm`}
+          class={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-chalk ${getStockColor(variant.stock)} border shadow-sm`}
         >
           {variant.stock}
         </div>
@@ -75,7 +75,7 @@ export function ProductVariantRow({ variant, onEdit, onDelete }: ProductVariantR
           size="sm"
           variant="outline"
           onClick={() => onDelete(variant.id)}
-          class="text-xs text-red-600 border-red-200 hover:bg-red-50"
+          class="text-xs text-void border-fog-border hover:bg-chalk"
         >
           🗑️
         </Button>
@@ -185,7 +185,7 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
                     sku: (e.target as HTMLInputElement).value,
                   })
                 }
-                class="bg-white/80 text-gray-900"
+                class="bg-canvas text-void"
                 placeholder="SKU-001"
               />
             </div>
@@ -199,7 +199,7 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
                     barcode: (e.target as HTMLInputElement).value,
                   })
                 }
-                class="bg-white/80 text-gray-900"
+                class="bg-canvas text-void"
                 placeholder="1234567890"
                 helperText={
                   normalizeBarcode(formData.barcode)
@@ -226,7 +226,7 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
                   })
                 }
                 required
-                class="bg-white/80 text-gray-900"
+                class="bg-canvas text-void"
                 placeholder="0.00"
               />
             </div>
@@ -242,7 +242,7 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
                   })
                 }
                 required
-                class="bg-white/80 text-gray-900"
+                class="bg-canvas text-void"
                 placeholder="0.00"
               />
             </div>
@@ -258,7 +258,7 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
                   })
                 }
                 required
-                class="bg-white/80 text-gray-900"
+                class="bg-canvas text-void"
                 placeholder="0"
               />
             </div>
@@ -266,14 +266,14 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
 
           {/* Profit Margin */}
           {formData.price > 0 && formData.cost > 0 && (
-            <div class="backdrop-blur-md bg-emerald-100/60 rounded-xl p-4 border border-emerald-200/50 shadow-md">
+            <div class="backdrop-blur-md bg-chalk rounded-cards p-4 border border-fog-border shadow-sm">
               <div class="flex justify-between items-center">
-                <span class="font-semibold text-emerald-800">{t('products.profitMarginLabel')}</span>
-                <span class="text-xl font-bold text-emerald-600">
+                <span class="font-semibold text-void">{t('products.profitMarginLabel')}</span>
+                <span class="text-xl font-bold text-void">
                   {(((formData.price - formData.cost) / formData.cost) * 100).toFixed(1)}%
                 </span>
               </div>
-              <div class="text-sm text-emerald-700 mt-1">
+              <div class="text-sm text-void mt-1">
                 {t('products.profitPerUnit', { amount: formatCurrency(formData.price - formData.cost) })}
               </div>
             </div>
@@ -300,13 +300,13 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
                   label: `⛔ ${t('products.inactiveStatus')}`,
                 },
               ]}
-              class="bg-white/80"
+              class="bg-canvas"
             />
           </div>
         </form>
       </div>
 
-      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 border-t border-gray-200">
+      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 border-t border-fog-border">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
           {t('common.cancel')}
         </Button>
@@ -414,7 +414,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
     return (
       <Dialog isOpen={isOpen} onClose={onClose} title={t('variants.variantGenerator')} size="lg">
         <div class="flex justify-center py-8">
-          <SpinnerIcon class="h-7 w-7 animate-spin text-gray-400" />
+          <SpinnerIcon class="h-7 w-7 animate-spin text-graphite" />
         </div>
       </Dialog>
     )
@@ -430,15 +430,15 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
           <div class="flex items-center">
             <div
               class={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                currentStep >= 1 ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'
+                currentStep >= 1 ? 'bg-void text-canvas' : 'bg-chalk text-graphite'
               }`}
             >
               1
             </div>
-            <div class={`w-16 h-1 ${currentStep >= 2 ? 'bg-indigo-600' : 'bg-gray-200'}`}></div>
+            <div class={`w-16 h-1 ${currentStep >= 2 ? 'bg-chalk' : 'bg-chalk'}`}></div>
             <div
               class={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                currentStep >= 2 ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'
+                currentStep >= 2 ? 'bg-void text-canvas' : 'bg-chalk text-graphite'
               }`}
             >
               2
@@ -449,19 +449,19 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
         {currentStep === 1 && (
           <div class="space-y-6">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">{t('variants.selectAttributes')}</h3>
+              <h3 class="text-lg font-semibold text-void mb-4">{t('variants.selectAttributes')}</h3>
               {attributes.length === 0 ? (
-                <div class="text-center py-8 bg-gray-50 rounded-xl">
+                <div class="text-center py-8 bg-chalk rounded-cards">
                   <div class="text-4xl mb-2">🏷️</div>
-                  <p class="text-gray-600">{t('variants.noAttributesAvailable')}</p>
+                  <p class="text-graphite">{t('variants.noAttributesAvailable')}</p>
                 </div>
               ) : (
                 <div class="space-y-4">
                   {attributes.map((attr) => (
-                    <div key={attr.id} class="bg-gray-50 rounded-xl p-4">
+                    <div key={attr.id} class="bg-chalk rounded-cards p-4">
                       <div class="flex items-center justify-between mb-3">
-                        <h4 class="font-semibold text-gray-900">{attr.name}</h4>
-                        <span class="text-sm text-gray-500">{attr.slug}</span>
+                        <h4 class="font-semibold text-void">{attr.name}</h4>
+                        <span class="text-sm text-graphite">{attr.slug}</span>
                       </div>
                       <div class="flex flex-wrap gap-2">
                         {attr.values.map((value) => {
@@ -471,10 +471,10 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
                               key={value}
                               type="button"
                               onClick={() => toggleAttributeValue(attr.id, value)}
-                              class={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              class={`px-3 py-2 rounded-cards text-sm font-medium transition-all ${
                                 isSelected
-                                  ? 'bg-indigo-600 text-white shadow-md'
-                                  : 'bg-white text-gray-700 border border-gray-200 hover:border-indigo-300'
+                                  ? 'bg-void text-canvas shadow-sm'
+                                  : 'bg-canvas text-void border border-fog-border hover:border-fog-border'
                               }`}
                             >
                               {value}
@@ -483,7 +483,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
                         })}
                       </div>
                       {selectedAttributes[attr.id] && selectedAttributes[attr.id].length > 0 && (
-                        <div class="mt-2 text-sm text-indigo-600">
+                        <div class="mt-2 text-sm text-void">
                           {t('variants.selectValues')}: {selectedAttributes[attr.id].join(', ')}
                         </div>
                       )}
@@ -494,10 +494,10 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
             </div>
 
             {totalCombinations > 0 && (
-              <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+              <div class="bg-chalk border border-fog-border rounded-cards p-4">
                 <div class="flex items-center justify-between">
-                  <span class="text-indigo-900 font-semibold">{t('variants.variantsGenerated')}</span>
-                  <span class="text-2xl font-bold text-indigo-600">{totalCombinations}</span>
+                  <span class="text-void font-semibold">{t('variants.variantsGenerated')}</span>
+                  <span class="text-2xl font-bold text-void">{totalCombinations}</span>
                 </div>
               </div>
             )}
@@ -516,15 +516,15 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
         {currentStep === 2 && (
           <div class="space-y-6">
             <div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">
+              <h3 class="text-lg font-semibold text-void mb-4">
                 {t('variants.title')} - {t('common.details')}
               </h3>
 
-              <div class="bg-gray-50 rounded-xl p-4 mb-4">
-                <p class="text-sm text-gray-600">
+              <div class="bg-chalk rounded-cards p-4 mb-4">
+                <p class="text-sm text-graphite">
                   {t('variants.variantsGenerated')}: <span class="font-bold">{totalCombinations}</span>
                 </p>
-                <div class="mt-2 text-xs text-gray-500">
+                <div class="mt-2 text-xs text-graphite">
                   {Object.entries(selectedAttributes).map(([attrId, values]) => {
                     const attr = attributes.find((a) => a.id === attrId)
                     return (
@@ -544,7 +544,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
                     value={basePrice.toString()}
                     onInput={(e) => setBasePrice(parseFloat((e.target as HTMLInputElement).value) || 0)}
                     required
-                    class="bg-white/80 text-gray-900"
+                    class="bg-canvas text-void"
                     placeholder="0.00"
                   />
                 </div>
@@ -555,7 +555,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
                     value={baseCost.toString()}
                     onInput={(e) => setBaseCost(parseFloat((e.target as HTMLInputElement).value) || 0)}
                     required
-                    class="bg-white/80 text-gray-900"
+                    class="bg-canvas text-void"
                     placeholder="0.00"
                   />
                 </div>
@@ -566,7 +566,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
                     value={baseStock.toString()}
                     onInput={(e) => setBaseStock(parseInt((e.target as HTMLInputElement).value, 10) || 0)}
                     required
-                    class="bg-white/80 text-gray-900"
+                    class="bg-canvas text-void"
                     placeholder="0"
                   />
                 </div>
@@ -655,16 +655,16 @@ export function VariantSettingsModal({ productId, isOpen, onClose, onSaved }: Va
         {error && <ErrorAlert class="mb-6">{error}</ErrorAlert>}
 
         <div class="space-y-6">
-          <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-            <p class="text-sm text-indigo-900">{t('variants.confirmConvertToConfigurable')}</p>
+          <div class="bg-chalk border border-fog-border rounded-cards p-4">
+            <p class="text-sm text-void">{t('variants.confirmConvertToConfigurable')}</p>
           </div>
 
           <div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">{t('variants.selectAttributes')}</h3>
+            <h3 class="text-lg font-semibold text-void mb-4">{t('variants.selectAttributes')}</h3>
             {attributes.length === 0 ? (
-              <div class="text-center py-8 bg-gray-50 rounded-xl">
+              <div class="text-center py-8 bg-chalk rounded-cards">
                 <div class="text-4xl mb-2">🏷️</div>
-                <p class="text-gray-600">{t('variants.noAttributesAvailable')}</p>
+                <p class="text-graphite">{t('variants.noAttributesAvailable')}</p>
               </div>
             ) : (
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -675,14 +675,14 @@ export function VariantSettingsModal({ productId, isOpen, onClose, onSaved }: Va
                       key={attr.id}
                       type="button"
                       onClick={() => handleToggleAttribute(attr.id)}
-                      class={`p-4 rounded-xl text-left transition-all ${
+                      class={`p-4 rounded-cards text-left transition-all ${
                         isSelected
-                          ? 'bg-indigo-600 text-white shadow-md'
-                          : 'bg-white text-gray-700 border border-gray-200 hover:border-indigo-300'
+                          ? 'bg-void text-canvas shadow-sm'
+                          : 'bg-canvas text-void border border-fog-border hover:border-fog-border'
                       }`}
                     >
                       <div class="font-semibold">{attr.name}</div>
-                      <div class={`text-sm ${isSelected ? 'text-indigo-100' : 'text-gray-500'}`}>{attr.slug}</div>
+                      <div class={`text-sm ${isSelected ? 'text-void' : 'text-graphite'}`}>{attr.slug}</div>
                     </button>
                   )
                 })}
@@ -691,15 +691,15 @@ export function VariantSettingsModal({ productId, isOpen, onClose, onSaved }: Va
           </div>
 
           {selectedAttributeIds.length > 0 && (
-            <div class="bg-gray-50 rounded-xl p-4">
-              <p class="text-sm text-gray-600">{t('attributes.attributeValues')}:</p>
+            <div class="bg-chalk rounded-cards p-4">
+              <p class="text-sm text-graphite">{t('attributes.attributeValues')}:</p>
               <div class="mt-2 flex flex-wrap gap-2">
                 {selectedAttributeIds.map((attrId) => {
                   const attr = attributes.find((a) => a.id === attrId)
                   return (
                     <span
                       key={attrId}
-                      class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800"
+                      class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-chalk text-void"
                     >
                       {attr?.name}
                     </span>
@@ -711,7 +711,7 @@ export function VariantSettingsModal({ productId, isOpen, onClose, onSaved }: Va
         </div>
       </div>
 
-      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 border-t border-gray-200">
+      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 border-t border-fog-border">
         <Button variant="outline" onClick={onClose} disabled={isConverting}>
           {t('common.cancel')}
         </Button>

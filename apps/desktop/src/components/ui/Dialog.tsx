@@ -1,8 +1,8 @@
 import type { ComponentChildren } from 'preact'
 import { useEffect, useState } from 'preact/hooks'
 import { clsx } from '../../lib/utils'
+import { registerFullSizeDialog } from '../../stores/ui/dialogStore'
 import { Button } from './Button'
-import { CloseIcon } from './icons'
 
 interface DialogProps {
   isOpen: boolean
@@ -58,6 +58,11 @@ export function Dialog({ isOpen, onClose, title, children, size = 'md', closeOnO
     return () => document.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose])
 
+  useEffect(() => {
+    if (!isOpen || size !== 'full') return
+    return registerFullSizeDialog()
+  }, [isOpen, size])
+
   if (!isOpen) return null
 
   const sizeClasses = {
@@ -84,7 +89,7 @@ export function Dialog({ isOpen, onClose, title, children, size = 'md', closeOnO
       <div class="pointer-events-none relative z-10 flex min-h-full items-center justify-center p-4">
         <div
           class={clsx(
-            'pointer-events-auto relative w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl',
+            'pointer-events-auto relative w-full bg-canvas rounded-cards border border-fog-border shadow-sm',
             'transition-all duration-200 transform',
             isAnimating ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
             sizeClasses[size],
@@ -93,14 +98,16 @@ export function Dialog({ isOpen, onClose, title, children, size = 'md', closeOnO
           aria-modal="true"
         >
           {title && (
-            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+            <div class="flex items-center justify-between p-6 border-b border-fog-border">
+              <h3 class="text-lg font-semibold text-void">{title}</h3>
               <button
                 type="button"
                 onClick={onClose}
-                class="p-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
+                class="p-2 text-graphite hover:text-void focus:outline-none focus:ring-2 focus:ring-void rounded-buttons"
               >
-                <CloseIcon class="w-5 h-5" />
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
           )}
@@ -130,7 +137,7 @@ export function DialogConfirm({
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div class="space-y-4">
-        <p class="text-gray-700 dark:text-gray-300">{message}</p>
+        <p class="text-graphite">{message}</p>
         <div class="flex justify-end space-x-3">
           <Button variant="secondary" onClick={onClose}>
             {cancelText}

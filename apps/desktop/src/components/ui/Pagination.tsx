@@ -53,11 +53,11 @@ export function Pagination({
   if (totalPages <= 1) return null
 
   return (
-    <div class="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg mt-2">
-      <div class="text-sm text-gray-600 dark:text-gray-400">
-        Showing <span class="font-medium text-gray-900 dark:text-gray-200">{startItem}</span> to{' '}
-        <span class="font-medium text-gray-900 dark:text-gray-200">{endItem}</span> of{' '}
-        <span class="font-medium text-gray-900 dark:text-gray-200">{totalCount}</span> results
+    <div class="flex items-center justify-between px-4 py-3 bg-canvas border border-fog-border rounded-cards mt-2">
+      <div class="text-sm text-graphite ">
+        Showing <span class="font-medium text-void ">{startItem}</span> to{' '}
+        <span class="font-medium text-void ">{endItem}</span> of{' '}
+        <span class="font-medium text-void ">{totalCount}</span> results
       </div>
 
       <div class="flex items-center gap-1">
@@ -76,7 +76,7 @@ export function Pagination({
             return (
               <div key={key}>
                 {page === '...' ? (
-                  <span class="px-2 py-1 text-gray-400 dark:text-gray-500">…</span>
+                  <span class="px-2 py-1 text-graphite ">…</span>
                 ) : (
                   <Button
                     variant={currentPage === page ? 'primary' : 'ghost'}

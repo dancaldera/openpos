@@ -24,9 +24,9 @@ export function VirtualKeypad({ onDigitPress, onBackspace, disabled = false, siz
   const isLarge = size === 'large'
   const buttonTextClass = isLarge ? 'text-3xl' : 'text-lg'
   const buttonBase = clsx(
-    'aspect-square rounded font-bold transition-colors',
+    'aspect-square rounded-buttons font-bold transition-colors',
     'disabled:opacity-50 disabled:cursor-not-allowed',
-    'focus:outline-none focus:ring-2',
+    'focus:outline-none focus:ring-2 focus:ring-void',
     buttonTextClass,
   )
 
@@ -34,7 +34,7 @@ export function VirtualKeypad({ onDigitPress, onBackspace, disabled = false, siz
     <div class={clsx('w-full mx-auto mt-3 px-1', isLarge ? 'max-w-72' : 'max-w-48')}>
       <div
         class={clsx(
-          'grid grid-cols-3 bg-gray-100 rounded-lg border border-gray-300',
+          'grid grid-cols-3 bg-chalk rounded-cards border border-fog-border',
           isLarge ? 'gap-3 p-4' : 'gap-2 p-3',
         )}
       >
@@ -44,7 +44,7 @@ export function VirtualKeypad({ onDigitPress, onBackspace, disabled = false, siz
             type="button"
             onClick={() => handleDigitPress(num.toString())}
             disabled={disabled}
-            class={clsx(buttonBase, 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500')}
+            class={clsx(buttonBase, 'bg-void text-canvas')}
             aria-label={`Digit ${num}`}
           >
             {num}
@@ -55,7 +55,7 @@ export function VirtualKeypad({ onDigitPress, onBackspace, disabled = false, siz
           type="button"
           onClick={() => handleDigitPress('backspace')}
           disabled={disabled}
-          class={clsx(buttonBase, 'bg-red-500 hover:bg-red-600 text-white focus:ring-red-500')}
+          class={clsx(buttonBase, 'bg-void text-canvas')}
           aria-label={t('auth.backspace')}
         >
           ⌫
@@ -65,7 +65,7 @@ export function VirtualKeypad({ onDigitPress, onBackspace, disabled = false, siz
           type="button"
           onClick={() => handleDigitPress('0')}
           disabled={disabled}
-          class={clsx(buttonBase, 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500')}
+          class={clsx(buttonBase, 'bg-void text-canvas')}
           aria-label="Digit 0"
         >
           0

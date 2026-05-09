@@ -61,12 +61,12 @@ function ProductVisual({
   name,
   imageUrl,
   sizeClass = 'h-10 w-10',
-  roundedClass = 'rounded-lg',
+  roundedClass = 'rounded-cards',
   className = '',
 }: ProductVisualProps) {
   return (
     <div
-      class={`flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-sm ${sizeClass} ${roundedClass} ${className}`}
+      class={`flex shrink-0 items-center justify-center overflow-hidden bg-chalk text-void ${sizeClass} ${roundedClass} ${className}`}
     >
       {imageUrl ? (
         <img src={imageUrl} alt={name} class="h-full w-full object-cover" />
@@ -79,9 +79,9 @@ function ProductVisual({
 
 export default function Orders() {
   const { t } = useTranslation()
-  const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
-  const mutedPanelClass = 'rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50'
-  const softMetricClass = 'rounded-xl border p-3 sm:p-5'
+  const panelClass = 'rounded-cards border border-fog-border bg-canvas '
+  const mutedPanelClass = 'rounded-cards border border-fog-border bg-chalk '
+  const softMetricClass = 'rounded-cards border p-3 sm:p-5'
 
   const [orders, setOrders] = useState<Order[]>([])
   const [allOrders, setAllOrders] = useState<Order[]>([])
@@ -650,15 +650,15 @@ export default function Orders() {
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
       case 'pending':
-        return 'border border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-300'
+        return 'border border-fog-border bg-chalk text-void '
       case 'paid':
-        return 'border border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300'
+        return 'border border-fog-border bg-chalk text-void '
       case 'completed':
-        return 'border border-green-200 bg-green-50 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300'
+        return 'border border-fog-border bg-chalk text-void '
       case 'cancelled':
-        return 'border border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300'
+        return 'border border-fog-border bg-chalk text-void '
       default:
-        return 'border border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+        return 'border border-fog-border bg-chalk text-void '
     }
   }
 
@@ -777,7 +777,7 @@ export default function Orders() {
   return (
     <div class="max-w-6xl mx-auto">
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
+        <p class="text-sm text-graphite ">
           {totalCount} {totalCount === 1 ? t('orders.order') : t('orders.orders')}
           {selectedDateFilter === 'today'
             ? ` ${t('dates.today').toLowerCase()}`
@@ -801,10 +801,10 @@ export default function Orders() {
       {/* Print Status Message */}
       {printStatus && (
         <div
-          class={`mb-4 rounded-lg border p-3 text-center text-sm ${
+          class={`mb-4 rounded-cards border p-3 text-center text-sm ${
             printStatus.includes('failed') || printStatus.includes('Print failed')
-              ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300'
-              : 'border-green-200 bg-green-50 text-green-700 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300'
+              ? 'border-fog-border bg-chalk text-void '
+              : 'border-fog-border bg-chalk text-void '
           }`}
         >
           {printStatus}
@@ -865,7 +865,7 @@ export default function Orders() {
                 class="w-full sm:w-auto min-w-0"
               />
             </div>
-            <div class="hidden sm:flex w-auto items-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
+            <div class="hidden sm:flex w-auto items-center rounded-cards border border-fog-border bg-chalk px-3 py-2 text-sm text-graphite ">
               <span class="mr-2">{t('orders.sortBy')}:</span>
               <span class="font-medium capitalize">
                 {sortBy === 'date'
@@ -883,48 +883,40 @@ export default function Orders() {
 
         {/* Order Statistics */}
         <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-          <div
-            class={`${softMetricClass} border-yellow-200 bg-yellow-50 dark:border-yellow-900/60 dark:bg-yellow-950/30`}
-          >
+          <div class={`${softMetricClass} border-fog-border bg-chalk `}>
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-xl font-semibold text-yellow-800 sm:text-2xl dark:text-yellow-300">
-                  {orderStats.pending}
-                </div>
-                <div class="text-xs text-yellow-800 sm:text-sm dark:text-yellow-300">{t('orders.pendingOrders')}</div>
+                <div class="text-xl font-semibold text-void sm:text-2xl ">{orderStats.pending}</div>
+                <div class="text-xs text-void sm:text-sm ">{t('orders.pendingOrders')}</div>
               </div>
-              <div class="text-xl text-yellow-300 sm:text-2xl dark:text-yellow-500">⏳</div>
+              <div class="text-xl text-void sm:text-2xl ">⏳</div>
             </div>
           </div>
-          <div class={`${softMetricClass} border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/30`}>
+          <div class={`${softMetricClass} border-fog-border bg-chalk `}>
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-xl font-semibold text-green-800 sm:text-2xl dark:text-green-300">
-                  {orderStats.completed}
-                </div>
-                <div class="text-xs text-green-800 sm:text-sm dark:text-green-300">{t('orders.completed')}</div>
+                <div class="text-xl font-semibold text-void sm:text-2xl ">{orderStats.completed}</div>
+                <div class="text-xs text-void sm:text-sm ">{t('orders.completed')}</div>
               </div>
-              <div class="text-xl text-green-300 sm:text-2xl dark:text-green-500">✅</div>
+              <div class="text-xl text-void sm:text-2xl ">✅</div>
             </div>
           </div>
-          <div class={`${softMetricClass} border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/30`}>
+          <div class={`${softMetricClass} border-fog-border bg-chalk `}>
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-xl font-semibold text-blue-800 sm:text-2xl dark:text-blue-300">{orderStats.paid}</div>
-                <div class="text-xs text-blue-800 sm:text-sm dark:text-blue-300">{t('orders.paidOrders')}</div>
+                <div class="text-xl font-semibold text-void sm:text-2xl ">{orderStats.paid}</div>
+                <div class="text-xs text-void sm:text-sm ">{t('orders.paidOrders')}</div>
               </div>
-              <div class="text-xl text-blue-300 sm:text-2xl dark:text-blue-500">💳</div>
+              <div class="text-xl text-void sm:text-2xl ">💳</div>
             </div>
           </div>
-          <div class={`${softMetricClass} border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30`}>
+          <div class={`${softMetricClass} border-fog-border bg-chalk `}>
             <div class="flex items-center justify-between">
               <div>
-                <div class="text-xl font-semibold text-red-800 sm:text-2xl dark:text-red-300">
-                  {orderStats.cancelled}
-                </div>
-                <div class="text-xs text-red-800 sm:text-sm dark:text-red-300">{t('orders.cancelled')}</div>
+                <div class="text-xl font-semibold text-void sm:text-2xl ">{orderStats.cancelled}</div>
+                <div class="text-xs text-void sm:text-sm ">{t('orders.cancelled')}</div>
               </div>
-              <div class="text-xl text-red-300 sm:text-2xl dark:text-red-500">❌</div>
+              <div class="text-xl text-void sm:text-2xl ">❌</div>
             </div>
           </div>
         </div>
@@ -933,24 +925,24 @@ export default function Orders() {
       <div class={`${panelClass} overflow-hidden`}>
         <Table striped>
           <TableHead>
-            <TableRow class="bg-gray-50 dark:bg-gray-800/60">
+            <TableRow class="bg-chalk ">
               <TableHeader class="font-semibold">{t('orders.order')}</TableHeader>
               <TableHeader class="font-semibold">{t('orders.items')}</TableHeader>
               <TableHeader class="font-semibold">{t('orders.payment')}</TableHeader>
               <TableHeader
-                class="cursor-pointer select-none font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+                class="cursor-pointer select-none font-semibold hover:bg-chalk "
                 onClick={() => handleSort('total')}
               >
                 {t('common.total')} {getSortIcon('total')}
               </TableHeader>
               <TableHeader
-                class="cursor-pointer select-none font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+                class="cursor-pointer select-none font-semibold hover:bg-chalk "
                 onClick={() => handleSort('status')}
               >
                 {t('common.status')} {getSortIcon('status')}
               </TableHeader>
               <TableHeader
-                class="cursor-pointer select-none font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+                class="cursor-pointer select-none font-semibold hover:bg-chalk "
                 onClick={() => handleSort('date')}
               >
                 {t('common.date')} {getSortIcon('date')}
@@ -971,7 +963,7 @@ export default function Orders() {
                 </TableCell>
                 <TableCell>
                   <div class="max-w-xs">
-                    <div class="mb-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <div class="mb-1 text-sm font-medium text-void ">
                       {order.items.length} {order.items.length === 1 ? t('orders.item') : t('orders.items')}
                     </div>
                     <div class="space-y-1">
@@ -980,7 +972,7 @@ export default function Orders() {
                         return (
                           <div
                             key={`${item.productId}-${item.variantId || 'simple'}-${itemIndex}`}
-                            class="flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-400"
+                            class="flex items-center justify-between gap-2 text-xs text-graphite "
                           >
                             <div class="flex min-w-0 items-center gap-2">
                               <ProductVisual
@@ -988,7 +980,7 @@ export default function Orders() {
                                 name={item.productName}
                                 imageUrl={getProductImageUrl(product)}
                                 sizeClass="h-8 w-8"
-                                roundedClass="rounded-md"
+                                roundedClass="rounded-cards"
                               />
                               <span class="truncate">{item.productName}</span>
                             </div>
@@ -997,7 +989,7 @@ export default function Orders() {
                         )
                       })}
                       {order.items.length > 2 && (
-                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                        <div class="text-xs text-graphite ">
                           +{order.items.length - 2} {t('orders.more')}...
                         </div>
                       )}
@@ -1010,7 +1002,7 @@ export default function Orders() {
                       <span class="text-lg mr-2">
                         {order.paymentMethod === 'cash' ? '💵' : order.paymentMethod === 'card' ? '💳' : '🔄'}
                       </span>
-                      <span class="text-sm font-medium capitalize text-gray-700 dark:text-gray-300">
+                      <span class="text-sm font-medium capitalize text-void ">
                         {order.paymentMethod === 'cash'
                           ? t('orders.cash')
                           : order.paymentMethod === 'card'
@@ -1022,16 +1014,16 @@ export default function Orders() {
                 </TableCell>
                 <TableCell>
                   <div class="text-right">
-                    <div class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    <div class="text-lg font-bold text-void ">
                       {formatCurrency(taxEnabled ? order.total : order.subtotal)}
                     </div>
                     {taxEnabled && order.tax > 0 && (
-                      <div class="text-xs text-gray-500 dark:text-gray-400">
+                      <div class="text-xs text-graphite ">
                         {t('common.tax')}: {formatCurrency(order.tax)}
                       </div>
                     )}
                     {taxEnabled && order.tax === 0 && (
-                      <div class="text-xs italic text-gray-400 dark:text-gray-500">{t('orders.noTaxApplied')}</div>
+                      <div class="text-xs italic text-graphite ">{t('orders.noTaxApplied')}</div>
                     )}
                   </div>
                 </TableCell>
@@ -1050,9 +1042,9 @@ export default function Orders() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div class="text-sm text-gray-600 dark:text-gray-400">
+                  <div class="text-sm text-graphite ">
                     <div>{new Date(order.createdAt).toLocaleDateString()}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                    <div class="text-xs text-graphite ">
                       {new Date(order.createdAt).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -1099,14 +1091,14 @@ export default function Orders() {
                         ? '💳'
                         : '❌'}
             </div>
-            <h2 class="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <h2 class="mb-3 text-lg font-semibold text-void ">
               {searchQuery
                 ? t('orders.noMatchingOrders')
                 : selectedStatus === 'all'
                   ? t('orders.noOrdersYet')
                   : t('orders.noOrdersWithStatus', { status: selectedStatus })}
             </h2>
-            <p class="mx-auto mb-6 max-w-md text-gray-600 dark:text-gray-400">
+            <p class="mx-auto mb-6 max-w-md text-graphite ">
               {searchQuery
                 ? t('orders.noMatchingOrdersDesc', { query: searchQuery })
                 : selectedStatus === 'all'
@@ -1136,8 +1128,8 @@ export default function Orders() {
             {/* Available Products */}
             <div>
               <div class="mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('orders.availableProducts')}</h3>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{t('orders.clickToAdd')}</p>
+                <h3 class="text-lg font-semibold text-void ">{t('orders.availableProducts')}</h3>
+                <p class="mt-1 text-sm text-graphite ">{t('orders.clickToAdd')}</p>
               </div>
               <div class="flex flex-col sm:flex-row gap-3 mb-2">
                 <div class="flex-1">
@@ -1182,17 +1174,15 @@ export default function Orders() {
                   />
                 </div>
               </div>
-              <div class="mb-3 text-sm text-gray-500 dark:text-gray-400">
+              <div class="mb-3 text-sm text-graphite ">
                 {filteredProducts.length} {t('orders.of')} {products.length} {t('products.title').toLowerCase()}
               </div>
               <div class={`${panelClass} max-h-96 overflow-y-auto p-4 sm:p-6`}>
                 {filteredProducts.length === 0 ? (
                   <div class="text-center py-12">
                     <div class="text-6xl mb-4">🔍</div>
-                    <h3 class="mb-2 text-lg font-medium text-gray-900 dark:text-gray-100">
-                      {t('orders.noProductsFound')}
-                    </h3>
-                    <p class="text-gray-500 dark:text-gray-400">
+                    <h3 class="mb-2 text-lg font-medium text-void ">{t('orders.noProductsFound')}</h3>
+                    <p class="text-graphite ">
                       {productSearch
                         ? t('orders.noProductsMatch', { search: productSearch })
                         : t('orders.noProductsAvailable')}
@@ -1201,7 +1191,7 @@ export default function Orders() {
                       <button
                         type="button"
                         onClick={() => setProductSearch('')}
-                        class="mt-4 text-blue-600 hover:text-blue-800 font-medium"
+                        class="mt-4 text-void hover:text-void font-medium"
                       >
                         {t('orders.clearSearch')}
                       </button>
@@ -1218,13 +1208,11 @@ export default function Orders() {
                       return (
                         <div
                           key={product.id}
-                          class={`group relative rounded-lg border p-4 transition-colors duration-150 ${
-                            product.stock > 0 ? 'cursor-pointer hover:border-blue-300' : 'cursor-not-allowed opacity-50'
-                          } ${
-                            selectedVariantId
-                              ? 'border-purple-300 bg-purple-50 dark:border-purple-800 dark:bg-purple-950/20'
-                              : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
-                          }`}
+                          class={`group relative rounded-cards border p-4 transition-colors duration-150 ${
+                            product.stock > 0
+                              ? 'cursor-pointer hover:border-fog-border'
+                              : 'cursor-not-allowed opacity-50'
+                          } ${selectedVariantId ? 'border-fog-border bg-chalk ' : 'border-fog-border bg-canvas '}`}
                         >
                           <div class="flex flex-col h-full">
                             <div class="flex-1">
@@ -1237,24 +1225,20 @@ export default function Orders() {
                                     sizeClass="h-12 w-12"
                                   />
                                   <div class="min-w-0 flex-1">
-                                    <div class="text-sm font-semibold leading-tight text-gray-900 dark:text-gray-100">
-                                      {product.name}
-                                    </div>
-                                    <div class="mt-1 inline-block rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                    <div class="text-sm font-semibold leading-tight text-void ">{product.name}</div>
+                                    <div class="mt-1 inline-block rounded-full bg-chalk px-2 py-1 text-xs font-medium text-graphite ">
                                       {product.category}
                                     </div>
                                   </div>
                                 </div>
                                 {isConfigurable && (
-                                  <span class="rounded-full bg-purple-100 px-2 py-1 text-xs text-purple-800 dark:bg-purple-950/40 dark:text-purple-300">
+                                  <span class="rounded-full bg-chalk px-2 py-1 text-xs text-void ">
                                     {t('variants.variant')}
                                   </span>
                                 )}
                               </div>
                               {product.barcode && (
-                                <div class="mb-2 text-[11px] font-mono text-gray-500 dark:text-gray-400">
-                                  {product.barcode}
-                                </div>
+                                <div class="mb-2 text-[11px] font-mono text-graphite ">{product.barcode}</div>
                               )}
 
                               {/* Variant selector for configurable products */}
@@ -1268,7 +1252,7 @@ export default function Orders() {
                                         [product.id]: (e.target as HTMLSelectElement).value,
                                       })
                                     }}
-                                    class="w-full rounded-lg border border-gray-300 bg-white px-2 py-2 text-xs text-gray-900 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                                    class="w-full rounded-cards border border-fog-border bg-canvas px-2 py-2 text-xs text-void focus:border-fog-border focus:outline-none focus:ring-2 focus:ring-void "
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <option value="">{t('variants.selectVariant')}</option>
@@ -1290,7 +1274,7 @@ export default function Orders() {
                             </div>
 
                             <div class="flex items-center justify-between mt-auto">
-                              <div class="text-lg font-bold text-blue-600 dark:text-blue-400">
+                              <div class="text-lg font-bold text-void ">
                                 {selectedVariant
                                   ? formatCurrency(selectedVariant.price)
                                   : formatCurrency(product.price)}
@@ -1298,10 +1282,10 @@ export default function Orders() {
                               <div
                                 class={`rounded-full px-2 py-1 text-xs font-medium ${
                                   (selectedVariant ? selectedVariant.stock : product.stock) > 10
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300'
+                                    ? 'bg-chalk text-void '
                                     : (selectedVariant ? selectedVariant.stock : product.stock) > 0
-                                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300'
-                                      : 'bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300'
+                                      ? 'bg-chalk text-void '
+                                      : 'bg-chalk text-void '
                                 }`}
                               >
                                 {(selectedVariant ? selectedVariant.stock : product.stock) > 0
@@ -1318,7 +1302,7 @@ export default function Orders() {
                                 (isConfigurable && !selectedVariantId) ||
                                 (selectedVariant && selectedVariant.stock === 0)
                               }
-                              class="w-full mt-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors duration-150"
+                              class="w-full mt-3 bg-void disabled:bg-chalk disabled:cursor-not-allowed text-canvas disabled:text-ash text-sm font-medium py-2 px-4 rounded-buttons transition-colors duration-150"
                             >
                               {isConfigurable && !selectedVariantId
                                 ? t('variants.selectVariant')
@@ -1336,7 +1320,7 @@ export default function Orders() {
             {/* Order Items */}
             {newOrder.items.length > 0 && (
               <div>
-                <h3 class="mb-6 text-lg font-semibold text-gray-900 dark:text-gray-100">{t('orders.orderSummary')}</h3>
+                <h3 class="mb-6 text-lg font-semibold text-void ">{t('orders.orderSummary')}</h3>
                 <div class={`${mutedPanelClass} space-y-3 p-4 sm:space-y-4 sm:p-6`}>
                   {newOrder.items.map((item) => {
                     const product = getProductById(item.productId)
@@ -1350,29 +1334,27 @@ export default function Orders() {
                     return product ? (
                       <div
                         key={`${item.productId}-${item.variantId || 'simple'}`}
-                        class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
+                        class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-cards border border-fog-border bg-canvas p-4 "
                       >
                         <div class="flex flex-1 items-start gap-3 min-w-0">
                           <ProductVisual product={product} name={product.name} imageUrl={getProductImageUrl(product)} />
                           <div class="flex-1 min-w-0">
-                            <div class="mb-1 font-semibold text-gray-900 dark:text-gray-100 truncate">
-                              {product.name}
-                            </div>
+                            <div class="mb-1 font-semibold text-void truncate">{product.name}</div>
                             {variantAttributes && (
-                              <div class="mb-2 text-xs text-purple-700 dark:text-purple-300">
+                              <div class="mb-2 text-xs text-void ">
                                 {Object.entries(variantAttributes).map(([k, v]) => (
                                   <span
                                     key={k}
-                                    class="mr-1 mb-1 inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300"
+                                    class="mr-1 mb-1 inline-flex items-center rounded-cards bg-chalk px-2 py-1 text-void "
                                   >
                                     <span class="capitalize">{k}:</span> {v}
                                   </span>
                                 ))}
                               </div>
                             )}
-                            <div class="inline-block rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                            <div class="inline-block rounded-full bg-chalk px-3 py-1 text-sm text-graphite ">
                               {formatCurrency(itemPrice)} × {item.quantity} ={' '}
-                              <span class="font-bold text-blue-600">{formatCurrency(itemPrice * item.quantity)}</span>
+                              <span class="font-bold text-void">{formatCurrency(itemPrice * item.quantity)}</span>
                             </div>
                           </div>
                         </div>
@@ -1391,7 +1373,7 @@ export default function Orders() {
                           >
                             −
                           </Button>
-                          <div class="w-10 rounded border border-blue-200 bg-blue-50 px-1 py-1 text-center text-lg font-bold dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">
+                          <div class="w-10 rounded border border-fog-border bg-chalk px-1 py-1 text-center text-lg font-bold ">
                             {item.quantity}
                           </div>
                           <Button
@@ -1417,7 +1399,7 @@ export default function Orders() {
                   })}
 
                   {/* Order Totals */}
-                  <div class="mt-4 border-t border-gray-200 pt-4 sm:mt-6 sm:pt-6">
+                  <div class="mt-4 border-t border-fog-border pt-4 sm:mt-6 sm:pt-6">
                     {(() => {
                       const subtotal = newOrder.items.reduce((total, item) => {
                         const product = products.find((p) => p.id === item.productId)
@@ -1433,12 +1415,12 @@ export default function Orders() {
                       return (
                         <div class={`${panelClass} p-4 sm:p-5`}>
                           <div class="space-y-3 sm:space-y-4">
-                            <div class="flex justify-between text-gray-700 dark:text-gray-300">
+                            <div class="flex justify-between text-void ">
                               <span class="font-medium">{t('common.subtotal')}:</span>
                               <span class="font-semibold">{formatCurrency(subtotal)}</span>
                             </div>
                             {taxEnabled && (
-                              <div class="flex justify-between text-gray-700 dark:text-gray-300">
+                              <div class="flex justify-between text-void ">
                                 <span class="font-medium">
                                   {t('common.tax')} ({(taxRate * 100).toFixed(1)}%):
                                 </span>
@@ -1446,14 +1428,14 @@ export default function Orders() {
                               </div>
                             )}
                             {!taxEnabled && (
-                              <div class="py-2 text-center text-sm italic text-gray-500 dark:text-gray-400">
+                              <div class="py-2 text-center text-sm italic text-graphite ">
                                 {t('orders.taxDisabled')}
                               </div>
                             )}
-                            <div class="border-t border-gray-200 pt-3 sm:pt-4 dark:border-gray-800">
-                              <div class="flex justify-between rounded-lg bg-blue-50 px-3 py-2 text-lg font-bold text-gray-900 sm:px-4 sm:py-3 sm:text-xl dark:bg-blue-950/30 dark:text-gray-100">
+                            <div class="border-t border-fog-border pt-3 sm:pt-4 ">
+                              <div class="flex justify-between rounded-cards bg-chalk px-3 py-2 text-lg font-bold text-void sm:px-4 sm:py-3 sm:text-xl ">
                                 <span>{t('common.total')}:</span>
-                                <span class="text-blue-600 dark:text-blue-300">{formatCurrency(total)}</span>
+                                <span class="text-void ">{formatCurrency(total)}</span>
                               </div>
                             </div>
                           </div>
@@ -1521,7 +1503,7 @@ export default function Orders() {
             </div>
 
             {/* Action Buttons */}
-            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-fog-border pt-6 ">
               <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)} disabled={isLoading}>
                 {t('common.cancel')}
               </Button>
@@ -1551,8 +1533,8 @@ export default function Orders() {
             {/* Available Products for Editing */}
             <div>
               <div class="mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('orders.availableProducts')}</h3>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{t('orders.clickToAdd')}</p>
+                <h3 class="text-lg font-semibold text-void ">{t('orders.availableProducts')}</h3>
+                <p class="mt-1 text-sm text-graphite ">{t('orders.clickToAdd')}</p>
               </div>
               <div class="mb-2">
                 <Input
@@ -1595,17 +1577,15 @@ export default function Orders() {
                   class="text-sm"
                 />
               </div>
-              <div class="mb-3 text-sm text-gray-500 dark:text-gray-400">
+              <div class="mb-3 text-sm text-graphite ">
                 {filteredEditProducts.length} {t('orders.of')} {products.length} {t('products.title').toLowerCase()}
               </div>
               <div class={`${panelClass} max-h-96 overflow-y-auto p-4 sm:p-6`}>
                 {filteredEditProducts.length === 0 ? (
                   <div class="text-center py-12">
                     <div class="text-6xl mb-4">🔍</div>
-                    <h3 class="mb-2 text-lg font-medium text-gray-900 dark:text-gray-100">
-                      {t('orders.noProductsFound')}
-                    </h3>
-                    <p class="text-gray-500 dark:text-gray-400">
+                    <h3 class="mb-2 text-lg font-medium text-void ">{t('orders.noProductsFound')}</h3>
+                    <p class="text-graphite ">
                       {editProductSearch
                         ? t('orders.noProductsMatch', { search: editProductSearch })
                         : t('orders.noProductsAvailable')}
@@ -1614,7 +1594,7 @@ export default function Orders() {
                       <button
                         type="button"
                         onClick={() => setEditProductSearch('')}
-                        class="mt-4 text-blue-600 hover:text-blue-800 font-medium"
+                        class="mt-4 text-void hover:text-void font-medium"
                       >
                         {t('orders.clearSearch')}
                       </button>
@@ -1626,31 +1606,27 @@ export default function Orders() {
                       <button
                         key={product.id}
                         type="button"
-                        class="group relative rounded-lg border border-gray-200 bg-white p-4 text-left transition-colors duration-150 hover:border-blue-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 cursor-pointer"
+                        class="group relative rounded-cards border border-fog-border bg-canvas p-4 text-left transition-colors duration-150 hover:border-fog-border hover:bg-chalk focus:outline-none focus:ring-2 focus:ring-void cursor-pointer"
                         onClick={() => product.stock > 0 && addItemToEditOrder(product.id)}
                         disabled={product.stock === 0}
                         aria-label={`${t('orders.addProduct')} ${product.name}`}
                       >
                         <div class="flex flex-col h-full">
                           <div class="flex-1">
-                            <div class="mb-2 text-sm font-semibold leading-tight text-gray-900 dark:text-gray-100">
-                              {product.name}
-                            </div>
-                            <div class="mb-3 inline-block rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                            <div class="mb-2 text-sm font-semibold leading-tight text-void ">{product.name}</div>
+                            <div class="mb-3 inline-block rounded-full bg-chalk px-2 py-1 text-xs font-medium text-graphite ">
                               {product.category}
                             </div>
                           </div>
                           <div class="flex items-center justify-between mt-auto">
-                            <div class="text-lg font-bold text-blue-600 dark:text-blue-400">
-                              {formatCurrency(product.price)}
-                            </div>
+                            <div class="text-lg font-bold text-void ">{formatCurrency(product.price)}</div>
                             <div
                               class={`rounded-full px-2 py-1 text-xs font-medium ${
                                 product.stock > 10
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300'
+                                  ? 'bg-chalk text-void '
                                   : product.stock > 0
-                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300'
-                                    : 'bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300'
+                                    ? 'bg-chalk text-void '
+                                    : 'bg-chalk text-void '
                               }`}
                             >
                               {product.stock > 0 ? `📦 ${product.stock}` : '❌ Out'}
@@ -1667,22 +1643,20 @@ export default function Orders() {
             {/* Edit Order Items */}
             {editOrderItems.length > 0 && (
               <div>
-                <h3 class="mb-6 text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {t('orders.updatedOrderSummary')}
-                </h3>
+                <h3 class="mb-6 text-lg font-semibold text-void ">{t('orders.updatedOrderSummary')}</h3>
                 <div class={`${mutedPanelClass} space-y-3 p-4 sm:space-y-4 sm:p-6`}>
                   {editOrderItems.map((item) => {
                     const product = products.find((p) => p.id === item.productId)
                     return product ? (
                       <div
                         key={item.productId}
-                        class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
+                        class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-cards border border-fog-border bg-canvas p-4 "
                       >
                         <div class="flex-1 min-w-0">
-                          <div class="mb-1 font-semibold text-gray-900 dark:text-gray-100 truncate">{product.name}</div>
-                          <div class="inline-block rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                          <div class="mb-1 font-semibold text-void truncate">{product.name}</div>
+                          <div class="inline-block rounded-full bg-chalk px-3 py-1 text-sm text-graphite ">
                             {formatCurrency(product.price)} × {item.quantity} ={' '}
-                            <span class="font-bold text-blue-600">{formatCurrency(product.price * item.quantity)}</span>
+                            <span class="font-bold text-void">{formatCurrency(product.price * item.quantity)}</span>
                           </div>
                         </div>
                         <div class="flex items-center gap-2 flex-shrink-0">
@@ -1694,7 +1668,7 @@ export default function Orders() {
                           >
                             −
                           </Button>
-                          <div class="w-10 rounded border border-blue-200 bg-blue-50 px-1 py-1 text-center text-lg font-bold dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">
+                          <div class="w-10 rounded border border-fog-border bg-chalk px-1 py-1 text-center text-lg font-bold ">
                             {item.quantity}
                           </div>
                           <Button
@@ -1720,7 +1694,7 @@ export default function Orders() {
                   })}
 
                   {/* Updated Order Totals */}
-                  <div class="mt-4 border-t border-gray-200 pt-4 sm:mt-6 sm:pt-6">
+                  <div class="mt-4 border-t border-fog-border pt-4 sm:mt-6 sm:pt-6">
                     {(() => {
                       const subtotal = editOrderItems.reduce((total, item) => {
                         const product = products.find((p) => p.id === item.productId)
@@ -1732,12 +1706,12 @@ export default function Orders() {
                       return (
                         <div class={`${panelClass} p-4 sm:p-5`}>
                           <div class="space-y-3 sm:space-y-4">
-                            <div class="flex justify-between text-gray-700 dark:text-gray-300">
+                            <div class="flex justify-between text-void ">
                               <span class="font-medium">{t('common.subtotal')}:</span>
                               <span class="font-semibold">{formatCurrency(subtotal)}</span>
                             </div>
                             {taxEnabled && (
-                              <div class="flex justify-between text-gray-700 dark:text-gray-300">
+                              <div class="flex justify-between text-void ">
                                 <span class="font-medium">
                                   {t('common.tax')} ({(taxRate * 100).toFixed(1)}%):
                                 </span>
@@ -1745,14 +1719,14 @@ export default function Orders() {
                               </div>
                             )}
                             {!taxEnabled && (
-                              <div class="py-2 text-center text-sm italic text-gray-500 dark:text-gray-400">
+                              <div class="py-2 text-center text-sm italic text-graphite ">
                                 {t('orders.taxDisabled')}
                               </div>
                             )}
-                            <div class="border-t border-gray-200 pt-3 sm:pt-4 dark:border-gray-800">
-                              <div class="flex justify-between rounded-lg bg-blue-50 px-3 py-2 text-lg font-bold text-gray-900 sm:px-4 sm:py-3 sm:text-xl dark:bg-blue-950/30 dark:text-gray-100">
+                            <div class="border-t border-fog-border pt-3 sm:pt-4 ">
+                              <div class="flex justify-between rounded-cards bg-chalk px-3 py-2 text-lg font-bold text-void sm:px-4 sm:py-3 sm:text-xl ">
                                 <span>{t('orders.newTotal')}:</span>
-                                <span class="text-blue-600 dark:text-blue-300">{formatCurrency(total)}</span>
+                                <span class="text-void ">{formatCurrency(total)}</span>
                               </div>
                             </div>
                           </div>
@@ -1792,7 +1766,7 @@ export default function Orders() {
           </div>
         </div>
 
-        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-fog-border pt-6 ">
           <Button
             type="button"
             variant="outline"
@@ -1824,7 +1798,7 @@ export default function Orders() {
           <div>
             <div class="space-y-6">
               {/* Order Header */}
-              <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-gray-200 pb-4 dark:border-gray-800">
+              <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-fog-border pb-4 ">
                 <div>
                   <div class="flex flex-wrap items-center gap-2 mb-2">
                     <div
@@ -1840,7 +1814,7 @@ export default function Orders() {
                             : t('orders.cancelled')}
                     </div>
                     {selectedOrder.paymentMethod && (
-                      <div class="flex items-center text-gray-600 dark:text-gray-400">
+                      <div class="flex items-center text-graphite ">
                         <span class="text-lg mr-1">
                           {selectedOrder.paymentMethod === 'cash'
                             ? '💵'
@@ -1858,37 +1832,36 @@ export default function Orders() {
                       </div>
                     )}
                   </div>
-                  <div class="text-sm text-gray-600 dark:text-gray-400">
+                  <div class="text-sm text-graphite ">
                     {t('orders.created')}: {new Date(selectedOrder.createdAt).toLocaleString()}
                   </div>
                   {selectedOrder.completedAt && (
-                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                    <div class="text-sm text-graphite ">
                       {t('orders.completed')}: {new Date(selectedOrder.completedAt).toLocaleString()}
                     </div>
                   )}
                   {selectedOrder.userId && users[selectedOrder.userId] && (
-                    <div class="text-sm text-gray-600 dark:text-gray-400">
-                      {t('orders.createdBy')}:{' '}
-                      <span class="font-medium text-gray-700 dark:text-gray-300">{users[selectedOrder.userId]}</span>
+                    <div class="text-sm text-graphite ">
+                      {t('orders.createdBy')}: <span class="font-medium text-void ">{users[selectedOrder.userId]}</span>
                     </div>
                   )}
                 </div>
                 <div class="sm:text-right">
-                  <div class="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                  <div class="text-3xl font-bold text-void ">
                     {formatCurrency(taxEnabled ? selectedOrder.total : selectedOrder.subtotal)}
                   </div>
-                  <div class="text-sm text-gray-500 dark:text-gray-400">{t('orders.totalAmount')}</div>
+                  <div class="text-sm text-graphite ">{t('orders.totalAmount')}</div>
                 </div>
               </div>
 
               {/* Order Items */}
               <div>
-                <h4 class="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">{t('orders.orderItems')}</h4>
+                <h4 class="mb-3 text-lg font-semibold text-void ">{t('orders.orderItems')}</h4>
                 <div class="space-y-3">
                   {selectedOrder.items.map((item, index) => (
                     <div
                       key={`${item.productId}-${item.variantId || 'simple'}-${index}`}
-                      class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50"
+                      class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-cards border border-fog-border bg-chalk p-4 "
                     >
                       <div class="flex min-w-0 flex-1 items-start gap-3">
                         <ProductVisual
@@ -1898,13 +1871,13 @@ export default function Orders() {
                           sizeClass="h-12 w-12"
                         />
                         <div class="min-w-0 flex-1">
-                          <div class="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.productName}</div>
+                          <div class="font-semibold text-void truncate">{item.productName}</div>
                           {item.variantAttributes && (
-                            <div class="mt-1 text-xs text-purple-700 dark:text-purple-300">
+                            <div class="mt-1 text-xs text-void ">
                               {Object.entries(item.variantAttributes).map(([k, v]) => (
                                 <span
                                   key={k}
-                                  class="mr-1 mb-1 inline-flex items-center rounded-md bg-purple-100 px-2 py-1 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300"
+                                  class="mr-1 mb-1 inline-flex items-center rounded-cards bg-chalk px-2 py-1 text-void "
                                 >
                                   <span class="capitalize">{k}:</span> {v}
                                 </span>
@@ -1915,20 +1888,16 @@ export default function Orders() {
                       </div>
                       <div class="flex items-center justify-between sm:justify-end gap-4 flex-shrink-0">
                         <div class="text-center">
-                          <div class="font-semibold text-gray-900 dark:text-gray-100">×{item.quantity}</div>
-                          <div class="text-xs text-gray-500 dark:text-gray-400">{t('common.quantity')}</div>
+                          <div class="font-semibold text-void ">×{item.quantity}</div>
+                          <div class="text-xs text-graphite ">{t('common.quantity')}</div>
                         </div>
                         <div class="text-right">
-                          <div class="font-semibold text-gray-900 dark:text-gray-100">
-                            {formatCurrency(item.unitPrice)}
-                          </div>
-                          <div class="text-xs text-gray-500 dark:text-gray-400">{t('orders.unitPrice')}</div>
+                          <div class="font-semibold text-void ">{formatCurrency(item.unitPrice)}</div>
+                          <div class="text-xs text-graphite ">{t('orders.unitPrice')}</div>
                         </div>
                         <div class="text-right">
-                          <div class="text-lg font-bold text-gray-900 dark:text-gray-100">
-                            {formatCurrency(item.totalPrice)}
-                          </div>
-                          <div class="text-xs text-gray-500 dark:text-gray-400">{t('orders.itemTotal')}</div>
+                          <div class="text-lg font-bold text-void ">{formatCurrency(item.totalPrice)}</div>
+                          <div class="text-xs text-graphite ">{t('orders.itemTotal')}</div>
                         </div>
                       </div>
                     </div>
@@ -1937,27 +1906,27 @@ export default function Orders() {
               </div>
 
               {/* Order Summary */}
-              <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
-                <h4 class="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">{t('orders.orderSummary')}</h4>
+              <div class="rounded-cards border border-fog-border bg-chalk p-4 ">
+                <h4 class="mb-3 text-lg font-semibold text-void ">{t('orders.orderSummary')}</h4>
                 <div class="space-y-2">
                   {/* Only show subtotal and tax breakdown when tax is enabled */}
                   {taxEnabled && (
                     <>
-                      <div class="flex justify-between text-gray-700 dark:text-gray-300">
+                      <div class="flex justify-between text-void ">
                         <span>{t('common.subtotal')}:</span>
                         <span class="font-semibold">{formatCurrency(selectedOrder.subtotal)}</span>
                       </div>
                       {/* Only show tax line if the order actually has tax applied */}
                       {selectedOrder.tax > 0 && (
-                        <div class="flex justify-between text-gray-700 dark:text-gray-300">
+                        <div class="flex justify-between text-void ">
                           <span>
                             {t('common.tax')} ({((selectedOrder.tax / selectedOrder.subtotal) * 100).toFixed(1)}%):
                           </span>
                           <span class="font-semibold">{formatCurrency(selectedOrder.tax)}</span>
                         </div>
                       )}
-                      <div class="border-t border-blue-200 pt-2 dark:border-blue-900/60">
-                        <div class="flex justify-between text-xl font-bold text-gray-900 dark:text-gray-100">
+                      <div class="border-t border-fog-border pt-2 ">
+                        <div class="flex justify-between text-xl font-bold text-void ">
                           <span>{t('common.total')}:</span>
                           <span>{formatCurrency(selectedOrder.total)}</span>
                         </div>
@@ -1966,7 +1935,7 @@ export default function Orders() {
                   )}
                   {/* When tax is disabled, only show the total */}
                   {!taxEnabled && (
-                    <div class="flex justify-between text-xl font-bold text-gray-900 dark:text-gray-100">
+                    <div class="flex justify-between text-xl font-bold text-void ">
                       <span>{t('common.total')}:</span>
                       <span>{formatCurrency(selectedOrder.subtotal)}</span>
                     </div>
@@ -1977,20 +1946,20 @@ export default function Orders() {
               {/* Notes */}
               {selectedOrder.notes && (
                 <div>
-                  <h4 class="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">{t('orders.notes')}</h4>
-                  <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-900/60 dark:bg-yellow-950/30">
-                    <p class="text-gray-800 dark:text-gray-200">{selectedOrder.notes}</p>
+                  <h4 class="mb-3 text-lg font-semibold text-void ">{t('orders.notes')}</h4>
+                  <div class="rounded-cards border border-fog-border bg-chalk p-4 ">
+                    <p class="text-void ">{selectedOrder.notes}</p>
                   </div>
                 </div>
               )}
 
               {/* Order Actions */}
-              <div class="flex flex-wrap items-center gap-2 border-t border-gray-200 pt-4 dark:border-gray-800">
+              <div class="flex flex-wrap items-center gap-2 border-t border-fog-border pt-4 ">
                 <Button
                   size="sm"
                   onClick={() => handleThermalPrint(selectedOrder)}
                   disabled={isPrinting}
-                  class="bg-purple-600 hover:bg-purple-700 text-white"
+                  class="bg-void text-canvas"
                 >
                   {isPrinting ? t('orders.printing') : t('orders.printReceipt')}
                 </Button>
@@ -2011,7 +1980,7 @@ export default function Orders() {
                         handleUpdateStatus(selectedOrder.id, 'paid')
                         setSelectedOrder(null)
                       }}
-                      class="bg-green-600 hover:bg-green-700 text-white"
+                      class="bg-void text-canvas"
                     >
                       {t('orders.markAsPaid')}
                     </Button>
@@ -2023,7 +1992,7 @@ export default function Orders() {
                           handleUpdateStatus(selectedOrder.id, 'cancelled')
                           setSelectedOrder(null)
                         }}
-                        class="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
+                        class="text-void border-fog-border hover:bg-chalk "
                       >
                         {t('orders.cancelOrder')}
                       </Button>
@@ -2037,7 +2006,7 @@ export default function Orders() {
                       handleUpdateStatus(selectedOrder.id, 'completed')
                       setSelectedOrder(null)
                     }}
-                    class="bg-blue-600 hover:bg-blue-700 text-white"
+                    class="bg-void text-canvas"
                   >
                     {t('orders.markComplete')}
                   </Button>
@@ -2050,7 +2019,7 @@ export default function Orders() {
                       setDeleteConfirm(selectedOrder.id)
                       setSelectedOrder(null)
                     }}
-                    class="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
+                    class="text-void border-fog-border hover:bg-chalk "
                   >
                     {t('orders.deleteOrder')}
                   </Button>

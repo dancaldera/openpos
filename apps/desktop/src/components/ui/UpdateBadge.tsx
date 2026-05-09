@@ -5,6 +5,7 @@ import { useClickOutside } from '../../hooks/useClickOutside'
 import { useTranslation } from '../../hooks/useTranslation'
 import { getDesktopApi } from '../../lib/desktop'
 import { isDesktop } from '../../lib/platform'
+import { openFullSizeDialogCount } from '../../stores/ui/dialogStore'
 import { updateActions } from '../../stores/update/updateActions'
 import {
   downloadError,
@@ -130,8 +131,8 @@ export function getUpdateBadgeViewModel({
   }
 
   return {
-    borderClass: available ? 'border-amber-500/40' : 'border-gray-700/50',
-    iconColorClass: available ? 'text-amber-400' : 'text-gray-400',
+    borderClass: 'border-fog-border',
+    iconColorClass: available ? 'text-void' : 'text-graphite',
     headline,
     installedVersionLabel: installedVersion ?? '…',
     primaryLabel,
@@ -253,64 +254,67 @@ export function UpdateBadge() {
     await updateActions.downloadUpdate()
   }
 
+  if (openFullSizeDialogCount.value > 0) {
+    popoverOpen.value = false
+    return null
+  }
+
   return (
     <div ref={wrapperRef} class="fixed bottom-4 left-4 z-50 flex flex-col items-start gap-2">
       {popoverOpen.value && (
         <div
-          class={`mb-1 w-72 rounded-lg border ${viewModel.borderClass} bg-gray-900/95 backdrop-blur-sm shadow-xl text-xs text-gray-300 overflow-hidden`}
+          class={`mb-1 w-72 rounded-cards border ${viewModel.borderClass} bg-canvas shadow-sm text-xs text-graphite overflow-hidden`}
         >
-          <div class="px-4 py-3 border-b border-white/10">
-            <p class="font-semibold text-white text-sm">{labels.appUpdate}</p>
-            <p class="text-gray-400 mt-0.5">{viewModel.headline}</p>
+          <div class="px-4 py-3 border-b border-fog-border">
+            <p class="font-semibold text-void text-sm">{labels.appUpdate}</p>
+            <p class="text-graphite mt-0.5">{viewModel.headline}</p>
           </div>
 
           <div class="px-4 py-3 space-y-2.5">
             <div class="flex items-center justify-between">
-              <span class="text-gray-400">{labels.installed}</span>
-              <span class="text-gray-200">{viewModel.installedVersionLabel}</span>
+              <span class="text-graphite">{labels.installed}</span>
+              <span class="text-void">{viewModel.installedVersionLabel}</span>
             </div>
 
             {viewModel.latestVersionLabel && (
               <div class="flex items-center justify-between">
-                <span class="text-gray-400">{labels.latest}</span>
-                <span class={available ? 'text-amber-400 font-medium' : 'text-gray-200'}>
-                  {viewModel.latestVersionLabel}
-                </span>
+                <span class="text-graphite">{labels.latest}</span>
+                <span class={available ? 'text-void font-medium' : 'text-void'}>{viewModel.latestVersionLabel}</span>
               </div>
             )}
 
             {viewModel.lastCheckedLabel && (
               <div class="flex items-center justify-between">
-                <span class="text-gray-400">{labels.lastChecked}</span>
-                <span class="text-gray-200">{viewModel.lastCheckedLabel}</span>
+                <span class="text-graphite">{labels.lastChecked}</span>
+                <span class="text-void">{viewModel.lastCheckedLabel}</span>
               </div>
             )}
 
             {viewModel.statusLabel && (
               <div class="space-y-1 pt-0.5">
-                <span class="text-gray-400">{labels.status}</span>
-                <p class="text-amber-300 leading-relaxed">{viewModel.statusLabel}</p>
+                <span class="text-graphite">{labels.status}</span>
+                <p class="text-void leading-relaxed">{viewModel.statusLabel}</p>
               </div>
             )}
 
             {viewModel.downloadedAssetLabel && (
               <div class="space-y-1 pt-0.5">
-                <span class="text-gray-400">{labels.downloadedAsset}</span>
-                <p class="text-gray-300 leading-relaxed break-all">{viewModel.downloadedAssetLabel}</p>
+                <span class="text-graphite">{labels.downloadedAsset}</span>
+                <p class="text-void leading-relaxed break-all">{viewModel.downloadedAssetLabel}</p>
               </div>
             )}
 
             {viewModel.releaseNotesPreview && (
               <div class="space-y-1 pt-0.5">
-                <span class="text-gray-400">{labels.releaseNotes}</span>
-                <p class="text-gray-300 leading-relaxed line-clamp-3">{viewModel.releaseNotesPreview}</p>
+                <span class="text-graphite">{labels.releaseNotes}</span>
+                <p class="text-void leading-relaxed line-clamp-3">{viewModel.releaseNotesPreview}</p>
               </div>
             )}
 
             {viewModel.error && (
               <div class="space-y-1 pt-0.5">
-                <span class="text-gray-400">{labels.error}</span>
-                <p class="text-rose-300 leading-relaxed">{viewModel.error}</p>
+                <span class="text-graphite">{labels.error}</span>
+                <p class="text-void leading-relaxed">{viewModel.error}</p>
               </div>
             )}
           </div>
@@ -322,7 +326,7 @@ export function UpdateBadge() {
                 void updateActions.checkForUpdate()
               }}
               disabled={checking || downloading || installing}
-              class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium transition-colors disabled:opacity-50"
+              class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-buttons bg-chalk hover:bg-chalk text-void text-xs font-medium transition-colors disabled:opacity-50"
             >
               {checking && <SpinnerIcon class="w-3 h-3 animate-spin" />}
               {viewModel.checkingLabel}
@@ -335,7 +339,7 @@ export function UpdateBadge() {
                   void handleInstallAction()
                 }}
                 disabled={viewModel.actionDisabled}
-                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition-colors disabled:opacity-50"
+                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-buttons bg-void text-canvas text-xs font-medium transition-colors disabled:opacity-50"
               >
                 {(downloading || installing) && <SpinnerIcon class="w-3 h-3 animate-spin" />}
                 {viewModel.actionLabel}
@@ -348,7 +352,7 @@ export function UpdateBadge() {
                 onClick={() => {
                   void handleViewRelease()
                 }}
-                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium transition-colors"
+                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-buttons bg-chalk text-void text-xs font-medium transition-colors"
               >
                 {labels.viewRelease} ↗
               </button>
@@ -362,7 +366,7 @@ export function UpdateBadge() {
         onClick={() => {
           popoverOpen.value = !popoverOpen.value
         }}
-        class={`relative flex items-center gap-2 px-3 py-1.5 rounded-full border ${viewModel.borderClass} bg-gray-900/90 backdrop-blur-sm shadow-lg cursor-pointer select-none transition-opacity hover:opacity-90 active:scale-95`}
+        class={`relative flex items-center gap-2 px-3 py-1.5 rounded-buttons border ${viewModel.borderClass} bg-canvas shadow-sm cursor-pointer select-none transition-opacity hover:opacity-90 active:scale-95`}
         title={labels.appUpdate}
       >
         {checking || downloading || installing ? (
@@ -370,7 +374,7 @@ export function UpdateBadge() {
         ) : (
           <span class="relative inline-flex">
             <RocketIcon class={`w-3 h-3 ${viewModel.iconColorClass}`} />
-            {available && <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />}
+            {available && <span class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-void" />}
           </span>
         )}
         <span class={`text-xs font-medium ${viewModel.iconColorClass}`}>{viewModel.primaryLabel}</span>

@@ -32,17 +32,17 @@ export default function FirstRunSync({ status, isRetrying, onRetry }: FirstRunSy
       : t('startup.initialSyncFailedDescription')
 
   return (
-    <div class="min-h-screen flex items-center justify-center p-4 bg-blue-100">
+    <div class="min-h-screen flex items-center justify-center p-4 bg-chalk">
       <div class="w-full max-w-md">
-        <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-8">
+        <div class="bg-canvas backdrop-blur-sm rounded-cards shadow-sm p-8">
           <div class="text-center mb-8">
-            <h1 class="text-2xl font-bold text-gray-900">{appName.value}</h1>
-            <p class="text-sm text-gray-600 mt-2">{t('startup.subtitle')}</p>
+            <h1 class="text-2xl font-bold text-void">{appName.value}</h1>
+            <p class="text-sm text-graphite mt-2">{t('startup.subtitle')}</p>
           </div>
 
-          <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-5">
+          <div class="rounded-cards border border-fog-border bg-chalk px-4 py-5">
             <div class="flex items-center gap-3 mb-4">
-              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
+              <div class="flex h-10 w-10 items-center justify-center rounded-buttons bg-void text-canvas">
                 {isSyncing ? (
                   <SpinnerIcon class="h-5 w-5 animate-spin" />
                 ) : (
@@ -50,14 +50,14 @@ export default function FirstRunSync({ status, isRetrying, onRetry }: FirstRunSy
                 )}
               </div>
               <div class="text-left">
-                <h2 class="text-lg font-semibold text-gray-900">{title}</h2>
-                <p class="text-sm text-gray-600">{description}</p>
+                <h2 class="text-lg font-semibold text-void">{title}</h2>
+                <p class="text-sm text-graphite">{description}</p>
               </div>
             </div>
 
-            {status.lastError ? <p class="text-sm text-red-700 mb-4">{status.lastError}</p> : null}
+            {status.lastError ? <p class="text-sm text-void mb-4">{status.lastError}</p> : null}
 
-            <div class="space-y-2 text-sm text-gray-700">
+            <div class="space-y-2 text-sm text-void">
               <p>
                 {t('startup.remoteConfigured', { value: status.remoteConfigured ? t('common.yes') : t('common.no') })}
               </p>
@@ -66,22 +66,22 @@ export default function FirstRunSync({ status, isRetrying, onRetry }: FirstRunSy
           </div>
 
           <div class="mt-6 space-y-3">
-            {isMissingConfig ? <p class="text-sm text-gray-600">{t('startup.configureRemoteHint')}</p> : null}
+            {isMissingConfig ? <p class="text-sm text-graphite">{t('startup.configureRemoteHint')}</p> : null}
 
             {isFailed ? (
               <button
                 type="button"
                 onClick={() => void onRetry()}
                 disabled={isRetrying}
-                class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-full py-3 px-4 bg-void text-canvas font-semibold rounded-buttons transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isRetrying ? t('common.loading') : t('startup.retry')}
               </button>
             ) : null}
           </div>
 
-          <div class="mt-8 pt-6 border-t border-gray-200 text-center">
-            <span class="text-xs text-gray-500">
+          <div class="mt-8 pt-6 border-t border-fog-border text-center">
+            <span class="text-xs text-graphite">
               v{APP_VERSION} • {t('startup.firstRunRequired')}
             </span>
           </div>

@@ -8,15 +8,10 @@ interface ErrorAlertProps {
 
 export function ErrorAlert({ children, class: className }: ErrorAlertProps) {
   return (
-    <div
-      class={clsx(
-        'bg-red-500/10 backdrop-blur-sm border border-red-400/20 text-red-700 px-4 py-3 rounded-xl',
-        className,
-      )}
-    >
+    <div class={clsx('bg-chalk border border-fog-border text-void px-4 py-3 rounded-cards', className)}>
       <div class="flex items-center">
-        <span class="text-red-500 mr-2" aria-hidden="true">
-          ⚠️
+        <span class="text-void mr-2" aria-hidden="true">
+          !
         </span>
         {children}
       </div>

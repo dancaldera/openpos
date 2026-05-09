@@ -126,17 +126,17 @@ export default function SignIn() {
   }
 
   return (
-    <div class="drag-region min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gray-100 dark:bg-gray-950">
+    <div class="drag-region min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-chalk ">
       <canvas ref={canvasRef} class="absolute inset-0 pointer-events-none" />
 
       {/* Grabbable zone at top for macOS traffic lights */}
       {isMac && <div class="drag-region absolute top-0 left-0 right-0 h-10 z-20" />}
 
       <div class="no-drag w-full max-w-sm relative z-10">
-        <div class="bg-white/95 dark:bg-gray-900/97 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/60 dark:border-gray-700/60 p-8">
+        <div class="bg-canvas backdrop-blur-xl rounded-cards shadow-sm border border-fog-border p-8">
           <div class="text-center mb-7">
-            <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{appName.value}</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('auth.signInToAccount')}</p>
+            <h1 class="text-xl font-semibold text-void ">{appName.value}</h1>
+            <p class="text-sm text-graphite mt-1">{t('auth.signInToAccount')}</p>
           </div>
 
           <Form onSubmit={handleSubmit} spacing="md">
@@ -172,14 +172,14 @@ export default function SignIn() {
             </Button>
           </Form>
 
-          <div class="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800 text-center">
-            <span class="text-xs text-gray-400 dark:text-gray-500">
+          <div class="mt-6 pt-5 border-t border-fog-border text-center">
+            <span class="text-xs text-graphite ">
               v{APP_VERSION} •{' '}
               <a
                 href="https://github.com/dancaldera"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                class="hover:text-graphite transition-colors"
               >
                 GitHub
               </a>
@@ -190,7 +190,7 @@ export default function SignIn() {
                   <button
                     type="button"
                     onClick={fillDemo}
-                    class="bg-gradient-to-r from-gray-300 via-indigo-400 to-gray-300 dark:from-gray-600 dark:via-indigo-500 dark:to-gray-600 bg-[length:200%_auto] animate-[shimmer_4s_linear_infinite] [background-clip:text] [-webkit-background-clip:text] [color:transparent] text-xs cursor-pointer"
+                    class="text-xs text-void underline underline-offset-4 cursor-pointer"
                     title="Fill demo credentials"
                   >
                     demo

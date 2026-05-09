@@ -113,7 +113,7 @@ function getErrorMessage(message: string, t: TranslateFunction): string {
 
 function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }: EditProductModalProps) {
   const { t } = useTranslation()
-  const panelClass = 'rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900'
+  const panelClass = 'rounded-cards border border-fog-border bg-canvas p-6 '
 
   const [formData, setFormData] = useState({
     name: '',
@@ -332,9 +332,9 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
     >
       <div>
         {error && (
-          <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+          <div class="mb-6 rounded-cards border border-fog-border bg-chalk px-4 py-3 text-void ">
             <div class="flex items-center">
-              <span class="text-red-500 mr-2">⚠️</span>
+              <span class="text-void mr-2">⚠️</span>
               {error}
             </div>
           </div>
@@ -354,7 +354,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                     })
                   }
                   required
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder={t('products.productName')}
                 />
               </div>
@@ -372,7 +372,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                   required
                   placeholder={t('products.selectCategory')}
                   options={getCategoryOptions(t)}
-                  class="bg-white/80"
+                  class="bg-canvas"
                 />
               </div>
             </div>
@@ -388,16 +388,14 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                   })
                 }
                 rows={3}
-                class="bg-white/80 text-gray-900"
+                class="bg-canvas text-void"
                 placeholder={t('products.enterDescription')}
               />
             </div>
 
             <div>
               <div class="mb-2 flex items-center justify-between">
-                <div class="block text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {t('products.productImage')}
-                </div>
+                <div class="block text-sm font-medium text-void ">{t('products.productImage')}</div>
                 {(imagePreviewUrl || product?.image) && (
                   <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage} disabled={isLoading}>
                     {t('products.removeImage')}
@@ -405,13 +403,13 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                 )}
               </div>
 
-              <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/60">
+              <div class="rounded-cards border border-dashed border-fog-border bg-chalk p-4 ">
                 <div class="flex flex-col gap-4 md:flex-row md:items-center">
-                  <div class="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                  <div class="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-cards border border-fog-border bg-canvas ">
                     {imagePreviewUrl ? (
                       <img src={imagePreviewUrl} alt={t('products.imagePreview')} class="h-full w-full object-cover" />
                     ) : (
-                      <div class="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500">
+                      <div class="flex flex-col items-center gap-1 text-graphite ">
                         <span class="text-3xl">🖼️</span>
                         <span class="text-xs font-medium">{t('products.noImage')}</span>
                       </div>
@@ -419,17 +417,17 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                   </div>
 
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <p class="text-sm font-medium text-void ">
                       {selectedImageFile ? t('products.changeImage') : t('products.uploadImage')}
                     </p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('products.imageHelp')}</p>
+                    <p class="mt-1 text-xs text-graphite ">{t('products.imageHelp')}</p>
                     {selectedImageFile && (
-                      <p class="mt-2 text-xs font-medium text-blue-700 dark:text-blue-300">
+                      <p class="mt-2 text-xs font-medium text-void ">
                         {t('products.imageSelected', { fileName: selectedImageFile.name })}
                       </p>
                     )}
 
-                    <label class="mt-3 inline-flex cursor-pointer items-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300 dark:hover:bg-blue-950/50">
+                    <label class="mt-3 inline-flex cursor-pointer items-center rounded-cards border border-fog-border bg-chalk px-4 py-2 text-sm font-medium text-void transition-colors hover:bg-chalk ">
                       <span>
                         {selectedImageFile || imagePreviewUrl ? t('products.changeImage') : t('products.uploadImage')}
                       </span>
@@ -459,7 +457,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                     })
                   }
                   required
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder="0.00"
                 />
               </div>
@@ -476,7 +474,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                     })
                   }
                   required
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder="0.00"
                 />
               </div>
@@ -493,7 +491,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                     })
                   }
                   required
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   placeholder="0"
                 />
               </div>
@@ -511,7 +509,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                     })
                   }
                   placeholder={t('products.enterBarcode')}
-                  class="bg-white/80 text-gray-900"
+                  class="bg-canvas text-void"
                   helperText={
                     normalizeBarcode(formData.barcode)
                       ? product?.variantType === 'configurable'
@@ -548,23 +546,21 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                       label: t('products.inactiveStatus'),
                     },
                   ]}
-                  class="bg-white/80"
+                  class="bg-canvas"
                 />
               </div>
             </div>
 
             {/* Profit Margin Preview */}
             {formData.price > 0 && formData.cost > 0 && (
-              <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+              <div class="rounded-cards border border-fog-border bg-chalk p-4 ">
                 <div class="flex justify-between items-center">
-                  <span class="font-semibold text-emerald-800 dark:text-emerald-300">
-                    {t('products.profitMarginLabel')}
-                  </span>
-                  <span class="text-xl font-bold text-emerald-600 dark:text-emerald-300">
+                  <span class="font-semibold text-void ">{t('products.profitMarginLabel')}</span>
+                  <span class="text-xl font-bold text-void ">
                     {(((formData.price - formData.cost) / formData.cost) * 100).toFixed(1)}%
                   </span>
                 </div>
-                <div class="mt-1 text-sm text-emerald-700 dark:text-emerald-300">
+                <div class="mt-1 text-sm text-void ">
                   {t('products.profitPerUnit', { amount: `$${(formData.price - formData.cost).toFixed(2)}` })}
                 </div>
               </div>
@@ -573,7 +569,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
         </div>
       </div>
 
-      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-fog-border pt-6 ">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
           {t('common.cancel')}
         </Button>
@@ -593,7 +589,7 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
 
 export default function Products() {
   const { t } = useTranslation()
-  const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
+  const panelClass = 'rounded-cards border border-fog-border bg-canvas '
 
   const [products, setProducts] = useState<Product[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
@@ -895,18 +891,16 @@ export default function Products() {
 
   const getStockColor = (stock: number) => {
     if (stock === 0) {
-      return 'border border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300'
+      return 'border border-fog-border bg-chalk text-void '
     }
     if (stock < 10) {
-      return 'border border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-300'
+      return 'border border-fog-border bg-chalk text-void '
     }
-    return 'border border-green-200 bg-green-50 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300'
+    return 'border border-fog-border bg-chalk text-void '
   }
 
   const getStatusColor = (isActive: boolean) => {
-    return isActive
-      ? 'border border-green-200 bg-green-50 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300'
-      : 'border border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+    return isActive ? 'border border-fog-border bg-chalk text-void ' : 'border border-fog-border bg-chalk text-void '
   }
 
   const getStockIcon = (stock: number) => {
@@ -924,9 +918,9 @@ export default function Products() {
       <div class="max-w-6xl mx-auto">
         <div class={`${panelClass} p-12`}>
           <div class="text-center">
-            <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
-            <h3 class="mb-3 text-2xl font-bold text-gray-900 dark:text-gray-100">{t('products.accessDenied')}</h3>
-            <p class="mx-auto max-w-md text-gray-600 dark:text-gray-400">{t('products.noPermission')}</p>
+            <div class="text-6xl mb-6 drop-shadow-sm">🔒</div>
+            <h3 class="mb-3 text-2xl font-bold text-void ">{t('products.accessDenied')}</h3>
+            <p class="mx-auto max-w-md text-graphite ">{t('products.noPermission')}</p>
           </div>
         </div>
       </div>
@@ -940,7 +934,7 @@ export default function Products() {
   return (
     <div class="max-w-6xl mx-auto">
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
+        <p class="text-sm text-graphite ">
           {totalCount} {t('products.productsTotal')}
           {totalPages > 1 && ` • ${t('products.pageXofY', { current: currentPage, total: totalPages })}`}
           {searchQuery && ` • ${t('products.searchingFor')} "${searchQuery}"`}
@@ -1009,9 +1003,9 @@ export default function Products() {
       </div>
 
       {error && (
-        <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+        <div class="mb-6 rounded-cards border border-fog-border bg-chalk px-4 py-3 text-void ">
           <div class="flex items-center">
-            <span class="text-red-500 mr-2">⚠️</span>
+            <span class="text-void mr-2">⚠️</span>
             {error}
           </div>
         </div>
@@ -1020,7 +1014,7 @@ export default function Products() {
       <div class={`${panelClass} overflow-hidden`}>
         <Table dense striped>
           <TableHead>
-            <TableRow class="bg-gray-50 dark:bg-gray-800/60">
+            <TableRow class="bg-chalk ">
               <TableHeader class="py-2 font-semibold">{t('common.name')}</TableHeader>
               <TableHeader class="py-2 font-semibold">{t('products.category')}</TableHeader>
               <TableHeader class="py-2 font-semibold">{t('common.price')}</TableHeader>
@@ -1083,7 +1077,7 @@ export default function Products() {
                   <TableRow key={product.id} style={`animation-delay: ${index * 50}ms`}>
                     <TableCell>
                       <div class="flex items-start gap-2.5">
-                        <div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-sm text-white shadow-sm">
+                        <div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-cards bg-chalk text-sm text-void">
                           {product.image && resolvedImageUrls[product.image] ? (
                             <img
                               src={resolvedImageUrls[product.image]}
@@ -1096,12 +1090,12 @@ export default function Products() {
                         </div>
                         <div class="min-w-0 flex-1">
                           <div class="flex items-center gap-1.5">
-                            <span class="truncate font-semibold text-gray-900 dark:text-gray-100">{product.name}</span>
+                            <span class="truncate font-semibold text-void ">{product.name}</span>
                             {isConfigurable && (
                               <button
                                 type="button"
                                 onClick={() => handleToggleExpand(product.id)}
-                                class="inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-800 transition-colors hover:bg-purple-200 dark:border-purple-900/60 dark:bg-purple-950/30 dark:text-purple-300 dark:hover:bg-purple-950/50"
+                                class="inline-flex items-center gap-1 rounded-full border border-fog-border bg-chalk px-2 py-0.5 text-[11px] font-medium text-void transition-colors hover:bg-chalk "
                               >
                                 🏷️ {variantCount} {t('variants.variants')}
                                 <span class={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
@@ -1111,12 +1105,10 @@ export default function Products() {
                             )}
                           </div>
                           {product.description && (
-                            <div class="mt-0.5 max-w-xs truncate text-xs text-gray-600 dark:text-gray-400">
-                              {product.description}
-                            </div>
+                            <div class="mt-0.5 max-w-xs truncate text-xs text-graphite ">{product.description}</div>
                           )}
                           {product.barcode && (
-                            <div class="mt-1 inline-flex w-fit items-center rounded-md bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                            <div class="mt-1 inline-flex w-fit items-center rounded-cards bg-chalk px-1.5 py-0.5 font-mono text-[11px] text-graphite ">
                               📊 {product.barcode}
                             </div>
                           )}
@@ -1124,7 +1116,7 @@ export default function Products() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div class="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">
+                      <div class="inline-flex items-center rounded-full border border-fog-border bg-chalk px-2 py-1 text-[11px] font-semibold text-void ">
                         <span class="mr-1">{getCategoryIcon(product.category)}</span>
                         {getCategoryLabel(product.category, t)}
                       </div>
@@ -1132,11 +1124,11 @@ export default function Products() {
                     <TableCell>
                       {productWithVariants?.minPrice !== undefined && productWithVariants?.maxPrice !== undefined ? (
                         <div class="space-y-0.5">
-                          <div class="text-base font-bold text-emerald-600 dark:text-emerald-300">
+                          <div class="text-base font-bold text-void ">
                             {formatCurrency(productWithVariants.minPrice)}
                           </div>
                           {productWithVariants.minPrice !== productWithVariants.maxPrice && (
-                            <div class="text-[11px] leading-tight text-gray-500 dark:text-gray-400">
+                            <div class="text-[11px] leading-tight text-graphite ">
                               {t('variants.priceRange', {
                                 min: formatCurrency(productWithVariants.minPrice),
                                 max: formatCurrency(productWithVariants.maxPrice),
@@ -1145,16 +1137,12 @@ export default function Products() {
                           )}
                         </div>
                       ) : (
-                        <div class="text-base font-bold text-emerald-600 dark:text-emerald-300">
-                          {formatCurrency(product.price)}
-                        </div>
+                        <div class="text-base font-bold text-void ">{formatCurrency(product.price)}</div>
                       )}
                     </TableCell>
                     <TableCell>
-                      <div class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {formatCurrency(product.cost)}
-                      </div>
-                      <div class="mt-0.5 text-[11px] leading-tight text-gray-500 dark:text-gray-400">
+                      <div class="text-sm font-medium text-void ">{formatCurrency(product.cost)}</div>
+                      <div class="mt-0.5 text-[11px] leading-tight text-graphite ">
                         {t('products.profitMargin')}:{' '}
                         {(((product.price - product.cost) / product.cost) * 100).toFixed(1)}%
                       </div>
@@ -1192,7 +1180,7 @@ export default function Products() {
                             items={actionItems}
                             trigger={
                               <>
-                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200">
+                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-cards border border-fog-border text-graphite transition-colors hover:bg-chalk hover:text-void ">
                                   <svg aria-hidden="true" viewBox="0 0 16 16" class="h-4 w-4 fill-current">
                                     <circle cx="3" cy="8" r="1.25" />
                                     <circle cx="8" cy="8" r="1.25" />
@@ -1210,11 +1198,11 @@ export default function Products() {
 
                   {/* Expandable variants row */}
                   {isExpanded && productWithVariants?.variants && (
-                    <TableRow key={`${product.id}-variants`} class="bg-gray-50 dark:bg-gray-800/40">
+                    <TableRow key={`${product.id}-variants`} class="bg-chalk ">
                       <TableCell colSpan={7} class="px-4 py-3">
                         <div class="space-y-2">
                           <div class="flex items-center justify-between">
-                            <h4 class="font-semibold text-gray-900 dark:text-gray-100">{t('variants.variants')}</h4>
+                            <h4 class="font-semibold text-void ">{t('variants.variants')}</h4>
                             <div class="flex gap-2">
                               <Button
                                 size="sm"
@@ -1229,9 +1217,9 @@ export default function Products() {
                             </div>
                           </div>
                           {productWithVariants.variants.length === 0 ? (
-                            <div class="rounded-lg bg-white py-8 text-center dark:bg-gray-900">
+                            <div class="rounded-cards bg-canvas py-8 text-center ">
                               <div class="text-4xl mb-2">📦</div>
-                              <p class="text-gray-600 dark:text-gray-400">{t('variants.noVariants')}</p>
+                              <p class="text-graphite ">{t('variants.noVariants')}</p>
                             </div>
                           ) : (
                             <div class="space-y-2">
@@ -1272,10 +1260,10 @@ export default function Products() {
         <div class={`${panelClass} p-12`}>
           <div class="text-center">
             <div class="text-6xl mb-6">{searchQuery ? '🔍' : '📦'}</div>
-            <h3 class="mb-3 text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h3 class="mb-3 text-2xl font-bold text-void ">
               {searchQuery ? t('products.noProducts') : t('products.noProducts')}
             </h3>
-            <p class="mx-auto mb-6 max-w-md text-gray-600 dark:text-gray-400">
+            <p class="mx-auto mb-6 max-w-md text-graphite ">
               {searchQuery
                 ? t('products.noProductsSearch', { query: searchQuery })
                 : t('products.emptyProductsCatalog')}

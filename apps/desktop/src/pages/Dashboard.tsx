@@ -73,14 +73,14 @@ function buildCalendarDays(visibleMonth: Date): Date[] {
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const { t, getCurrentLocale } = useTranslation()
   const statCardClass =
-    'text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-3 sm:p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all'
-  const statValueClass = 'text-xl font-semibold text-gray-900 sm:text-2xl dark:text-gray-100'
+    'text-left bg-canvas rounded-cards border border-fog-border p-3 sm:p-5 hover:border-fog-border hover:shadow-sm transition-all'
+  const statValueClass = 'text-xl font-semibold text-void sm:text-2xl '
   const datePickerClass =
-    'relative inline-flex h-8 min-w-24 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-gray-700 dark:hover:bg-gray-800'
+    'relative inline-flex h-8 min-w-24 items-center justify-center rounded-cards border border-fog-border bg-canvas px-3 text-xs font-medium text-void shadow-sm transition-colors hover:border-fog-border hover:bg-chalk '
   const resetDateButtonClass =
-    'inline-flex h-8 items-center justify-center rounded-lg border border-gray-200 bg-white px-2 text-xs font-medium text-gray-500 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+    'inline-flex h-8 items-center justify-center rounded-cards border border-fog-border bg-canvas px-2 text-xs font-medium text-graphite shadow-sm transition-colors hover:border-fog-border hover:bg-chalk hover:text-void '
   const monthButtonClass =
-    'inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+    'inline-flex h-7 w-7 items-center justify-center rounded-cards text-graphite transition-colors hover:bg-chalk hover:text-void '
 
   const [stats, setStats] = useState({
     totalSales: 0,
@@ -215,7 +215,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </button>
 
         {isDatePickerOpen && (
-          <div class="absolute right-0 top-10 z-20 w-64 rounded-xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+          <div class="absolute right-0 top-10 z-20 w-64 rounded-cards border border-fog-border bg-canvas p-3 shadow-sm ">
             <div class="mb-3 flex items-center justify-between">
               <button
                 type="button"
@@ -225,7 +225,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               >
                 <ChevronLeftIcon class="h-4 w-4" />
               </button>
-              <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{visibleMonthLabel}</div>
+              <div class="text-sm font-medium text-void ">{visibleMonthLabel}</div>
               <button
                 type="button"
                 class={monthButtonClass}
@@ -238,7 +238,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
             <div class="grid grid-cols-7 gap-1">
               {weekdayLabels.map((label, index) => (
-                <div key={index} class="h-6 text-center text-[11px] font-medium text-gray-400 dark:text-gray-500">
+                <div key={index} class="h-6 text-center text-[11px] font-medium text-graphite ">
                   {label}
                 </div>
               ))}
@@ -253,14 +253,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     key={formatDateInputValue(date)}
                     type="button"
                     onClick={() => selectCalendarDate(date)}
-                    class={`h-8 rounded-md text-xs transition-colors ${
+                    class={`h-8 rounded-cards text-xs transition-colors ${
                       isSelectedDate
-                        ? 'bg-gray-900 font-semibold text-white dark:bg-gray-100 dark:text-gray-900'
+                        ? 'bg-void font-semibold text-canvas '
                         : isToday
-                          ? 'font-semibold text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30'
+                          ? 'font-semibold text-void hover:bg-chalk '
                           : isVisibleMonth
-                            ? 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800'
-                            : 'text-gray-300 hover:bg-gray-50 dark:text-gray-600 dark:hover:bg-gray-800/60'
+                            ? 'text-void hover:bg-chalk '
+                            : 'text-graphite hover:bg-chalk '
                     }`}
                   >
                     {date.getDate()}
@@ -275,19 +275,15 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {/* Main Stats */}
       <div class="mb-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <button type="button" onClick={() => onNavigate?.('orders')} class={statCardClass}>
-          <p class="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-1">
-            {t('dashboard.dailySales')}
-          </p>
+          <p class="text-xs font-medium text-void uppercase tracking-wide mb-1">{t('dashboard.dailySales')}</p>
           <p class={statValueClass}>{formatCurrency(stats.totalSales)}</p>
-          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.completedPaid')}</p>
+          <p class="text-xs text-graphite mt-1">{t('dashboard.completedPaid')}</p>
         </button>
 
         <button type="button" onClick={() => onNavigate?.('orders')} class={statCardClass}>
-          <p class="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">
-            {t('dashboard.orders')}
-          </p>
+          <p class="text-xs font-medium text-void uppercase tracking-wide mb-1">{t('dashboard.orders')}</p>
           <p class={statValueClass}>{stats.ordersToday}</p>
-          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.totalOrdersDesc')}</p>
+          <p class="text-xs text-graphite mt-1">{t('dashboard.totalOrdersDesc')}</p>
         </button>
 
         <button
@@ -295,30 +291,24 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           onClick={() => onNavigate?.('orders')}
           class={`${statCardClass} col-span-2 lg:col-span-1`}
         >
-          <p class="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-1">
-            {t('dashboard.avgOrderValue')}
-          </p>
+          <p class="text-xs font-medium text-void uppercase tracking-wide mb-1">{t('dashboard.avgOrderValue')}</p>
           <p class={statValueClass}>{formatCurrency(stats.averageOrderValue)}</p>
-          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.perOrder')}</p>
+          <p class="text-xs text-graphite mt-1">{t('dashboard.perOrder')}</p>
         </button>
       </div>
 
       {/* Secondary Stats */}
       <div class="grid grid-cols-2 gap-3 sm:gap-4">
         <button type="button" onClick={() => onNavigate?.('products')} class={statCardClass}>
-          <p class="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-1">
-            {t('dashboard.lowStockAlert')}
-          </p>
+          <p class="text-xs font-medium text-void uppercase tracking-wide mb-1">{t('dashboard.lowStockAlert')}</p>
           <p class={statValueClass}>{stats.lowStockProducts}</p>
-          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.needsRestocking')}</p>
+          <p class="text-xs text-graphite mt-1">{t('dashboard.needsRestocking')}</p>
         </button>
 
         <button type="button" onClick={() => onNavigate?.('orders')} class={statCardClass}>
-          <p class="text-xs font-medium text-rose-600 dark:text-rose-400 uppercase tracking-wide mb-1">
-            {t('dashboard.pendingOrders')}
-          </p>
+          <p class="text-xs font-medium text-void uppercase tracking-wide mb-1">{t('dashboard.pendingOrders')}</p>
           <p class={statValueClass}>{stats.pendingOrders}</p>
-          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('dashboard.awaitingProcessing')}</p>
+          <p class="text-xs text-graphite mt-1">{t('dashboard.awaitingProcessing')}</p>
         </button>
       </div>
     </div>

@@ -53,12 +53,12 @@ export function Sidebar({
       {/* Header */}
       <div class={clsx('p-4', isMac && !mobileOpen && 'pt-10')}>
         <div class="flex items-center justify-between">
-          <h1 class="text-xl font-bold text-gray-900 dark:text-white/90">{title}</h1>
+          <h1 class="text-xl font-semibold tracking-[-0.01em] text-void">{title}</h1>
           {mobileOpen && (
             <button
               type="button"
               onClick={onMobileClose}
-              class="ml-auto p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-200/70 dark:text-white/60 dark:hover:text-white dark:hover:bg-white/10 transition-colors"
+              class="ml-auto p-2 rounded-buttons text-graphite hover:text-void hover:bg-chalk transition-colors"
               aria-label="Close menu"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -81,17 +81,15 @@ export function Sidebar({
                   onMobileClose?.()
                 }}
                 class={clsx(
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                  'focus:outline-none focus:ring-2 focus:ring-gray-400/40 dark:focus:ring-white/20',
-                  item.active
-                    ? 'bg-gray-200 text-gray-900 dark:bg-white/15 dark:text-white'
-                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/70 dark:text-white/60 dark:hover:text-white dark:hover:bg-white/10',
+                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-buttons transition-colors',
+                  'focus:outline-none focus:ring-2 focus:ring-void',
+                  item.active ? 'bg-void text-canvas' : 'text-graphite hover:text-void hover:bg-chalk',
                 )}
               >
                 <span class="w-5 h-5 flex-shrink-0">{item.icon}</span>
                 <span class="flex-1 text-left text-sm font-medium">{item.label}</span>
                 {item.badge && (
-                  <span class="bg-red-500/80 text-white text-xs rounded-full px-2 py-0.5 min-w-5 text-center">
+                  <span class="bg-void text-canvas text-xs rounded-buttons px-2 py-0.5 min-w-5 text-center">
                     {item.badge}
                   </span>
                 )}
@@ -102,17 +100,11 @@ export function Sidebar({
       </nav>
 
       {/* Footer */}
-      {footer && (
-        <div class="p-4 border-t border-gray-200 dark:border-white/10">
-          {typeof footer === 'function' ? footer({}) : footer}
-        </div>
-      )}
+      {footer && <div class="p-4 border-t border-fog-border">{typeof footer === 'function' ? footer({}) : footer}</div>}
     </>
   )
 
-  const baseColors = isMac
-    ? 'macos-sidebar text-gray-900 dark:text-white'
-    : 'bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white'
+  const baseColors = isMac ? 'macos-sidebar text-void' : 'bg-canvas text-void'
 
   return (
     <>
@@ -121,7 +113,7 @@ export function Sidebar({
         class={clsx(
           widths[width],
           baseColors,
-          'border-r border-gray-200 dark:border-white/10',
+          'border-r border-fog-border',
           'hidden md:flex flex-col transition-all duration-300',
           className,
         )}
@@ -133,12 +125,12 @@ export function Sidebar({
       {/* Mobile overlay + drawer */}
       {mobileOpen && (
         <div class="fixed inset-0 z-40 md:hidden" aria-modal="true" role="dialog">
-          <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onMobileClose} aria-hidden="true" />
+          <div class="absolute inset-0 bg-void/50 backdrop-blur-sm" onClick={onMobileClose} aria-hidden="true" />
           <div
             class={clsx(
               'absolute left-0 top-0 bottom-0 w-72',
               baseColors,
-              'border-r border-gray-200 dark:border-white/10 flex flex-col',
+              'border-r border-fog-border flex flex-col',
               'animate-[slideInLeft_200ms_ease-out]',
             )}
           >

@@ -24,8 +24,8 @@ import { companySettingsService } from '../services/company-settings-turso'
 
 export default function Analytics() {
   const { t } = useTranslation()
-  const panelClass = 'rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
-  const metricCardClass = 'rounded-xl border p-3 transition-colors sm:p-6'
+  const panelClass = 'rounded-cards border border-fog-border bg-canvas '
+  const metricCardClass = 'rounded-cards border p-3 transition-colors sm:p-6'
   const metricValueClass = 'text-xl font-semibold sm:text-2xl'
   const metricLabelClass = 'mt-1 text-xs sm:text-sm'
   const metricIconClass = 'text-xl sm:text-2xl'
@@ -142,9 +142,9 @@ export default function Analytics() {
       <div class="max-w-6xl mx-auto">
         <div class={`${panelClass} p-12`}>
           <div class="text-center">
-            <div class="text-6xl mb-6 drop-shadow-lg">🔒</div>
-            <h2 class="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">{t('errors.unauthorized')}</h2>
-            <p class="text-gray-600 dark:text-gray-400 max-w-md mx-auto">{t('analytics.adminOnly')}</p>
+            <div class="text-6xl mb-6 drop-shadow-sm">🔒</div>
+            <h2 class="text-lg font-semibold mb-3 text-void ">{t('errors.unauthorized')}</h2>
+            <p class="text-graphite max-w-md mx-auto">{t('analytics.adminOnly')}</p>
           </div>
         </div>
       </div>
@@ -165,7 +165,7 @@ export default function Analytics() {
 
       {/* Date Range Filters */}
       <div class={`${panelClass} p-6 mb-6`}>
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('analytics.dateRange')}</h3>
+        <h3 class="text-lg font-semibold text-void mb-4">{t('analytics.dateRange')}</h3>
         <div class="flex flex-wrap gap-4 items-end">
           <div class="flex-1 min-w-48">
             <Select
@@ -185,10 +185,7 @@ export default function Analytics() {
           {customDateRange && (
             <>
               <div class="flex-1 min-w-40">
-                <label
-                  for="analytics-start-date"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                >
+                <label for="analytics-start-date" class="block text-sm font-medium text-void mb-2">
                   {t('analytics.startDate')}
                 </label>
                 <input
@@ -196,11 +193,11 @@ export default function Analytics() {
                   type="date"
                   value={startDate}
                   onInput={(e) => setStartDate((e.target as HTMLInputElement).value)}
-                  class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  class="w-full rounded-cards border border-fog-border bg-canvas px-4 py-2.5 text-sm text-void focus:border-fog-border focus:outline-none focus:ring-2 focus:ring-void "
                 />
               </div>
               <div class="flex-1 min-w-40">
-                <label for="analytics-end-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="analytics-end-date" class="block text-sm font-medium text-void mb-2">
                   {t('analytics.endDate')}
                 </label>
                 <input
@@ -208,7 +205,7 @@ export default function Analytics() {
                   type="date"
                   value={endDate}
                   onInput={(e) => setEndDate((e.target as HTMLInputElement).value)}
-                  class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  class="w-full rounded-cards border border-fog-border bg-canvas px-4 py-2.5 text-sm text-void focus:border-fog-border focus:outline-none focus:ring-2 focus:ring-void "
                 />
               </div>
             </>
@@ -219,57 +216,43 @@ export default function Analytics() {
       {/* Key Metrics */}
       {metrics && (
         <div class="mb-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
-          <div class={`${metricCardClass} bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900/60`}>
+          <div class={`${metricCardClass} bg-chalk border-fog-border `}>
             <div class="flex items-center justify-between">
               <div>
-                <div class={`${metricValueClass} text-blue-700 dark:text-blue-300`}>
-                  {formatCurrency(metrics.totalRevenue)}
-                </div>
-                <div class={`${metricLabelClass} text-blue-700 dark:text-blue-300`}>{t('analytics.totalRevenue')}</div>
+                <div class={`${metricValueClass} text-void `}>{formatCurrency(metrics.totalRevenue)}</div>
+                <div class={`${metricLabelClass} text-void `}>{t('analytics.totalRevenue')}</div>
               </div>
-              <div class={`${metricIconClass} text-blue-300 dark:text-blue-500`}>💰</div>
+              <div class={`${metricIconClass} text-void `}>💰</div>
             </div>
           </div>
 
-          <div class={`${metricCardClass} bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900/60`}>
+          <div class={`${metricCardClass} bg-chalk border-fog-border `}>
             <div class="flex items-center justify-between">
               <div>
-                <div class={`${metricValueClass} text-green-700 dark:text-green-300`}>
-                  {formatCurrency(metrics.totalProfit)}
-                </div>
-                <div class={`${metricLabelClass} text-green-700 dark:text-green-300`}>{t('analytics.totalProfit')}</div>
+                <div class={`${metricValueClass} text-void `}>{formatCurrency(metrics.totalProfit)}</div>
+                <div class={`${metricLabelClass} text-void `}>{t('analytics.totalProfit')}</div>
               </div>
-              <div class={`${metricIconClass} text-green-300 dark:text-green-500`}>💵</div>
+              <div class={`${metricIconClass} text-void `}>💵</div>
             </div>
           </div>
 
-          <div
-            class={`${metricCardClass} bg-purple-50 border-purple-200 dark:bg-purple-950/30 dark:border-purple-900/60`}
-          >
+          <div class={`${metricCardClass} bg-chalk border-fog-border `}>
             <div class="flex items-center justify-between">
               <div>
-                <div class={`${metricValueClass} text-purple-700 dark:text-purple-300`}>{metrics.completedOrders}</div>
-                <div class={`${metricLabelClass} text-purple-700 dark:text-purple-300`}>
-                  {t('analytics.completedOrders')}
-                </div>
+                <div class={`${metricValueClass} text-void `}>{metrics.completedOrders}</div>
+                <div class={`${metricLabelClass} text-void `}>{t('analytics.completedOrders')}</div>
               </div>
-              <div class={`${metricIconClass} text-purple-300 dark:text-purple-500`}>✅</div>
+              <div class={`${metricIconClass} text-void `}>✅</div>
             </div>
           </div>
 
-          <div
-            class={`${metricCardClass} bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-900/60`}
-          >
+          <div class={`${metricCardClass} bg-chalk border-fog-border `}>
             <div class="flex items-center justify-between">
               <div>
-                <div class={`${metricValueClass} text-orange-700 dark:text-orange-300`}>
-                  {formatCurrency(metrics.averageOrderValue)}
-                </div>
-                <div class={`${metricLabelClass} text-orange-700 dark:text-orange-300`}>
-                  {t('analytics.averageOrderValue')}
-                </div>
+                <div class={`${metricValueClass} text-void `}>{formatCurrency(metrics.averageOrderValue)}</div>
+                <div class={`${metricLabelClass} text-void `}>{t('analytics.averageOrderValue')}</div>
               </div>
-              <div class={`${metricIconClass} text-orange-300 dark:text-orange-500`}>📊</div>
+              <div class={`${metricIconClass} text-void `}>📊</div>
             </div>
           </div>
         </div>
@@ -278,13 +261,13 @@ export default function Analytics() {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Sales by Members */}
         <div class={`${panelClass} overflow-hidden`}>
-          <div class="p-6 border-b border-gray-200 dark:border-gray-800">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('analytics.salesByMembers')}</h3>
+          <div class="p-6 border-b border-fog-border ">
+            <h3 class="text-lg font-semibold text-void ">{t('analytics.salesByMembers')}</h3>
           </div>
           <div class="max-h-96 overflow-y-auto">
             <Table striped>
               <TableHead>
-                <TableRow class="bg-gray-50 dark:bg-gray-800/60">
+                <TableRow class="bg-chalk ">
                   <TableHeader class="font-semibold">{t('analytics.member')}</TableHeader>
                   <TableHeader class="font-semibold">{t('analytics.orders')}</TableHeader>
                   <TableHeader class="font-semibold">{t('analytics.revenue')}</TableHeader>
@@ -295,26 +278,24 @@ export default function Analytics() {
                   <TableRow key={member.userId}>
                     <TableCell>
                       <div class="flex items-center">
-                        <div class="mr-3 flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+                        <div class="mr-3 flex h-8 w-8 items-center justify-center rounded-full bg-chalk text-sm font-semibold text-void ">
                           {member.userName.charAt(0).toUpperCase()}
                         </div>
-                        <div class="font-medium text-gray-900 dark:text-gray-100">{member.userName}</div>
+                        <div class="font-medium text-void ">{member.userName}</div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div class="font-semibold text-gray-900 dark:text-gray-100">{member.totalOrders}</div>
+                      <div class="font-semibold text-void ">{member.totalOrders}</div>
                     </TableCell>
                     <TableCell>
-                      <div class="font-semibold text-green-600 dark:text-green-400">
-                        {formatCurrency(member.totalRevenue)}
-                      </div>
+                      <div class="font-semibold text-void ">{formatCurrency(member.totalRevenue)}</div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
             {salesByMembers.length === 0 && (
-              <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+              <div class="p-8 text-center text-graphite ">
                 <div class="text-4xl mb-2">👥</div>
                 <p>{t('analytics.noSalesData')}</p>
               </div>
@@ -324,13 +305,13 @@ export default function Analytics() {
 
         {/* Top Products */}
         <div class={`${panelClass} overflow-hidden`}>
-          <div class="p-6 border-b border-gray-200 dark:border-gray-800">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('analytics.topProducts')}</h3>
+          <div class="p-6 border-b border-fog-border ">
+            <h3 class="text-lg font-semibold text-void ">{t('analytics.topProducts')}</h3>
           </div>
           <div class="max-h-96 overflow-y-auto">
             <Table striped>
               <TableHead>
-                <TableRow class="bg-gray-50 dark:bg-gray-800/60">
+                <TableRow class="bg-chalk ">
                   <TableHeader class="font-semibold">{t('analytics.product')}</TableHeader>
                   <TableHeader class="font-semibold">{t('analytics.sold')}</TableHeader>
                   <TableHeader class="font-semibold">{t('analytics.revenue')}</TableHeader>
@@ -341,26 +322,24 @@ export default function Analytics() {
                   <TableRow key={product.productId}>
                     <TableCell>
                       <div class="flex items-center">
-                        <div class="mr-3 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                        <div class="mr-3 flex h-8 w-8 items-center justify-center rounded-full bg-chalk text-sm font-semibold text-void ">
                           {index + 1}
                         </div>
-                        <div class="font-medium text-gray-900 dark:text-gray-100">{product.productName}</div>
+                        <div class="font-medium text-void ">{product.productName}</div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div class="font-semibold text-gray-900 dark:text-gray-100">{product.totalSold}</div>
+                      <div class="font-semibold text-void ">{product.totalSold}</div>
                     </TableCell>
                     <TableCell>
-                      <div class="font-semibold text-green-600 dark:text-green-400">
-                        {formatCurrency(product.totalRevenue)}
-                      </div>
+                      <div class="font-semibold text-void ">{formatCurrency(product.totalRevenue)}</div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
             {topProducts.length === 0 && (
-              <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+              <div class="p-8 text-center text-graphite ">
                 <div class="text-4xl mb-2">📦</div>
                 <p>{t('analytics.noProductSales')}</p>
               </div>
@@ -371,30 +350,28 @@ export default function Analytics() {
 
       {/* Recent Activity */}
       <div class={`${panelClass} p-6`}>
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('analytics.recentActivity')}</h3>
+        <h3 class="text-lg font-semibold text-void mb-4">{t('analytics.recentActivity')}</h3>
         <div class="space-y-3 max-h-96 overflow-y-auto">
           {recentActivity.map((activity) => (
             <div
               key={`${activity.id}-${activity.type}`}
-              class="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-800/60"
+              class="flex items-center justify-between rounded-cards border border-fog-border bg-chalk p-3 "
             >
               <div class="flex items-center">
                 <span class="text-xl mr-3">{getActivityIcon(activity.type)}</span>
                 <div>
-                  <div class="font-medium text-gray-900 dark:text-gray-100">{activity.description}</div>
-                  <div class="text-sm text-gray-600 dark:text-gray-400">
+                  <div class="font-medium text-void ">{activity.description}</div>
+                  <div class="text-sm text-graphite ">
                     {t('analytics.by')} {activity.userName} • {new Date(activity.timestamp).toLocaleString()}
                   </div>
                 </div>
               </div>
-              {activity.amount && (
-                <div class="font-semibold text-green-600 dark:text-green-400">{formatCurrency(activity.amount)}</div>
-              )}
+              {activity.amount && <div class="font-semibold text-void ">{formatCurrency(activity.amount)}</div>}
             </div>
           ))}
         </div>
         {recentActivity.length === 0 && (
-          <div class="py-8 text-center text-gray-500 dark:text-gray-400">
+          <div class="py-8 text-center text-graphite ">
             <div class="text-4xl mb-2">🕒</div>
             <p>{t('analytics.noRecentActivity')}</p>
           </div>

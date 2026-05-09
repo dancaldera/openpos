@@ -18,40 +18,41 @@ import {
 } from '../../lib/db'
 import { isDesktop } from '../../lib/platform'
 import { formatRelativeTime } from '../../lib/utils'
+import { openFullSizeDialogCount } from '../../stores/ui/dialogStore'
 import { SpinnerIcon } from './icons'
 
 const STATUS_CONFIG = {
   online: {
-    dot: 'bg-green-400',
+    dot: 'bg-void',
     label: 'Online',
     sublabel: 'Remote sync healthy',
-    border: 'border-green-500/30',
-    badgeBg: 'bg-gray-900/90',
-    textColor: 'text-green-400',
+    border: 'border-fog-border',
+    badgeBg: 'bg-canvas',
+    textColor: 'text-void',
   },
   offline: {
-    dot: 'bg-yellow-400',
+    dot: 'bg-void',
     label: 'Offline',
     sublabel: 'Using local SQLite mirror',
-    border: 'border-yellow-500/30',
-    badgeBg: 'bg-gray-900/90',
-    textColor: 'text-yellow-400',
+    border: 'border-fog-border',
+    badgeBg: 'bg-canvas',
+    textColor: 'text-void',
   },
   syncing: {
-    dot: 'bg-blue-400',
+    dot: 'bg-void',
     label: 'Syncing',
     sublabel: 'Reconciling local mirror',
-    border: 'border-blue-500/30',
-    badgeBg: 'bg-gray-900/90',
-    textColor: 'text-blue-400',
+    border: 'border-fog-border',
+    badgeBg: 'bg-canvas',
+    textColor: 'text-void',
   },
   error: {
-    dot: 'bg-red-500',
+    dot: 'bg-void',
     label: 'Error',
     sublabel: 'Sync subsystem unavailable',
-    border: 'border-red-500/30',
-    badgeBg: 'bg-gray-900/90',
-    textColor: 'text-red-400',
+    border: 'border-fog-border',
+    badgeBg: 'bg-canvas',
+    textColor: 'text-void',
   },
 } as const
 
@@ -97,11 +98,7 @@ export function DbStatusBadge() {
   const panelSubtitle =
     connectionMode.value === 'api' ? 'Web client API status' : 'Desktop local-first sync and API health'
   const apiStatusLabel = !isApiConfigured ? 'Not configured' : isApiReachable ? 'Reachable' : 'Unavailable'
-  const apiStatusClass = !isApiConfigured
-    ? 'text-gray-500'
-    : isApiReachable
-      ? 'text-green-400'
-      : 'text-rose-400 font-medium'
+  const apiStatusClass = !isApiConfigured ? 'text-ash' : isApiReachable ? 'text-void' : 'text-void font-medium'
 
   const badgeLabel = getBadgeLabel(status, config, pending, errors, conflicts)
 
@@ -115,20 +112,25 @@ export function DbStatusBadge() {
     return () => clearInterval(id)
   }, [popoverOpen.value])
 
+  if (openFullSizeDialogCount.value > 0) {
+    popoverOpen.value = false
+    return null
+  }
+
   return (
     <div ref={wrapperRef} class="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
       {popoverOpen.value && (
         <div
-          class={`mb-1 w-64 rounded-lg border ${config.border} bg-gray-900/95 backdrop-blur-sm shadow-xl text-xs text-gray-300 overflow-hidden`}
+          class={`mb-1 w-64 rounded-cards border ${config.border} bg-canvas shadow-sm text-xs text-graphite overflow-hidden`}
         >
-          <div class="px-4 py-3 border-b border-white/10">
-            <p class="font-semibold text-white text-sm">{panelTitle}</p>
-            <p class="text-gray-400 mt-0.5">{panelSubtitle}</p>
+          <div class="px-4 py-3 border-b border-fog-border">
+            <p class="font-semibold text-void text-sm">{panelTitle}</p>
+            <p class="text-graphite mt-0.5">{panelSubtitle}</p>
           </div>
 
           <div class="px-4 py-3 space-y-2.5">
             <div class="flex items-center justify-between">
-              <span class="text-gray-400">Status</span>
+              <span class="text-graphite">Status</span>
               <span class={`font-medium ${config.textColor} flex items-center gap-1.5`}>
                 {status === 'syncing' ? (
                   <SpinnerIcon class="w-3 h-3 animate-spin" />
@@ -140,75 +142,73 @@ export function DbStatusBadge() {
             </div>
 
             <div class="flex items-center justify-between">
-              <span class="text-gray-400">Mode</span>
-              <span class="text-gray-200">{modeDescription}</span>
+              <span class="text-graphite">Mode</span>
+              <span class="text-void">{modeDescription}</span>
             </div>
 
             <div class="flex items-center justify-between">
-              <span class="text-gray-400">API</span>
+              <span class="text-graphite">API</span>
               <span class={apiStatusClass}>{apiStatusLabel}</span>
             </div>
 
             <div class="flex items-center justify-between">
-              <span class="text-gray-400">Remote configured</span>
-              <span class={isRemoteConfigured ? 'text-green-400' : 'text-gray-500'}>
-                {isRemoteConfigured ? 'Yes' : 'No'}
-              </span>
+              <span class="text-graphite">Remote configured</span>
+              <span class={isRemoteConfigured ? 'text-void' : 'text-ash'}>{isRemoteConfigured ? 'Yes' : 'No'}</span>
             </div>
 
             {lastCheckedAt && (
               <div class="flex items-center justify-between">
-                <span class="text-gray-400">Last check</span>
-                <span class="text-gray-200">{tick.value >= 0 && formatRelativeTime(lastCheckedAt)}</span>
+                <span class="text-graphite">Last check</span>
+                <span class="text-void">{tick.value >= 0 && formatRelativeTime(lastCheckedAt)}</span>
               </div>
             )}
 
             {lastApiCheckedAt && (
               <div class="flex items-center justify-between">
-                <span class="text-gray-400">API check</span>
-                <span class="text-gray-200">{tick.value >= 0 && formatRelativeTime(lastApiCheckedAt)}</span>
+                <span class="text-graphite">API check</span>
+                <span class="text-void">{tick.value >= 0 && formatRelativeTime(lastApiCheckedAt)}</span>
               </div>
             )}
 
             {lastSyncedAt && (
               <div class="flex items-center justify-between">
-                <span class="text-gray-400">Last sync</span>
-                <span class="text-gray-200">{tick.value >= 0 && formatRelativeTime(lastSyncedAt)}</span>
+                <span class="text-graphite">Last sync</span>
+                <span class="text-void">{tick.value >= 0 && formatRelativeTime(lastSyncedAt)}</span>
               </div>
             )}
 
             <div class="flex items-center justify-between">
-              <span class="text-gray-400">Pending writes</span>
-              <span class={pending > 0 ? 'text-yellow-400 font-medium' : 'text-gray-500'}>
+              <span class="text-graphite">Pending writes</span>
+              <span class={pending > 0 ? 'text-void font-medium' : 'text-ash'}>
                 {pending > 0 ? `${pending} queued` : 'None'}
               </span>
             </div>
 
             <div class="flex items-center justify-between">
-              <span class="text-gray-400">Write errors</span>
-              <span class={errors > 0 ? 'text-rose-400 font-medium' : 'text-gray-500'}>
+              <span class="text-graphite">Write errors</span>
+              <span class={errors > 0 ? 'text-void font-medium' : 'text-ash'}>
                 {errors > 0 ? `${errors} retrying` : 'None'}
               </span>
             </div>
 
             <div class="flex items-center justify-between">
-              <span class="text-gray-400">Conflicts</span>
-              <span class={conflicts > 0 ? 'text-rose-400 font-medium' : 'text-gray-500'}>
+              <span class="text-graphite">Conflicts</span>
+              <span class={conflicts > 0 ? 'text-void font-medium' : 'text-ash'}>
                 {conflicts > 0 ? `${conflicts} need review` : 'None'}
               </span>
             </div>
 
             {lastError && (
               <div class="space-y-1">
-                <span class="text-gray-400">Last error</span>
-                <p class="text-rose-300 leading-relaxed">{lastError}</p>
+                <span class="text-graphite">Last error</span>
+                <p class="text-void leading-relaxed">{lastError}</p>
               </div>
             )}
 
             {lastApiFailure && lastApiFailure !== lastError && (
               <div class="space-y-1">
-                <span class="text-gray-400">API error</span>
-                <p class="text-rose-300 leading-relaxed">{lastApiFailure}</p>
+                <span class="text-graphite">API error</span>
+                <p class="text-void leading-relaxed">{lastApiFailure}</p>
               </div>
             )}
           </div>
@@ -220,7 +220,7 @@ export function DbStatusBadge() {
         onClick={() => {
           popoverOpen.value = !popoverOpen.value
         }}
-        class={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${config.border} ${config.badgeBg} backdrop-blur-sm shadow-lg cursor-pointer select-none transition-opacity hover:opacity-90 active:scale-95`}
+        class={`flex items-center gap-2 px-3 py-1.5 rounded-buttons border ${config.border} ${config.badgeBg} shadow-sm cursor-pointer select-none transition-opacity hover:opacity-90 active:scale-95`}
         title={config.sublabel}
       >
         {status === 'syncing' ? (
