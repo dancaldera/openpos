@@ -2,7 +2,7 @@
  * Turso client singleton for the API server.
  */
 
-import { createRemote } from '@dancaldera/libsql-bridge'
+import { createClient } from '@libsql/client'
 
 interface QueryableClient {
   execute(sql: string, params?: unknown[]): Promise<{
@@ -61,7 +61,7 @@ export function getTursoClient(): QueryableClient {
     )
   }
 
-  _client = createRemote({ url, authToken }).client as QueryableClient
+  _client = createClient({ url, authToken, intMode: 'bigint' }) as QueryableClient
   return _client
 }
 
