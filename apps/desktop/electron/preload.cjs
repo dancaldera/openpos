@@ -63,7 +63,9 @@ contextBridge.exposeInMainWorld('openposDesktop', {
     openReleasePage: (url) => ipcRenderer.invoke('desktop:open-external', url),
     relaunch: () => ipcRenderer.invoke('desktop:relaunch'),
     downloadAppImageUpdate: (url, version) => ipcRenderer.invoke('desktop:update-download-appimage', { url, version }),
+    downloadDebUpdate: (url, version) => ipcRenderer.invoke('desktop:update-download-deb', { url, version }),
     installDownloadedAppImage: (tempPath) => ipcRenderer.invoke('desktop:update-install-appimage', { tempPath }),
+    installDownloadedDeb: (tempPath) => ipcRenderer.invoke('desktop:update-install-deb', { tempPath }),
     restartFromInstalledAppImage: () => ipcRenderer.invoke('desktop:update-restart-appimage'),
     onStatusChange: (listener) => {
       const wrapped = (_event, payload) => listener(payload)

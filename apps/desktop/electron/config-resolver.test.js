@@ -116,6 +116,8 @@ describe('resolveDesktopConnectionConfig', () => {
         tursoDatabaseUrl: 'libsql://runtime-db',
         tursoAuthToken: 'runtime-token',
         apiUrl: 'https://runtime-api.example.com',
+        printStationId: 'front-counter-1',
+        printStationName: 'Front Counter',
       },
       runtimeConfigSource: 'userData',
       configPath: '/home/ana/.config/OpenPOS/config.json',
@@ -143,6 +145,11 @@ describe('resolveDesktopConnectionConfig', () => {
         configured: true,
         source: 'userData',
         configPath: '/home/ana/.config/OpenPOS/config.json',
+      },
+      printStation: {
+        id: 'front-counter-1',
+        name: 'Front Counter',
+        configured: true,
       },
     })
   })
@@ -200,6 +207,7 @@ describe('createPublicConnectionConfig', () => {
     expect(summary).toEqual({
       remoteConfigured: true,
       apiConfigured: true,
+      printStationConfigured: false,
     })
     expect('url' in summary).toBe(false)
     expect('authToken' in summary).toBe(false)

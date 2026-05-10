@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import { Hono } from 'hono'
+import jwt from 'jsonwebtoken'
 
 const execute = mock(
   async (_sql: string, _params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }> => ({
@@ -21,6 +22,21 @@ mock.module('../lib/turso.js', () => ({
 }))
 
 const { customersRouter } = await import('./customers')
+
+process.env.JWT_SECRET = 'customers-test-secret'
+
+const authToken = jwt.sign(
+  {
+    sub: '3',
+    email: 'manager@example.com',
+    name: 'Manager',
+    role: 'manager',
+    permissions: [],
+  },
+  process.env.JWT_SECRET,
+)
+
+const authHeaders = { Authorization: `Bearer ${authToken}` }
 
 function createApp() {
   const app = new Hono()
@@ -84,6 +100,7 @@ describe('customersRouter parity', () => {
     const response = await createApp().request('/api/customers', {
       method: 'POST',
       headers: {
+        ...authHeaders,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -254,6 +271,7 @@ describe('customersRouter parity', () => {
     const response = await createApp().request('/api/customers/11', {
       method: 'PUT',
       headers: {
+        ...authHeaders,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -337,7 +355,9 @@ describe('customersRouter parity', () => {
         },
       ])
 
-    const response = await createApp().request('/api/customers?search=HOUSE-77')
+    const response = await createApp().request('/api/customers?search=HOUSE-77', {
+      headers: authHeaders,
+    })
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({

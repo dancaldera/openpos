@@ -893,7 +893,7 @@
     "appUpdate": "App Update",
     "checkForUpdates": "Check for updates",
     "checkForNewerRelease": "Check for a newer release",
-    "automaticInstallUnavailable": "Automatic install is available only for Linux AppImage releases",
+    "automaticInstallUnavailable": "Automatic install is available only for supported Linux release packages",
     "downloadedAsset": "Downloaded file",
     "installedLabel": "Installed",
     "latestLabel": "Latest",

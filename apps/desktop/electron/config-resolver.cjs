@@ -96,6 +96,17 @@ function resolveDesktopConnectionConfig({
       : normalizeString(envConfig.VITE_API_URL) || normalizeString(defaultApiUrl)
         ? 'bundled'
         : runtimeConfigSource
+  const printStationId =
+    normalizeString(runtimeConfig.printStationId) ||
+    normalizeString(runtimeConfig.print_station_id) ||
+    normalizeString(processEnv.OPENPOS_PRINT_STATION_ID) ||
+    normalizeString(envConfig.OPENPOS_PRINT_STATION_ID)
+  const printStationName =
+    normalizeString(runtimeConfig.printStationName) ||
+    normalizeString(runtimeConfig.print_station_name) ||
+    normalizeString(processEnv.OPENPOS_PRINT_STATION_NAME) ||
+    normalizeString(envConfig.OPENPOS_PRINT_STATION_NAME) ||
+    printStationId
 
   return {
     remote: {
@@ -109,6 +120,11 @@ function resolveDesktopConnectionConfig({
       source: apiSource,
       configPath: normalizeString(configPath) || '',
     },
+    printStation: {
+      id: printStationId || '',
+      name: printStationName || '',
+      configured: Boolean(printStationId),
+    },
   }
 }
 
@@ -116,6 +132,7 @@ function createPublicConnectionConfig(connectionConfig) {
   return {
     remoteConfigured: Boolean(connectionConfig?.remote?.configured),
     apiConfigured: Boolean(connectionConfig?.api?.configured),
+    printStationConfigured: Boolean(connectionConfig?.printStation?.configured),
   }
 }
 

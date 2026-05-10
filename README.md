@@ -25,6 +25,10 @@ curl -fsSL https://raw.githubusercontent.com/dancaldera/OpenPOS/main/scripts/ins
 The installer places the binary at `~/.local/bin/openpos` by default. Use `--install-dir` to override the target directory.
 Make sure `~/.local/bin` is in your `PATH` if your shell does not already include it.
 
+Debian-family `.deb` installs can update from inside the desktop app when a newer GitHub release is available.
+The system may show an authentication prompt while installing the package. If authentication fails, open the release
+from the update badge and download the `.deb` manually.
+
 ## Desktop Runtime Config
 
 Packaged desktop installs read runtime config from Electron `userData` first.

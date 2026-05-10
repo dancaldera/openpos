@@ -5,11 +5,15 @@ import { computed, signal } from '@preact/signals'
  * These signals track update availability, download progress, and errors.
  */
 
+export type UpdateAssetFormat = 'appimage' | 'deb'
+
 export const updateAvailable = signal(false)
 export const updateVersion = signal<string | null>(null)
 export const updateAssetName = signal<string | null>(null)
 export const updateAssetUrl = signal<string | null>(null)
+export const updateAssetFormat = signal<UpdateAssetFormat | null>(null)
 export const downloadedUpdatePath = signal<string | null>(null)
+export const downloadedUpdateFormat = signal<UpdateAssetFormat | null>(null)
 export const updateDownloadProgress = signal(0)
 export const isDownloading = signal(false)
 export const isInstalling = signal(false)

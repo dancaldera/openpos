@@ -13,7 +13,7 @@ const labels = {
   appUpdate: 'App Update',
   checkForNewerRelease: 'Check for a newer release',
   newVersionAvailable: 'New version available',
-  automaticInstallUnavailable: 'Automatic install is available only for Linux AppImage releases',
+  automaticInstallUnavailable: 'Automatic install is available only for supported Linux release packages',
   downloadUpdate: 'Download update',
   installAndRestart: 'Install & Restart',
   downloading: 'Downloading...',
@@ -164,7 +164,7 @@ describe('getUpdateBadgeViewModel', () => {
       labels,
     })
 
-    expect(viewModel.headline).toBe('Automatic install is available only for Linux AppImage releases')
+    expect(viewModel.headline).toBe('Automatic install is available only for supported Linux release packages')
     expect(viewModel.canAutoInstall).toBe(false)
     expect(viewModel.showViewRelease).toBe(true)
   })

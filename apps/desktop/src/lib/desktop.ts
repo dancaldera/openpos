@@ -47,11 +47,16 @@ export interface DesktopUpdateStatusEvent {
   message?: string
 }
 
+export type LinuxUpdateFormat = 'appimage' | 'deb' | null
+
 export interface DesktopRuntimeConfigSummary {
   apiUrl: string
   configPath: string
   configSource: 'userData' | 'fallback' | 'env' | 'bundled'
   userDataConfigPath: string
+  printStationId?: string
+  printStationName?: string
+  printStationConfigured?: boolean
 }
 
 export interface DesktopApi {
@@ -61,6 +66,7 @@ export interface DesktopApi {
     version: string
     platform: string
     arch: string
+    linuxUpdateFormat: LinuxUpdateFormat
     githubToken: string | null
   }>
   greet(name: string): Promise<string>
@@ -107,7 +113,9 @@ export interface DesktopApi {
     openReleasePage(url: string): Promise<void>
     relaunch(): Promise<void>
     downloadAppImageUpdate(url: string, version: string): Promise<{ filePath: string }>
+    downloadDebUpdate(url: string, version: string): Promise<{ filePath: string }>
     installDownloadedAppImage(tempPath: string): Promise<void>
+    installDownloadedDeb(tempPath: string): Promise<void>
     restartFromInstalledAppImage(): Promise<void>
     onStatusChange(listener: (event: DesktopUpdateStatusEvent) => void): () => void
   }

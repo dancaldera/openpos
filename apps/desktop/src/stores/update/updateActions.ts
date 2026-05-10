@@ -1,11 +1,14 @@
-import { type DesktopUpdateStatusEvent, getDesktopApi } from '../../lib/desktop'
+import { type DesktopUpdateStatusEvent, getDesktopApi, type LinuxUpdateFormat } from '../../lib/desktop'
 import {
   downloadError,
+  downloadedUpdateFormat,
   downloadedUpdatePath,
   isChecking,
   isDownloading,
   isInstalling,
   lastCheckTime,
+  type UpdateAssetFormat,
+  updateAssetFormat,
   updateAssetName,
   updateAssetUrl,
   updateAvailable,
@@ -62,8 +65,10 @@ export function isNewerVersion(latest: string, current: string): boolean {
 }
 
 function clearInstallState(): void {
+  updateAssetFormat.value = null
   updateAssetName.value = null
   updateAssetUrl.value = null
+  downloadedUpdateFormat.value = null
   downloadedUpdatePath.value = null
   updateDownloadProgress.value = 0
   isDownloading.value = false
@@ -91,25 +96,55 @@ function normalizeArchToken(arch: string): string[] {
   return [arch]
 }
 
-export function pickAppImageAsset(assets: GitHubReleaseAsset[] = [], arch: string): GitHubReleaseAsset | null {
-  const appImages = assets.filter(
+function pickAssetByExtension(
+  assets: GitHubReleaseAsset[] = [],
+  arch: string,
+  extension: string,
+): GitHubReleaseAsset | null {
+  const matchingAssets = assets.filter(
     (asset) =>
       typeof asset.name === 'string' &&
-      asset.name.toLowerCase().endsWith('.appimage') &&
+      asset.name.toLowerCase().endsWith(extension) &&
       typeof asset.browser_download_url === 'string',
   )
 
-  if (appImages.length === 0) {
+  if (matchingAssets.length === 0) {
     return null
   }
 
   const archTokens = normalizeArchToken(arch)
-  const archMatch = appImages.find((asset) => archTokens.some((token) => asset.name?.toLowerCase().includes(token)))
+  const archMatch = matchingAssets.find((asset) =>
+    archTokens.some((token) => asset.name?.toLowerCase().includes(token)),
+  )
   if (archMatch) {
     return archMatch
   }
 
-  return appImages.length === 1 ? appImages[0] : null
+  return matchingAssets.length === 1 ? matchingAssets[0] : null
+}
+
+export function pickAppImageAsset(assets: GitHubReleaseAsset[] = [], arch: string): GitHubReleaseAsset | null {
+  return pickAssetByExtension(assets, arch, '.appimage')
+}
+
+export function pickDebAsset(assets: GitHubReleaseAsset[] = [], arch: string): GitHubReleaseAsset | null {
+  return pickAssetByExtension(assets, arch, '.deb')
+}
+
+export function pickUpdateAsset(
+  assets: GitHubReleaseAsset[] = [],
+  arch: string,
+  linuxUpdateFormat: LinuxUpdateFormat,
+): { asset: GitHubReleaseAsset | null; format: UpdateAssetFormat | null } {
+  if (linuxUpdateFormat === 'deb') {
+    return { asset: pickDebAsset(assets, arch), format: 'deb' }
+  }
+
+  if (linuxUpdateFormat === 'appimage') {
+    return { asset: pickAppImageAsset(assets, arch), format: 'appimage' }
+  }
+
+  return { asset: null, format: null }
 }
 
 function handleUpdateStatusEvent(event: DesktopUpdateStatusEvent): void {
@@ -126,6 +161,7 @@ function handleUpdateStatusEvent(event: DesktopUpdateStatusEvent): void {
       updateReadyToInstall.value = true
       updateDownloadProgress.value = 100
       downloadedUpdatePath.value = event.filePath ?? downloadedUpdatePath.value
+      downloadedUpdateFormat.value = updateAssetFormat.value
       break
     case 'installing':
       isDownloading.value = false
@@ -168,7 +204,7 @@ export const updateActions = {
       const api = getDesktopApi()
       if (!api) return false
 
-      const { version: currentVersion, platform, arch, githubToken } = await api.getInfo()
+      const { version: currentVersion, platform, arch, githubToken, linuxUpdateFormat } = await api.getInfo()
 
       const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' }
       if (githubToken) {
@@ -191,15 +227,19 @@ export const updateActions = {
       lastCheckTime.value = Date.now()
 
       if (latestVersion && isNewerVersion(latestVersion, currentVersion)) {
-        const appImageAsset = platform === 'linux' ? pickAppImageAsset(release.assets, arch) : null
+        const { asset: updateAsset, format } =
+          platform === 'linux'
+            ? pickUpdateAsset(release.assets, arch, linuxUpdateFormat)
+            : { asset: null, format: null }
 
         updateVersion.value = latestVersion
         updateAvailable.value = true
         updateReleaseUrl.value = release.html_url ?? GITHUB_RELEASES_PAGE
         updateReleaseNotes.value = release.body ?? null
         clearInstallState()
-        updateAssetName.value = appImageAsset?.name ?? null
-        updateAssetUrl.value = appImageAsset?.browser_download_url ?? null
+        updateAssetFormat.value = updateAsset ? format : null
+        updateAssetName.value = updateAsset?.name ?? null
+        updateAssetUrl.value = updateAsset?.browser_download_url ?? null
         return true
       }
 
@@ -223,8 +263,9 @@ export const updateActions = {
 
     const api = getDesktopApi()
     const downloadUrl = updateAssetUrl.value
+    const format = updateAssetFormat.value
     const version = updateVersion.value
-    if (!api?.updates || !downloadUrl || !version) {
+    if (!api?.updates || !downloadUrl || !version || !format) {
       return false
     }
 
@@ -234,8 +275,12 @@ export const updateActions = {
     updateReadyToInstall.value = false
 
     try {
-      const { filePath } = await api.updates.downloadAppImageUpdate(downloadUrl, version)
+      const { filePath } =
+        format === 'deb'
+          ? await api.updates.downloadDebUpdate(downloadUrl, version)
+          : await api.updates.downloadAppImageUpdate(downloadUrl, version)
       downloadedUpdatePath.value = filePath
+      downloadedUpdateFormat.value = format
       updateReadyToInstall.value = true
       updateDownloadProgress.value = 100
       return true
@@ -254,7 +299,8 @@ export const updateActions = {
 
     const api = getDesktopApi()
     const tempPath = downloadedUpdatePath.value
-    if (!api?.updates || !tempPath) {
+    const format = downloadedUpdateFormat.value
+    if (!api?.updates || !tempPath || !format) {
       return false
     }
 
@@ -262,8 +308,13 @@ export const updateActions = {
     isInstalling.value = true
 
     try {
-      await api.updates.installDownloadedAppImage(tempPath)
-      await api.updates.restartFromInstalledAppImage()
+      if (format === 'deb') {
+        await api.updates.installDownloadedDeb(tempPath)
+        await api.updates.relaunch()
+      } else {
+        await api.updates.installDownloadedAppImage(tempPath)
+        await api.updates.restartFromInstalledAppImage()
+      }
       return true
     } catch (error) {
       isInstalling.value = false

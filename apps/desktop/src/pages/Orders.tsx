@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
+import { isDesktop } from '../lib/platform'
 import { authService } from '../services/auth-turso'
 import { type CompanySettings, companySettingsService } from '../services/company-settings-turso'
 import { type Customer, customerService } from '../services/customers-turso'
@@ -23,6 +24,7 @@ import { type Order, orderService } from '../services/orders-turso'
 import { formatReceiptData, type PrintReceiptData, printThermalReceipt } from '../services/print-service'
 import { resolveProductImageUrls } from '../services/product-images'
 import { type Product, type ProductWithVariants, productService } from '../services/products-turso'
+import { createReceiptPrintJob, getPrintJob, getPrintStations, type PrintStation } from '../services/remote-printing'
 import { userService } from '../services/users-turso'
 
 const getCategoryIcon = (category: string): string => {
@@ -109,6 +111,8 @@ export default function Orders() {
   const [isPrinting, setIsPrinting] = useState(false)
   const [printStatus, setPrintStatus] = useState<string | null>(null)
   const [lastPrintTime, setLastPrintTime] = useState<number>(0)
+  const [printStations, setPrintStations] = useState<PrintStation[]>([])
+  const [selectedPrintStationId, setSelectedPrintStationId] = useState('')
 
   const [resolvedImageUrls, setResolvedImageUrls] = useState<Record<string, string>>({})
 
@@ -144,6 +148,9 @@ export default function Orders() {
 
   useEffect(() => {
     loadData()
+    if (!isDesktop) {
+      void loadPrintStations()
+    }
     // Get current user role
     const user = authService.getCurrentUser()
     if (user) {
@@ -287,6 +294,16 @@ export default function Orders() {
       toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadPrintStations = async () => {
+    try {
+      const stations = await getPrintStations()
+      setPrintStations(stations)
+      setSelectedPrintStationId((current) => current || stations[0]?.id || '')
+    } catch (err) {
+      console.error('Failed to load print stations:', err)
     }
   }
 
@@ -732,12 +749,8 @@ export default function Orders() {
 
     setIsPrinting(true)
     setPrintStatus(null)
-
-    // Add timeout to prevent hanging
-    const timeoutId = setTimeout(() => {
-      setIsPrinting(false)
-      setPrintStatus('Print failed: Operation timed out')
-    }, 15000) // 15 second timeout
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    let clearPrintStatusAfterFinish = true
 
     try {
       // Validate order data
@@ -751,6 +764,31 @@ export default function Orders() {
         throw new Error('Could not load company settings')
       }
 
+      if (!isDesktop) {
+        if (!selectedPrintStationId) {
+          throw new Error('No print station is selected')
+        }
+
+        const selectedStation = printStations.find((station) => station.id === selectedPrintStationId)
+        const job = await createReceiptPrintJob({
+          stationId: selectedPrintStationId,
+          orderId: order.id,
+          payload: receiptData,
+        })
+        const stationName = selectedStation?.name || selectedPrintStationId
+        setPrintStatus(`Print job queued for ${stationName}`)
+        toast.success(`Print job queued for ${stationName}`)
+        clearPrintStatusAfterFinish = false
+        void watchRemotePrintJob(job.id, stationName)
+        return
+      }
+
+      // Add timeout to prevent hanging native print commands
+      timeoutId = setTimeout(() => {
+        setIsPrinting(false)
+        setPrintStatus('Print failed: Operation timed out')
+      }, 15000) // 15 second timeout
+
       // Send to printer
       const response = await printThermalReceipt(receiptData)
 
@@ -758,16 +796,50 @@ export default function Orders() {
       toast.success(t('orders.printSuccess'))
       console.log('Print response:', response)
     } catch (error: unknown) {
-      clearTimeout(timeoutId)
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
       console.error('Print error:', error)
       const printErrorMessage = error instanceof Error ? error.message : String(error)
       setPrintStatus(`Print failed: ${printErrorMessage}`)
       toast.error(printErrorMessage || t('orders.printError'))
     } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
       setIsPrinting(false)
-      // Clear status after 3 seconds
-      setTimeout(() => setPrintStatus(null), 3000)
+      if (clearPrintStatusAfterFinish) {
+        setTimeout(() => setPrintStatus(null), 3000)
+      }
     }
+  }
+
+  const watchRemotePrintJob = async (jobId: string, stationName: string) => {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+
+      try {
+        const job = await getPrintJob(jobId)
+        if (job.status === 'printed') {
+          setPrintStatus(`Receipt printed by ${stationName}`)
+          toast.success(t('orders.printSuccess'))
+          setTimeout(() => setPrintStatus(null), 3000)
+          return
+        }
+
+        if (job.status === 'failed') {
+          const message = job.lastError || 'Remote print job failed'
+          setPrintStatus(`Print failed: ${message}`)
+          toast.error(message)
+          return
+        }
+      } catch (error) {
+        console.error('Failed to refresh print job status:', error)
+        return
+      }
+    }
+
+    setPrintStatus(`Print job is still queued for ${stationName}`)
   }
 
   if (isLoading && orders.length === 0) {
@@ -1955,10 +2027,26 @@ export default function Orders() {
 
               {/* Order Actions */}
               <div class="flex flex-wrap items-center gap-2 border-t border-fog-border pt-4 ">
+                {!isDesktop && (
+                  <Select
+                    value={selectedPrintStationId}
+                    onChange={(e) => setSelectedPrintStationId((e.target as HTMLSelectElement).value)}
+                    options={
+                      printStations.length > 0
+                        ? printStations.map((station) => ({
+                            value: station.id,
+                            label: `${station.name}${station.status === 'online' ? '' : ' (offline)'}`,
+                          }))
+                        : [{ value: '', label: 'No print stations' }]
+                    }
+                    disabled={printStations.length === 0 || isPrinting}
+                    class="w-full sm:w-56"
+                  />
+                )}
                 <Button
                   size="sm"
                   onClick={() => handleThermalPrint(selectedOrder)}
-                  disabled={isPrinting}
+                  disabled={isPrinting || (!isDesktop && !selectedPrintStationId)}
                   class="bg-void text-canvas"
                 >
                   {isPrinting ? t('orders.printing') : t('orders.printReceipt')}

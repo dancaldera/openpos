@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { APP_VERSION } from '../lib/app-version'
 import type { CompanySettings } from './company-settings-turso'
 import type { Order } from './orders-turso'
 import { formatReceiptData, RECEIPT_APP_PHONE, renderReceiptHtml, renderReceiptText } from './print-service'
@@ -73,7 +74,7 @@ describe('print receipt helpers', () => {
     expect(text).toContain('555-0100')
     expect(text).toContain('MX$116.00')
     expect(text).toContain('Gracias por su compra')
-    expect(text).toContain('OpenPOS | Version 0.7.5')
+    expect(text).toContain(`OpenPOS | Version ${APP_VERSION}`)
     expect(text).toContain('Support: +523322633323')
     expect(text).toContain('ITEM')
     expect(text).toContain('QTY')

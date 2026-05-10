@@ -26,8 +26,8 @@ describe('runDesktopMode', () => {
     const calls: string[] = []
     let spawnCount = 0
 
-    const runCommand = mock(async () => {
-      calls.push('run:prepare-native')
+    const runCommand = mock(async (_command: string, args: string[]) => {
+      calls.push(`run:${args.join(' ')}`)
     })
     const ensureElectronBinaryInstalled = mock(async () => {
       calls.push('ensure:electron')
@@ -86,11 +86,12 @@ describe('runDesktopMode', () => {
     )
 
     expect(calls).toEqual([
-      'run:prepare-native',
+      'run:run build:bootstrap',
+      'run:run prepare:native',
       'ensure:electron',
-      'spawn:api:bun:run dev',
+      `spawn:api:${process.execPath}:run dev`,
       `wait:${API_PORT}`,
-      'spawn:vite:bun:run dev',
+      `spawn:vite:${process.execPath}:run dev`,
       `wait:${VITE_PORT}`,
       'spawn:electron:/tmp/electron:.',
       'shutdown:0',

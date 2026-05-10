@@ -11,7 +11,14 @@ const {
 } = require('./config-resolver.cjs')
 const { formatPrinterCommandError, resolvePrinterConfig } = require('./printer-config.cjs')
 const { isLegacyLocalImageKey } = require('./product-image-keys.cjs')
+const { createRemotePrintQueue } = require('./remote-print-queue.cjs')
 const { createSyncManager, ensureLocalSyncSchema, resetLocalDatabase } = require('./sync-manager.cjs')
+const {
+  assertUpdateFilePath,
+  buildDebInstallCommand,
+  resolveLinuxUpdateFormat,
+  resolveUpdateDownloadFileName,
+} = require('./update-installer.cjs')
 
 const pkg = require('../package.json')
 
@@ -21,6 +28,7 @@ app.setName('OpenPOS')
 let mainWindow = null
 let db = null
 let syncManager = null
+let remotePrintQueue = null
 let initialSyncPromise = null
 let initialSyncError = null
 let cachedRemoteClient = null
@@ -179,26 +187,20 @@ function ensureHttpsUrl(url) {
   return parsed
 }
 
-function sanitizeVersion(version) {
-  return String(version || 'latest').replace(/[^a-zA-Z0-9._-]/g, '-')
+function getLinuxUpdateFormat() {
+  return resolveLinuxUpdateFormat({
+    platform: process.platform,
+    env: process.env,
+    readFileSync: fs.readFileSync,
+  })
 }
 
-function resolveDownloadFileName(downloadUrl, version) {
-  const url = ensureHttpsUrl(downloadUrl)
-  const candidate = path.basename(url.pathname)
-  if (candidate.toLowerCase().endsWith('.appimage')) {
-    return candidate
-  }
-
-  return `openpos-${sanitizeVersion(version)}-${process.arch}.AppImage`
-}
-
-async function downloadAppImageUpdate(downloadUrl, version) {
+async function downloadLinuxUpdate(downloadUrl, version, format) {
   if (process.platform !== 'linux') {
-    throw new Error('In-app AppImage updates are only supported on Linux')
+    throw new Error('In-app Linux updates are only supported on Linux')
   }
 
-  const fileName = resolveDownloadFileName(downloadUrl, version)
+  const fileName = resolveUpdateDownloadFileName(downloadUrl, version, process.arch, format)
   const tempDir = getUpdateTempDir()
   const tempPath = path.join(tempDir, fileName)
 
@@ -252,6 +254,18 @@ async function downloadAppImageUpdate(downloadUrl, version) {
   return { filePath: tempPath }
 }
 
+async function downloadAppImageUpdate(downloadUrl, version) {
+  return downloadLinuxUpdate(downloadUrl, version, 'appimage')
+}
+
+async function downloadDebUpdate(downloadUrl, version) {
+  if (getLinuxUpdateFormat() !== 'deb') {
+    throw new Error('In-app Debian package updates are only supported on Debian-family Linux')
+  }
+
+  return downloadLinuxUpdate(downloadUrl, version, 'deb')
+}
+
 function runCommand(command, args) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -284,11 +298,11 @@ async function installDownloadedAppImage(tempPath) {
     throw new Error('Downloaded AppImage was not found')
   }
 
-  const expectedTempDir = path.resolve(getUpdateTempDir())
-  const resolvedTempPath = path.resolve(tempPath)
-  if (!resolvedTempPath.startsWith(expectedTempDir + path.sep) && resolvedTempPath !== expectedTempDir) {
-    throw new Error('Refusing to install update from an unexpected location')
-  }
+  const resolvedTempPath = assertUpdateFilePath({
+    tempDir: getUpdateTempDir(),
+    filePath: tempPath,
+    format: 'appimage',
+  })
 
   const installPath = getAppImageInstallPath()
   const installDir = path.dirname(installPath)
@@ -305,6 +319,33 @@ async function installDownloadedAppImage(tempPath) {
     await fs.promises.rm(stagedPath, { force: true }).catch(() => {})
     throw error
   }
+}
+
+async function installDownloadedDeb(tempPath) {
+  if (process.platform !== 'linux') {
+    throw new Error('In-app Debian package updates are only supported on Linux')
+  }
+
+  if (getLinuxUpdateFormat() !== 'deb') {
+    throw new Error('In-app Debian package updates are only supported on Debian-family Linux')
+  }
+
+  if (!tempPath || !fs.existsSync(tempPath)) {
+    throw new Error('Downloaded Debian package was not found')
+  }
+
+  const resolvedTempPath = assertUpdateFilePath({
+    tempDir: getUpdateTempDir(),
+    filePath: tempPath,
+    format: 'deb',
+  })
+  const { command, args } = buildDebInstallCommand({
+    debPath: resolvedTempPath,
+    isRoot: typeof process.getuid === 'function' && process.getuid() === 0,
+  })
+
+  emitUpdateStatus({ phase: 'installing' })
+  await runCommand(command, args)
 }
 
 async function restartFromInstalledAppImage() {
@@ -1155,6 +1196,7 @@ function registerIpcHandlers() {
       version: pkg.version,
       platform: process.platform,
       arch: process.arch,
+      linuxUpdateFormat: getLinuxUpdateFormat(),
       githubToken,
     }
   })
@@ -1191,6 +1233,9 @@ function registerIpcHandlers() {
       configPath: config.api.configPath || getUserDataConfigPath(),
       configSource: config.api.source,
       userDataConfigPath: getUserDataConfigPath(),
+      printStationId: config.printStation.id,
+      printStationName: config.printStation.name,
+      printStationConfigured: config.printStation.configured,
     }
   })
   ipcMain.handle('desktop:open-external', (_event, url) => {
@@ -1212,9 +1257,31 @@ function registerIpcHandlers() {
       throw error
     }
   })
+  ipcMain.handle('desktop:update-download-deb', async (_event, payload) => {
+    try {
+      return await downloadDebUpdate(payload.url, payload.version)
+    } catch (error) {
+      emitUpdateStatus({
+        phase: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  })
   ipcMain.handle('desktop:update-install-appimage', async (_event, payload) => {
     try {
       await installDownloadedAppImage(payload.tempPath)
+    } catch (error) {
+      emitUpdateStatus({
+        phase: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  })
+  ipcMain.handle('desktop:update-install-deb', async (_event, payload) => {
+    try {
+      await installDownloadedDeb(payload.tempPath)
     } catch (error) {
       emitUpdateStatus({
         phase: 'error',
@@ -1368,10 +1435,16 @@ app.whenReady().then(() => {
     getRemoteConfig: getDbConnectionConfig,
     onFlushOrderQueue: flushOrderSyncQueueWithClient,
   })
+  remotePrintQueue = createRemotePrintQueue({
+    getClient: getRemoteDbClient,
+    getRuntimeConfig,
+    printReceipt: printThermalReceipt,
+  })
   registerIpcHandlers()
   registerThemeHandlers()
   createWindow()
   syncManager.start()
+  remotePrintQueue.start()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -1389,6 +1462,10 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   if (syncManager) {
     syncManager.stop()
+  }
+
+  if (remotePrintQueue) {
+    remotePrintQueue.stop()
   }
 
   if (db) {

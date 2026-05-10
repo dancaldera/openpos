@@ -922,9 +922,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     if (runHardDeletes && remoteCounts.size > 0) {
       await runHardDeleteReconciliation(database, client, remoteCounts)
     }
-    if (hadActivity) {
-      await repairMissingProductImages(database, client)
-    }
+    await repairMissingProductImages(database, client)
     logSync('remote pull phase completed')
     await flushOutbox(database, client)
     logSync('outbox flush completed')
