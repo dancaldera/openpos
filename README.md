@@ -77,14 +77,15 @@ printing tests, see [Thermal Receipt Printing on macOS](docs/THERMAL_PRINTING_MA
 
 ### `githubToken` — in-app update checks
 
-If the GitHub repository is private, the app needs a token to query the GitHub Releases API for updates. Add `githubToken` to `config.json` with a Personal Access Token (PAT) that has the following scope:
+If the GitHub repository is private, the app needs a token to query GitHub Releases and download release assets.
+Add `githubToken` to `config.json` with a Personal Access Token (PAT) that has the following scope:
 
 | Token type | Required scope |
 |---|---|
 | Classic PAT | `repo` (read access to private repos) |
 | Fine-grained PAT | **Contents** → Read-only, scoped to the `OpenPOS` repository |
 
-Generate a token at <https://github.com/settings/tokens>. The token is only used for the read-only `/repos/{owner}/{repo}/releases/latest` endpoint — it is never sent anywhere else.
+Generate a token at <https://github.com/settings/tokens>. The token is only used for read-only GitHub release metadata and asset downloads.
 
 Create the file interactively:
 

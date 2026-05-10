@@ -228,6 +228,7 @@ describe('updateActions.checkForUpdate', () => {
               },
               {
                 name: 'openpos-0.3.2-amd64.deb',
+                url: 'https://api.github.com/repos/dancaldera/OpenPOS/releases/assets/123',
                 browser_download_url: 'https://github.com/dancaldera/OpenPOS/releases/download/v0.3.2/openpos.deb',
               },
             ],
@@ -241,7 +242,7 @@ describe('updateActions.checkForUpdate', () => {
     expect(result).toBe(true)
     expect(updateAssetFormat.value).toBe('deb')
     expect(updateAssetName.value).toBe('openpos-0.3.2-amd64.deb')
-    expect(updateAssetUrl.value).toBe('https://github.com/dancaldera/OpenPOS/releases/download/v0.3.2/openpos.deb')
+    expect(updateAssetUrl.value).toBe('https://api.github.com/repos/dancaldera/OpenPOS/releases/assets/123')
   })
 
   it('keeps the release visible but disables auto-install when no Debian asset exists', async () => {

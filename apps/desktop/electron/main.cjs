@@ -200,6 +200,7 @@ async function downloadLinuxUpdate(downloadUrl, version, format) {
     throw new Error('In-app Linux updates are only supported on Linux')
   }
 
+  const githubToken = getGithubToken()
   const fileName = resolveUpdateDownloadFileName(downloadUrl, version, process.arch, format)
   const tempDir = getUpdateTempDir()
   const tempPath = path.join(tempDir, fileName)
@@ -207,7 +208,10 @@ async function downloadLinuxUpdate(downloadUrl, version, format) {
   await fs.promises.mkdir(tempDir, { recursive: true })
 
   const response = await fetch(downloadUrl, {
-    headers: { Accept: 'application/octet-stream' },
+    headers: {
+      Accept: 'application/octet-stream',
+      ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {}),
+    },
   })
 
   if (!response.ok || !response.body) {
@@ -454,6 +458,16 @@ function resolveConnectionConfig() {
     envConfig: getDotEnvConfig(),
     defaultApiUrl: isDev() ? 'http://localhost:3001' : undefined,
   })
+}
+
+function getGithubToken() {
+  const runtimeConfig = getRuntimeConfig()
+  return (
+    runtimeConfig.config.githubToken ||
+    process.env.OPENPOS_GITHUB_TOKEN ||
+    getDotEnvConfig().OPENPOS_GITHUB_TOKEN ||
+    null
+  )
 }
 
 function getDbConnectionConfig() {
@@ -1183,13 +1197,6 @@ function createWindow() {
 
 function registerIpcHandlers() {
   ipcMain.handle('desktop:info', () => {
-    const runtimeConfig = getRuntimeConfig()
-    const githubToken =
-      runtimeConfig.config.githubToken ||
-      process.env.OPENPOS_GITHUB_TOKEN ||
-      getDotEnvConfig().OPENPOS_GITHUB_TOKEN ||
-      null
-
     return {
       isDesktop: true,
       isElectron: true,
@@ -1197,7 +1204,7 @@ function registerIpcHandlers() {
       platform: process.platform,
       arch: process.arch,
       linuxUpdateFormat: getLinuxUpdateFormat(),
-      githubToken,
+      githubToken: getGithubToken(),
     }
   })
 

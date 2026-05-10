@@ -24,6 +24,7 @@ const GITHUB_RELEASES_PAGE = 'https://github.com/dancaldera/OpenPOS/releases/lat
 
 interface GitHubReleaseAsset {
   name?: string
+  url?: string
   browser_download_url?: string
 }
 
@@ -105,7 +106,7 @@ function pickAssetByExtension(
     (asset) =>
       typeof asset.name === 'string' &&
       asset.name.toLowerCase().endsWith(extension) &&
-      typeof asset.browser_download_url === 'string',
+      (typeof asset.url === 'string' || typeof asset.browser_download_url === 'string'),
   )
 
   if (matchingAssets.length === 0) {
@@ -239,7 +240,7 @@ export const updateActions = {
         clearInstallState()
         updateAssetFormat.value = updateAsset ? format : null
         updateAssetName.value = updateAsset?.name ?? null
-        updateAssetUrl.value = updateAsset?.browser_download_url ?? null
+        updateAssetUrl.value = updateAsset?.url ?? updateAsset?.browser_download_url ?? null
         return true
       }
 
