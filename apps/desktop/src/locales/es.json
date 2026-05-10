@@ -793,7 +793,7 @@
     "pastDate": "La fecha no puede estar en el pasado"
   },
   "pagination": {
-    "showing": "Mostrando {{start}} a {{end}} de {{total}} entradas",
+    "showing": "Mostrando {{start}} a {{end}} de {{total}} resultados",
     "previous": "Anterior",
     "next": "Siguiente",
     "page": "Página",

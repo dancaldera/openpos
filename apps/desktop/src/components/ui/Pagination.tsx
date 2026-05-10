@@ -1,3 +1,4 @@
+import { useTranslation } from '../../hooks/useTranslation'
 import { Button } from './Button'
 
 interface PaginationProps {
@@ -17,6 +18,7 @@ export function Pagination({
   pageSize,
   isLoading = false,
 }: PaginationProps) {
+  const { t } = useTranslation()
   const startItem = (currentPage - 1) * pageSize + 1
   const endItem = Math.min(currentPage * pageSize, totalCount)
 
@@ -55,9 +57,11 @@ export function Pagination({
   return (
     <div class="flex items-center justify-between px-4 py-3 bg-canvas border border-fog-border rounded-cards mt-2">
       <div class="text-sm text-graphite ">
-        Showing <span class="font-medium text-void ">{startItem}</span> to{' '}
-        <span class="font-medium text-void ">{endItem}</span> of{' '}
-        <span class="font-medium text-void ">{totalCount}</span> results
+        {t('pagination.showing', {
+          start: startItem,
+          end: endItem,
+          total: totalCount,
+        })}
       </div>
 
       <div class="flex items-center gap-1">
@@ -67,7 +71,7 @@ export function Pagination({
           disabled={currentPage === 1 || isLoading}
           class="px-3 py-1"
         >
-          Previous
+          {t('pagination.previous')}
         </Button>
 
         <div class="flex items-center gap-1">
@@ -98,7 +102,7 @@ export function Pagination({
           disabled={currentPage === totalPages || isLoading}
           class="px-3 py-1"
         >
-          Next
+          {t('pagination.next')}
         </Button>
       </div>
     </div>

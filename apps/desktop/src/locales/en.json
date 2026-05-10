@@ -793,7 +793,7 @@
     "pastDate": "Date cannot be in the past"
   },
   "pagination": {
-    "showing": "Showing {{start}} to {{end}} of {{total}} entries",
+    "showing": "Showing {{start}} to {{end}} of {{total}} results",
     "previous": "Previous",
     "next": "Next",
     "page": "Page",
