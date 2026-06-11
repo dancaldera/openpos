@@ -16,8 +16,9 @@ const { createSyncManager, ensureLocalSyncSchema, resetLocalDatabase } = require
 const {
   assertUpdateFilePath,
   buildDebInstallCommand,
-  resolveLinuxUpdateFormat,
+  resolveMacAppBundlePath,
   resolveUpdateDownloadFileName,
+  resolveUpdateFormat,
 } = require('./update-installer.cjs')
 
 const pkg = require('../package.json')
@@ -187,20 +188,17 @@ function ensureHttpsUrl(url) {
   return parsed
 }
 
-function getLinuxUpdateFormat() {
-  return resolveLinuxUpdateFormat({
+function getUpdateFormat() {
+  return resolveUpdateFormat({
     platform: process.platform,
     env: process.env,
     readFileSync: fs.readFileSync,
+    isPackaged: app.isPackaged,
+    exePath: app.getPath('exe'),
   })
 }
 
-async function downloadLinuxUpdate(downloadUrl, version, format) {
-  if (process.platform !== 'linux') {
-    throw new Error('In-app Linux updates are only supported on Linux')
-  }
-
-  const githubToken = getGithubToken()
+async function downloadUpdateAsset(downloadUrl, version, format) {
   const fileName = resolveUpdateDownloadFileName(downloadUrl, version, process.arch, format)
   const tempDir = getUpdateTempDir()
   const tempPath = path.join(tempDir, fileName)
@@ -210,7 +208,6 @@ async function downloadLinuxUpdate(downloadUrl, version, format) {
   const response = await fetch(downloadUrl, {
     headers: {
       Accept: 'application/octet-stream',
-      ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {}),
     },
   })
 
@@ -253,21 +250,35 @@ async function downloadLinuxUpdate(downloadUrl, version, format) {
   }
 
   await fileHandle.close()
-  await fs.promises.chmod(tempPath, 0o755)
+  if (format === 'appimage') {
+    await fs.promises.chmod(tempPath, 0o755)
+  }
   emitUpdateStatus({ phase: 'downloaded', filePath: tempPath, progress: 100 })
   return { filePath: tempPath }
 }
 
 async function downloadAppImageUpdate(downloadUrl, version) {
-  return downloadLinuxUpdate(downloadUrl, version, 'appimage')
+  if (process.platform !== 'linux') {
+    throw new Error('In-app AppImage updates are only supported on Linux')
+  }
+
+  return downloadUpdateAsset(downloadUrl, version, 'appimage')
 }
 
 async function downloadDebUpdate(downloadUrl, version) {
-  if (getLinuxUpdateFormat() !== 'deb') {
+  if (getUpdateFormat() !== 'deb') {
     throw new Error('In-app Debian package updates are only supported on Debian-family Linux')
   }
 
-  return downloadLinuxUpdate(downloadUrl, version, 'deb')
+  return downloadUpdateAsset(downloadUrl, version, 'deb')
+}
+
+async function downloadMacZipUpdate(downloadUrl, version) {
+  if (process.platform !== 'darwin') {
+    throw new Error('In-app macOS updates are only supported on macOS')
+  }
+
+  return downloadUpdateAsset(downloadUrl, version, 'mac-zip')
 }
 
 function runCommand(command, args) {
@@ -330,7 +341,7 @@ async function installDownloadedDeb(tempPath) {
     throw new Error('In-app Debian package updates are only supported on Linux')
   }
 
-  if (getLinuxUpdateFormat() !== 'deb') {
+  if (getUpdateFormat() !== 'deb') {
     throw new Error('In-app Debian package updates are only supported on Debian-family Linux')
   }
 
@@ -368,6 +379,75 @@ async function restartFromInstalledAppImage() {
     stdio: 'ignore',
   })
   child.unref()
+  app.exit(0)
+}
+
+async function installDownloadedMacZip(tempPath) {
+  if (process.platform !== 'darwin') {
+    throw new Error('In-app macOS updates are only supported on macOS')
+  }
+
+  if (!tempPath || !fs.existsSync(tempPath)) {
+    throw new Error('Downloaded update archive was not found')
+  }
+
+  const resolvedTempPath = assertUpdateFilePath({
+    tempDir: getUpdateTempDir(),
+    filePath: tempPath,
+    format: 'mac-zip',
+  })
+
+  const targetAppPath = resolveMacAppBundlePath(app.getPath('exe'))
+  if (!targetAppPath) {
+    throw new Error('OpenPOS is not running from an installed .app bundle')
+  }
+
+  emitUpdateStatus({ phase: 'installing' })
+
+  // ditto preserves symlinks and permissions; plain unzip libraries break .app bundles
+  const extractDir = path.join(getUpdateTempDir(), 'extracted')
+  await fs.promises.rm(extractDir, { recursive: true, force: true })
+  await fs.promises.mkdir(extractDir, { recursive: true })
+  await runCommand('ditto', ['-x', '-k', resolvedTempPath, extractDir])
+
+  const entries = await fs.promises.readdir(extractDir)
+  const appName = entries.find((entry) => entry.endsWith('.app'))
+  if (!appName) {
+    throw new Error('Update archive does not contain an app bundle')
+  }
+  const newAppPath = path.join(extractDir, appName)
+
+  await runCommand('xattr', ['-dr', 'com.apple.quarantine', newAppPath]).catch(() => {})
+
+  // Renaming a running .app bundle is allowed on macOS
+  const backupPath = `${targetAppPath}.update-backup`
+  await fs.promises.rm(backupPath, { recursive: true, force: true })
+  await fs.promises.rename(targetAppPath, backupPath)
+
+  try {
+    try {
+      await fs.promises.rename(newAppPath, targetAppPath)
+    } catch (error) {
+      if (error && error.code === 'EXDEV') {
+        await runCommand('ditto', [newAppPath, targetAppPath])
+      } else {
+        throw error
+      }
+    }
+  } catch (error) {
+    await fs.promises.rename(backupPath, targetAppPath).catch(() => {})
+    throw error
+  }
+
+  await fs.promises.rm(backupPath, { recursive: true, force: true }).catch(() => {})
+}
+
+async function restartFromUpdatedMacApp() {
+  if (process.platform !== 'darwin') {
+    throw new Error('In-app macOS updates are only supported on macOS')
+  }
+
+  app.relaunch()
   app.exit(0)
 }
 
@@ -458,16 +538,6 @@ function resolveConnectionConfig() {
     envConfig: getDotEnvConfig(),
     defaultApiUrl: isDev() ? 'http://localhost:3001' : undefined,
   })
-}
-
-function getGithubToken() {
-  const runtimeConfig = getRuntimeConfig()
-  return (
-    runtimeConfig.config.githubToken ||
-    process.env.OPENPOS_GITHUB_TOKEN ||
-    getDotEnvConfig().OPENPOS_GITHUB_TOKEN ||
-    null
-  )
 }
 
 function getDbConnectionConfig() {
@@ -1203,8 +1273,7 @@ function registerIpcHandlers() {
       version: pkg.version,
       platform: process.platform,
       arch: process.arch,
-      linuxUpdateFormat: getLinuxUpdateFormat(),
-      githubToken: getGithubToken(),
+      updateFormat: getUpdateFormat(),
     }
   })
 
@@ -1298,6 +1367,29 @@ function registerIpcHandlers() {
     }
   })
   ipcMain.handle('desktop:update-restart-appimage', () => restartFromInstalledAppImage())
+  ipcMain.handle('desktop:update-download-mac-zip', async (_event, payload) => {
+    try {
+      return await downloadMacZipUpdate(payload.url, payload.version)
+    } catch (error) {
+      emitUpdateStatus({
+        phase: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  })
+  ipcMain.handle('desktop:update-install-mac-zip', async (_event, payload) => {
+    try {
+      await installDownloadedMacZip(payload.tempPath)
+    } catch (error) {
+      emitUpdateStatus({
+        phase: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  })
+  ipcMain.handle('desktop:update-restart-mac', () => restartFromUpdatedMacApp())
 
   // ── Product images (local file system) ──────────────────────────────
   ipcMain.handle('desktop:image-save', async (_event, payload) => {

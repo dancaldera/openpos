@@ -47,7 +47,7 @@ export interface DesktopUpdateStatusEvent {
   message?: string
 }
 
-export type LinuxUpdateFormat = 'appimage' | 'deb' | null
+export type UpdateFormat = 'appimage' | 'deb' | 'mac-zip' | null
 
 export interface DesktopRuntimeConfigSummary {
   apiUrl: string
@@ -66,8 +66,7 @@ export interface DesktopApi {
     version: string
     platform: string
     arch: string
-    linuxUpdateFormat: LinuxUpdateFormat
-    githubToken: string | null
+    updateFormat: UpdateFormat
   }>
   greet(name: string): Promise<string>
   hashPassword(password: string): Promise<string>
@@ -117,6 +116,9 @@ export interface DesktopApi {
     installDownloadedAppImage(tempPath: string): Promise<void>
     installDownloadedDeb(tempPath: string): Promise<void>
     restartFromInstalledAppImage(): Promise<void>
+    downloadMacZipUpdate(url: string, version: string): Promise<{ filePath: string }>
+    installDownloadedMacZip(tempPath: string): Promise<void>
+    restartFromUpdatedMacApp(): Promise<void>
     onStatusChange(listener: (event: DesktopUpdateStatusEvent) => void): () => void
   }
 }

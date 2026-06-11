@@ -30,7 +30,7 @@ const currentAppInfo = signal<{
   arch: string
 } | null>(null)
 
-const FALLBACK_RELEASE_URL = 'https://github.com/dancaldera/OpenPOS/releases/latest'
+const FALLBACK_RELEASE_URL = 'https://github.com/dancaldera/openpos/releases/latest'
 
 if (isDesktop) {
   getDesktopApi()
@@ -74,7 +74,6 @@ export interface UpdateBadgeViewModelInput {
   installedVersion: string | null
   installing: boolean
   latestVersion: string | null
-  linuxSupported: boolean
   readyToInstall: boolean
   releaseNotes: string | null
   releaseUrl: string | null
@@ -93,7 +92,6 @@ export function getUpdateBadgeViewModel({
   installedVersion,
   installing,
   latestVersion,
-  linuxSupported,
   readyToInstall,
   releaseNotes,
   releaseUrl,
@@ -101,7 +99,7 @@ export function getUpdateBadgeViewModel({
   updateAssetUrl: assetUrl,
   labels,
 }: UpdateBadgeViewModelInput) {
-  const canAutoInstall = available && linuxSupported && Boolean(assetUrl)
+  const canAutoInstall = available && Boolean(assetUrl)
   const progressLabel =
     downloading && downloadProgress > 0
       ? `${labels.downloading} ${downloadProgress}%`
@@ -202,7 +200,6 @@ export function UpdateBadge() {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const appInfo = currentAppInfo.value
   const installedVersion = appInfo?.version ?? null
-  const linuxSupported = appInfo?.platform === 'linux'
 
   useClickOutside(wrapperRef, () => {
     popoverOpen.value = false
@@ -232,7 +229,6 @@ export function UpdateBadge() {
     installedVersion,
     installing,
     latestVersion,
-    linuxSupported,
     readyToInstall,
     releaseNotes,
     releaseUrl,

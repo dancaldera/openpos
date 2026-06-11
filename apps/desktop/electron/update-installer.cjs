@@ -47,6 +47,37 @@ function resolveLinuxUpdateFormat({ platform, env = {}, readFileSync }) {
   }
 }
 
+function resolveMacAppBundlePath(exePath) {
+  if (!exePath) {
+    return null
+  }
+
+  let current = path.resolve(exePath)
+  while (true) {
+    if (current.endsWith('.app')) {
+      return current
+    }
+
+    const parent = path.dirname(current)
+    if (parent === current) {
+      return null
+    }
+    current = parent
+  }
+}
+
+function resolveUpdateFormat({ platform, env = {}, readFileSync, isPackaged, exePath }) {
+  if (platform === 'linux') {
+    return resolveLinuxUpdateFormat({ platform, env, readFileSync })
+  }
+
+  if (platform === 'darwin') {
+    return isPackaged && resolveMacAppBundlePath(exePath) ? 'mac-zip' : null
+  }
+
+  return null
+}
+
 function normalizeArchTokens(arch) {
   if (arch === 'arm64') {
     return ['arm64', 'aarch64']
@@ -63,14 +94,27 @@ function sanitizeVersion(version) {
   return String(version || 'latest').replace(/[^a-zA-Z0-9._-]/g, '-')
 }
 
+const UPDATE_FORMAT_EXTENSIONS = {
+  deb: { extension: '.deb', fallbackExtension: '.deb' },
+  appimage: { extension: '.appimage', fallbackExtension: '.AppImage' },
+  'mac-zip': { extension: '.zip', fallbackExtension: '.zip' },
+}
+
+function getUpdateFormatExtensions(format) {
+  const extensions = UPDATE_FORMAT_EXTENSIONS[format]
+  if (!extensions) {
+    throw new Error(`Unsupported update format: ${format}`)
+  }
+  return extensions
+}
+
 function resolveUpdateDownloadFileName(downloadUrl, version, arch, format) {
   const url = new URL(downloadUrl)
   if (url.protocol !== 'https:') {
     throw new Error('Only https: URLs allowed')
   }
 
-  const extension = format === 'deb' ? '.deb' : '.appimage'
-  const fallbackExtension = format === 'deb' ? '.deb' : '.AppImage'
+  const { extension, fallbackExtension } = getUpdateFormatExtensions(format)
   const candidate = path.basename(url.pathname)
 
   if (candidate.toLowerCase().endsWith(extension)) {
@@ -91,7 +135,7 @@ function assertUpdateFilePath({ tempDir, filePath, format }) {
     throw new Error('Refusing to install update from an unexpected location')
   }
 
-  const extension = format === 'deb' ? '.deb' : '.appimage'
+  const { extension } = getUpdateFormatExtensions(format)
   if (!resolvedFilePath.toLowerCase().endsWith(extension)) {
     throw new Error(`Downloaded update must be a ${extension} file`)
   }
@@ -114,5 +158,7 @@ module.exports = {
   normalizeArchTokens,
   parseOsRelease,
   resolveLinuxUpdateFormat,
+  resolveMacAppBundlePath,
   resolveUpdateDownloadFileName,
+  resolveUpdateFormat,
 }

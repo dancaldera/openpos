@@ -65,6 +65,7 @@
     ],
     "mac": {
       "icon": "electron/build/icons/icon.icns",
+      "artifactName": "openpos-${arch}.${ext}",
       "target": [
         "dmg",
         "zip"

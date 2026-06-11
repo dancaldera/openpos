@@ -5,7 +5,7 @@ import { computed, signal } from '@preact/signals'
  * These signals track update availability, download progress, and errors.
  */
 
-export type UpdateAssetFormat = 'appimage' | 'deb'
+export type UpdateAssetFormat = 'appimage' | 'deb' | 'mac-zip'
 
 export const updateAvailable = signal(false)
 export const updateVersion = signal<string | null>(null)

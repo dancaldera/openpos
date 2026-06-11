@@ -41,7 +41,6 @@ describe('getUpdateBadgeViewModel', () => {
       installedVersion: null,
       installing: false,
       latestVersion: null,
-      linuxSupported: true,
       readyToInstall: false,
       releaseNotes: null,
       releaseUrl: null,
@@ -55,7 +54,7 @@ describe('getUpdateBadgeViewModel', () => {
     expect(viewModel.installedVersionLabel).toBe('…')
     expect(viewModel.lastCheckedLabel).toBeNull()
     expect(viewModel.releaseNotesPreview).toBeNull()
-    expect(viewModel.releaseUrl).toBe('https://github.com/dancaldera/OpenPOS/releases/latest')
+    expect(viewModel.releaseUrl).toBe('https://github.com/dancaldera/openpos/releases/latest')
     expect(viewModel.checkingLabel).toBe('Check for updates')
     expect(viewModel.canAutoInstall).toBe(false)
   })
@@ -72,12 +71,11 @@ describe('getUpdateBadgeViewModel', () => {
       installedVersion: '0.3.1',
       installing: false,
       latestVersion: '0.3.2',
-      linuxSupported: true,
       readyToInstall: false,
       releaseNotes: longNotes,
-      releaseUrl: 'https://github.com/dancaldera/OpenPOS/releases/tag/v0.3.2',
+      releaseUrl: 'https://github.com/dancaldera/openpos/releases/tag/v0.3.2',
       updateAssetName: 'openpos-0.3.2-x86_64.AppImage',
-      updateAssetUrl: 'https://github.com/dancaldera/OpenPOS/releases/download/v0.3.2/openpos.AppImage',
+      updateAssetUrl: 'https://github.com/dancaldera/openpos/releases/download/v0.3.2/openpos.AppImage',
       labels,
     })
 
@@ -87,7 +85,7 @@ describe('getUpdateBadgeViewModel', () => {
     expect(viewModel.latestVersionLabel).toBe('0.3.2')
     expect(viewModel.lastCheckedLabel).toBeTruthy()
     expect(viewModel.releaseNotesPreview).toBe(longNotes.slice(0, 200))
-    expect(viewModel.releaseUrl).toBe('https://github.com/dancaldera/OpenPOS/releases/tag/v0.3.2')
+    expect(viewModel.releaseUrl).toBe('https://github.com/dancaldera/openpos/releases/tag/v0.3.2')
     expect(viewModel.canAutoInstall).toBe(true)
     expect(viewModel.actionLabel).toBe('Download update')
   })
@@ -103,7 +101,6 @@ describe('getUpdateBadgeViewModel', () => {
       installedVersion: '0.3.1',
       installing: false,
       latestVersion: '0.3.2',
-      linuxSupported: true,
       readyToInstall: false,
       releaseNotes: null,
       releaseUrl: null,
@@ -129,7 +126,6 @@ describe('getUpdateBadgeViewModel', () => {
       installedVersion: '0.3.1',
       installing: false,
       latestVersion: '0.3.2',
-      linuxSupported: true,
       readyToInstall: true,
       releaseNotes: null,
       releaseUrl: null,
@@ -144,7 +140,7 @@ describe('getUpdateBadgeViewModel', () => {
     expect(viewModel.error).toBe('pkexec denied the action')
   })
 
-  it('falls back to release-view mode when linux auto install is unavailable', () => {
+  it('falls back to release-view mode when no auto-install asset is available', () => {
     const viewModel = getUpdateBadgeViewModel({
       available: true,
       checking: false,
@@ -155,7 +151,6 @@ describe('getUpdateBadgeViewModel', () => {
       installedVersion: '0.3.1',
       installing: false,
       latestVersion: '0.3.2',
-      linuxSupported: false,
       readyToInstall: false,
       releaseNotes: null,
       releaseUrl: null,

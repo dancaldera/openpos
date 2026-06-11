@@ -1,4 +1,4 @@
-import { type DesktopUpdateStatusEvent, getDesktopApi, type LinuxUpdateFormat } from '../../lib/desktop'
+import { type DesktopUpdateStatusEvent, getDesktopApi, type UpdateFormat } from '../../lib/desktop'
 import {
   downloadError,
   downloadedUpdateFormat,
@@ -19,12 +19,11 @@ import {
   updateVersion,
 } from './updateStore'
 
-const GITHUB_RELEASES_URL = 'https://api.github.com/repos/dancaldera/OpenPOS/releases/latest'
-const GITHUB_RELEASES_PAGE = 'https://github.com/dancaldera/OpenPOS/releases/latest'
+const GITHUB_RELEASES_URL = 'https://api.github.com/repos/dancaldera/openpos/releases/latest'
+const GITHUB_RELEASES_PAGE = 'https://github.com/dancaldera/openpos/releases/latest'
 
 interface GitHubReleaseAsset {
   name?: string
-  url?: string
   browser_download_url?: string
 }
 
@@ -106,7 +105,7 @@ function pickAssetByExtension(
     (asset) =>
       typeof asset.name === 'string' &&
       asset.name.toLowerCase().endsWith(extension) &&
-      (typeof asset.url === 'string' || typeof asset.browser_download_url === 'string'),
+      typeof asset.browser_download_url === 'string',
   )
 
   if (matchingAssets.length === 0) {
@@ -132,17 +131,25 @@ export function pickDebAsset(assets: GitHubReleaseAsset[] = [], arch: string): G
   return pickAssetByExtension(assets, arch, '.deb')
 }
 
+export function pickMacZipAsset(assets: GitHubReleaseAsset[] = [], arch: string): GitHubReleaseAsset | null {
+  return pickAssetByExtension(assets, arch, '.zip')
+}
+
 export function pickUpdateAsset(
   assets: GitHubReleaseAsset[] = [],
   arch: string,
-  linuxUpdateFormat: LinuxUpdateFormat,
+  updateFormat: UpdateFormat,
 ): { asset: GitHubReleaseAsset | null; format: UpdateAssetFormat | null } {
-  if (linuxUpdateFormat === 'deb') {
+  if (updateFormat === 'deb') {
     return { asset: pickDebAsset(assets, arch), format: 'deb' }
   }
 
-  if (linuxUpdateFormat === 'appimage') {
+  if (updateFormat === 'appimage') {
     return { asset: pickAppImageAsset(assets, arch), format: 'appimage' }
+  }
+
+  if (updateFormat === 'mac-zip') {
+    return { asset: pickMacZipAsset(assets, arch), format: 'mac-zip' }
   }
 
   return { asset: null, format: null }
@@ -205,15 +212,10 @@ export const updateActions = {
       const api = getDesktopApi()
       if (!api) return false
 
-      const { version: currentVersion, platform, arch, githubToken, linuxUpdateFormat } = await api.getInfo()
-
-      const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' }
-      if (githubToken) {
-        headers.Authorization = `Bearer ${githubToken}`
-      }
+      const { version: currentVersion, arch, updateFormat } = await api.getInfo()
 
       const response = await fetch(GITHUB_RELEASES_URL, {
-        headers,
+        headers: { Accept: 'application/vnd.github.v3+json' },
         signal: AbortSignal.timeout(10_000),
       })
 
@@ -228,10 +230,7 @@ export const updateActions = {
       lastCheckTime.value = Date.now()
 
       if (latestVersion && isNewerVersion(latestVersion, currentVersion)) {
-        const { asset: updateAsset, format } =
-          platform === 'linux'
-            ? pickUpdateAsset(release.assets, arch, linuxUpdateFormat)
-            : { asset: null, format: null }
+        const { asset: updateAsset, format } = pickUpdateAsset(release.assets, arch, updateFormat)
 
         updateVersion.value = latestVersion
         updateAvailable.value = true
@@ -240,7 +239,7 @@ export const updateActions = {
         clearInstallState()
         updateAssetFormat.value = updateAsset ? format : null
         updateAssetName.value = updateAsset?.name ?? null
-        updateAssetUrl.value = updateAsset?.url ?? updateAsset?.browser_download_url ?? null
+        updateAssetUrl.value = updateAsset?.browser_download_url ?? null
         return true
       }
 
@@ -279,7 +278,9 @@ export const updateActions = {
       const { filePath } =
         format === 'deb'
           ? await api.updates.downloadDebUpdate(downloadUrl, version)
-          : await api.updates.downloadAppImageUpdate(downloadUrl, version)
+          : format === 'mac-zip'
+            ? await api.updates.downloadMacZipUpdate(downloadUrl, version)
+            : await api.updates.downloadAppImageUpdate(downloadUrl, version)
       downloadedUpdatePath.value = filePath
       downloadedUpdateFormat.value = format
       updateReadyToInstall.value = true
@@ -312,6 +313,9 @@ export const updateActions = {
       if (format === 'deb') {
         await api.updates.installDownloadedDeb(tempPath)
         await api.updates.relaunch()
+      } else if (format === 'mac-zip') {
+        await api.updates.installDownloadedMacZip(tempPath)
+        await api.updates.restartFromUpdatedMacApp()
       } else {
         await api.updates.installDownloadedAppImage(tempPath)
         await api.updates.restartFromInstalledAppImage()

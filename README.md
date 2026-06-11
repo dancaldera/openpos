@@ -8,6 +8,16 @@ OpenPOS is a Bun workspace monorepo for a desktop-first point of sale system.
 - `apps/api`: Hono API for sync and auth flows
 - `apps/landing`: Astro marketing site
 
+## Install on macOS
+
+Official macOS releases are distributed as `.dmg` and `.zip` for Apple Silicon. Download the latest
+`openpos-arm64.dmg` from the [releases page](https://github.com/dancaldera/openpos/releases/latest) and drag
+OpenPOS into `/Applications`.
+
+The app is not code-signed with an Apple Developer ID, so the first launch requires right-click → Open
+(or `xattr -dr com.apple.quarantine /Applications/OpenPOS.app`). After that, the app updates itself in place
+from inside the update badge — no Gatekeeper prompt is involved for in-app updates.
+
 ## Install on Linux
 
 Official Linux releases are distributed as AppImage and `.deb`.
@@ -50,8 +60,7 @@ Example:
   "tursoDatabaseUrl": "libsql://your-db.turso.io",
   "tursoAuthToken": "your-token-here",
   "apiUrl": "https://your-api.example.com",
-  "thermalPrinterName": "Thermal_80mm",
-  "githubToken": "github_pat_xxxxxxxxxxxx"
+  "thermalPrinterName": "Thermal_80mm"
 }
 ```
 
@@ -76,18 +85,6 @@ If the system has no default printer, either set one with `lpoptions -d <printer
 
 For macOS setup details, including USB ESC/POS printers, CUPS queues, and raw
 printing tests, see [Thermal Receipt Printing on macOS](docs/THERMAL_PRINTING_MACOS.md).
-
-### `githubToken` — in-app update checks
-
-If the GitHub repository is private, the app needs a token to query GitHub Releases and download release assets.
-Add `githubToken` to `config.json` with a Personal Access Token (PAT) that has the following scope:
-
-| Token type | Required scope |
-|---|---|
-| Classic PAT | `repo` (read access to private repos) |
-| Fine-grained PAT | **Contents** → Read-only, scoped to the `OpenPOS` repository |
-
-Generate a token at <https://github.com/settings/tokens>. The token is only used for read-only GitHub release metadata and asset downloads.
 
 Create the file interactively:
 
@@ -126,8 +123,9 @@ The desktop renderer runs on `http://localhost:1420` during development.
 ## Release Notes
 
 - GitHub release tags remain `v*.*.*`.
-- The release workflow currently publishes Linux `.AppImage` and `.deb` artifacts.
-- Local macOS maintainer release build: `bun run release:desktop:mac`
+- Pushing a `v*.*.*` tag triggers the release workflow, which builds and publishes Linux `.AppImage` + `.deb`
+  and macOS (Apple Silicon) `.dmg` + `.zip` artifacts in a single GitHub release.
+- Release flow: `bun run version:bump <x.y.z>` → commit → `git tag v<x.y.z>` → `git push --tags`.
 - Local maintainer install test: `bash scripts/install-latest-appimage.sh --version <x.y.z>`
 
 ## Contributing

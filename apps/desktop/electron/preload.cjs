@@ -67,6 +67,9 @@ contextBridge.exposeInMainWorld('openposDesktop', {
     installDownloadedAppImage: (tempPath) => ipcRenderer.invoke('desktop:update-install-appimage', { tempPath }),
     installDownloadedDeb: (tempPath) => ipcRenderer.invoke('desktop:update-install-deb', { tempPath }),
     restartFromInstalledAppImage: () => ipcRenderer.invoke('desktop:update-restart-appimage'),
+    downloadMacZipUpdate: (url, version) => ipcRenderer.invoke('desktop:update-download-mac-zip', { url, version }),
+    installDownloadedMacZip: (tempPath) => ipcRenderer.invoke('desktop:update-install-mac-zip', { tempPath }),
+    restartFromUpdatedMacApp: () => ipcRenderer.invoke('desktop:update-restart-mac'),
     onStatusChange: (listener) => {
       const wrapped = (_event, payload) => listener(payload)
       ipcRenderer.on('desktop:update-status', wrapped)

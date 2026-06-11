@@ -2,7 +2,7 @@
 
 OpenPOS desktop releases are published by `.github/workflows/release.yml`.
 
-The workflow runs when a `vX.Y.Z` tag is pushed, or when it is started manually with a tag. It checks out that tag, installs dependencies, validates that the desktop, API, and landing package versions match the tag, runs the desktop check, builds Linux desktop artifacts, and publishes a GitHub release with the AppImage and `.deb`.
+The workflow runs when a `vX.Y.Z` tag is pushed, or when it is started manually with a tag. It checks out that tag, installs dependencies, validates that the desktop, API, and landing package versions match the tag, runs the desktop check, builds Linux and macOS desktop artifacts, and publishes a GitHub release with the AppImage, `.deb`, `.dmg`, and `.zip`.
 
 ## Release Steps
 
@@ -47,6 +47,8 @@ git push origin main --tags
 
 - `*.AppImage`
 - `*.deb`
+- `*.dmg`
+- `*.zip`
 
 ## Manual Workflow Run
 
@@ -66,10 +68,10 @@ For Linux artifact testing:
 bun run build:desktop:linux
 ```
 
-For macOS maintainer builds:
+For macOS artifact testing:
 
 ```bash
-bun run release:desktop:mac
+bun run build:desktop:mac
 ```
 
 Do not commit generated release artifacts from `apps/desktop/dist-electron/`.
