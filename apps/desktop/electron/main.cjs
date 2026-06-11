@@ -1022,10 +1022,8 @@ function printThermalReceipt(receiptData) {
     }
 
     let receiptText
-    let receiptBuffer
     try {
       receiptText = renderReceiptText(receiptPayload)
-      receiptBuffer = createEscposReceiptBuffer(receiptText)
     } catch (error) {
       reject(error)
       return
@@ -1036,11 +1034,11 @@ function printThermalReceipt(receiptData) {
       runtimeConfig: runtimeConfig.config,
       processEnv: process.env,
       envConfig: getDotEnvConfig(),
+      platform: process.platform,
+      discover: true,
     })
-    const resolvedArgs = args.map((arg) => (arg === '{data}' ? receiptText : arg))
-    const writesToStdin = !resolvedArgs.includes(receiptText)
 
-    const child = spawn(command, resolvedArgs, {
+    const child = spawn(command, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
     })
 
@@ -1077,11 +1075,7 @@ function printThermalReceipt(receiptData) {
       )
     })
 
-    if (writesToStdin) {
-      child.stdin.write(receiptBuffer)
-    }
-
-    child.stdin.end()
+    child.stdin.end(`${receiptText}\n`)
   })
 }
 
@@ -1099,26 +1093,6 @@ function parseReceiptPayload(receiptData) {
   } catch (error) {
     throw new Error(`Receipt data must be valid JSON: ${error.message}`)
   }
-}
-
-function normalizePrinterText(text) {
-  if (!text) return ''
-  return String(text)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/¡/g, '!')
-    .replace(/¿/g, '?')
-}
-
-function createEscposReceiptBuffer(receiptText) {
-  const normalized = normalizePrinterText(receiptText)
-  return Buffer.concat([
-    Buffer.from([0x1b, 0x40]), // Initialize printer.
-    Buffer.from(normalized, 'utf8'),
-    Buffer.from('\n', 'utf8'),
-    Buffer.from([0x1b, 0x64, 0x06]), // Feed 6 lines before cutting.
-    Buffer.from([0x1d, 0x56, 0x00]), // Full cut.
-  ])
 }
 
 function renderReceiptText(receiptData) {

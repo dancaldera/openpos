@@ -1,5 +1,6 @@
 const { describe, expect, it } = require('bun:test')
 const {
+  discoverSystemPrinterName,
   formatPrinterCommandError,
   resolvePrinterConfig,
   resolvePrinterName,
@@ -31,6 +32,39 @@ describe('resolvePrinterName', () => {
 
     expect(result).toBe('OpenPOS_Printer')
   })
+
+  it('discovers a system printer when requested', () => {
+    const calls = []
+    const result = resolvePrinterName({
+      runtimeConfig: {},
+      processEnv: {},
+      envConfig: {},
+      platform: 'linux',
+      discover: true,
+      execFileSync: (_command, args) => {
+        calls.push(args.join(' '))
+        return args.includes('-d') ? 'system default destination: POS80\n' : ''
+      },
+    })
+
+    expect(result).toBe('POS80')
+    expect(calls).toEqual(['-d'])
+  })
+})
+
+describe('discoverSystemPrinterName', () => {
+  it('uses the first installed printer when no default is set', () => {
+    const result = discoverSystemPrinterName({
+      platform: 'darwin',
+      execFileSync: (_command, args) => {
+        if (args.includes('-d')) return 'no system default destination\n'
+        if (args.includes('-e')) return 'Kitchen_Printer\nOffice_Printer\n'
+        return ''
+      },
+    })
+
+    expect(result).toBe('Kitchen_Printer')
+  })
 })
 
 describe('resolvePrinterConfig', () => {
@@ -43,7 +77,7 @@ describe('resolvePrinterConfig', () => {
 
     expect(result).toEqual({
       command: 'lp',
-      args: ['-o', 'raw'],
+      args: [],
       printerName: '',
     })
   })
@@ -59,7 +93,7 @@ describe('resolvePrinterConfig', () => {
 
     expect(result).toEqual({
       command: 'lp',
-      args: ['-d', 'Thermal_80mm', '-o', 'raw'],
+      args: ['-d', 'Thermal_80mm'],
       printerName: 'Thermal_80mm',
     })
   })
@@ -74,9 +108,10 @@ describe('formatPrinterCommandError', () => {
       printerName: '',
     })
 
-    expect(result).toContain('No thermal printer is configured for OpenPOS.')
+    expect(result).toContain('No printer is configured for OpenPOS.')
     expect(result).toContain('thermalPrinterName')
     expect(result).toContain('lpoptions -d <printer>')
+    expect(result).toContain('lpstat -e')
   })
 
   it('keeps printer-specific command errors intact', () => {
