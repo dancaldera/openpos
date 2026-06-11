@@ -2,6 +2,8 @@
 
 OpenPOS is a Bun workspace monorepo for a desktop-first point of sale system.
 
+[Live Demo](https://demo.openpos.xyz) · [Releases](https://github.com/dancaldera/openpos/releases) · [Contributing](./CONTRIBUTING.md)
+
 - `apps/desktop`: Electron + Preact POS client
 - `apps/api`: Hono API for sync and auth flows
 - `apps/landing`: Astro marketing site
@@ -13,13 +15,13 @@ Official Linux releases are distributed as AppImage and `.deb`.
 Install the latest release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dancaldera/OpenPOS/main/scripts/install-latest-appimage.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dancaldera/openpos/main/scripts/install-latest-appimage.sh | bash
 ```
 
 Install a specific version:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dancaldera/OpenPOS/main/scripts/install-latest-appimage.sh | bash -s -- --version 0.3.6
+curl -fsSL https://raw.githubusercontent.com/dancaldera/openpos/main/scripts/install-latest-appimage.sh | bash -s -- --version 0.3.6
 ```
 
 The installer places the binary at `~/.local/bin/openpos` by default. Use `--install-dir` to override the target directory.
@@ -127,6 +129,10 @@ The desktop renderer runs on `http://localhost:1420` during development.
 - The release workflow currently publishes Linux `.AppImage` and `.deb` artifacts.
 - Local macOS maintainer release build: `bun run release:desktop:mac`
 - Local maintainer install test: `bash scripts/install-latest-appimage.sh --version <x.y.z>`
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup, style, and PR guidelines.
 
 ## License
 

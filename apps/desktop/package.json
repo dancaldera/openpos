@@ -7,7 +7,7 @@
     "name": "Daniel Caldera",
     "email": "dancaldera@proton.me"
   },
-  "homepage": "https://github.com/dancaldera/OpenPOS",
+  "homepage": "https://github.com/dancaldera/openpos",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {

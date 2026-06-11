@@ -2,6 +2,8 @@
   "name": "openpos",
   "version": "0.8.1",
   "private": true,
+  "license": "MIT",
+  "repository": "github:dancaldera/openpos",
   "workspaces": [
     "apps/*",
     "packages/*"
