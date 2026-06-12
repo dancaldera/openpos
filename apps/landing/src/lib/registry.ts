@@ -73,6 +73,14 @@ export async function ensureSchema(): Promise<void> {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `)
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS login_rate_limits (
+      ip TEXT PRIMARY KEY,
+      fail_count INTEGER NOT NULL DEFAULT 0,
+      window_start TEXT NOT NULL,
+      locked_until TEXT
+    )
+  `)
   schemaReady = true
 }
 
@@ -188,4 +196,83 @@ export async function deleteClientRecord(id: string): Promise<void> {
 
 export function isRegistryConfigured(): boolean {
   return Boolean(getEnv('ADMIN_TURSO_DATABASE_URL') && getEnv('ADMIN_TURSO_AUTH_TOKEN'))
+}
+
+const LOGIN_MAX_ATTEMPTS = 5
+const LOGIN_WINDOW_SECONDS = 15 * 60
+const LOGIN_LOCKOUT_SECONDS = 15 * 60
+
+function rowValue(row: Record<string, unknown>, key: string): unknown {
+  if (key in row) return row[key]
+  return row[key.toUpperCase()]
+}
+
+export async function checkLoginAllowed(ip: string): Promise<{ allowed: boolean; retryAfterSeconds?: number }> {
+  await ensureSchema()
+  const result = await getRegistryClient().execute({
+    sql: 'SELECT fail_count, window_start, locked_until FROM login_rate_limits WHERE ip = ?',
+    args: [ip],
+  })
+  const row = result.rows[0] as Record<string, unknown> | undefined
+  if (!row) return { allowed: true }
+
+  const lockedUntil = rowValue(row, 'locked_until')
+  if (lockedUntil) {
+    const lockedUntilMs = new Date(String(lockedUntil)).getTime()
+    if (!Number.isNaN(lockedUntilMs) && lockedUntilMs > Date.now()) {
+      return {
+        allowed: false,
+        retryAfterSeconds: Math.max(1, Math.ceil((lockedUntilMs - Date.now()) / 1000)),
+      }
+    }
+  }
+
+  return { allowed: true }
+}
+
+export async function recordLoginFailure(ip: string): Promise<void> {
+  await ensureSchema()
+  const client = getRegistryClient()
+  const now = new Date()
+  const nowIso = now.toISOString()
+
+  const result = await client.execute({
+    sql: 'SELECT fail_count, window_start, locked_until FROM login_rate_limits WHERE ip = ?',
+    args: [ip],
+  })
+  const row = result.rows[0] as Record<string, unknown> | undefined
+
+  if (!row) {
+    await client.execute({
+      sql: 'INSERT INTO login_rate_limits (ip, fail_count, window_start, locked_until) VALUES (?, 1, ?, NULL)',
+      args: [ip, nowIso],
+    })
+    return
+  }
+
+  const windowStartMs = new Date(String(rowValue(row, 'window_start'))).getTime()
+  const withinWindow = !Number.isNaN(windowStartMs) && now.getTime() - windowStartMs <= LOGIN_WINDOW_SECONDS * 1000
+  const failCount = withinWindow ? Number(rowValue(row, 'fail_count')) + 1 : 1
+  const windowStart = withinWindow ? String(rowValue(row, 'window_start')) : nowIso
+  const lockedUntil =
+    failCount >= LOGIN_MAX_ATTEMPTS
+      ? new Date(now.getTime() + LOGIN_LOCKOUT_SECONDS * 1000).toISOString()
+      : null
+
+  await client.execute({
+    sql: `
+      UPDATE login_rate_limits
+      SET fail_count = ?, window_start = ?, locked_until = ?
+      WHERE ip = ?
+    `,
+    args: [failCount, windowStart, lockedUntil, ip],
+  })
+}
+
+export async function clearLoginFailures(ip: string): Promise<void> {
+  await ensureSchema()
+  await getRegistryClient().execute({
+    sql: 'DELETE FROM login_rate_limits WHERE ip = ?',
+    args: [ip],
+  })
 }

@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro'
+import { pickDefaultGroup } from '../../../../lib/groups'
 import { errorMessage, json, readJson } from '../../../../lib/http'
 import { applyMigrations } from '../../../../lib/migrations'
 import {
@@ -9,6 +10,7 @@ import {
 import {
   createDatabase,
   getDatabase,
+  listGroups,
   mintToken,
   toLibsqlUrl,
   TursoApiError,
@@ -50,7 +52,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (body.provision) {
       const databaseName = body.database_name?.trim()
-      const group = body.group?.trim() || 'default'
+      const groups = await listGroups()
+      const group = body.group?.trim() || pickDefaultGroup(groups)
       if (!databaseName) {
         return json({ error: 'Database name is required for provisioning' }, 400)
       }

@@ -2,6 +2,7 @@
 export const prerender = false
 
 import AdminLayout from '../../../layouts/AdminLayout.astro'
+import { pickDefaultGroup, resolveGroupFilter } from '../../../lib/groups'
 import { listClients } from '../../../lib/registry'
 import { listDatabases, listGroups } from '../../../lib/turso-platform'
 
@@ -9,9 +10,19 @@ let error: string | null = null
 let clients: Awaited<ReturnType<typeof listClients>> = []
 let databases: Awaited<ReturnType<typeof listDatabases>> = []
 let groups: Awaited<ReturnType<typeof listGroups>> = []
+let selectedGroup = 'all'
+let defaultGroup = 'default'
 
 try {
-  ;[clients, databases, groups] = await Promise.all([listClients(), listDatabases(), listGroups()])
+  groups = await listGroups()
+  defaultGroup = pickDefaultGroup(groups)
+  const groupFilter = resolveGroupFilter(groups, Astro.url.searchParams.get('group'))
+  selectedGroup = groupFilter || 'all'
+
+  ;[clients, databases] = await Promise.all([
+    listClients(),
+    groupFilter ? listDatabases(groupFilter) : listDatabases(),
+  ])
 } catch (err) {
   error = err instanceof Error ? err.message : 'Failed to load clients'
 }
@@ -66,7 +77,18 @@ const availableDatabases = databases.filter((database) => !linkedNames.has(datab
       </div>
 
       <div class="rounded-[var(--radius-cards)] border border-fog-border bg-canvas p-6 shadow-sm">
-        <h2 class="mb-4 text-sm font-semibold">New client</h2>
+        <div class="mb-4 flex flex-wrap items-end justify-between gap-4">
+          <h2 class="text-sm font-semibold">New client</h2>
+          <label class="min-w-[180px] space-y-2">
+            <span class="text-sm font-medium">Database group filter</span>
+            <select id="group-filter" class="field">
+              <option value="all" selected={selectedGroup === 'all'}>All groups</option>
+              {groups.map((group) => (
+                <option value={group.name} selected={selectedGroup === group.name}>{group.name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
         <form id="client-form" class="grid gap-4 lg:grid-cols-2">
           <label class="space-y-2">
             <span class="text-sm font-medium">Name</span>
@@ -123,7 +145,7 @@ const availableDatabases = databases.filter((database) => !linkedNames.has(datab
                 <span class="text-sm font-medium">Group</span>
                 <select name="group" class="field">
                   {groups.map((group) => (
-                    <option value={group.name}>{group.name}</option>
+                    <option value={group.name} selected={group.name === defaultGroup}>{group.name}</option>
                   ))}
                 </select>
               </label>
@@ -159,12 +181,23 @@ const availableDatabases = databases.filter((database) => !linkedNames.has(datab
   }
 </style>
 
-<script>
-  const form = document.getElementById('client-form') as HTMLFormElement | null
+<script define:vars={{ defaultGroupFallback: defaultGroup }}>
+  const form = document.getElementById('client-form')
   const linkPanel = document.getElementById('link-panel')
   const provisionPanel = document.getElementById('provision-panel')
   const errorEl = document.getElementById('client-form-error')
   const statusEl = document.getElementById('client-form-status')
+
+  document.getElementById('group-filter')?.addEventListener('change', (event) => {
+    const value = event.target.value
+    const url = new URL(window.location.href)
+    if (value === 'all') {
+      url.searchParams.delete('group')
+    } else {
+      url.searchParams.set('group', value)
+    }
+    window.location.href = url.toString()
+  })
 
   form?.querySelectorAll('input[name="db_mode"]').forEach((input) => {
     input.addEventListener('change', () => {
@@ -192,7 +225,7 @@ const availableDatabases = databases.filter((database) => !linkedNames.has(datab
     if (mode === 'provision') {
       payload.provision = true
       payload.database_name = String(formData.get('provision_database_name') ?? '')
-      payload.group = String(formData.get('group') ?? 'default')
+      payload.group = String(formData.get('group') ?? defaultGroupFallback)
     } else {
       payload.database_name = String(formData.get('database_name') ?? '') || undefined
     }

@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro'
+import { pickDefaultGroup, resolveGroupFilter } from '../../../../lib/groups'
 import { errorMessage, json, readJson } from '../../../../lib/http'
 import { listClients } from '../../../../lib/registry'
 import {
@@ -11,11 +12,12 @@ import {
 
 export const prerender = false
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ url }) => {
   try {
-    const [databases, groups, clients] = await Promise.all([
-      listDatabases(),
-      listGroups(),
+    const groups = await listGroups()
+    const group = resolveGroupFilter(groups, url.searchParams.get('group'))
+    const [databases, clients] = await Promise.all([
+      group ? listDatabases(group) : listDatabases(),
       listClients(),
     ])
 
@@ -32,6 +34,7 @@ export const GET: APIRoute = async () => {
         client: clientByDatabase.get(database.Name) ?? null,
       })),
       groups,
+      selectedGroup: group || 'all',
     })
   } catch (error) {
     const status = error instanceof TursoApiError ? error.status : 500
@@ -43,7 +46,8 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await readJson<{ name?: string; group?: string }>(request)
     const name = body.name?.trim()
-    const group = body.group?.trim() || 'default'
+    const groups = await listGroups()
+    const group = body.group?.trim() || pickDefaultGroup(groups)
 
     if (!name) {
       return json({ error: 'Database name is required' }, 400)
