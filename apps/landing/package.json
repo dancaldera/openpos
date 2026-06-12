@@ -9,6 +9,9 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/vercel": "^10.0.8",
+    "@dancaldera/libsql-bridge": "npm:@jsr/dancaldera__libsql-bridge",
+    "@libsql/client": "^0.17.3",
     "@tailwindcss/vite": "^4.2.1",
     "astro": "^6.0.5",
     "tailwindcss": "^4.2.1"

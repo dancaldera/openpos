@@ -1,0 +1,93 @@
+---
+export const prerender = false
+
+import '../../styles/global.css'
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Admin Login · OpenPOS</title>
+  </head>
+  <body class="flex min-h-screen items-center justify-center bg-canvas px-4 font-sans text-void antialiased">
+    <div class="w-full max-w-md rounded-[var(--radius-cards)] border border-fog-border bg-canvas p-8 shadow-sm">
+      <div class="mb-8 text-center">
+        <span class="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-buttons border border-fog-border text-caption font-semibold">
+          OP
+        </span>
+        <h1 class="text-heading font-semibold tracking-[-0.02em]">Admin sign in</h1>
+        <p class="mt-2 text-sm text-graphite">Manage Turso databases and client records.</p>
+      </div>
+
+      <form id="login-form" class="space-y-4">
+        <label class="block space-y-2">
+          <span class="text-sm font-medium">Email</span>
+          <input
+            type="email"
+            name="email"
+            required
+            autocomplete="username"
+            class="w-full rounded-[var(--radius-input)] border border-fog-border bg-canvas px-4 py-2.5 text-sm outline-none focus:border-void"
+          />
+        </label>
+        <label class="block space-y-2">
+          <span class="text-sm font-medium">Password</span>
+          <input
+            type="password"
+            name="password"
+            required
+            autocomplete="current-password"
+            class="w-full rounded-[var(--radius-input)] border border-fog-border bg-canvas px-4 py-2.5 text-sm outline-none focus:border-void"
+          />
+        </label>
+        <p id="login-error" class="hidden text-sm text-red-600"></p>
+        <button
+          type="submit"
+          class="w-full rounded-buttons bg-void px-4 py-2.5 text-sm font-medium text-canvas shadow-sm transition-opacity disabled:opacity-60"
+        >
+          Sign in
+        </button>
+      </form>
+    </div>
+
+    <script>
+      const form = document.getElementById('login-form') as HTMLFormElement | null
+      const errorEl = document.getElementById('login-error') as HTMLParagraphElement | null
+
+      form?.addEventListener('submit', async (event) => {
+        event.preventDefault()
+        errorEl?.classList.add('hidden')
+
+        const formData = new FormData(form)
+        const email = String(formData.get('email') ?? '')
+        const password = String(formData.get('password') ?? '')
+        const button = form.querySelector('button[type="submit"]') as HTMLButtonElement | null
+        button?.setAttribute('disabled', 'true')
+
+        try {
+          const response = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          })
+          const payload = await response.json()
+          if (!response.ok) {
+            throw new Error(payload.error ?? 'Login failed')
+          }
+          window.location.href = '/admin'
+        } catch (error) {
+          if (errorEl) {
+            errorEl.textContent = error instanceof Error ? error.message : 'Login failed'
+            errorEl.classList.remove('hidden')
+          }
+        } finally {
+          button?.removeAttribute('disabled')
+        }
+      })
+    </script>
+  </body>
+</html>

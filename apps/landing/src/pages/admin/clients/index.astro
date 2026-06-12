@@ -1,0 +1,231 @@
+---
+export const prerender = false
+
+import AdminLayout from '../../../layouts/AdminLayout.astro'
+import { listClients } from '../../../lib/registry'
+import { listDatabases, listGroups } from '../../../lib/turso-platform'
+
+let error: string | null = null
+let clients: Awaited<ReturnType<typeof listClients>> = []
+let databases: Awaited<ReturnType<typeof listDatabases>> = []
+let groups: Awaited<ReturnType<typeof listGroups>> = []
+
+try {
+  ;[clients, databases, groups] = await Promise.all([listClients(), listDatabases(), listGroups()])
+} catch (err) {
+  error = err instanceof Error ? err.message : 'Failed to load clients'
+}
+
+const linkedNames = new Set(clients.map((client) => client.database_name).filter(Boolean))
+const availableDatabases = databases.filter((database) => !linkedNames.has(database.Name))
+---
+
+<AdminLayout title="Clients" active="clients">
+  {error ? (
+    <div class="rounded-[var(--radius-cards)] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+      {error}
+    </div>
+  ) : (
+    <>
+      <div class="mb-6 overflow-hidden rounded-[var(--radius-cards)] border border-fog-border bg-canvas shadow-sm">
+        <div class="border-b border-fog-border px-5 py-4">
+          <h2 class="text-sm font-semibold">Existing clients</h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-left text-sm">
+            <thead class="border-b border-fog-border bg-chalk/40 text-graphite">
+              <tr>
+                <th class="px-5 py-3 font-medium">Name</th>
+                <th class="px-5 py-3 font-medium">Database</th>
+                <th class="px-5 py-3 font-medium">API URL</th>
+                <th class="px-5 py-3 font-medium">Frontend</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.length === 0 ? (
+                <tr>
+                  <td colspan="4" class="px-5 py-6 text-graphite">No clients yet.</td>
+                </tr>
+              ) : (
+                clients.map((client) => (
+                  <tr class="border-b border-fog-border last:border-b-0">
+                    <td class="px-5 py-3">
+                      <a href={`/admin/clients/${client.id}`} class="font-medium underline underline-offset-4">
+                        {client.name}
+                      </a>
+                    </td>
+                    <td class="px-5 py-3">{client.database_name ?? '—'}</td>
+                    <td class="px-5 py-3">{client.api_url ?? '—'}</td>
+                    <td class="px-5 py-3">{client.frontend_url ?? '—'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="rounded-[var(--radius-cards)] border border-fog-border bg-canvas p-6 shadow-sm">
+        <h2 class="mb-4 text-sm font-semibold">New client</h2>
+        <form id="client-form" class="grid gap-4 lg:grid-cols-2">
+          <label class="space-y-2">
+            <span class="text-sm font-medium">Name</span>
+            <input name="name" required class="field" />
+          </label>
+          <label class="space-y-2">
+            <span class="text-sm font-medium">Contact email</span>
+            <input name="contact_email" type="email" class="field" />
+          </label>
+          <label class="space-y-2">
+            <span class="text-sm font-medium">API URL</span>
+            <input name="api_url" type="url" placeholder="https://api.example.com" class="field" />
+          </label>
+          <label class="space-y-2">
+            <span class="text-sm font-medium">Frontend URL</span>
+            <input name="frontend_url" type="url" placeholder="https://pos.example.com" class="field" />
+          </label>
+          <label class="space-y-2 lg:col-span-2">
+            <span class="text-sm font-medium">Notes</span>
+            <textarea name="notes" rows="3" class="field"></textarea>
+          </label>
+
+          <div class="lg:col-span-2 rounded-[var(--radius-cards)] border border-fog-border p-4">
+            <p class="mb-3 text-sm font-medium">Database</p>
+            <div class="flex flex-wrap gap-4 text-sm">
+              <label class="inline-flex items-center gap-2">
+                <input type="radio" name="db_mode" value="link" checked />
+                Link existing
+              </label>
+              <label class="inline-flex items-center gap-2">
+                <input type="radio" name="db_mode" value="provision" />
+                Provision new
+              </label>
+            </div>
+
+            <div id="link-panel" class="mt-4 grid gap-4 sm:grid-cols-2">
+              <label class="space-y-2 sm:col-span-2">
+                <span class="text-sm font-medium">Existing database</span>
+                <select name="database_name" class="field">
+                  <option value="">Select a database</option>
+                  {availableDatabases.map((database) => (
+                    <option value={database.Name}>{database.Name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div id="provision-panel" class="mt-4 hidden grid gap-4 sm:grid-cols-2">
+              <label class="space-y-2">
+                <span class="text-sm font-medium">New database name</span>
+                <input name="provision_database_name" pattern="[a-z0-9-]+" class="field" placeholder="acme-pos" />
+              </label>
+              <label class="space-y-2">
+                <span class="text-sm font-medium">Group</span>
+                <select name="group" class="field">
+                  {groups.map((group) => (
+                    <option value={group.name}>{group.name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="lg:col-span-2">
+            <p id="client-form-error" class="mb-3 hidden text-sm text-red-600"></p>
+            <p id="client-form-status" class="mb-3 hidden text-sm text-graphite"></p>
+            <button type="submit" class="rounded-buttons bg-void px-5 py-2.5 text-sm font-medium text-canvas shadow-sm">
+              Create client
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )}
+</AdminLayout>
+
+<style>
+  .field {
+    width: 100%;
+    border-radius: var(--radius-input);
+    border: 1px solid var(--color-fog-border);
+    background: var(--color-canvas);
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    outline: none;
+  }
+
+  .field:focus {
+    border-color: var(--color-void);
+  }
+</style>
+
+<script>
+  const form = document.getElementById('client-form') as HTMLFormElement | null
+  const linkPanel = document.getElementById('link-panel')
+  const provisionPanel = document.getElementById('provision-panel')
+  const errorEl = document.getElementById('client-form-error')
+  const statusEl = document.getElementById('client-form-status')
+
+  form?.querySelectorAll('input[name="db_mode"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const mode = (form?.querySelector('input[name="db_mode"]:checked') as HTMLInputElement | null)?.value
+      linkPanel?.classList.toggle('hidden', mode !== 'link')
+      provisionPanel?.classList.toggle('hidden', mode !== 'provision')
+    })
+  })
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    errorEl?.classList.add('hidden')
+    statusEl?.classList.add('hidden')
+
+    const formData = new FormData(form)
+    const mode = String(formData.get('db_mode'))
+    const payload: Record<string, unknown> = {
+      name: String(formData.get('name') ?? ''),
+      contact_email: String(formData.get('contact_email') ?? '') || undefined,
+      api_url: String(formData.get('api_url') ?? '') || undefined,
+      frontend_url: String(formData.get('frontend_url') ?? '') || undefined,
+      notes: String(formData.get('notes') ?? '') || undefined,
+    }
+
+    if (mode === 'provision') {
+      payload.provision = true
+      payload.database_name = String(formData.get('provision_database_name') ?? '')
+      payload.group = String(formData.get('group') ?? 'default')
+    } else {
+      payload.database_name = String(formData.get('database_name') ?? '') || undefined
+    }
+
+    const button = form.querySelector('button[type="submit"]') as HTMLButtonElement | null
+    button?.setAttribute('disabled', 'true')
+
+    try {
+      const response = await fetch('/api/admin/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error ?? 'Failed to create client')
+      }
+
+      if (statusEl) {
+        statusEl.textContent = mode === 'provision'
+          ? `Provisioned ${result.client.name}. Migrations applied: ${result.migrationResult?.applied ?? 0}.`
+          : `Created ${result.client.name}.`
+        statusEl.classList.remove('hidden')
+      }
+
+      window.location.href = `/admin/clients/${result.client.id}`
+    } catch (error) {
+      if (errorEl) {
+        errorEl.textContent = error instanceof Error ? error.message : 'Failed to create client'
+        errorEl.classList.remove('hidden')
+      }
+    } finally {
+      button?.removeAttribute('disabled')
+    }
+  })
+</script>
