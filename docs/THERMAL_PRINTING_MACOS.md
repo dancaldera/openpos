@@ -1,6 +1,6 @@
 # Thermal Receipt Printing on macOS
 
-OpenPOS uses the macOS printing system only. It sends plain receipt text to `lp`, so the already-installed CUPS printer driver handles the device.
+OpenPOS prints through the macOS printing system with `lp -o raw`. It renders the receipt as ESC/POS bytes — receipt text plus feed and paper-cut commands — and sends them straight to the printer queue, bypassing driver page formatting.
 
 ## How OpenPOS Chooses a Printer
 
@@ -12,10 +12,12 @@ OpenPOS uses the macOS printing system only. It sends plain receipt text to `lp`
 OpenPOS runs:
 
 ```bash
-lp
+lp -o raw
 # or, with a configured/discovered printer:
-lp -d <printer>
+lp -d <printer> -o raw
 ```
+
+The app appends ESC/POS feed and full-cut commands at the end of every receipt, so the paper advances past the tear bar and the auto-cutter fires.
 
 ## Minimal Setup
 
@@ -26,10 +28,10 @@ lp -d <printer>
 lpstat -e
 ```
 
-3. Test the installed driver:
+3. Test raw printing:
 
 ```bash
-printf "OpenPOS print test\n\n\n" | lp
+printf "OpenPOS print test\n\n\n" | lp -o raw
 ```
 
 4. Optional: set the default printer:
@@ -52,4 +54,5 @@ lpoptions -d <printer>
 - Show default printer: `lpstat -d`
 - Show queue/device details: `lpstat -v`
 - If `lp` is missing or no queues appear, add the printer again in macOS settings.
-- If the printer is listed but output is wrong, fix/change the macOS printer driver first; OpenPOS intentionally uses the installed driver.
+- If the printer is listed but nothing prints, confirm the queue accepts raw jobs: `printf "test\n\n\n" | lp -d <printer> -o raw`.
+- If the paper does not cut, the printer is not interpreting ESC/POS — verify the device is an ESC/POS thermal printer and the queue points at it directly.

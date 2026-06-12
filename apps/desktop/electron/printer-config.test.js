@@ -77,7 +77,7 @@ describe('resolvePrinterConfig', () => {
 
     expect(result).toEqual({
       command: 'lp',
-      args: [],
+      args: ['-o', 'raw'],
       printerName: '',
     })
   })
@@ -93,7 +93,7 @@ describe('resolvePrinterConfig', () => {
 
     expect(result).toEqual({
       command: 'lp',
-      args: ['-d', 'Thermal_80mm'],
+      args: ['-d', 'Thermal_80mm', '-o', 'raw'],
       printerName: 'Thermal_80mm',
     })
   })

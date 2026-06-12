@@ -66,7 +66,7 @@ Example:
 
 Include only the fields needed for that install. Public GitHub releases must not embed `TURSO_AUTH_TOKEN`, `JWT_SECRET`, or other backend secrets.
 
-On macOS and Linux, receipt printing uses the native `lp` command and your already-installed system printer driver. macOS includes `lp` by default. On Linux, install CUPS if `lp` is missing:
+On macOS and Linux, receipt printing uses the native `lp -o raw` command and sends formatted ESC/POS receipt bytes (including feed and paper-cut commands) to the printer queue. macOS includes `lp` by default. On Linux, install CUPS if `lp` is missing:
 
 ```bash
 sudo apt install cups
@@ -76,7 +76,7 @@ Verify the system printing path:
 
 ```bash
 lpstat -e
-printf "OpenPOS print test\n\n\n" | lp
+printf "OpenPOS print test\n\n\n" | lp -o raw
 ```
 
 OpenPOS uses `thermalPrinterName` when configured, otherwise it uses the system default printer, then the first queue from `lpstat -e`. Set a default with `lpoptions -d <printer>` if needed.

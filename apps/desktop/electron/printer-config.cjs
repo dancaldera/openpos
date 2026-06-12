@@ -74,7 +74,7 @@ function resolvePrinterConfig(options = {}) {
 
   return {
     command: 'lp',
-    args: printerName ? ['-d', printerName] : [],
+    args: printerName ? ['-d', printerName, '-o', 'raw'] : ['-o', 'raw'],
     printerName: printerName || '',
   }
 }
