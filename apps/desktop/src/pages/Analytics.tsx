@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import {
   Button,
+  MetricCard,
   PageLoader,
   Select,
   Table,
@@ -18,21 +19,19 @@ import {
   analyticsService,
   type RecentActivity,
   type SalesByMember,
+  type SalesByPeriod,
   type TopProduct,
 } from '../services/analytics-turso'
 import { companySettingsService } from '../services/company-settings-turso'
 
 export default function Analytics() {
-  const { t } = useTranslation()
+  const { t, getCurrentLocale } = useTranslation()
   const panelClass = 'rounded-cards border border-fog-border bg-canvas '
-  const metricCardClass = 'rounded-cards border p-3 transition-colors sm:p-6'
-  const metricValueClass = 'text-xl font-semibold sm:text-2xl'
-  const metricLabelClass = 'mt-1 text-xs sm:text-sm'
-  const metricIconClass = 'text-xl sm:text-2xl'
 
   const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null)
   const [salesByMembers, setSalesByMembers] = useState<SalesByMember[]>([])
   const [topProducts, setTopProducts] = useState<TopProduct[]>([])
+  const [salesByPeriod, setSalesByPeriod] = useState<SalesByPeriod[]>([])
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [currencySymbol, setCurrencySymbol] = useState('$')
@@ -82,7 +81,7 @@ export default function Analytics() {
 
   const loadAnalytics = async () => {
     if (!isAdmin) {
-      toast.error("You don't have permission to view analytics")
+      toast.error(t('analytics.permissionDenied'))
       setIsLoading(false)
       return
     }
@@ -91,25 +90,33 @@ export default function Analytics() {
       setIsLoading(true)
       const { start, end } = getDateRange()
 
-      const [metricsData, salesData, productsData, activityData, settings] = await Promise.all([
+      const [metricsData, salesData, productsData, periodData, activityData] = await Promise.all([
         analyticsService.getOverallMetrics(start, end),
         analyticsService.getSalesByMembers(start, end),
         analyticsService.getTopProducts(10, start, end),
+        analyticsService.getSalesByPeriod('day', start, end),
         analyticsService.getRecentActivity(10),
-        companySettingsService.getSettings(),
       ])
 
       setMetrics(metricsData)
       setSalesByMembers(salesData)
       setTopProducts(productsData)
+      setSalesByPeriod(periodData)
       setRecentActivity(activityData)
-      setCurrencySymbol(settings.currencySymbol)
     } catch (err: unknown) {
-      toast.error((err as Error)?.message || 'Failed to load analytics')
+      toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
   }
+
+  // Currency symbol rarely changes, so load it once instead of on every range change.
+  useEffect(() => {
+    companySettingsService
+      .getSettings()
+      .then((settings) => setCurrencySymbol(settings.currencySymbol))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     loadAnalytics()
@@ -136,6 +143,18 @@ export default function Analytics() {
         return '📊'
     }
   }
+
+  // Trend bars: service returns most-recent-first, so reverse to chronological
+  // and cap to the most recent buckets to keep the chart readable.
+  const trendBuckets = [...salesByPeriod].reverse().slice(-30)
+  const maxTrendRevenue = trendBuckets.reduce((max, b) => Math.max(max, b.revenue), 0)
+  const formatPeriodLabel = (period: string) => {
+    const parsed = new Date(period)
+    if (Number.isNaN(parsed.getTime())) return period
+    return new Intl.DateTimeFormat(getCurrentLocale(), { month: 'short', day: 'numeric' }).format(parsed)
+  }
+
+  const profitMargin = metrics && metrics.totalRevenue > 0 ? (metrics.totalProfit / metrics.totalRevenue) * 100 : 0
 
   if (!isAdmin) {
     return (
@@ -215,48 +234,53 @@ export default function Analytics() {
 
       {/* Key Metrics */}
       {metrics && (
-        <div class="mb-6 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
-          <div class={`${metricCardClass} bg-chalk border-fog-border `}>
-            <div class="flex items-center justify-between">
-              <div>
-                <div class={`${metricValueClass} text-void `}>{formatCurrency(metrics.totalRevenue)}</div>
-                <div class={`${metricLabelClass} text-void `}>{t('analytics.totalRevenue')}</div>
-              </div>
-              <div class={`${metricIconClass} text-void `}>💰</div>
-            </div>
+        <>
+          <div class="mb-3 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
+            <MetricCard label={t('analytics.totalRevenue')} value={formatCurrency(metrics.totalRevenue)} />
+            <MetricCard
+              label={t('analytics.totalProfit')}
+              value={formatCurrency(metrics.totalProfit)}
+              description={t('analytics.margin', { value: profitMargin.toFixed(1) })}
+            />
+            <MetricCard label={t('analytics.completedOrders')} value={metrics.completedOrders} />
+            <MetricCard label={t('analytics.averageOrderValue')} value={formatCurrency(metrics.averageOrderValue)} />
           </div>
 
-          <div class={`${metricCardClass} bg-chalk border-fog-border `}>
-            <div class="flex items-center justify-between">
-              <div>
-                <div class={`${metricValueClass} text-void `}>{formatCurrency(metrics.totalProfit)}</div>
-                <div class={`${metricLabelClass} text-void `}>{t('analytics.totalProfit')}</div>
-              </div>
-              <div class={`${metricIconClass} text-void `}>💵</div>
-            </div>
+          {/* Order status breakdown */}
+          <div class="mb-6 grid grid-cols-2 gap-3 sm:gap-6">
+            <MetricCard label={t('analytics.pendingOrders')} value={metrics.pendingOrders} />
+            <MetricCard label={t('analytics.cancelledOrders')} value={metrics.cancelledOrders} />
           </div>
-
-          <div class={`${metricCardClass} bg-chalk border-fog-border `}>
-            <div class="flex items-center justify-between">
-              <div>
-                <div class={`${metricValueClass} text-void `}>{metrics.completedOrders}</div>
-                <div class={`${metricLabelClass} text-void `}>{t('analytics.completedOrders')}</div>
-              </div>
-              <div class={`${metricIconClass} text-void `}>✅</div>
-            </div>
-          </div>
-
-          <div class={`${metricCardClass} bg-chalk border-fog-border `}>
-            <div class="flex items-center justify-between">
-              <div>
-                <div class={`${metricValueClass} text-void `}>{formatCurrency(metrics.averageOrderValue)}</div>
-                <div class={`${metricLabelClass} text-void `}>{t('analytics.averageOrderValue')}</div>
-              </div>
-              <div class={`${metricIconClass} text-void `}>📊</div>
-            </div>
-          </div>
-        </div>
+        </>
       )}
+
+      {/* Sales Trend */}
+      <div class={`${panelClass} p-6 mb-6`}>
+        <h3 class="text-lg font-semibold text-void mb-4">{t('analytics.salesTrends')}</h3>
+        {trendBuckets.length > 0 ? (
+          <div class="flex h-40 items-end gap-1">
+            {trendBuckets.map((bucket) => (
+              <div
+                key={bucket.period}
+                class="flex h-full flex-1 items-end"
+                title={`${formatPeriodLabel(bucket.period)} • ${formatCurrency(bucket.revenue)} • ${bucket.orders} ${t('analytics.orders').toLowerCase()}`}
+              >
+                <div
+                  class="w-full rounded-t-sm bg-void transition-all hover:opacity-80"
+                  style={{
+                    height: maxTrendRevenue > 0 ? `${Math.max((bucket.revenue / maxTrendRevenue) * 100, 2)}%` : '2%',
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div class="py-8 text-center text-graphite ">
+            <div class="text-4xl mb-2">📈</div>
+            <p>{t('analytics.noData')}</p>
+          </div>
+        )}
+      </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Sales by Members */}
