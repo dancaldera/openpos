@@ -1,10 +1,12 @@
 import { execute, query, transaction } from '../lib/db-adapter'
 import { requireDesktopApi } from '../lib/desktop'
 import { isDesktop } from '../lib/platform'
+import { computeCartPricing, type PricingLine } from '../lib/promotions'
 import { companySettingsService } from './company-settings-turso'
 import { invalidateDashboardStatsCache } from './dashboard-stats'
 import { type ProductVariant, productVariantsService } from './product-variants-turso'
 import { productService } from './products-turso'
+import { promotionService } from './promotions-turso'
 
 export interface OrderItem {
   productId: string
@@ -26,6 +28,7 @@ export interface Order {
   subtotal: number
   tax: number
   total: number
+  discount?: number
   status: 'pending' | 'paid' | 'cancelled' | 'completed'
   paymentMethod?: 'cash' | 'card' | 'transfer'
   notes?: string
@@ -62,6 +65,7 @@ interface DatabaseOrder {
   subtotal: number
   tax: number
   total: number
+  discount?: number
   status: 'pending' | 'paid' | 'cancelled' | 'completed'
   payment_method?: 'cash' | 'card' | 'transfer'
   notes?: string
@@ -131,6 +135,7 @@ export class OrderService {
       subtotal: dbOrder.subtotal,
       tax: dbOrder.tax,
       total: dbOrder.total,
+      discount: dbOrder.discount ?? 0,
       status: dbOrder.status,
       paymentMethod: dbOrder.payment_method,
       notes: dbOrder.notes,
@@ -247,6 +252,7 @@ export class OrderService {
 
       // Build order items with product/variant details
       const orderItems: OrderItem[] = []
+      const pricingLines: PricingLine[] = []
       let subtotal = 0
 
       for (const item of orderData.items) {
@@ -292,59 +298,55 @@ export class OrderService {
           variantId: item.variantId,
           variantAttributes,
         })
+        pricingLines.push({
+          productId: product.id,
+          category: product.category,
+          unitPrice: itemPrice,
+          quantity: item.quantity,
+          variantId: item.variantId,
+        })
 
         subtotal += itemTotal
       }
 
-      // Get tax rate from company settings
-      const { tax: taxAmount, total } = await companySettingsService.calculateTotalWithTax(subtotal)
+      // Apply active promotions (server-authoritative) and tax on the net subtotal.
+      const activePromotions = await promotionService.getActivePromotions()
+      const categoryAncestors = await promotionService.getCategoryAncestorsByName()
+      const { totalDiscount: discount } = computeCartPricing(pricingLines, activePromotions, {
+        now: new Date().toISOString(),
+        categoryAncestors,
+      })
+      const { tax: taxAmount, total } = await companySettingsService.calculateTotalWithTax(subtotal - discount)
       const now = new Date().toISOString()
       const orderId = await this.getNextOrderId()
       const hasUserId = await this.tableHasColumn('orders', 'user_id')
       const hasCustomerId = await this.tableHasColumn('orders', 'customer_id')
       const hasVariantSupport = await this.tableHasColumn('order_items', 'variant_id')
+      const hasDiscount = await this.tableHasColumn('orders', 'discount')
 
       const statements: Array<{ sql: string; params?: unknown[] }> = []
 
+      // Build the orders INSERT dynamically so optional columns (user/customer,
+      // and the newer `discount`) degrade safely on un-migrated local DBs.
+      const orderColumns: string[] = ['id']
+      const orderValues: unknown[] = [orderId]
       if (hasUserId && hasCustomerId) {
-        statements.push({
-          sql: `INSERT INTO orders (
-            id, user_id, customer_id, subtotal, tax, total, status,
-            payment_method, notes, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          params: [
-            orderId,
-            1,
-            orderData.customerId ? parseInt(orderData.customerId, 10) : null,
-            subtotal,
-            taxAmount,
-            total,
-            'pending',
-            orderData.paymentMethod || null,
-            orderData.notes || null,
-            now,
-            now,
-          ],
-        })
-      } else {
-        statements.push({
-          sql: `INSERT INTO orders (
-            id, subtotal, tax, total, status,
-            payment_method, notes, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          params: [
-            orderId,
-            subtotal,
-            taxAmount,
-            total,
-            'pending',
-            orderData.paymentMethod || null,
-            orderData.notes || null,
-            now,
-            now,
-          ],
-        })
+        orderColumns.push('user_id', 'customer_id')
+        orderValues.push(1, orderData.customerId ? parseInt(orderData.customerId, 10) : null)
       }
+      orderColumns.push('subtotal', 'tax', 'total')
+      orderValues.push(subtotal, taxAmount, total)
+      if (hasDiscount) {
+        orderColumns.push('discount')
+        orderValues.push(discount)
+      }
+      orderColumns.push('status', 'payment_method', 'notes', 'created_at', 'updated_at')
+      orderValues.push('pending', orderData.paymentMethod || null, orderData.notes || null, now, now)
+
+      statements.push({
+        sql: `INSERT INTO orders (${orderColumns.join(', ')}) VALUES (${orderColumns.map(() => '?').join(', ')})`,
+        params: orderValues,
+      })
 
       for (const item of orderItems) {
         if (hasVariantSupport) {
@@ -396,6 +398,7 @@ export class OrderService {
         subtotal,
         tax: taxAmount,
         total,
+        discount,
         status: 'pending',
         paymentMethod: orderData.paymentMethod,
         notes: orderData.notes,

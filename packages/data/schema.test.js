@@ -16,6 +16,7 @@ describe('@openpos/data Drizzle schema exports', () => {
       'product_attributes',
       'product_variants',
       'product_variant_settings',
+      'promotions',
     ])
     expect(replicatedTablesByName.products.columns).toContain('barcode_normalized')
   })

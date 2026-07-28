@@ -17,6 +17,7 @@ import {
 } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
 import { isDesktop } from '../lib/platform'
+import { computeCartPricing, type PricingLine } from '../lib/promotions'
 import { authService } from '../services/auth-turso'
 import { type CompanySettings, companySettingsService } from '../services/company-settings-turso'
 import { type Customer, customerService } from '../services/customers-turso'
@@ -24,6 +25,7 @@ import { type Order, orderService } from '../services/orders-turso'
 import { formatReceiptData, type PrintReceiptData, printThermalReceipt } from '../services/print-service'
 import { resolveProductImageUrls } from '../services/product-images'
 import { type Product, type ProductWithVariants, productService } from '../services/products-turso'
+import { type Promotion, promotionService } from '../services/promotions-turso'
 import { createReceiptPrintJob, getPrintJob, getPrintStations, type PrintStation } from '../services/remote-printing'
 import { userService } from '../services/users-turso'
 
@@ -102,6 +104,8 @@ export default function Orders() {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
   const [taxRate, setTaxRate] = useState<number>(0.1)
   const [taxEnabled, setTaxEnabled] = useState<boolean>(true)
+  const [promotions, setPromotions] = useState<Promotion[]>([])
+  const [categoryAncestors, setCategoryAncestors] = useState<Record<string, string[]>>({})
   const [currencySymbol, setCurrencySymbol] = useState<string>('$')
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null)
   const [productSearch, setProductSearch] = useState('')
@@ -283,6 +287,8 @@ export default function Orders() {
       setTaxEnabled(settings.taxEnabled)
       setTaxRate(settings.taxEnabled ? settings.taxPercentage / 100 : 0)
       setCurrencySymbol(settings.currencySymbol)
+      setPromotions(await promotionService.getActivePromotions())
+      setCategoryAncestors(await promotionService.getCategoryAncestorsByName())
 
       // Create user mapping
       const userMapping: { [key: string]: string } = {}
@@ -1481,8 +1487,26 @@ export default function Orders() {
                         const itemPrice = variant?.price || product?.price || 0
                         return total + itemPrice * item.quantity
                       }, 0)
-                      const tax = taxEnabled ? subtotal * taxRate : 0
-                      const total = subtotal + tax
+                      const pricingLines: PricingLine[] = newOrder.items.map((item) => {
+                        const product = products.find((p) => p.id === item.productId)
+                        const variant = item.variantId
+                          ? productsWithVariants[item.productId]?.variants?.find((v) => v.id === item.variantId)
+                          : undefined
+                        return {
+                          productId: item.productId,
+                          category: product?.category ?? '',
+                          unitPrice: variant?.price || product?.price || 0,
+                          quantity: item.quantity,
+                          variantId: item.variantId,
+                        }
+                      })
+                      const discount = computeCartPricing(pricingLines, promotions, {
+                        now: new Date().toISOString(),
+                        categoryAncestors,
+                      }).totalDiscount
+                      const taxBase = subtotal - discount
+                      const tax = taxEnabled ? taxBase * taxRate : 0
+                      const total = taxBase + tax
 
                       return (
                         <div class={`${panelClass} p-4 sm:p-5`}>
@@ -1491,6 +1515,12 @@ export default function Orders() {
                               <span class="font-medium">{t('common.subtotal')}:</span>
                               <span class="font-semibold">{formatCurrency(subtotal)}</span>
                             </div>
+                            {discount > 0 && (
+                              <div class="flex justify-between text-void ">
+                                <span class="font-medium">{t('common.discount')}:</span>
+                                <span class="font-semibold">-{formatCurrency(discount)}</span>
+                              </div>
+                            )}
                             {taxEnabled && (
                               <div class="flex justify-between text-void ">
                                 <span class="font-medium">
@@ -1772,8 +1802,23 @@ export default function Orders() {
                         const product = products.find((p) => p.id === item.productId)
                         return total + (product ? product.price * item.quantity : 0)
                       }, 0)
-                      const tax = taxEnabled ? subtotal * taxRate : 0
-                      const total = subtotal + tax
+                      const pricingLines: PricingLine[] = editOrderItems.map((item) => {
+                        const product = products.find((p) => p.id === item.productId)
+                        return {
+                          productId: item.productId,
+                          category: product?.category ?? '',
+                          unitPrice: product?.price ?? 0,
+                          quantity: item.quantity,
+                          variantId: item.variantId,
+                        }
+                      })
+                      const discount = computeCartPricing(pricingLines, promotions, {
+                        now: new Date().toISOString(),
+                        categoryAncestors,
+                      }).totalDiscount
+                      const taxBase = subtotal - discount
+                      const tax = taxEnabled ? taxBase * taxRate : 0
+                      const total = taxBase + tax
 
                       return (
                         <div class={`${panelClass} p-4 sm:p-5`}>
@@ -1782,6 +1827,12 @@ export default function Orders() {
                               <span class="font-medium">{t('common.subtotal')}:</span>
                               <span class="font-semibold">{formatCurrency(subtotal)}</span>
                             </div>
+                            {discount > 0 && (
+                              <div class="flex justify-between text-void ">
+                                <span class="font-medium">{t('common.discount')}:</span>
+                                <span class="font-semibold">-{formatCurrency(discount)}</span>
+                              </div>
+                            )}
                             {taxEnabled && (
                               <div class="flex justify-between text-void ">
                                 <span class="font-medium">

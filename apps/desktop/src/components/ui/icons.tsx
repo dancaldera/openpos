@@ -177,6 +177,27 @@ export function ProductsIcon({ class: className, ...props }: IconProps) {
   )
 }
 
+export function PromotionsIcon({ class: className, ...props }: IconProps) {
+  return (
+    <svg
+      class={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M9 9h.01" />
+      <path d="M15 15h.01" />
+      <path d="m9 15 6-6" />
+      <path d="M3 3h7.586a2 2 0 0 1 1.414.586l8.704 8.704a2 2 0 0 1 0 2.828l-5.586 5.586a2 2 0 0 1-2.828 0L3.586 12A2 2 0 0 1 3 10.586Z" />
+    </svg>
+  )
+}
+
 export function CustomersIcon({ class: className, ...props }: IconProps) {
   return (
     <svg

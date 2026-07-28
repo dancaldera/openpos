@@ -13,6 +13,7 @@ import FirstRunSync from './pages/FirstRunSync'
 import Members from './pages/Members'
 import Orders from './pages/Orders'
 import Products from './pages/Products'
+import Promotions from './pages/Promotions'
 import Settings from './pages/Settings'
 import SignIn from './pages/SignIn'
 import { appSettingsStore } from './stores/appSettings/appSettingsStore'
@@ -151,6 +152,8 @@ function App() {
         return <Orders />
       case 'products':
         return <Products />
+      case 'promotions':
+        return <Promotions />
       case 'customers':
         return <Customers />
       case 'members':
