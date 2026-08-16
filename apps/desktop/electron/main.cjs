@@ -12,7 +12,7 @@ const {
 const { formatPrinterCommandError, resolvePrinterConfig } = require('./printer-config.cjs')
 const { isLegacyLocalImageKey } = require('./product-image-keys.cjs')
 const { createRemotePrintQueue } = require('./remote-print-queue.cjs')
-const { createSyncManager, ensureLocalSyncSchema, resetLocalDatabase } = require('./sync-manager.cjs')
+const { createSyncManager, ensureLocalSyncSchema, resetLocalDatabase } = require('@openpos/sync')
 const {
   assertUpdateFilePath,
   buildDebInstallCommand,

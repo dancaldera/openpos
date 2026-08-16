@@ -1,6 +1,6 @@
 const { beforeEach, describe, expect, it } = require('bun:test')
 const { Database } = require('bun:sqlite')
-const { createSyncManager } = require('./sync-manager.cjs')
+const { createSyncManager } = require('@openpos/sync')
 
 function createRemoteClient(database) {
   return {
