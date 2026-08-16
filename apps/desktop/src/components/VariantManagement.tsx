@@ -232,7 +232,7 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
             </div>
             <div>
               <Input
-                label={`🏭 ${t('common.cost')}`}
+                label={`🏭 ${t('variants.variantCost')}`}
                 type="number"
                 value={formData.cost.toString()}
                 onInput={(e) =>
@@ -550,7 +550,7 @@ export function VariantGenerator({ productId, isOpen, onClose, onGenerated }: Va
                 </div>
                 <div>
                   <Input
-                    label={`🏭 ${t('common.cost')}`}
+                    label={`🏭 ${t('variants.variantCost')}`}
                     type="number"
                     value={baseCost.toString()}
                     onInput={(e) => setBaseCost(parseFloat((e.target as HTMLInputElement).value) || 0)}
