@@ -3,7 +3,7 @@
 import { mkdirSync, rmSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { Database } from 'bun:sqlite'
-const { runLocalMigrations } = require('../src/internal/migrate-helpers')
+const { runLocalMigrations } = require('@dancaldera/libsql-bridge')
 const { bootstrapDatabasePath, migrationsDir } = require('../src/project')
 
 async function main() {

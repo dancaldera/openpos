@@ -1,5 +1,5 @@
 import { useTranslation } from '../../hooks/useTranslation'
-import { languageActions } from '../../stores/language'
+import { languageActions } from '../../stores/language/languageActions'
 import { Select } from './Select'
 
 interface LanguageSelectorProps {

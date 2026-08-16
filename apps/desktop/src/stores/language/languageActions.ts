@@ -1,12 +1,6 @@
-import { signal } from '@preact/signals'
 import { companySettingsService } from '../../services/company-settings-turso'
 import { translationService } from '../../services/translations'
-
-export const languageStore = {
-  currentLocale: signal<string>('en'),
-  isLoading: signal<boolean>(false),
-  availableLocales: signal<string[]>(['en', 'es']),
-}
+import { languageStore } from './languageStore'
 
 export const languageActions = {
   async changeLanguage(locale: string): Promise<void> {

@@ -1,4 +1,4 @@
-import { updateActions } from '../stores/update'
+import { updateActions } from '../stores/update/updateActions'
 
 /**
  * Configuration options for the update service.

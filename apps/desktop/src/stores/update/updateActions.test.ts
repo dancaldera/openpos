@@ -16,7 +16,7 @@ import {
   updateReleaseNotes,
   updateReleaseUrl,
   updateVersion,
-} from '.'
+} from './updateStore'
 
 let desktopInfo: {
   version: string
@@ -62,7 +62,9 @@ mock.module('../../lib/desktop', () => ({
   }),
 }))
 
-const { isNewerVersion, pickAppImageAsset, pickDebAsset, pickMacZipAsset, updateActions } = await import('.')
+const { isNewerVersion, pickAppImageAsset, pickDebAsset, pickMacZipAsset, updateActions } = await import(
+  './updateActions'
+)
 
 describe('isNewerVersion', () => {
   it('detects newer semantic versions', () => {

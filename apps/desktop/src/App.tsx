@@ -16,8 +16,8 @@ import Products from './pages/Products'
 import Settings from './pages/Settings'
 import SignIn from './pages/SignIn'
 import { appSettingsStore } from './stores/appSettings/appSettingsStore'
-import { authActions } from './stores/auth'
-import { languageActions } from './stores/language'
+import { authActions } from './stores/auth/authActions'
+import { languageActions } from './stores/language/languageActions'
 import './App.css'
 
 function App() {

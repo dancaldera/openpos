@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { createClient } from '@libsql/client'
-const { runRemoteMigrations } = require('../src/internal/migrate-helpers')
+const { runRemoteMigrations } = require('@dancaldera/libsql-bridge')
 const { loadEnv } = require('../src/internal/env')
 const { devMigrationsDir, migrationsDir, repoRoot } = require('../src/project')
 

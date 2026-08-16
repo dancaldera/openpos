@@ -1,3 +1,4 @@
+import { updateActions } from '../stores/update/updateActions'
 import {
   downloadError,
   hasUpdate,
@@ -6,12 +7,11 @@ import {
   isInstalling,
   isUpdating,
   lastCheckTime,
-  updateActions,
   updateAvailable,
   updateDownloadProgress,
   updateReadyToInstall,
   updateVersion,
-} from '../stores/update'
+} from '../stores/update/updateStore'
 
 interface UseUpdateCheckerReturn {
   // Reactive state

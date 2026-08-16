@@ -1,28 +1,23 @@
-import { computed, signal } from '@preact/signals'
 import { type DesktopUpdateStatusEvent, getDesktopApi, type UpdateFormat } from '../../lib/desktop'
-
-// Update state signals
-export type UpdateAssetFormat = 'appimage' | 'deb' | 'mac-zip'
-
-export const updateAvailable = signal(false)
-export const updateVersion = signal<string | null>(null)
-export const updateAssetName = signal<string | null>(null)
-export const updateAssetUrl = signal<string | null>(null)
-export const updateAssetFormat = signal<UpdateAssetFormat | null>(null)
-export const downloadedUpdatePath = signal<string | null>(null)
-export const downloadedUpdateFormat = signal<UpdateAssetFormat | null>(null)
-export const updateDownloadProgress = signal(0)
-export const isDownloading = signal(false)
-export const isInstalling = signal(false)
-export const isChecking = signal(false)
-export const downloadError = signal<string | null>(null)
-export const lastCheckTime = signal(0)
-export const updateReadyToInstall = signal(false)
-export const updateReleaseUrl = signal<string | null>(null)
-export const updateReleaseNotes = signal<string | null>(null)
-
-export const hasUpdate = computed(() => updateAvailable.value && updateVersion.value !== null)
-export const isUpdating = computed(() => isChecking.value || isDownloading.value || isInstalling.value)
+import {
+  downloadError,
+  downloadedUpdateFormat,
+  downloadedUpdatePath,
+  isChecking,
+  isDownloading,
+  isInstalling,
+  lastCheckTime,
+  type UpdateAssetFormat,
+  updateAssetFormat,
+  updateAssetName,
+  updateAssetUrl,
+  updateAvailable,
+  updateDownloadProgress,
+  updateReadyToInstall,
+  updateReleaseNotes,
+  updateReleaseUrl,
+  updateVersion,
+} from './updateStore'
 
 const GITHUB_RELEASES_URL = 'https://api.github.com/repos/dancaldera/openpos/releases/latest'
 const GITHUB_RELEASES_PAGE = 'https://github.com/dancaldera/openpos/releases/latest'

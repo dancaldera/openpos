@@ -6,13 +6,13 @@ import { useTranslation } from '../../hooks/useTranslation'
 import { getDesktopApi } from '../../lib/desktop'
 import { isDesktop } from '../../lib/platform'
 import { openFullSizeDialogCount } from '../../stores/ui/dialogStore'
+import { updateActions } from '../../stores/update/updateActions'
 import {
   downloadError,
   isChecking,
   isDownloading,
   isInstalling,
   lastCheckTime,
-  updateActions,
   updateAssetName,
   updateAssetUrl,
   updateAvailable,
@@ -21,7 +21,7 @@ import {
   updateReleaseNotes,
   updateReleaseUrl,
   updateVersion,
-} from '../../stores/update'
+} from '../../stores/update/updateStore'
 import { SpinnerIcon } from './icons'
 
 const currentAppInfo = signal<{
