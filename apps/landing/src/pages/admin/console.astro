@@ -1,0 +1,162 @@
+---
+export const prerender = false
+
+import AdminLayout from '../../layouts/AdminLayout.astro'
+import { listClients } from '../../lib/registry'
+
+const selectedClientId = Astro.url.searchParams.get('client') ?? ''
+let error: string | null = null
+let clients: Awaited<ReturnType<typeof listClients>> = []
+
+try {
+  clients = await listClients()
+} catch (err) {
+  error = err instanceof Error ? err.message : 'Failed to load clients'
+}
+
+const runnableClients = clients.filter((client) => client.database_url && client.database_token)
+---
+
+<AdminLayout title="SQL Console" active="console">
+  {error ? (
+    <div class="rounded-[var(--radius-cards)] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+      {error}
+    </div>
+  ) : (
+    <div class="grid gap-6">
+      <div class="rounded-[var(--radius-cards)] border border-fog-border bg-canvas p-6 shadow-sm">
+        <div class="mb-4 flex flex-wrap items-end gap-4">
+          <label class="min-w-[240px] flex-1 space-y-2">
+            <span class="text-sm font-medium">Client / database</span>
+            <select id="client-select" class="field">
+              {runnableClients.length === 0 ? (
+                <option value="">No clients with database credentials</option>
+              ) : (
+                runnableClients.map((client) => (
+                  <option value={client.id} selected={client.id === selectedClientId}>
+                    {client.name}{client.database_name ? ` (${client.database_name})` : ''}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          <p class="text-sm text-graphite">Full read/write access. Cmd+Enter to run.</p>
+        </div>
+
+        <textarea
+          id="sql-input"
+          rows="8"
+          spellcheck="false"
+          class="field font-mono text-sm"
+          placeholder="SELECT * FROM users LIMIT 20;"
+        ></textarea>
+
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          <button id="run-sql" class="rounded-buttons bg-void px-5 py-2.5 text-sm font-medium text-canvas shadow-sm" disabled={runnableClients.length === 0}>
+            Run query
+          </button>
+          <p id="sql-meta" class="text-sm text-graphite"></p>
+        </div>
+        <p id="sql-error" class="mt-3 hidden text-sm text-red-600"></p>
+      </div>
+
+      <div class="overflow-hidden rounded-[var(--radius-cards)] border border-fog-border bg-canvas shadow-sm">
+        <div class="border-b border-fog-border px-5 py-4">
+          <h2 class="text-sm font-semibold">Results</h2>
+        </div>
+        <div id="results-empty" class="px-5 py-6 text-sm text-graphite">Run a query to see results.</div>
+        <div id="results-wrap" class="hidden overflow-x-auto">
+          <table class="min-w-full text-left text-sm">
+            <thead id="results-head" class="border-b border-fog-border bg-chalk/40 text-graphite"></thead>
+            <tbody id="results-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )}
+</AdminLayout>
+
+<style>
+  .field {
+    width: 100%;
+    border-radius: var(--radius-cards);
+    border: 1px solid var(--color-fog-border);
+    background: var(--color-canvas);
+    padding: 0.75rem 1rem;
+    outline: none;
+  }
+
+  .field:focus {
+    border-color: var(--color-void);
+  }
+</style>
+
+<script>
+  const clientSelect = document.getElementById('client-select') as HTMLSelectElement | null
+  const sqlInput = document.getElementById('sql-input') as HTMLTextAreaElement | null
+  const runButton = document.getElementById('run-sql') as HTMLButtonElement | null
+  const sqlMeta = document.getElementById('sql-meta')
+  const sqlError = document.getElementById('sql-error')
+  const resultsEmpty = document.getElementById('results-empty')
+  const resultsWrap = document.getElementById('results-wrap')
+  const resultsHead = document.getElementById('results-head')
+  const resultsBody = document.getElementById('results-body')
+
+  async function runQuery() {
+    const clientId = clientSelect?.value
+    const sql = sqlInput?.value.trim()
+    if (!clientId || !sql) return
+
+    sqlError?.classList.add('hidden')
+    runButton?.setAttribute('disabled', 'true')
+
+    try {
+      const response = await fetch('/api/admin/sql', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, sql }),
+      })
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload.error ?? 'Query failed')
+      }
+
+      if (sqlMeta) {
+        sqlMeta.textContent = `${payload.rowsAffected} row(s) affected · ${payload.durationMs}ms`
+      }
+
+      resultsEmpty?.classList.add('hidden')
+      resultsWrap?.classList.remove('hidden')
+
+      if (resultsHead) {
+        resultsHead.innerHTML = `<tr>${payload.columns.map((column: string) => `<th class="px-5 py-3 font-medium">${column}</th>`).join('')}</tr>`
+      }
+
+      if (resultsBody) {
+        if (payload.rows.length === 0) {
+          resultsBody.innerHTML = `<tr><td class="px-5 py-4 text-graphite" colspan="${Math.max(payload.columns.length, 1)}">No rows returned.</td></tr>`
+        } else {
+          resultsBody.innerHTML = payload.rows
+            .map((row: unknown[]) => `<tr class="border-b border-fog-border last:border-b-0">${row.map((value) => `<td class="px-5 py-3 align-top font-mono text-xs">${value == null ? 'NULL' : String(value)}</td>`).join('')}</tr>`)
+            .join('')
+        }
+      }
+    } catch (error) {
+      if (sqlError) {
+        sqlError.textContent = error instanceof Error ? error.message : 'Query failed'
+        sqlError.classList.remove('hidden')
+      }
+    } finally {
+      runButton?.removeAttribute('disabled')
+    }
+  }
+
+  runButton?.addEventListener('click', runQuery)
+
+  sqlInput?.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+      event.preventDefault()
+      runQuery()
+    }
+  })
+</script>

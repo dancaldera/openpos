@@ -1,0 +1,41 @@
+---
+const chips = ['Offline-first', 'Real-time sync', 'Cross-platform']
+---
+
+<section class="flex min-h-[calc(100vh-64px)] items-center bg-canvas px-4 pb-24 pt-32 sm:px-6 lg:px-8">
+  <div class="mx-auto flex max-w-[760px] flex-col items-center text-center">
+    <p class="mb-6 text-caption font-medium tracking-[0.011em] text-graphite">
+      AI-powered point of sale
+    </p>
+
+    <h1 class="max-w-[720px] text-[40px] font-semibold leading-[1.16] tracking-[-1.2px] text-void sm:text-display sm:tracking-[-1.44px]">
+      OpenPOS
+      <span class="block">The intelligent point of sale for modern retailers.</span>
+    </h1>
+
+    <p class="mt-6 max-w-[640px] text-base leading-[1.65] text-graphite sm:text-[18px]">
+      A modern, offline-first POS system for retailers who need fast checkout, real-time sync,
+      cross-platform desktop support, and an AI-ready foundation.
+    </p>
+
+    <a
+      href="https://demo.openpos.xyz"
+      class="mt-10 flex w-full max-w-[640px] items-center justify-between rounded-input border border-fog-border bg-canvas py-2 pl-6 pr-2 text-left text-sm font-medium text-void transition-colors hover:bg-chalk focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void sm:pl-8"
+    >
+      <span class="text-graphite">Try the live demo</span>
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-buttons bg-void text-canvas shadow-sm">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 12h14m0 0-5-5m5 5-5 5" />
+        </svg>
+      </span>
+    </a>
+
+    <div class="mt-6 flex flex-wrap justify-center gap-2">
+      {chips.map(chip => (
+        <span class="rounded-softbutton bg-chalk px-4 py-2 text-sm font-medium text-void">
+          {chip}
+        </span>
+      ))}
+    </div>
+  </div>
+</section>

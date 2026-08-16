@@ -1,0 +1,29 @@
+{
+  "name": "@openpos/data",
+  "private": true,
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "files": [
+    "assets",
+    "drizzle",
+    "drizzle.config.js",
+    "migrations",
+    "src"
+  ],
+  "scripts": {
+    "drizzle:generate": "drizzle-kit generate --config drizzle.config.js",
+    "drizzle:push": "drizzle-kit push --config drizzle.config.js",
+    "drizzle:studio": "drizzle-kit studio --config drizzle.config.js",
+    "migrate:remote": "bun scripts/migrate-remote.ts",
+    "build:bootstrap": "bun scripts/build-bootstrap.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.15",
+    "drizzle-orm": "^0.44.5"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.5"
+  }
+}

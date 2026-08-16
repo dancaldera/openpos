@@ -1,0 +1,45 @@
+{
+  "name": "openpos",
+  "version": "0.8.3",
+  "private": true,
+  "license": "MIT",
+  "repository": "github:dancaldera/openpos",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun scripts/dev-runner.ts dev",
+    "dev:desktop": "bun scripts/dev-runner.ts dev:desktop",
+    "dev:desktop:web": "bun scripts/dev-runner.ts dev:desktop:web",
+    "dev:api": "bun scripts/dev-runner.ts dev:api",
+    "dev:landing": "bun scripts/dev-runner.ts dev:landing",
+    "build": "pnpm run build:desktop",
+    "build:desktop": "pnpm -C apps/desktop run build:desktop",
+    "build:desktop:mac": "pnpm -C apps/desktop run build:desktop:mac",
+    "build:desktop:linux": "pnpm -C apps/desktop run build:desktop:linux",
+    "build:desktop:linux:appimage": "pnpm -C apps/desktop run build:desktop:linux:appimage",
+    "build:desktop:linux:deb": "pnpm -C apps/desktop run build:desktop:linux:deb",
+    "build:desktop:web": "pnpm -C apps/desktop run build:web",
+    "build:api": "pnpm -C apps/api run build",
+    "build:landing": "pnpm -C apps/landing run build",
+    "db:migrate:remote": "pnpm -C packages/data run migrate:remote",
+    "db:create-admin": "bun scripts/create-admin.ts",
+    "db:build-bootstrap": "pnpm -C packages/data run build:bootstrap",
+    "install:appimage": "bash scripts/install-latest-appimage.sh",
+    "config:desktop": "bash scripts/create-desktop-config.sh",
+    "version:bump": "bun scripts/bump-version.ts",
+    "check": "tsc -p scripts/tsconfig.json && pnpm -C apps/desktop run check && pnpm -C apps/api run check",
+    "test": "pnpm run test:scripts && pnpm run test:data && pnpm run test:sync && pnpm run test:desktop && pnpm run test:api",
+    "test:scripts": "bun test scripts",
+    "test:data": "bun test packages/data",
+    "test:sync": "pnpm -C packages/sync run test",
+    "test:desktop": "pnpm -C apps/desktop run test",
+    "test:api": "pnpm -C apps/api run test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.13",
+    "bun-types": "^1.3.11",
+    "typescript": "^5.9.3"
+  }
+}

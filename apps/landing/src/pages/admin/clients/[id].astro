@@ -1,0 +1,276 @@
+---
+export const prerender = false
+
+import AdminLayout from '../../../layouts/AdminLayout.astro'
+import { getClient } from '../../../lib/registry'
+import { listDatabases } from '../../../lib/turso-platform'
+
+const { id } = Astro.params
+let error: string | null = null
+let client: Awaited<ReturnType<typeof getClient>> = null
+let databases: Awaited<ReturnType<typeof listDatabases>> = []
+
+if (!id) {
+  error = 'Client id is required'
+} else {
+  try {
+    ;[client, databases] = await Promise.all([getClient(id), listDatabases()])
+    if (!client) error = 'Client not found'
+  } catch (err) {
+    error = err instanceof Error ? err.message : 'Failed to load client'
+  }
+}
+---
+
+<AdminLayout title={client?.name ?? 'Client'} active="clients">
+  {error ? (
+    <div class="rounded-[var(--radius-cards)] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+      {error}
+    </div>
+  ) : client && (
+    <>
+      <div class="mb-4">
+        <a href="/admin/clients" class="text-sm text-graphite underline underline-offset-4">← Back to clients</a>
+      </div>
+
+      <form id="client-detail-form" class="grid gap-6 lg:grid-cols-2">
+        <input type="hidden" name="id" value={client.id} />
+
+        <div class="rounded-[var(--radius-cards)] border border-fog-border bg-canvas p-6 shadow-sm lg:col-span-2">
+          <h2 class="mb-4 text-sm font-semibold">Client details</h2>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="space-y-2">
+              <span class="text-sm font-medium">Name</span>
+              <input name="name" value={client.name} required class="field" />
+            </label>
+            <label class="space-y-2">
+              <span class="text-sm font-medium">Contact email</span>
+              <input name="contact_email" type="email" value={client.contact_email ?? ''} class="field" />
+            </label>
+            <label class="space-y-2">
+              <span class="text-sm font-medium">API URL</span>
+              <input name="api_url" type="url" value={client.api_url ?? ''} class="field" />
+            </label>
+            <label class="space-y-2">
+              <span class="text-sm font-medium">Frontend URL</span>
+              <input name="frontend_url" type="url" value={client.frontend_url ?? ''} class="field" />
+            </label>
+            <label class="space-y-2 sm:col-span-2">
+              <span class="text-sm font-medium">Notes</span>
+              <textarea name="notes" rows="4" class="field">{client.notes ?? ''}</textarea>
+            </label>
+          </div>
+        </div>
+
+        <div class="rounded-[var(--radius-cards)] border border-fog-border bg-canvas p-6 shadow-sm">
+          <h2 class="mb-4 text-sm font-semibold">Database</h2>
+          <label class="mb-4 block space-y-2">
+            <span class="text-sm font-medium">Linked database</span>
+            <select name="database_name" class="field">
+              <option value="">None</option>
+              {databases.map((database) => (
+                <option value={database.Name} selected={database.Name === client.database_name}>
+                  {database.Name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div class="space-y-3 text-sm">
+            <div>
+              <p class="text-graphite">URL</p>
+              <div class="mt-1 flex items-center gap-2">
+                <code class="truncate text-xs">{client.database_url ?? '—'}</code>
+                {client.database_url && (
+                  <button type="button" class="copy-btn rounded-buttons border border-fog-border px-2 py-1 text-xs" data-copy={client.database_url}>
+                    Copy
+                  </button>
+                )}
+              </div>
+            </div>
+            <div>
+              <p class="text-graphite">Token</p>
+              <div class="mt-1 flex items-center gap-2">
+                <code id="token-preview" class="truncate text-xs">{client.database_token ? '••••••••••••••••' : '—'}</code>
+                {client.database_token && (
+                  <>
+                    <button type="button" id="reveal-token" class="rounded-buttons border border-fog-border px-2 py-1 text-xs">Reveal</button>
+                    <button type="button" class="copy-btn rounded-buttons border border-fog-border px-2 py-1 text-xs" data-copy={client.database_token}>Copy</button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {client.database_name && (
+            <div class="mt-4 flex flex-wrap gap-2">
+              <button type="button" id="mint-token" class="rounded-buttons border border-fog-border px-3 py-1.5 text-xs">Generate token</button>
+              <button type="button" id="rotate-token" class="rounded-buttons border border-fog-border px-3 py-1.5 text-xs">Rotate tokens</button>
+              <a href={`/admin/console?client=${client.id}`} class="inline-flex rounded-buttons bg-void px-3 py-1.5 text-xs text-canvas">Open console</a>
+            </div>
+          )}
+        </div>
+
+        <div class="rounded-[var(--radius-cards)] border border-fog-border bg-canvas p-6 shadow-sm">
+          <h2 class="mb-4 text-sm font-semibold">Links</h2>
+          <ul class="space-y-3 text-sm">
+            <li>
+              <span class="text-graphite">API</span>
+              <p>{client.api_url ? <a href={client.api_url} target="_blank" rel="noreferrer" class="underline underline-offset-4">{client.api_url}</a> : '—'}</p>
+            </li>
+            <li>
+              <span class="text-graphite">Frontend</span>
+              <p>{client.frontend_url ? <a href={client.frontend_url} target="_blank" rel="noreferrer" class="underline underline-offset-4">{client.frontend_url}</a> : '—'}</p>
+            </li>
+            <li>
+              <span class="text-graphite">Created</span>
+              <p>{client.created_at}</p>
+            </li>
+            <li>
+              <span class="text-graphite">Updated</span>
+              <p>{client.updated_at}</p>
+            </li>
+          </ul>
+        </div>
+
+        <div class="lg:col-span-2 flex flex-wrap items-center gap-3">
+          <p id="detail-status" class="hidden text-sm text-graphite"></p>
+          <p id="detail-error" class="hidden text-sm text-red-600"></p>
+          <button type="submit" class="rounded-buttons bg-void px-5 py-2.5 text-sm font-medium text-canvas shadow-sm">Save changes</button>
+          <button type="button" id="delete-client" class="rounded-buttons border border-red-300 px-5 py-2.5 text-sm font-medium text-red-700">Delete client record</button>
+        </div>
+      </form>
+    </>
+  )}
+</AdminLayout>
+
+<style>
+  .field {
+    width: 100%;
+    border-radius: var(--radius-input);
+    border: 1px solid var(--color-fog-border);
+    background: var(--color-canvas);
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    outline: none;
+  }
+
+  .field:focus {
+    border-color: var(--color-void);
+  }
+</style>
+
+<script define:vars={{ clientId: client?.id, databaseName: client?.database_name, databaseToken: client?.database_token }}>
+  const form = document.getElementById('client-detail-form')
+  const statusEl = document.getElementById('detail-status')
+  const errorEl = document.getElementById('detail-error')
+  const tokenPreview = document.getElementById('token-preview')
+  let currentToken = databaseToken
+
+  function showStatus(message) {
+    if (!statusEl) return
+    statusEl.textContent = message
+    statusEl.classList.remove('hidden')
+    errorEl?.classList.add('hidden')
+  }
+
+  function showError(message) {
+    if (!errorEl) return
+    errorEl.textContent = message
+    errorEl.classList.remove('hidden')
+    statusEl?.classList.add('hidden')
+  }
+
+  document.querySelectorAll('.copy-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const value = button.getAttribute('data-copy')
+      if (!value) return
+      await navigator.clipboard.writeText(value)
+      button.textContent = 'Copied'
+      setTimeout(() => {
+        button.textContent = 'Copy'
+      }, 1200)
+    })
+  })
+
+  document.getElementById('reveal-token')?.addEventListener('click', () => {
+    if (!tokenPreview || !currentToken) return
+    tokenPreview.textContent = currentToken
+  })
+
+  document.getElementById('mint-token')?.addEventListener('click', async () => {
+    if (!databaseName) return
+    const response = await fetch(`/api/admin/databases/${encodeURIComponent(databaseName)}/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId }),
+    })
+    const payload = await response.json()
+    if (!response.ok) {
+      showError(payload.error ?? 'Failed to mint token')
+      return
+    }
+    currentToken = payload.jwt
+    if (tokenPreview) tokenPreview.textContent = '••••••••••••••••'
+    await navigator.clipboard.writeText(payload.jwt)
+    showStatus('New token minted and copied to clipboard.')
+  })
+
+  document.getElementById('rotate-token')?.addEventListener('click', async () => {
+    if (!databaseName) return
+    if (!confirm(`Rotate all tokens for ${databaseName}?`)) return
+    const response = await fetch(`/api/admin/databases/${encodeURIComponent(databaseName)}/rotate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId }),
+    })
+    const payload = await response.json()
+    if (!response.ok) {
+      showError(payload.error ?? 'Failed to rotate tokens')
+      return
+    }
+    currentToken = payload.jwt
+    if (tokenPreview) tokenPreview.textContent = '••••••••••••••••'
+    await navigator.clipboard.writeText(payload.jwt)
+    showStatus('Tokens rotated. New token copied to clipboard.')
+  })
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    const formData = new FormData(form)
+    const payload = {
+      name: String(formData.get('name') ?? ''),
+      contact_email: String(formData.get('contact_email') ?? '') || null,
+      api_url: String(formData.get('api_url') ?? '') || null,
+      frontend_url: String(formData.get('frontend_url') ?? '') || null,
+      notes: String(formData.get('notes') ?? '') || null,
+      database_name: String(formData.get('database_name') ?? '') || null,
+    }
+
+    const response = await fetch(`/api/admin/clients/${clientId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const result = await response.json()
+    if (!response.ok) {
+      showError(result.error ?? 'Failed to save client')
+      return
+    }
+    showStatus('Client saved.')
+    if (result.client.database_url) {
+      window.location.reload()
+    }
+  })
+
+  document.getElementById('delete-client')?.addEventListener('click', async () => {
+    if (!confirm('Delete this client record? The Turso database will not be deleted.')) return
+    const response = await fetch(`/api/admin/clients/${clientId}`, { method: 'DELETE' })
+    const result = await response.json()
+    if (!response.ok) {
+      showError(result.error ?? 'Failed to delete client')
+      return
+    }
+    window.location.href = '/admin/clients'
+  })
+</script>
