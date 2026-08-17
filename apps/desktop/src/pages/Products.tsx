@@ -25,6 +25,7 @@ import {
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
 import { normalizeBarcode } from '../lib/barcodes'
+import { categoryService } from '../services/categories-turso'
 import {
   DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE,
   deleteProductImage,
@@ -132,6 +133,35 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
   const [imagePreviewUrl, setImagePreviewUrl] = useState('')
   const [temporaryPreviewUrl, setTemporaryPreviewUrl] = useState<string | null>(null)
   const [removeExistingImage, setRemoveExistingImage] = useState(false)
+  const [categoryOptions, setCategoryOptions] = useState<{ value: string; label: string }[]>([])
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const activeCategories = await categoryService.getActiveCategories()
+        if (cancelled) {
+          return
+        }
+        const options = activeCategories.map((category) => ({
+          value: category.name,
+          label: `${getCategoryIcon(category.name)} ${getCategoryLabel(category.name, t)}`,
+        }))
+        setCategoryOptions(options.length > 0 ? options : getCategoryOptions(t))
+      } catch (err) {
+        console.error('Failed to load categories for product form:', err)
+        if (!cancelled) {
+          setCategoryOptions(getCategoryOptions(t))
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen])
 
   const clearTemporaryPreview = () => {
     if (temporaryPreviewUrl) {
@@ -371,7 +401,17 @@ function EditProductModal({ product, isOpen, resolvedImageUrl, onClose, onSave }
                   }
                   required
                   placeholder={t('products.selectCategory')}
-                  options={getCategoryOptions(t)}
+                  options={
+                    formData.category && !categoryOptions.some((option) => option.value === formData.category)
+                      ? [
+                          {
+                            value: formData.category,
+                            label: `${getCategoryIcon(formData.category)} ${getCategoryLabel(formData.category, t)}`,
+                          },
+                          ...categoryOptions,
+                        ]
+                      : categoryOptions
+                  }
                   class="bg-canvas"
                 />
               </div>

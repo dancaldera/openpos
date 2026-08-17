@@ -8,6 +8,7 @@ import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 import { Button, DbStatusBadge, DialogConfirm, UpdateBadge } from './ui'
 import {
   AnalyticsIcon,
+  CategoriesIcon,
   CustomersIcon,
   DashboardIcon,
   MembersIcon,
@@ -57,6 +58,12 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
       description: t('products.subtitle'),
     },
     {
+      id: 'categories',
+      label: t('navigation.categories'),
+      icon: <CategoriesIcon class="w-5 h-5" />,
+      description: t('categoryManagement.subtitle'),
+    },
+    {
       id: 'customers',
       label: t('navigation.customers'),
       icon: <CustomersIcon class="w-5 h-5" />,
@@ -81,7 +88,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
       description: t('settings.subtitle'),
     },
   ].filter((item) => {
-    if (item.id === 'members') {
+    if (item.id === 'members' || item.id === 'categories') {
       return user && (user.role === 'admin' || user.role === 'manager')
     }
     if (item.id === 'analytics') {

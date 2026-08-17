@@ -29,3 +29,6 @@ dist-web
 *.sw?
 .vercel
 .cache
+
+# Local libsql dev server data
+.turso-dev/

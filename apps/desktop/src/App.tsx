@@ -7,6 +7,7 @@ import { startDbStatusMonitor, stopDbStatusMonitor } from './lib/db-status'
 import { type DesktopFirstRunStatus, requireDesktopApi } from './lib/desktop'
 import { isDesktop } from './lib/platform'
 import Analytics from './pages/Analytics'
+import Categories from './pages/Categories'
 import Customers from './pages/Customers'
 import Dashboard from './pages/Dashboard'
 import FirstRunSync from './pages/FirstRunSync'
@@ -151,6 +152,8 @@ function App() {
         return <Orders />
       case 'products':
         return <Products />
+      case 'categories':
+        return <Categories />
       case 'customers':
         return <Customers />
       case 'members':

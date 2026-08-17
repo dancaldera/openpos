@@ -1,5 +1,6 @@
 const { buildReplicatedTableConfig, buildReplicatedTableMap } = require('./internal/replicated-meta')
 const {
+  categories,
   companySettings,
   customers,
   orderItems,
@@ -65,6 +66,12 @@ const replicatedTables = [
     watermarkColumn: 'updated_at',
     deleteStrategy: 'hard',
     pullOrder: 90,
+  }),
+  buildReplicatedTableConfig(categories, {
+    primaryKey: 'id',
+    watermarkColumn: 'updated_at',
+    deleteStrategy: 'hard',
+    pullOrder: 100,
   }),
 ]
 
