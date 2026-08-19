@@ -21,12 +21,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@dancaldera/libsql-bridge": "npm:@jsr/dancaldera__libsql-bridge",
+    "@dancaldera/libsql-bridge": "npm:@jsr/dancaldera__libsql-bridge@^0.0.2",
     "@libsql/client": "^0.15.15",
-    "drizzle-orm": "^0.44.5"
+    "drizzle-orm": "^0.44.7"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.5",
+    "drizzle-kit": "^0.31.10",
     "tsx": "^4.23.12",
     "vitest": "^4.1.10"
   }
