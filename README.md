@@ -1,6 +1,6 @@
 # OpenPOS
 
-OpenPOS is a Bun workspace monorepo for a desktop-first point of sale system.
+OpenPOS is a pnpm workspace monorepo for a desktop-first point of sale system.
 
 [Live Demo](https://demo.openpos.xyz) · [Releases](https://github.com/dancaldera/openpos/releases) · [Contributing](./CONTRIBUTING.md)
 
@@ -101,18 +101,18 @@ bash scripts/create-desktop-config.sh --path "$HOME/.config/OpenPOS/config.json"
 
 Prerequisites:
 
-- [Node.js](https://nodejs.org/) 20+
-- [bun](https://bun.sh/)
+- [Node.js](https://nodejs.org/) 22.13+
+- [pnpm](https://pnpm.io/)
 
 Common commands:
 
 ```bash
-bun install
-bun run dev
-bun run dev:api
-bun run dev:landing
-bun run check
-bun run test
+pnpm install
+pnpm run dev
+pnpm run dev:api
+pnpm run dev:landing
+pnpm run check
+pnpm run test
 ```
 
 The desktop renderer runs on `http://localhost:1420` during development.
@@ -122,7 +122,7 @@ The desktop renderer runs on `http://localhost:1420` during development.
 - GitHub release tags remain `v*.*.*`.
 - Pushing a `v*.*.*` tag triggers the release workflow, which builds and publishes Linux `.AppImage` + `.deb`
   and macOS (Apple Silicon) `.dmg` + `.zip` artifacts in a single GitHub release.
-- Release flow: `bun run version:bump <x.y.z>` → commit → `git tag v<x.y.z>` → `git push --tags`.
+- Release flow: `pnpm run version:bump <x.y.z>` → commit → `git tag v<x.y.z>` → `git push --tags`.
 - Local maintainer install test: `bash scripts/install-latest-appimage.sh --version <x.y.z>`
 
 ## Contributing

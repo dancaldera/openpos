@@ -2,20 +2,20 @@
 
 ## Project Structure & Module Organization
 
-OpenPOS is a Bun workspace monorepo. Main apps live in `apps/`: `desktop/` for the Electron + Preact client, `api/` for the Hono backend, and `landing/` for the Astro marketing site. Shared code lives in `packages/`: `data/` contains schema, migrations, and bootstrap assets, while `sync/` holds sync logic. Repository tooling and release helpers are in `scripts/`. Tests are usually colocated with source as `*.test.ts` or `*.test.js`.
+OpenPOS is a pnpm workspace monorepo. Main apps live in `apps/`: `desktop/` for the Electron + Preact client, `api/` for the Hono backend, and `landing/` for the Astro marketing site. Shared code lives in `packages/`: `data/` contains schema, migrations, and bootstrap assets, while `sync/` holds sync logic. Repository tooling and release helpers are in `scripts/`. Tests are usually colocated with source as `*.test.ts` or `*.test.js`.
 
 ## Build, Test, and Development Commands
 
 Run all commands from the repository root:
 
-- `bun install`: install workspace dependencies.
-- `bun run dev`: start the desktop app via the workspace runner.
-- `bun run dev:api` / `bun run dev:landing`: run a single app locally.
-- `bun run check`: run TypeScript checks plus Biome validation where configured.
-- `bun run test`: run the full test suite across scripts, packages, desktop, and API.
-- `bun run build:desktop` / `bun run build:api` / `bun run build:landing`: build a specific target.
+- `pnpm install`: install workspace dependencies.
+- `pnpm run dev`: start the desktop app via the workspace runner.
+- `pnpm run dev:api` / `pnpm run dev:landing`: run a single app locally.
+- `pnpm run check`: run TypeScript checks plus Biome validation where configured.
+- `pnpm run test`: run the full test suite across scripts, packages, desktop, and API.
+- `pnpm run build:desktop` / `pnpm run build:api` / `pnpm run build:landing`: build a specific target.
 
-Use `bun run --cwd apps/desktop test` when iterating on one area.
+Use `pnpm -C apps/desktop test` when iterating on one area.
 
 ## Coding Style & Naming Conventions
 
@@ -23,7 +23,7 @@ TypeScript is the default across active apps. Biome enforces 2-space indentation
 
 ## Testing Guidelines
 
-The repo uses Bun’s test runner. Keep tests next to the code they cover and name them `*.test.ts` or `*.test.js`. Add focused tests for route handlers, desktop services, sync flows, and utility modules you touch. Before opening a PR, run `bun run test` and, for UI or API-only changes, at least the relevant workspace test command.
+The repo uses Vitest as the test runner. Keep tests next to the code they cover and name them `*.test.ts` or `*.test.js`. Add focused tests for route handlers, desktop services, sync flows, and utility modules you touch. Before opening a PR, run `pnpm run test` and, for UI or API-only changes, at least the relevant workspace test command.
 
 ## Commit & Pull Request Guidelines
 
@@ -31,7 +31,7 @@ Recent history favors short imperative subjects such as `Add Debian package to L
 
 ## Release Instructions
 
-Use `docs/RELEASE.md` as the source of truth. Releases are tag-driven through `.github/workflows/release.yml`; push a `vX.Y.Z` tag only after package versions match `X.Y.Z`. Bump versions with `bun run version:bump X.Y.Z`, review the four changed package files, run `bun run check`, commit with `chore: bump version to vX.Y.Z`, then create and push the `vX.Y.Z` tag. Do not edit versions manually unless the bump script cannot run, and do not commit generated files from `apps/desktop/dist-electron/`.
+Use `docs/RELEASE.md` as the source of truth. Releases are tag-driven through `.github/workflows/release.yml`; push a `vX.Y.Z` tag only after package versions match `X.Y.Z`. Bump versions with `pnpm run version:bump X.Y.Z`, review the four changed package files, run `pnpm run check`, commit with `chore: bump version to vX.Y.Z`, then create and push the `vX.Y.Z` tag. Do not edit versions manually unless the bump script cannot run, and do not commit generated files from `apps/desktop/dist-electron/`.
 
 ## Security & Configuration Tips
 

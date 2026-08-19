@@ -8,10 +8,10 @@ Marketing pages are statically prerendered. The `/admin` area is server-rendered
 
 | Command       | Action                                      |
 | :------------ | :------------------------------------------ |
-| `bun install` | Install dependencies                        |
-| `bun run dev` | Start dev server at `localhost:4321`        |
-| `bun run build` | Build production site to `./dist/`        |
-| `bun run preview` | Preview build locally                    |
+| `pnpm install` | Install dependencies                        |
+| `pnpm run dev` | Start dev server at `localhost:4321`        |
+| `pnpm run build` | Build production site to `./dist/`        |
+| `pnpm run preview` | Preview build locally                    |
 
 ## Admin dashboard setup
 
@@ -55,7 +55,7 @@ Add the same environment variables in the Vercel project settings. The app uses 
 ### Security notes
 
 - Database tokens are stored in plaintext in the registry DB so you can view and rotate them from the dashboard. This is acceptable for a single-admin internal tool, but rotate immediately if the registry DB is exposed.
-- Provisioning runs OpenPOS schema migrations from `packages/data/drizzle/*.sql`, matching `bun run db:migrate:remote`.
+- Provisioning runs OpenPOS schema migrations from `packages/data/drizzle/*.sql`, matching `pnpm run db:migrate:remote`.
 - Deleting a client record does not delete the underlying Turso database.
 
 ## Deployment

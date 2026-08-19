@@ -87,16 +87,16 @@ The application now includes a complete customer management system! You can trac
 
 ```bash
 # Install dependencies in a fresh clone
-bun install
+pnpm install
 
 # Start the desktop app
-bun run dev
+pnpm run dev
 
 # Run read-only validation
-bun run check
+pnpm run check
 
 # Run automated tests
-bun run test
+pnpm run test
 ```
 
 ---

@@ -17,7 +17,7 @@ git status --short
 2. Bump the version without the `v` prefix:
 
 ```bash
-bun run version:bump 0.7.4
+pnpm run version:bump 0.7.4
 ```
 
 This updates:
@@ -30,7 +30,7 @@ This updates:
 3. Validate and review:
 
 ```bash
-bun run check
+pnpm run check
 git diff
 ```
 
@@ -65,13 +65,13 @@ The tag must still match the app package versions or the workflow will fail.
 For Linux artifact testing:
 
 ```bash
-bun run build:desktop:linux
+pnpm run build:desktop:linux
 ```
 
 For macOS artifact testing:
 
 ```bash
-bun run build:desktop:mac
+pnpm run build:desktop:mac
 ```
 
 Do not commit generated release artifacts from `apps/desktop/dist-electron/`.

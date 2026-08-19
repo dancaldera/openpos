@@ -11,8 +11,8 @@ Use Vercel only for the browser deployment.
 
 - Root Directory: `apps/desktop`
 - Framework Preset: `Vite`
-- Install Command: `bun install`
-- Build Command: `bun run build:web`
+- Install Command: `pnpm install`
+- Build Command: `pnpm run build:web`
 - Output Directory: `dist-web`
 
 Set `VITE_API_URL` in the Vercel project to your deployed API base URL.
@@ -28,5 +28,5 @@ On the API deployment, set `ALLOWED_ORIGIN` to the exact desktop web app origin 
 ## Local Verification
 
 ```bash
-bun run build:web
+pnpm run build:web
 ```
