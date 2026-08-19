@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.8.3",
   "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": "22.x"
+  },
   "description": "OpenPOS desktop application powered by Electron and Preact",
   "author": {
     "name": "Daniel Caldera",
