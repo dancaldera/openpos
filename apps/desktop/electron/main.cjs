@@ -11,7 +11,6 @@ const {
 } = require('./config-resolver.cjs')
 const { formatPrinterCommandError, resolvePrinterConfig } = require('./printer-config.cjs')
 const { isLegacyLocalImageKey } = require('./product-image-keys.cjs')
-const { createRemotePrintQueue } = require('./remote-print-queue.cjs')
 const { createSyncManager, ensureLocalSyncSchema, resetLocalDatabase } = require('@openpos/sync')
 const {
   assertUpdateFilePath,
@@ -29,7 +28,6 @@ app.setName('OpenPOS')
 let mainWindow = null
 let db = null
 let syncManager = null
-let remotePrintQueue = null
 let initialSyncPromise = null
 let initialSyncError = null
 let cachedRemoteClient = null
@@ -1303,9 +1301,6 @@ function registerIpcHandlers() {
       configPath: config.api.configPath || getUserDataConfigPath(),
       configSource: config.api.source,
       userDataConfigPath: getUserDataConfigPath(),
-      printStationId: config.printStation.id,
-      printStationName: config.printStation.name,
-      printStationConfigured: config.printStation.configured,
     }
   })
   ipcMain.handle('desktop:open-external', (_event, url) => {
@@ -1528,16 +1523,10 @@ app.whenReady().then(() => {
     getRemoteConfig: getDbConnectionConfig,
     onFlushOrderQueue: flushOrderSyncQueueWithClient,
   })
-  remotePrintQueue = createRemotePrintQueue({
-    getClient: getRemoteDbClient,
-    getRuntimeConfig,
-    printReceipt: printThermalReceipt,
-  })
   registerIpcHandlers()
   registerThemeHandlers()
   createWindow()
   syncManager.start()
-  remotePrintQueue.start()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -1555,10 +1544,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   if (syncManager) {
     syncManager.stop()
-  }
-
-  if (remotePrintQueue) {
-    remotePrintQueue.stop()
   }
 
   if (db) {

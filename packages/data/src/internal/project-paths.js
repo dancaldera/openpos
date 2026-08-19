@@ -21,7 +21,6 @@ function resolveProjectPaths(packageRoot, options = {}) {
     packageRoot,
     schemaPath: resolve(packageRoot, options.schemaPath ?? 'src/schema/index.js'),
     migrationsDir: resolve(packageRoot, options.migrationsDir ?? 'drizzle'),
-    devMigrationsDir: resolve(packageRoot, options.devMigrationsDir ?? 'drizzle/dev'),
     bootstrapDatabasePath: resolve(packageRoot, options.bootstrapDatabasePath ?? 'assets/openpos-bootstrap.sqlite'),
   }
 }

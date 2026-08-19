@@ -35,4 +35,4 @@ Use `docs/RELEASE.md` as the source of truth. Releases are tag-driven through `.
 
 ## Security & Configuration Tips
 
-Do not commit secrets or production tokens. Desktop runtime config belongs in the platform-specific Electron `userData` path, not in tracked files. When changing schema or seed data, update the corresponding files under `packages/data/migrations/` and mention any required migration step in the PR.
+Do not commit secrets or production tokens. Desktop runtime config belongs in the platform-specific Electron `userData` path, not in tracked files. When changing schema or seed data, update `packages/data/src/schema/`, generate a Drizzle migration under `packages/data/drizzle/`, rebuild the bootstrap database, and mention any required migration step in the PR.

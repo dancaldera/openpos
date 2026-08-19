@@ -9,7 +9,6 @@
     "assets",
     "drizzle",
     "drizzle.config.js",
-    "migrations",
     "src"
   ],
   "scripts": {

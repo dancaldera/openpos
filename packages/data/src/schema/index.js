@@ -305,6 +305,57 @@ const orderItems = sqliteTable(
   ],
 )
 
+const syncMetadata = sqliteTable('sync_metadata', {
+  id: integer('id').primaryKey(),
+  version: integer('version').notNull().default(0),
+})
+
+const syncOutbox = sqliteTable(
+  'sync_outbox',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    tableName: text('table_name').notNull(),
+    recordId: text('record_id').notNull(),
+    operation: text('operation').notNull().default('INSERT'),
+    rowPayload: text('row_payload'),
+    localUpdatedAt: optionalTimestamp('local_updated_at'),
+    baseRemoteUpdatedAt: optionalTimestamp('base_remote_updated_at'),
+    status: text('status').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    lastError: text('last_error'),
+    syncedAt: optionalTimestamp('synced_at'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    uniqueIndex('idx_sync_outbox_table_record_unique').on(table.tableName, table.recordId),
+    index('idx_sync_outbox_status').on(table.status),
+    index('idx_sync_outbox_updated_at').on(table.updatedAt),
+    check('sync_outbox_operation_check', sql`${table.operation} in ('INSERT', 'UPDATE', 'DELETE')`),
+    check('sync_outbox_status_check', sql`${table.status} in ('pending', 'synced', 'conflict', 'error')`),
+  ],
+)
+
+const syncState = sqliteTable('sync_state', {
+  tableName: text('table_name').primaryKey(),
+  lastPulledAt: optionalTimestamp('last_pulled_at'),
+  lastSyncAt: optionalTimestamp('last_sync_at'),
+  updatedAt: updatedAt(),
+})
+
+const orderSyncQueue = sqliteTable(
+  'order_sync_queue',
+  {
+    orderId: text('order_id').primaryKey(),
+    operation: text('operation').notNull().default('UPSERT'),
+    attempts: integer('attempts').notNull().default(0),
+    lastError: text('last_error'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [check('order_sync_queue_operation_check', sql`${table.operation} in ('UPSERT', 'DELETE')`)],
+)
+
 const schema = {
   users,
   passwordRecoveryCodes,
@@ -318,6 +369,10 @@ const schema = {
   productAttributes,
   productVariants,
   productVariantSettings,
+  syncMetadata,
+  syncOutbox,
+  syncState,
+  orderSyncQueue,
 }
 
 module.exports = {

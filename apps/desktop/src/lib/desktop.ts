@@ -54,9 +54,6 @@ export interface DesktopRuntimeConfigSummary {
   configPath: string
   configSource: 'userData' | 'fallback' | 'env' | 'bundled'
   userDataConfigPath: string
-  printStationId?: string
-  printStationName?: string
-  printStationConfigured?: boolean
 }
 
 export interface DesktopApi {

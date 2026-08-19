@@ -18,7 +18,6 @@ import { usersRouter } from './routes/users.js'
 import { analyticsRouter } from './routes/analytics.js'
 import { settingsRouter } from './routes/settings.js'
 import { productImagesRouter } from './routes/product-images.js'
-import { printJobsRouter } from './routes/print-jobs.js'
 
 export const app = new Hono()
 
@@ -89,7 +88,6 @@ app.route('/api/customers', customersRouter)
 app.route('/api/users', usersRouter)
 app.route('/api/analytics', analyticsRouter)
 app.route('/api/settings', settingsRouter)
-app.route('/api', printJobsRouter)
 
 // 404 catch-all
 app.notFound((c) => c.json({ error: `Route ${c.req.url} not found` }, 404))

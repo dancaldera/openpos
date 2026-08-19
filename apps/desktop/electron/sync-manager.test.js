@@ -5,16 +5,18 @@ const { createSyncManager } = await import('@openpos/sync')
 function createRemoteClient(database) {
   return {
     async execute(sql, params = []) {
-      const statement = database.prepare(sql)
+      const statementSql = typeof sql === 'string' ? sql : sql.sql
+      const statementParams = typeof sql === 'string' ? params : sql.args ?? []
+      const statement = database.prepare(statementSql)
 
-      if (/^\s*(select|pragma)\b/i.test(sql)) {
+      if (/^\s*(select|pragma)\b/i.test(statementSql)) {
         return {
           columns: [],
-          rows: statement.all(...params),
+          rows: statement.all(...statementParams),
         }
       }
 
-      const result = statement.run(...params)
+      const result = statement.run(...statementParams)
       return {
         columns: [],
         rows: [],

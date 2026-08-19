@@ -1,4 +1,6 @@
-# Migration System Test Report
+# Historical Migration System Test Report
+
+> This report describes the retired Tauri migration system. The current source of truth is the Drizzle schema in `packages/data/src/schema/` and migrations in `packages/data/drizzle/`.
 
 **Date:** 2026-03-13
 **Test Plan:** Migration System Testing Plan for OpenPOS

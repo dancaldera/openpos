@@ -8,6 +8,10 @@ describe('@openpos/data Drizzle schema exports', () => {
     expect(schema.passwordRecoveryCodes).toBeDefined()
     expect(schema.passwordResetTokens).toBeDefined()
     expect(schema.passwordResetSettings).toBeDefined()
+    expect(schema.syncMetadata).toBeDefined()
+    expect(schema.syncOutbox).toBeDefined()
+    expect(schema.syncState).toBeDefined()
+    expect(schema.orderSyncQueue).toBeDefined()
     expect(schema.products).toBeDefined()
     expect(replicatedTables.map((table) => table.tableName)).toEqual([
       'users',

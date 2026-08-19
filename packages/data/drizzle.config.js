@@ -1,12 +1,12 @@
 const { defineConfig } = require('drizzle-kit')
 const { defineDrizzleConfig } = require('./src/internal/project-paths')
 const { loadEnv } = require('./src/internal/env')
-const { migrationsDir, repoRoot, schemaPath } = require('./src/project')
+const { repoRoot, schemaPath } = require('./src/project')
 
 const env = loadEnv({ repoRoot })
 const config = defineDrizzleConfig({
   schema: schemaPath,
-  out: migrationsDir,
+  out: 'drizzle',
   dialect: 'turso',
 })
 
