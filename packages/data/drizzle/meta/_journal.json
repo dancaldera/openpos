@@ -8,6 +8,13 @@
       "when": 0,
       "tag": "0005_shared_infrastructure",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787150781189,
+      "tag": "0006_object_storage_settings",
+      "breakpoints": true
     }
   ]
 }

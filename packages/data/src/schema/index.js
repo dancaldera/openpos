@@ -86,6 +86,22 @@ const passwordResetSettings = sqliteTable(
   (table) => [check('password_reset_settings_singleton_check', sql`${table.id} = 1`)],
 )
 
+const objectStorageSettings = sqliteTable(
+  'object_storage_settings',
+  {
+    id: integer('id').primaryKey(),
+    endpoint: text('endpoint'),
+    region: text('region'),
+    bucket: text('bucket'),
+    accessKeyIdEncrypted: text('access_key_id_encrypted'),
+    secretAccessKeyEncrypted: text('secret_access_key_encrypted'),
+    urlTtlSeconds: integer('url_ttl_seconds').notNull().default(900),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [check('object_storage_settings_singleton_check', sql`${table.id} = 1`)],
+)
+
 const productAttributes = sqliteTable(
   'product_attributes',
   {
@@ -361,6 +377,7 @@ const schema = {
   passwordRecoveryCodes,
   passwordResetTokens,
   passwordResetSettings,
+  objectStorageSettings,
   products,
   customers,
   companySettings,

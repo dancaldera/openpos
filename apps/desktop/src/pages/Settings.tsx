@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import { ChangePasswordCard } from '../components/ChangePasswordCard'
+import { ObjectStorageSettingsCard } from '../components/ObjectStorageSettingsCard'
 import { PasswordResetEmailCard } from '../components/PasswordResetEmailCard'
 import { RecoveryCodesCard } from '../components/RecoveryCodesCard'
 import { Button, Dialog, Input, LanguageSelector, PageLoader, Select } from '../components/ui'
@@ -319,6 +320,7 @@ export default function Settings() {
                 <ChangePasswordCard />
                 <RecoveryCodesCard />
                 <PasswordResetEmailCard />
+                <ObjectStorageSettingsCard />
               </div>
             </div>
 

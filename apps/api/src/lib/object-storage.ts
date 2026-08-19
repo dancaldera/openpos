@@ -1,8 +1,10 @@
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { decryptSecret } from './password-reset-email.js'
+import { query } from './turso.js'
 
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
-const DEFAULT_SIGNED_URL_TTL_SECONDS = 900
+export const DEFAULT_SIGNED_URL_TTL_SECONDS = 900
 
 let cachedClient: S3Client | null = null
 let cachedConfigKey: string | null = null
@@ -17,6 +19,15 @@ export interface ObjectStorageConfig {
   configured: boolean
 }
 
+interface DatabaseObjectStorageSettings {
+  endpoint: string | null
+  region: string | null
+  bucket: string | null
+  access_key_id_encrypted: string | null
+  secret_access_key_encrypted: string | null
+  url_ttl_seconds: number | null
+}
+
 export class ObjectStorageConfigError extends Error {
   constructor(message: string) {
     super(message)
@@ -24,27 +35,52 @@ export class ObjectStorageConfigError extends Error {
   }
 }
 
-function normalizePositiveInt(value: string | undefined, fallback: number): number {
+function normalizePositiveInt(value: number | null | undefined, fallback: number): number {
   const parsed = Number(value)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
 }
 
-export function getObjectStorageConfig(): ObjectStorageConfig {
-  const endpoint = process.env.S3_ENDPOINT
-  const region = process.env.S3_REGION || 'auto'
-  const bucket = process.env.S3_BUCKET
-  const accessKeyId = process.env.S3_ACCESS_KEY_ID
-  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY
-  const urlTtlSeconds = normalizePositiveInt(process.env.PRODUCT_IMAGE_URL_TTL_SECONDS, DEFAULT_SIGNED_URL_TTL_SECONDS)
+export async function getObjectStorageConfig(): Promise<ObjectStorageConfig> {
+  let stored: DatabaseObjectStorageSettings | undefined
 
-  return {
-    endpoint: endpoint || undefined,
-    region,
-    bucket: bucket || undefined,
-    accessKeyId: accessKeyId || undefined,
-    secretAccessKey: secretAccessKey || undefined,
-    urlTtlSeconds,
-    configured: Boolean(endpoint && bucket && accessKeyId && secretAccessKey),
+  try {
+    stored = (
+      await query<DatabaseObjectStorageSettings>(
+        `SELECT endpoint, region, bucket, access_key_id_encrypted, secret_access_key_encrypted, url_ttl_seconds
+         FROM object_storage_settings WHERE id = 1 LIMIT 1`,
+      )
+    )[0]
+  } catch {
+    throw new ObjectStorageConfigError('Unable to load S3 object storage configuration.')
+  }
+
+  if (!stored) {
+    return {
+      region: 'auto',
+      urlTtlSeconds: DEFAULT_SIGNED_URL_TTL_SECONDS,
+      configured: false,
+    }
+  }
+
+  try {
+    const accessKeyId = stored.access_key_id_encrypted ? decryptSecret(stored.access_key_id_encrypted) : undefined
+    const secretAccessKey = stored.secret_access_key_encrypted
+      ? decryptSecret(stored.secret_access_key_encrypted)
+      : undefined
+    const endpoint = stored.endpoint || undefined
+    const bucket = stored.bucket || undefined
+
+    return {
+      endpoint,
+      region: stored.region || 'auto',
+      bucket,
+      accessKeyId,
+      secretAccessKey,
+      urlTtlSeconds: normalizePositiveInt(stored.url_ttl_seconds, DEFAULT_SIGNED_URL_TTL_SECONDS),
+      configured: Boolean(endpoint && bucket && accessKeyId && secretAccessKey),
+    }
+  } catch {
+    throw new ObjectStorageConfigError('Unable to decrypt S3 object storage configuration.')
   }
 }
 
@@ -55,16 +91,16 @@ function assertConfigured(config: ObjectStorageConfig): asserts config is Object
   secretAccessKey: string
 } {
   if (!config.configured || !config.endpoint || !config.bucket || !config.accessKeyId || !config.secretAccessKey) {
-    throw new ObjectStorageConfigError(
-      'Missing S3 object storage configuration. Set S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY.',
-    )
+    throw new ObjectStorageConfigError('Missing S3 object storage configuration. Configure it in Settings.')
   }
 }
 
 function getClient(config: ObjectStorageConfig): S3Client {
   assertConfigured(config)
 
-  const configKey = [config.endpoint, config.region, config.bucket, config.accessKeyId].join('|')
+  const configKey = [config.endpoint, config.region, config.bucket, config.accessKeyId, config.secretAccessKey].join(
+    '|',
+  )
   if (cachedClient && cachedConfigKey === configKey) {
     return cachedClient
   }
@@ -105,7 +141,7 @@ export function isAllowedImageType(contentType: string): boolean {
 }
 
 export async function uploadProductImageObject(file: File): Promise<{ key: string }> {
-  const config = getObjectStorageConfig()
+  const config = await getObjectStorageConfig()
   const client = getClient(config)
   const key = buildObjectKey(file.type, file.name)
 
@@ -123,7 +159,7 @@ export async function uploadProductImageObject(file: File): Promise<{ key: strin
 }
 
 export async function deleteProductImageObject(key: string): Promise<void> {
-  const config = getObjectStorageConfig()
+  const config = await getObjectStorageConfig()
   const client = getClient(config)
 
   await client.send(
@@ -135,7 +171,7 @@ export async function deleteProductImageObject(key: string): Promise<void> {
 }
 
 export async function getSignedProductImageUrl(key: string): Promise<{ url: string; expiresAt: string }> {
-  const config = getObjectStorageConfig()
+  const config = await getObjectStorageConfig()
   const client = getClient(config)
   const url = await getSignedUrl(
     client,

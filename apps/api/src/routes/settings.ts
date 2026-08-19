@@ -6,9 +6,13 @@
  * GET /api/settings/password-reset          — get safe reset email configuration status
  * PUT /api/settings/password-reset          — save reset email configuration (admin)
  * DELETE /api/settings/password-reset       — clear reset email configuration (admin)
+ * GET /api/settings/object-storage          — get safe object storage configuration status
+ * PUT /api/settings/object-storage          — save object storage configuration (admin)
+ * DELETE /api/settings/object-storage       — clear object storage configuration (admin)
  */
 
 import { Hono } from 'hono'
+import { DEFAULT_SIGNED_URL_TTL_SECONDS } from '../lib/object-storage.js'
 import { encryptSecret, isValidEmail, normalizeWebAppUrl } from '../lib/password-reset-email.js'
 import { execute, query } from '../lib/turso.js'
 import { authMiddleware, type JwtPayload } from '../middleware/auth.js'
@@ -41,6 +45,20 @@ interface DatabasePasswordResetSettings {
   updated_at: string
 }
 
+interface DatabaseObjectStorageSettings {
+  id: number
+  endpoint: string | null
+  region: string | null
+  bucket: string | null
+  access_key_id_encrypted: string | null
+  secret_access_key_encrypted: string | null
+  url_ttl_seconds: number | null
+  created_at: string
+  updated_at: string
+}
+
+const MAX_SIGNED_URL_TTL_SECONDS = 7 * 24 * 60 * 60
+
 export const settingsRouter = new Hono()
 
 // ---------------------------------------------------------------------------
@@ -49,7 +67,9 @@ export const settingsRouter = new Hono()
 settingsRouter.get('/public', async (c) => {
   // Public endpoint - no auth required
   // Returns only display-safe fields: name, app_name, language, currency_symbol, logo_url
-  const rows = await query<DatabaseCompanySettings>('SELECT name, app_name, language, currency_symbol, logo_url FROM company_settings LIMIT 1')
+  const rows = await query<DatabaseCompanySettings>(
+    'SELECT name, app_name, language, currency_symbol, logo_url FROM company_settings LIMIT 1',
+  )
   if (rows.length === 0) return c.json({ error: 'Settings not found' }, 404)
 
   const s = rows[0]
@@ -147,9 +167,7 @@ settingsRouter.put('/password-reset', async (c) => {
     )
   }
 
-  const rows = await query<DatabasePasswordResetSettings>(
-    'SELECT * FROM password_reset_settings WHERE id = 1 LIMIT 1',
-  )
+  const rows = await query<DatabasePasswordResetSettings>('SELECT * FROM password_reset_settings WHERE id = 1 LIMIT 1')
   return c.json({ settings: toPasswordResetSettings(rows[0]) })
 })
 
@@ -162,6 +180,138 @@ settingsRouter.delete('/password-reset', async (c) => {
   }
 
   await execute('DELETE FROM password_reset_settings WHERE id = 1')
+  return c.json({ success: true })
+})
+
+// GET /api/settings/object-storage (admin only — never returns credentials)
+settingsRouter.get('/object-storage', async (c) => {
+  // biome-ignore lint/suspicious/noExplicitAny: jwtPayload set by authMiddleware
+  const caller = (c as any).get('jwtPayload') as JwtPayload
+  if (caller.role !== 'admin' && !caller.permissions.includes('*')) {
+    return c.json({ error: 'Insufficient permissions' }, 403)
+  }
+
+  const rows = await query<DatabaseObjectStorageSettings>(
+    'SELECT id, endpoint, region, bucket, access_key_id_encrypted, secret_access_key_encrypted, url_ttl_seconds, created_at, updated_at FROM object_storage_settings WHERE id = 1 LIMIT 1',
+  )
+  return c.json({ settings: toObjectStorageSettings(rows[0]) })
+})
+
+// PUT /api/settings/object-storage (admin only)
+settingsRouter.put('/object-storage', async (c) => {
+  // biome-ignore lint/suspicious/noExplicitAny: jwtPayload set by authMiddleware
+  const caller = (c as any).get('jwtPayload') as JwtPayload
+  if (caller.role !== 'admin' && !caller.permissions.includes('*')) {
+    return c.json({ error: 'Insufficient permissions' }, 403)
+  }
+
+  let body: {
+    endpoint?: unknown
+    region?: unknown
+    bucket?: unknown
+    accessKeyId?: unknown
+    secretAccessKey?: unknown
+    urlTtlSeconds?: unknown
+  }
+  try {
+    const parsedBody: unknown = await c.req.json()
+    if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+      return c.json({ error: 'Invalid JSON body' }, 400)
+    }
+    body = parsedBody as typeof body
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400)
+  }
+
+  for (const [field, value] of Object.entries(body)) {
+    if (value !== undefined && typeof value !== 'string' && field !== 'urlTtlSeconds') {
+      return c.json({ error: `${field} must be a string` }, 400)
+    }
+  }
+  if (
+    body.urlTtlSeconds !== undefined &&
+    (typeof body.urlTtlSeconds !== 'number' || !Number.isInteger(body.urlTtlSeconds))
+  ) {
+    return c.json({ error: 'urlTtlSeconds must be an integer' }, 400)
+  }
+
+  const existingRows = await query<DatabaseObjectStorageSettings>(
+    'SELECT * FROM object_storage_settings WHERE id = 1 LIMIT 1',
+  )
+  const existing = existingRows[0]
+  const endpointInput = trimSetting(body.endpoint)
+  const endpointValue = body.endpoint === undefined ? existing?.endpoint?.trim() || '' : endpointInput
+  const region = body.region === undefined ? existing?.region?.trim() || 'auto' : trimSetting(body.region) || 'auto'
+  const bucket = body.bucket === undefined ? existing?.bucket?.trim() || '' : trimSetting(body.bucket)
+  const accessKeyId = trimSetting(body.accessKeyId)
+  const secretAccessKey = trimSetting(body.secretAccessKey)
+  const encryptedAccessKeyId = accessKeyId ? encryptSecret(accessKeyId) : existing?.access_key_id_encrypted || null
+  const encryptedSecretAccessKey = secretAccessKey
+    ? encryptSecret(secretAccessKey)
+    : existing?.secret_access_key_encrypted || null
+  const urlTtlSeconds =
+    body.urlTtlSeconds === undefined
+      ? (existing?.url_ttl_seconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS)
+      : body.urlTtlSeconds
+
+  let endpoint: string
+  try {
+    endpoint = normalizeObjectStorageEndpoint(endpointValue)
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : 'Invalid S3 endpoint' }, 400)
+  }
+
+  if (!bucket) {
+    return c.json({ error: 'S3 bucket is required' }, 400)
+  }
+  if (bucket.length > 255 || /\s/.test(bucket)) {
+    return c.json({ error: 'S3 bucket is invalid' }, 400)
+  }
+  if (!region || region.length > 100 || /\s/.test(region)) {
+    return c.json({ error: 'S3 region is invalid' }, 400)
+  }
+  if (
+    typeof urlTtlSeconds !== 'number' ||
+    !Number.isInteger(urlTtlSeconds) ||
+    urlTtlSeconds < 1 ||
+    urlTtlSeconds > MAX_SIGNED_URL_TTL_SECONDS
+  ) {
+    return c.json({ error: 'Signed URL TTL must be between 1 and 604800 seconds' }, 400)
+  }
+  if (!encryptedAccessKeyId || !encryptedSecretAccessKey) {
+    return c.json({ error: 'S3 access key ID and secret access key are required' }, 400)
+  }
+
+  const now = new Date().toISOString()
+  if (existing) {
+    await execute(
+      `UPDATE object_storage_settings
+       SET endpoint = ?, region = ?, bucket = ?, access_key_id_encrypted = ?, secret_access_key_encrypted = ?, url_ttl_seconds = ?, updated_at = ?
+       WHERE id = 1`,
+      [endpoint, region, bucket, encryptedAccessKeyId, encryptedSecretAccessKey, urlTtlSeconds, now],
+    )
+  } else {
+    await execute(
+      `INSERT INTO object_storage_settings
+       (id, endpoint, region, bucket, access_key_id_encrypted, secret_access_key_encrypted, url_ttl_seconds, created_at, updated_at)
+       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [endpoint, region, bucket, encryptedAccessKeyId, encryptedSecretAccessKey, urlTtlSeconds, now, now],
+    )
+  }
+
+  const rows = await query<DatabaseObjectStorageSettings>('SELECT * FROM object_storage_settings WHERE id = 1 LIMIT 1')
+  return c.json({ settings: toObjectStorageSettings(rows[0]) })
+})
+
+// DELETE /api/settings/object-storage (admin only)
+settingsRouter.delete('/object-storage', async (c) => {
+  // biome-ignore lint/suspicious/noExplicitAny: jwtPayload set by authMiddleware
+  const caller = (c as any).get('jwtPayload') as JwtPayload
+  if (caller.role !== 'admin' && !caller.permissions.includes('*')) {
+    return c.json({ error: 'Insufficient permissions' }, 403)
+  }
+
+  await execute('DELETE FROM object_storage_settings WHERE id = 1')
   return c.json({ success: true })
 })
 
@@ -185,7 +335,23 @@ settingsRouter.put('/', async (c) => {
       `INSERT INTO company_settings (name, app_name, description, tax_enabled, tax_percentage,
        currency_symbol, language, logo_url, address, phone, email, website, receipt_footer, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [body.name ?? 'My Store', body.app_name ?? null, body.description ?? null, body.tax_enabled ?? 0, body.tax_percentage ?? 0, body.currency_symbol ?? '$', body.language ?? 'en', body.logo_url ?? null, body.address ?? null, body.phone ?? null, body.email ?? null, body.website ?? null, body.receipt_footer ?? null, now, now],
+      [
+        body.name ?? 'My Store',
+        body.app_name ?? null,
+        body.description ?? null,
+        body.tax_enabled ?? 0,
+        body.tax_percentage ?? 0,
+        body.currency_symbol ?? '$',
+        body.language ?? 'en',
+        body.logo_url ?? null,
+        body.address ?? null,
+        body.phone ?? null,
+        body.email ?? null,
+        body.website ?? null,
+        body.receipt_footer ?? null,
+        now,
+        now,
+      ],
     )
   } else {
     await execute(
@@ -196,7 +362,23 @@ settingsRouter.put('/', async (c) => {
        phone = COALESCE(?, phone), email = COALESCE(?, email), website = COALESCE(?, website),
        receipt_footer = COALESCE(?, receipt_footer), updated_at = ?
        WHERE id = ?`,
-      [body.name ?? null, body.app_name ?? null, body.description ?? null, body.tax_enabled ?? null, body.tax_percentage ?? null, body.currency_symbol ?? null, body.language ?? null, body.logo_url ?? null, body.address ?? null, body.phone ?? null, body.email ?? null, body.website ?? null, body.receipt_footer ?? null, now, existing[0].id],
+      [
+        body.name ?? null,
+        body.app_name ?? null,
+        body.description ?? null,
+        body.tax_enabled ?? null,
+        body.tax_percentage ?? null,
+        body.currency_symbol ?? null,
+        body.language ?? null,
+        body.logo_url ?? null,
+        body.address ?? null,
+        body.phone ?? null,
+        body.email ?? null,
+        body.website ?? null,
+        body.receipt_footer ?? null,
+        now,
+        existing[0].id,
+      ],
     )
   }
 
@@ -214,6 +396,48 @@ function toPasswordResetSettings(s?: DatabasePasswordResetSettings) {
     webAppUrl: s?.web_app_url ?? null,
     updatedAt: s?.updated_at ?? null,
   }
+}
+
+function toObjectStorageSettings(s?: DatabaseObjectStorageSettings) {
+  return {
+    configured: Boolean(s?.endpoint && s?.bucket && s?.access_key_id_encrypted && s?.secret_access_key_encrypted),
+    endpoint: s?.endpoint ?? null,
+    region: s?.region ?? 'auto',
+    bucket: s?.bucket ?? null,
+    urlTtlSeconds: s?.url_ttl_seconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
+    updatedAt: s?.updated_at ?? null,
+  }
+}
+
+function trimSetting(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function normalizeObjectStorageEndpoint(value: string): string {
+  const normalized = value.trim().replace(/\/+$/, '')
+  if (!normalized) throw new Error('S3 endpoint is required')
+
+  let url: URL
+  try {
+    url = new URL(normalized)
+  } catch {
+    throw new Error('S3 endpoint must be a valid URL')
+  }
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('S3 endpoint must use http or https')
+  }
+  if (!url.hostname) {
+    throw new Error('S3 endpoint must include a hostname')
+  }
+  if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
+    throw new Error('S3 endpoint must use HTTPS in production')
+  }
+  if (url.username || url.password || url.search || url.hash) {
+    throw new Error('S3 endpoint must not include credentials, query parameters, or a hash')
+  }
+
+  return normalized
 }
 
 function toSettings(s: DatabaseCompanySettings) {

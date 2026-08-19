@@ -4,9 +4,9 @@ export const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000
 export const PASSWORD_RESET_REQUEST_COOLDOWN_MS = 60 * 1000
 
 function getEncryptionKey(): Buffer {
-  const masterSecret = process.env.PASSWORD_RESET_ENCRYPTION_KEY || process.env.JWT_SECRET
+  const masterSecret = process.env.JWT_SECRET
   if (!masterSecret) {
-    throw new Error('JWT_SECRET or PASSWORD_RESET_ENCRYPTION_KEY must be configured')
+    throw new Error('JWT_SECRET must be configured')
   }
 
   return createHash('sha256').update(masterSecret).digest()
