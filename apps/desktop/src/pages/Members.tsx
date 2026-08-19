@@ -340,19 +340,6 @@ export default function Members() {
     }
   }
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return '👑'
-      case 'manager':
-        return '👔'
-      case 'user':
-        return '👤'
-      default:
-        return '❓'
-    }
-  }
-
   if (!canManageUsers) {
     return (
       <div class="max-w-6xl mx-auto">
@@ -446,7 +433,6 @@ export default function Members() {
                       showDeletedUsers ? 'border border-fog-border bg-chalk text-graphite ' : getRoleColor(user.role)
                     }`}
                   >
-                    <span class="mr-1 text-sm">{getRoleIcon(user.role)}</span>
                     {user.role === 'admin'
                       ? t('members.admin')
                       : user.role === 'manager'
