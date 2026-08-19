@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 class MemoryStorage {
   private values = new Map<string, string>()
@@ -33,12 +33,12 @@ const { AuthExpiredError, setSessionExpiredHandler } = await import('./auth-sess
 
 describe('requestApiJson auth expiration handling', () => {
   let storage: MemoryStorage
-  const sessionExpiredHandler = mock(() => {})
+  const sessionExpiredHandler = vi.fn(() => {})
 
   beforeEach(() => {
     storage = new MemoryStorage()
     globalThis.localStorage = storage as unknown as Storage
-    globalThis.fetch = mock(
+    globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
     ) as unknown as typeof fetch
     sessionExpiredHandler.mockClear()
@@ -58,7 +58,7 @@ describe('requestApiJson auth expiration handling', () => {
   it('expires the session when the API returns 401 for a protected request', async () => {
     storage.setItem('auth_token', 'jwt-token')
     storage.setItem('pos_user', JSON.stringify({ id: '1' }))
-    globalThis.fetch = mock(
+    globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify({ error: 'Invalid or expired token' }), { status: 401 }),
     ) as unknown as typeof fetch
 
@@ -72,7 +72,7 @@ describe('requestApiJson auth expiration handling', () => {
   it('keeps auth state intact for non-authenticated request failures', async () => {
     storage.setItem('auth_token', 'jwt-token')
     storage.setItem('pos_user', JSON.stringify({ id: '1' }))
-    globalThis.fetch = mock(
+    globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify({ error: 'Server error' }), { status: 500 }),
     ) as unknown as typeof fetch
 
@@ -84,7 +84,7 @@ describe('requestApiJson auth expiration handling', () => {
   })
 
   it('surfaces plain-text API failures when the response is not JSON', async () => {
-    globalThis.fetch = mock(
+    globalThis.fetch = vi.fn(
       async () =>
         new Response('JWT_SECRET environment variable is not set', {
           status: 500,

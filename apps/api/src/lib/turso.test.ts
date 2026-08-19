@@ -1,15 +1,16 @@
-import { afterEach, describe, expect, it, mock } from 'bun:test'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const execute = mock(async () => ({
-  columns: ['safe_id', 'unsafe_id', 'name'],
-  rows: [[42n, 9007199254740993n, 'barcode product']],
-  rowsAffected: 0,
-  lastInsertRowid: undefined,
+const { execute, createClient } = vi.hoisted(() => ({
+  execute: vi.fn(async () => ({
+    columns: ['safe_id', 'unsafe_id', 'name'],
+    rows: [[42n, 9007199254740993n, 'barcode product']],
+    rowsAffected: 0,
+    lastInsertRowid: undefined,
+  })),
+  createClient: vi.fn(() => ({ execute })),
 }))
 
-const createClient = mock(() => ({ execute }))
-
-mock.module('@libsql/client', () => ({ createClient }))
+vi.mock('@libsql/client', () => ({ createClient }))
 
 const originalTursoDatabaseUrl = process.env.TURSO_DATABASE_URL
 const originalTursoAuthToken = process.env.TURSO_AUTH_TOKEN

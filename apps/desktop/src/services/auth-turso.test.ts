@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 class MemoryStorage {
   private values = new Map<string, string>()
@@ -28,33 +28,37 @@ class MemoryStorage {
   }
 }
 
-const requestApiJson = mock(async () => ({
-  user: {
-    id: '1',
-    email: 'ana@example.com',
-    name: 'Ana',
-    role: 'admin' as const,
-    permissions: ['*'],
-    createdAt: '2026-03-27T00:00:00.000Z',
-  },
+const { requestApiJson, execute, query } = vi.hoisted(() => ({
+  requestApiJson: vi.fn(async () => ({
+    user: {
+      id: '1',
+      email: 'ana@example.com',
+      name: 'Ana',
+      role: 'admin' as const,
+      permissions: ['*'],
+      createdAt: '2026-03-27T00:00:00.000Z',
+    },
+  })),
+  execute: vi.fn(async () => ({ lastInsertId: 0, rowsAffected: 0 })),
+  query: vi.fn(async () => []),
 }))
 
-mock.module('../lib/api-client', () => ({
+vi.mock('../lib/api-client', () => ({
   requestApiJson,
 }))
 
-mock.module('../lib/db-adapter', () => ({
-  execute: mock(async () => ({ lastInsertId: 0, rowsAffected: 0 })),
-  query: mock(async () => []),
+vi.mock('../lib/db-adapter', () => ({
+  execute,
+  query,
 }))
 
-mock.module('../lib/desktop', () => ({
-  requireDesktopApi: mock(() => {
+vi.mock('../lib/desktop', () => ({
+  requireDesktopApi: vi.fn(() => {
     throw new Error('Desktop API should not be used in web mode tests')
   }),
 }))
 
-mock.module('../lib/platform', () => ({
+vi.mock('../lib/platform', () => ({
   isDesktop: false,
 }))
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DASHBOARD_STATS_TTL_MS,
   fetchDashboardStats,
@@ -11,7 +11,7 @@ function createQueryRunner(responses: {
   lowStockProducts: { low_stock_products: number }
   pendingOrders: { pending_orders: number }
 }) {
-  const queryMock = mock(async (sql: string, params?: unknown[]) => {
+  const queryMock = vi.fn(async (sql: string, params?: unknown[]) => {
     if (sql.includes('orders_today')) {
       return [responses.todayMetrics]
     }
@@ -90,7 +90,7 @@ describe('dashboard stats helpers', () => {
   })
 
   it('keeps cached stats scoped to each calendar day', async () => {
-    const queryMock = mock(async (sql: string, params?: unknown[]) => {
+    const queryMock = vi.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes('orders_today')) {
         return [
           {
@@ -129,7 +129,7 @@ describe('dashboard stats helpers', () => {
 
   it('refreshes cached stats once the TTL expires', async () => {
     let totalSales = 80
-    const queryMock = mock(async (sql: string, _params?: unknown[]) => {
+    const queryMock = vi.fn(async (sql: string, _params?: unknown[]) => {
       if (sql.includes('orders_today')) {
         return [
           {
@@ -171,7 +171,7 @@ describe('dashboard stats helpers', () => {
 
   it('forces a refresh after explicit invalidation', async () => {
     let lowStockProducts = 4
-    const queryMock = mock(async (sql: string, _params?: unknown[]) => {
+    const queryMock = vi.fn(async (sql: string, _params?: unknown[]) => {
       if (sql.includes('orders_today')) {
         return [{ total_sales: 200, orders_today: 6, average_order_value: 50 }]
       }

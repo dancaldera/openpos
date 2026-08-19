@@ -1,16 +1,18 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Hono } from 'hono'
 import jwt from 'jsonwebtoken'
 
-const execute = mock(
-  async (_sql: string, _params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }> => ({
-    lastInsertId: 0,
-    rowsAffected: 1,
-  }),
-)
-const query = mock(async (_sql: string, _params?: unknown[]): Promise<Array<Record<string, unknown>>> => [])
+const { execute, query } = vi.hoisted(() => ({
+  execute: vi.fn(
+    async (_sql: string, _params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }> => ({
+      lastInsertId: 0,
+      rowsAffected: 1,
+    }),
+  ),
+  query: vi.fn(async (_sql: string, _params?: unknown[]): Promise<Array<Record<string, unknown>>> => []),
+}))
 
-mock.module('../lib/turso.js', () => ({
+vi.mock('../lib/turso.js', () => ({
   execute,
   query,
 }))

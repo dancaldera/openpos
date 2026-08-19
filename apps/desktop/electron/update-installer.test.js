@@ -1,5 +1,5 @@
-const { describe, expect, it } = require('bun:test')
-const path = require('node:path')
+import { describe, expect, it } from 'vitest'
+import path from 'node:path'
 const {
   assertUpdateFilePath,
   buildDebInstallCommand,
@@ -8,7 +8,7 @@ const {
   resolveMacAppBundlePath,
   resolveUpdateDownloadFileName,
   resolveUpdateFormat,
-} = require('./update-installer.cjs')
+} = await import('./update-installer.cjs')
 
 describe('update installer helpers', () => {
   it('detects Debian from ID=debian', () => {

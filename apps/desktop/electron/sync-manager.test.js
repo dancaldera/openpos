@@ -1,6 +1,6 @@
-const { beforeEach, describe, expect, it } = require('bun:test')
-const { Database } = require('bun:sqlite')
-const { createSyncManager } = require('@openpos/sync')
+import { beforeEach, describe, expect, it } from 'vitest'
+import { DatabaseSync as Database } from 'node:sqlite'
+const { createSyncManager } = await import('@openpos/sync')
 
 function createRemoteClient(database) {
   return {

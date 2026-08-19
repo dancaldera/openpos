@@ -1,5 +1,5 @@
-const { describe, expect, it } = require('bun:test')
-const { replicatedTables, replicatedTablesByName, schema } = require('./src')
+import { describe, expect, it } from 'vitest'
+const { replicatedTables, replicatedTablesByName, schema } = await import('./src/index.js')
 
 describe('@openpos/data Drizzle schema exports', () => {
   it('exposes the OpenPOS schema and derived replicated table metadata', () => {

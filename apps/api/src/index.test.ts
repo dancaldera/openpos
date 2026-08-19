@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'bun:test'
+import { afterEach, describe, expect, it } from 'vitest'
 import app from './index'
 
 const originalTursoDatabaseUrl = process.env.TURSO_DATABASE_URL

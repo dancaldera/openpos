@@ -1,9 +1,9 @@
-import { describe, expect, it, mock } from 'bun:test'
+import { describe, expect, it, vi } from 'vitest'
 import { handleDialogEscape, handleDialogOutsideClick } from './Dialog'
 
 describe('Dialog handlers', () => {
   it('closes on escape while open', () => {
-    const onClose = mock(() => {})
+    const onClose = vi.fn(() => {})
 
     handleDialogEscape({ key: 'Escape' }, true, onClose)
 
@@ -11,7 +11,7 @@ describe('Dialog handlers', () => {
   })
 
   it('ignores non-escape keys and closed dialogs', () => {
-    const onClose = mock(() => {})
+    const onClose = vi.fn(() => {})
 
     handleDialogEscape({ key: 'Enter' }, true, onClose)
     handleDialogEscape({ key: 'Escape' }, false, onClose)
@@ -20,7 +20,7 @@ describe('Dialog handlers', () => {
   })
 
   it('closes on outside click when enabled', () => {
-    const onClose = mock(() => {})
+    const onClose = vi.fn(() => {})
 
     handleDialogOutsideClick(true, onClose)
 
@@ -28,7 +28,7 @@ describe('Dialog handlers', () => {
   })
 
   it('does not close on outside click when disabled', () => {
-    const onClose = mock(() => {})
+    const onClose = vi.fn(() => {})
 
     handleDialogOutsideClick(false, onClose)
 

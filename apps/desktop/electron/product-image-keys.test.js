@@ -1,5 +1,5 @@
-const { describe, expect, it } = require('bun:test')
-const { isLegacyLocalImageKey } = require('./product-image-keys.cjs')
+import { describe, expect, it } from 'vitest'
+const { isLegacyLocalImageKey } = await import('./product-image-keys.cjs')
 
 describe('isLegacyLocalImageKey', () => {
   it('accepts plain local filenames with supported extensions', () => {

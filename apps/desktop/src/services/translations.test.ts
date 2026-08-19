@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type TranslationKeys, type TranslationLoader, TranslationService } from './translations'
 
 class MemoryStorage {
@@ -14,7 +14,7 @@ class MemoryStorage {
 }
 
 function createLoader(translations: Record<string, TranslationKeys>): TranslationLoader {
-  return mock(async (locale: string) => {
+  return vi.fn(async (locale: string) => {
     const translation = translations[locale]
     if (!translation) {
       throw new Error(`Missing locale: ${locale}`)

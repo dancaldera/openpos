@@ -1,10 +1,10 @@
-const { describe, expect, it } = require('bun:test')
+import { describe, expect, it } from 'vitest'
 const {
   discoverSystemPrinterName,
   formatPrinterCommandError,
   resolvePrinterConfig,
   resolvePrinterName,
-} = require('./printer-config.cjs')
+} = await import('./printer-config.cjs')
 
 describe('resolvePrinterName', () => {
   it('prefers runtime thermal printer config', () => {

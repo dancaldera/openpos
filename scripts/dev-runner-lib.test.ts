@@ -1,12 +1,12 @@
 import type { ChildProcess } from 'node:child_process'
-import { describe, expect, it, mock } from 'bun:test'
+import { describe, expect, it, vi } from 'vitest'
 import {
   API_PORT,
+  buildDesktopDevEnvironment,
   DEFAULT_DESKTOP_DEV_API_URL,
+  runDesktopMode,
   VITE_PORT,
   VITE_URL,
-  buildDesktopDevEnvironment,
-  runDesktopMode,
 } from './dev-runner-lib'
 
 describe('buildDesktopDevEnvironment', () => {
@@ -26,13 +26,13 @@ describe('runDesktopMode', () => {
     const calls: string[] = []
     let spawnCount = 0
 
-    const runCommand = mock(async (_command: string, args: string[]) => {
+    const runCommand = vi.fn(async (_command: string, args: string[]) => {
       calls.push(`run:${args.join(' ')}`)
     })
-    const ensureElectronBinaryInstalled = mock(async () => {
+    const ensureElectronBinaryInstalled = vi.fn(async () => {
       calls.push('ensure:electron')
     })
-    const spawnLongRunning = mock((command: string, args: string[], _cwd: string, env?: NodeJS.ProcessEnv) => {
+    const spawnLongRunning = vi.fn((command: string, args: string[], _cwd: string, env?: NodeJS.ProcessEnv) => {
       spawnCount += 1
 
       if (spawnCount === 1) {
@@ -52,20 +52,20 @@ describe('runDesktopMode', () => {
       expect(env?.VITE_DEV_SERVER_URL).toBe(VITE_URL)
       return { __name: 'electron' } as never
     })
-    const waitForChildExit = mock((child: ChildProcess & { __name?: string }) => {
+    const waitForChildExit = vi.fn((child: ChildProcess & { __name?: string }) => {
       if (child.__name === 'electron') {
         return Promise.resolve(0)
       }
 
       return new Promise<number>(() => {})
     })
-    const waitForPort = mock(async (port: number) => {
+    const waitForPort = vi.fn(async (port: number) => {
       calls.push(`wait:${port}`)
     })
-    const shutdown = mock(async (exitCode: number) => {
+    const shutdown = vi.fn(async (exitCode: number) => {
       calls.push(`shutdown:${exitCode}`)
     })
-    const resolveWorkspaceBinary = mock(() => '/tmp/electron')
+    const resolveWorkspaceBinary = vi.fn(() => '/tmp/electron')
 
     await runDesktopMode(
       {

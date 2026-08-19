@@ -1,8 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["bun-types"]
-  },
-  "include": ["src/**/*.test.ts", "src/**/*.test.tsx"],
+  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/vite-env.d.ts"],
   "exclude": []
 }

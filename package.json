@@ -31,15 +31,16 @@
     "version:bump": "bun scripts/bump-version.ts",
     "check": "tsc -p scripts/tsconfig.json && pnpm -C apps/desktop run check && pnpm -C apps/api run check",
     "test": "pnpm run test:scripts && pnpm run test:data && pnpm run test:sync && pnpm run test:desktop && pnpm run test:api",
-    "test:scripts": "bun test scripts",
-    "test:data": "bun test packages/data",
+    "test:scripts": "vitest run",
+    "test:data": "pnpm -C packages/data run test",
     "test:sync": "pnpm -C packages/sync run test",
     "test:desktop": "pnpm -C apps/desktop run test",
     "test:api": "pnpm -C apps/api run test"
   },
   "devDependencies": {
-    "@types/node": "^24.10.13",
-    "bun-types": "^1.3.11",
-    "typescript": "^5.9.3"
+    "@types/node": "^24.13.3",
+    "bun-types": "^1.3.14",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   }
 }

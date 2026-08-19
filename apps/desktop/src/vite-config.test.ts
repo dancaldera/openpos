@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'bun:test'
 import type { ConfigEnv, UserConfig, UserConfigFnObject } from 'vite'
+import { describe, expect, it } from 'vitest'
 import desktopViteConfig from '../vite.config'
 
 const buildEnv: ConfigEnv = {

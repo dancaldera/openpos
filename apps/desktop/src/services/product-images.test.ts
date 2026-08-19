@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 class MemoryStorage {
   private values = new Map<string, string>()
@@ -28,38 +28,46 @@ class MemoryStorage {
   }
 }
 
-const requestApiJson = mock(async () => ({}))
-const resolveImages = mock(async () => ({}))
-const deleteImage = mock(async () => {})
-const getApiBaseUrl = mock(async () => 'https://api.example.com')
-const getDesktopApiConfig = mock(async () => ({
-  apiUrl: 'https://api.example.com',
-  configPath: '/home/ana/.config/OpenPOS/config.json',
-  configSource: 'userData' as const,
-  userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
-}))
-const logError = mock(() => {})
-const requireDesktopApi = mock(() => ({
-  images: {
-    resolve: resolveImages,
-    delete: deleteImage,
-  },
-}))
+const { requestApiJson, resolveImages, deleteImage, getApiBaseUrl, getDesktopApiConfig, logError, requireDesktopApi } =
+  vi.hoisted(() => {
+    const resolveImages = vi.fn(async () => ({}))
+    const deleteImage = vi.fn(async () => {})
 
-mock.module('../lib/api-client', () => ({
+    return {
+      requestApiJson: vi.fn(async () => ({})),
+      resolveImages,
+      deleteImage,
+      getApiBaseUrl: vi.fn(async () => 'https://api.example.com'),
+      getDesktopApiConfig: vi.fn(async () => ({
+        apiUrl: 'https://api.example.com',
+        configPath: '/home/ana/.config/OpenPOS/config.json',
+        configSource: 'userData' as const,
+        userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
+      })),
+      logError: vi.fn(() => {}),
+      requireDesktopApi: vi.fn(() => ({
+        images: {
+          resolve: resolveImages,
+          delete: deleteImage,
+        },
+      })),
+    }
+  })
+
+vi.mock('../lib/api-client', () => ({
   requestApiJson,
 }))
 
-mock.module('../lib/api-config', () => ({
+vi.mock('../lib/api-config', () => ({
   getApiBaseUrl,
   getDesktopApiConfig,
 }))
 
-mock.module('../lib/desktop', () => ({
+vi.mock('../lib/desktop', () => ({
   requireDesktopApi,
 }))
 
-mock.module('../lib/platform', () => ({
+vi.mock('../lib/platform', () => ({
   isDesktop: true,
 }))
 

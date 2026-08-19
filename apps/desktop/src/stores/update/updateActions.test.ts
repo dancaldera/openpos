@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   downloadError,
   downloadedUpdateFormat,
@@ -30,20 +30,35 @@ let desktopInfo: {
   updateFormat: 'appimage',
 }
 
-const getInfo = mock(async () => desktopInfo)
-const openReleasePage = mock(async () => {})
-const downloadAppImageUpdate = mock(async () => ({ filePath: '/tmp/openpos-0.3.2.AppImage' }))
-const downloadDebUpdate = mock(async () => ({ filePath: '/tmp/openpos-0.3.2.deb' }))
-const downloadMacZipUpdate = mock(async () => ({ filePath: '/tmp/openpos-arm64.zip' }))
-const installDownloadedAppImage = mock(async () => {})
-const installDownloadedDeb = mock(async () => {})
-const installDownloadedMacZip = mock(async () => {})
-const restartFromInstalledAppImage = mock(async () => {})
-const restartFromUpdatedMacApp = mock(async () => {})
-const relaunch = mock(async () => {})
-const onStatusChange = mock(() => () => {})
+const {
+  getInfo,
+  openReleasePage,
+  downloadAppImageUpdate,
+  downloadDebUpdate,
+  downloadMacZipUpdate,
+  installDownloadedAppImage,
+  installDownloadedDeb,
+  installDownloadedMacZip,
+  restartFromInstalledAppImage,
+  restartFromUpdatedMacApp,
+  relaunch,
+  onStatusChange,
+} = vi.hoisted(() => ({
+  getInfo: vi.fn(async () => desktopInfo),
+  openReleasePage: vi.fn(async () => {}),
+  downloadAppImageUpdate: vi.fn(async () => ({ filePath: '/tmp/openpos-0.3.2.AppImage' })),
+  downloadDebUpdate: vi.fn(async () => ({ filePath: '/tmp/openpos-0.3.2.deb' })),
+  downloadMacZipUpdate: vi.fn(async () => ({ filePath: '/tmp/openpos-arm64.zip' })),
+  installDownloadedAppImage: vi.fn(async () => {}),
+  installDownloadedDeb: vi.fn(async () => {}),
+  installDownloadedMacZip: vi.fn(async () => {}),
+  restartFromInstalledAppImage: vi.fn(async () => {}),
+  restartFromUpdatedMacApp: vi.fn(async () => {}),
+  relaunch: vi.fn(async () => {}),
+  onStatusChange: vi.fn(() => () => {}),
+}))
 
-mock.module('../../lib/desktop', () => ({
+vi.mock('../../lib/desktop', () => ({
   getDesktopApi: () => ({
     getInfo,
     updates: {
@@ -173,7 +188,7 @@ describe('updateActions.checkForUpdate', () => {
   })
 
   it('stores release metadata and AppImage asset when a newer version exists', async () => {
-    globalThis.fetch = mock(
+    globalThis.fetch = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
@@ -208,7 +223,7 @@ describe('updateActions.checkForUpdate', () => {
   })
 
   it('keeps the release visible but disables auto-install when no AppImage asset exists', async () => {
-    globalThis.fetch = mock(
+    globalThis.fetch = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
@@ -236,7 +251,7 @@ describe('updateActions.checkForUpdate', () => {
       arch: 'x64',
       updateFormat: 'deb',
     }
-    globalThis.fetch = mock(
+    globalThis.fetch = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
@@ -273,7 +288,7 @@ describe('updateActions.checkForUpdate', () => {
       arch: 'arm64',
       updateFormat: 'mac-zip',
     }
-    globalThis.fetch = mock(
+    globalThis.fetch = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
@@ -314,7 +329,7 @@ describe('updateActions.checkForUpdate', () => {
       arch: 'arm64',
       updateFormat: null,
     }
-    globalThis.fetch = mock(
+    globalThis.fetch = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
@@ -349,7 +364,7 @@ describe('updateActions.checkForUpdate', () => {
       arch: 'x64',
       updateFormat: 'deb',
     }
-    globalThis.fetch = mock(
+    globalThis.fetch = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
@@ -385,7 +400,7 @@ describe('updateActions.checkForUpdate', () => {
     updateAssetName.value = 'old.AppImage'
     updateAssetUrl.value = 'https://example.com/old.AppImage'
 
-    globalThis.fetch = mock(
+    globalThis.fetch = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
@@ -417,7 +432,7 @@ describe('updateActions.checkForUpdate', () => {
     updateReleaseNotes.value = 'Old notes'
     updateAssetFormat.value = 'appimage'
 
-    globalThis.fetch = mock(async () => new Response('rate limited', { status: 503 })) as unknown as typeof fetch
+    globalThis.fetch = vi.fn(async () => new Response('rate limited', { status: 503 })) as unknown as typeof fetch
 
     const result = await updateActions.checkForUpdate()
 

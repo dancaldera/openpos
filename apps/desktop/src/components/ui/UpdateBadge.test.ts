@@ -1,6 +1,6 @@
-import { describe, expect, it, mock } from 'bun:test'
+import { describe, expect, it, vi } from 'vitest'
 
-mock.module('./icons', () => ({
+vi.mock('./icons', () => ({
   SpinnerIcon: () => null,
 }))
 

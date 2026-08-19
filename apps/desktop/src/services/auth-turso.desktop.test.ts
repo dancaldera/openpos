@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 class MemoryStorage {
   private values = new Map<string, string>()
@@ -28,40 +28,42 @@ class MemoryStorage {
   }
 }
 
-const requestApiJson = mock(async () => ({ token: 'jwt-token' }))
-const execute = mock(async () => ({ lastInsertId: 0, rowsAffected: 1 }))
-const query = mock(async (): Promise<Array<Record<string, unknown>>> => [])
-const verifyPassword = mock(async () => true)
-const hashPassword = mock(async () => 'hashed-password')
-const getDesktopApiConfig = mock(async () => ({
-  apiUrl: 'https://api.example.com',
-  configPath: '/home/ana/.config/OpenPOS/config.json',
-  configSource: 'userData' as const,
-  userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
+const { requestApiJson, execute, query, verifyPassword, hashPassword, getDesktopApiConfig, warn } = vi.hoisted(() => ({
+  requestApiJson: vi.fn(async () => ({ token: 'jwt-token' })),
+  execute: vi.fn(async () => ({ lastInsertId: 0, rowsAffected: 1 })),
+  query: vi.fn(async (): Promise<Array<Record<string, unknown>>> => []),
+  verifyPassword: vi.fn(async () => true),
+  hashPassword: vi.fn(async () => 'hashed-password'),
+  getDesktopApiConfig: vi.fn(async () => ({
+    apiUrl: 'https://api.example.com',
+    configPath: '/home/ana/.config/OpenPOS/config.json',
+    configSource: 'userData' as const,
+    userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
+  })),
+  warn: vi.fn(() => {}),
 }))
-const warn = mock(() => {})
 
-mock.module('../lib/api-client', () => ({
+vi.mock('../lib/api-client', () => ({
   requestApiJson,
 }))
 
-mock.module('../lib/db-adapter', () => ({
+vi.mock('../lib/db-adapter', () => ({
   execute,
   query,
 }))
 
-mock.module('../lib/api-config', () => ({
+vi.mock('../lib/api-config', () => ({
   getDesktopApiConfig,
 }))
 
-mock.module('../lib/desktop', () => ({
-  requireDesktopApi: mock(() => ({
+vi.mock('../lib/desktop', () => ({
+  requireDesktopApi: vi.fn(() => ({
     verifyPassword,
     hashPassword,
   })),
 }))
 
-mock.module('../lib/platform', () => ({
+vi.mock('../lib/platform', () => ({
   isDesktop: true,
 }))
 

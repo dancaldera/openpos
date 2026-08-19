@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'vitest'
 import { APP_VERSION } from '../lib/app-version'
 import type { CompanySettings } from './company-settings-turso'
 import type { Order } from './orders-turso'

@@ -9,10 +9,13 @@
     "src"
   ],
   "scripts": {
-    "test": "bun test"
+    "test": "vitest run"
   },
   "dependencies": {
     "@openpos/data": "workspace:*",
     "@tursodatabase/serverless": "^0.2.4"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
   }
 }

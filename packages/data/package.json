@@ -17,7 +17,8 @@
     "drizzle:push": "drizzle-kit push --config drizzle.config.js",
     "drizzle:studio": "drizzle-kit studio --config drizzle.config.js",
     "migrate:remote": "bun scripts/migrate-remote.ts",
-    "build:bootstrap": "bun scripts/build-bootstrap.ts"
+    "build:bootstrap": "bun scripts/build-bootstrap.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@dancaldera/libsql-bridge": "npm:@jsr/dancaldera__libsql-bridge",
@@ -25,6 +26,7 @@
     "drizzle-orm": "^0.44.5"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.5"
+    "drizzle-kit": "^0.31.5",
+    "vitest": "^4.1.10"
   }
 }

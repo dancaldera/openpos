@@ -1,10 +1,10 @@
-const { describe, expect, it } = require('bun:test')
+import { describe, expect, it } from 'vitest'
 const {
   createPublicConnectionConfig,
   getDesktopRuntimeConfigCandidates,
   resolveDesktopConnectionConfig,
   resolveDesktopRuntimeConfigPath,
-} = require('./config-resolver.cjs')
+} = await import('./config-resolver.cjs')
 
 describe('getDesktopRuntimeConfigCandidates', () => {
   it('returns the userData config path', () => {

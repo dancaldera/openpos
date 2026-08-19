@@ -1,5 +1,5 @@
-const { describe, expect, it, mock } = require('bun:test')
-const { createRemotePrintQueue, ensureRemotePrintSchema } = require('./remote-print-queue.cjs')
+import { describe, expect, it, vi } from 'vitest'
+const { createRemotePrintQueue, ensureRemotePrintSchema } = await import('./remote-print-queue.cjs')
 
 function createFakeClient(initialJobs = []) {
   const calls = []
@@ -110,12 +110,12 @@ describe('ensureRemotePrintSchema', () => {
 
 describe('createRemotePrintQueue', () => {
   it('does not poll when printStationId is missing', () => {
-    const getClient = mock(async () => createFakeClient())
-    const logger = { warn: mock(() => {}), error: mock(() => {}) }
+    const getClient = vi.fn(async () => createFakeClient())
+    const logger = { warn: vi.fn(() => {}), error: vi.fn(() => {}) }
     const queue = createRemotePrintQueue({
       getClient,
       getRuntimeConfig: () => ({ config: {} }),
-      printReceipt: mock(async () => 'printed'),
+      printReceipt: vi.fn(async () => 'printed'),
       logger,
       heartbeatIntervalMs: 50,
       pollIntervalMs: 50,
@@ -142,7 +142,7 @@ describe('createRemotePrintQueue', () => {
         updated_at: '2026-05-10T10:00:00.000Z',
       },
     ])
-    const printReceipt = mock(async () => 'printed')
+    const printReceipt = vi.fn(async () => 'printed')
     const queue = createRemotePrintQueue({
       getClient: async () => client,
       getRuntimeConfig: () => ({ config: { printStationId: 'front-counter-1', printStationName: 'Front Counter' } }),
@@ -174,7 +174,7 @@ describe('createRemotePrintQueue', () => {
     const queue = createRemotePrintQueue({
       getClient: async () => client,
       getRuntimeConfig: () => ({ config: { printStationId: 'front-counter-1' } }),
-      printReceipt: mock(async () => {
+      printReceipt: vi.fn(async () => {
         throw new Error('Printer offline')
       }),
     })
