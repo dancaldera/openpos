@@ -19,7 +19,7 @@
       "bcryptjs": ["../apps/desktop/node_modules/bcryptjs"]
     },
     "lib": ["ES2023"],
-    "types": ["node", "bun-types"],
+    "types": ["node"],
     "noEmit": true
   },
   "include": ["**/*.ts"]
