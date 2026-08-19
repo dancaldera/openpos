@@ -116,6 +116,11 @@ if (import.meta.main && !process.env.VERCEL) {
     console.log('  POST /api/auth/hash')
     console.log('  POST /api/auth/verify')
     console.log('  GET  /api/auth/me')
+    console.log('  POST /api/auth/forgot-password')
+    console.log('  POST /api/auth/reset-password-token')
+    console.log('  GET  /api/auth/recovery-codes')
+    console.log('  POST /api/auth/recovery-codes')
+    console.log('  POST /api/auth/reset-password')
     console.log('  ...and more')
   })
 }

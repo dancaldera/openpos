@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { toast } from 'sonner'
+import { ForgotPasswordDialog } from '../components/ForgotPasswordDialog'
 import { Button } from '../components/ui/Button'
 import { DbStatusBadge } from '../components/ui/DbStatusBadge'
 import { Form } from '../components/ui/Form'
@@ -22,6 +23,7 @@ export default function SignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isDemoHost, setIsDemoHost] = useState(false)
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false)
 
   useEffect(() => {
     setIsDemoHost(window.location.hostname === 'demo.openpos.xyz')
@@ -160,6 +162,16 @@ export default function SignIn() {
               required
             />
 
+            <div class="flex justify-end -mt-1">
+              <button
+                type="button"
+                onClick={() => setIsForgotPasswordOpen(true)}
+                class="text-xs text-graphite hover:text-void underline underline-offset-4 transition-colors cursor-pointer"
+              >
+                {t('auth.forgotPassword')}
+              </button>
+            </div>
+
             <Button type="submit" variant="primary" size="lg" disabled={isLoading} class="w-full mt-1">
               {isLoading ? (
                 <>
@@ -204,6 +216,12 @@ export default function SignIn() {
 
       <UpdateBadge />
       <DbStatusBadge />
+
+      <ForgotPasswordDialog
+        isOpen={isForgotPasswordOpen}
+        onClose={() => setIsForgotPasswordOpen(false)}
+        initialEmail={email}
+      />
     </div>
   )
 }

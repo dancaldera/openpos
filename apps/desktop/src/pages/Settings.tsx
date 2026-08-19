@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
+import { ChangePasswordCard } from '../components/ChangePasswordCard'
+import { PasswordResetEmailCard } from '../components/PasswordResetEmailCard'
+import { RecoveryCodesCard } from '../components/RecoveryCodesCard'
 import { Button, Dialog, Input, LanguageSelector, PageLoader, Select } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
 import { requireDesktopApi } from '../lib/desktop'
@@ -304,6 +307,18 @@ export default function Settings() {
                 <div>
                   <LanguageSelector class="mb-2" />
                 </div>
+              </div>
+            </div>
+
+            {/* Security */}
+            <div class={`${panelClass} p-6`}>
+              <h2 class={sectionTitleClass}>{t('settings.securitySettings')}</h2>
+              <span class="mb-6 block text-graphite">{t('settings.securityDesc')}</span>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <ChangePasswordCard />
+                <RecoveryCodesCard />
+                <PasswordResetEmailCard />
               </div>
             </div>
 

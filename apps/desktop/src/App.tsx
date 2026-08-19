@@ -13,12 +13,16 @@ import FirstRunSync from './pages/FirstRunSync'
 import Members from './pages/Members'
 import Orders from './pages/Orders'
 import Products from './pages/Products'
+import ResetPassword from './pages/ResetPassword'
 import Settings from './pages/Settings'
 import SignIn from './pages/SignIn'
 import { appSettingsStore } from './stores/appSettings/appSettingsStore'
 import { authActions } from './stores/auth/authActions'
 import { languageActions } from './stores/language/languageActions'
 import './App.css'
+
+const isPasswordResetPage =
+  !isDesktop && typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/reset-password'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -34,6 +38,13 @@ function App() {
     const initializeApp = async () => {
       await languageActions.initializeLanguage()
       await appSettingsStore.initialize()
+
+      if (isPasswordResetPage) {
+        if (!isCancelled) {
+          setIsStartupLoading(false)
+        }
+        return
+      }
 
       if (!isDesktop) {
         await authActions.initializeAuth()
@@ -128,6 +139,15 @@ function App() {
     return (
       <>
         <FirstRunSync status={startupStatus} isRetrying={isRetryingStartup} onRetry={handleRetryStartup} />
+        <Toaster position="top-right" />
+      </>
+    )
+  }
+
+  if (isPasswordResetPage) {
+    return (
+      <>
+        <ResetPassword />
         <Toaster position="top-right" />
       </>
     )

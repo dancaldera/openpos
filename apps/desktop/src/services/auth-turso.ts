@@ -3,6 +3,12 @@ import { getDesktopApiConfig } from '../lib/api-config'
 import { clearPersistedAuth, isAuthExpiredError } from '../lib/auth-session'
 import { execute, query } from '../lib/db-adapter'
 import { requireDesktopApi } from '../lib/desktop'
+import {
+  generateRecoveryCodes,
+  hashRecoveryCode,
+  RECOVERY_CODE_COUNT,
+  validatePasswordStrength,
+} from '../lib/password-recovery'
 import { isDesktop } from '../lib/platform'
 
 // ---------------------------------------------------------------------------
@@ -31,6 +37,24 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
     body: { password, hash },
   })
   return data.valid
+}
+
+async function ensureLocalRecoveryCodesTable(): Promise<void> {
+  if (!isDesktop) return
+
+  await execute(`
+    CREATE TABLE IF NOT EXISTS password_recovery_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      code_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      used_at TEXT
+    )
+  `)
+  await execute(
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_password_recovery_codes_code_hash_unique ON password_recovery_codes(code_hash)',
+  )
+  await execute('CREATE INDEX IF NOT EXISTS idx_password_recovery_codes_user_id ON password_recovery_codes(user_id)')
 }
 
 export interface DesktopRemoteSessionState {
@@ -164,6 +188,12 @@ export interface User {
   createdAt: string
   lastLogin?: string
   deletedAt?: string
+}
+
+export interface RecoveryCodesStatus {
+  generated: boolean
+  unusedCount: number
+  lastGeneratedAt: string | null
 }
 
 export const DEFAULT_PERMISSIONS = {
@@ -507,36 +537,9 @@ export class AuthService {
       return { success: false, error: 'Not authenticated' }
     }
 
-    // Strong password validation
-    if (newPassword.length < 8) {
-      return {
-        success: false,
-        error: 'Password must be at least 8 characters',
-      }
-    }
-    if (!/[A-Z]/.test(newPassword)) {
-      return {
-        success: false,
-        error: 'Password must contain an uppercase letter',
-      }
-    }
-    if (!/[a-z]/.test(newPassword)) {
-      return {
-        success: false,
-        error: 'Password must contain a lowercase letter',
-      }
-    }
-    if (!/[0-9]/.test(newPassword)) {
-      return {
-        success: false,
-        error: 'Password must contain a number',
-      }
-    }
-    if (!/[^A-Za-z0-9]/.test(newPassword)) {
-      return {
-        success: false,
-        error: 'Password must contain a special character',
-      }
+    const strengthError = validatePasswordStrength(newPassword)
+    if (strengthError) {
+      return { success: false, error: strengthError }
     }
 
     try {
@@ -565,8 +568,9 @@ export class AuthService {
 
       // Hash new password and update
       const hashedPassword = await hashPassword(newPassword)
-      await execute('UPDATE users SET password = ?, password_hashed = 1 WHERE id = ?', [
+      await execute('UPDATE users SET password = ?, password_hashed = 1, updated_at = ? WHERE id = ?', [
         hashedPassword,
+        new Date().toISOString(),
         parseInt(user.id, 10),
       ])
 
@@ -574,6 +578,216 @@ export class AuthService {
     } catch (error) {
       console.error('Change password error:', error)
       return { success: false, error: 'Failed to change password' }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Password recovery (single-use recovery codes)
+  // -------------------------------------------------------------------------
+
+  async getRecoveryCodesStatus(): Promise<RecoveryCodesStatus> {
+    const user = this.getCurrentUser()
+    if (!user) {
+      return { generated: false, unusedCount: 0, lastGeneratedAt: null }
+    }
+
+    if (!isDesktop) {
+      return requestApiJson<RecoveryCodesStatus>('/api/auth/recovery-codes', {
+        requireAuth: true,
+      })
+    }
+
+    await ensureLocalRecoveryCodesTable()
+
+    const rows = await query<{ total_count: number; unused_count: number; last_generated_at: string | null }>(
+      `SELECT COUNT(*) AS total_count,
+              SUM(CASE WHEN used_at IS NULL THEN 1 ELSE 0 END) AS unused_count,
+              MAX(created_at) AS last_generated_at
+       FROM password_recovery_codes WHERE user_id = ?`,
+      [parseInt(user.id, 10)],
+    )
+
+    const row = rows[0]
+    return {
+      generated: Number(row?.total_count ?? 0) > 0,
+      unusedCount: Number(row?.unused_count ?? 0),
+      lastGeneratedAt: row?.last_generated_at ?? null,
+    }
+  }
+
+  async generateRecoveryCodes(
+    currentPassword: string,
+  ): Promise<{ success: boolean; codes?: string[]; error?: string }> {
+    const user = this.getCurrentUser()
+    if (!user) {
+      return { success: false, error: 'Not authenticated' }
+    }
+
+    if (!currentPassword) {
+      return { success: false, error: 'Current password is required' }
+    }
+
+    if (!isDesktop) {
+      try {
+        const data = await requestApiJson<{ codes: string[] }>('/api/auth/recovery-codes', {
+          method: 'POST',
+          requireAuth: true,
+          body: { currentPassword },
+        })
+        return { success: true, codes: data.codes }
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to generate recovery codes' }
+      }
+    }
+
+    // Desktop mode: operate on the local database directly.
+    try {
+      await ensureLocalRecoveryCodesTable()
+      const users = await query<DatabaseUser>('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1', [
+        parseInt(user.id, 10),
+      ])
+
+      if (users.length === 0) {
+        return { success: false, error: 'User not found' }
+      }
+
+      const dbUser = users[0]
+      const isHashed = dbUser.password_hashed === 1
+      const passwordValid = isHashed
+        ? await verifyPassword(currentPassword, dbUser.password)
+        : dbUser.password === currentPassword
+
+      if (!passwordValid) {
+        return { success: false, error: 'Current password is incorrect' }
+      }
+
+      const codes = generateRecoveryCodes(RECOVERY_CODE_COUNT)
+      const now = new Date().toISOString()
+
+      // Generating new codes invalidates every previous code.
+      await execute('DELETE FROM password_recovery_codes WHERE user_id = ?', [parseInt(user.id, 10)])
+      for (const code of codes) {
+        await execute('INSERT INTO password_recovery_codes (user_id, code_hash, created_at) VALUES (?, ?, ?)', [
+          parseInt(user.id, 10),
+          await hashRecoveryCode(code),
+          now,
+        ])
+      }
+
+      return { success: true, codes }
+    } catch (error) {
+      console.error('Generate recovery codes error:', error)
+      return { success: false, error: 'Failed to generate recovery codes' }
+    }
+  }
+
+  async requestPasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
+    if (isDesktop) {
+      return { success: false, error: 'Password reset links are available in the web version only' }
+    }
+
+    if (!email.trim()) {
+      return { success: false, error: 'A valid email is required' }
+    }
+
+    try {
+      await requestApiJson<{ success: boolean }>('/api/auth/forgot-password', {
+        method: 'POST',
+        body: { email: email.trim().toLowerCase() },
+      })
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to request password reset' }
+    }
+  }
+
+  async resetPasswordWithToken(token: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    const strengthError = validatePasswordStrength(newPassword)
+    if (strengthError) {
+      return { success: false, error: strengthError }
+    }
+
+    if (isDesktop) {
+      return { success: false, error: 'Password reset links are available in the web version only' }
+    }
+
+    try {
+      await requestApiJson<{ success: boolean }>('/api/auth/reset-password-token', {
+        method: 'POST',
+        body: { token, newPassword },
+      })
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to reset password' }
+    }
+  }
+
+  async resetPasswordWithRecoveryCode(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const strengthError = validatePasswordStrength(newPassword)
+    if (strengthError) {
+      return { success: false, error: strengthError }
+    }
+
+    if (!isDesktop) {
+      try {
+        await requestApiJson<{ success: boolean }>('/api/auth/reset-password', {
+          method: 'POST',
+          body: { email: email.toLowerCase(), code, newPassword },
+        })
+        return { success: true }
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to reset password' }
+      }
+    }
+
+    // Desktop mode: operate on the local database directly.
+    try {
+      await ensureLocalRecoveryCodesTable()
+      const users = await query<DatabaseUser>('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1', [
+        email.toLowerCase(),
+      ])
+
+      if (users.length === 0) {
+        return { success: false, error: 'Invalid email or recovery code' }
+      }
+
+      const userId = users[0].id
+      const codeHash = await hashRecoveryCode(code)
+
+      const codeRows = await query<{ id: number }>(
+        'SELECT id FROM password_recovery_codes WHERE user_id = ? AND code_hash = ? AND used_at IS NULL LIMIT 1',
+        [userId, codeHash],
+      )
+
+      if (codeRows.length === 0) {
+        return { success: false, error: 'Invalid email or recovery code' }
+      }
+
+      // Mark the code as used first (single-use guard, safe under concurrency).
+      const markUsed = await execute(
+        'UPDATE password_recovery_codes SET used_at = ? WHERE id = ? AND used_at IS NULL',
+        [new Date().toISOString(), codeRows[0].id],
+      )
+
+      if (markUsed.rowsAffected !== 1) {
+        return { success: false, error: 'Invalid email or recovery code' }
+      }
+
+      const hashedPassword = await hashPassword(newPassword)
+      await execute('UPDATE users SET password = ?, password_hashed = 1, updated_at = ? WHERE id = ?', [
+        hashedPassword,
+        new Date().toISOString(),
+        userId,
+      ])
+
+      return { success: true }
+    } catch (error) {
+      console.error('Reset password with recovery code error:', error)
+      return { success: false, error: 'Failed to reset password' }
     }
   }
 

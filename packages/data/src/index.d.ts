@@ -4,6 +4,9 @@ export type { ReplicatedDeleteStrategy, ReplicatedTableConfig } from './internal
 
 export const schema: Record<string, unknown>
 export const users: unknown
+export const passwordRecoveryCodes: unknown
+export const passwordResetTokens: unknown
+export const passwordResetSettings: unknown
 export const products: unknown
 export const customers: unknown
 export const companySettings: unknown

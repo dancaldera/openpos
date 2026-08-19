@@ -41,6 +41,51 @@ const users = sqliteTable(
   ],
 )
 
+const passwordRecoveryCodes = sqliteTable(
+  'password_recovery_codes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    codeHash: text('code_hash').notNull(),
+    createdAt: createdAt(),
+    usedAt: optionalTimestamp('used_at'),
+  },
+  (table) => [
+    uniqueIndex('idx_password_recovery_codes_code_hash_unique').on(table.codeHash),
+    index('idx_password_recovery_codes_user_id').on(table.userId),
+  ],
+)
+
+const passwordResetTokens = sqliteTable(
+  'password_reset_tokens',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: text('expires_at').notNull(),
+    usedAt: optionalTimestamp('used_at'),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    uniqueIndex('idx_password_reset_tokens_hash_unique').on(table.tokenHash),
+    index('idx_password_reset_tokens_user_id').on(table.userId),
+    index('idx_password_reset_tokens_expires_at').on(table.expiresAt),
+  ],
+)
+
+const passwordResetSettings = sqliteTable(
+  'password_reset_settings',
+  {
+    id: integer('id').primaryKey(),
+    resendApiKeyEncrypted: text('resend_api_key_encrypted'),
+    fromEmail: text('from_email'),
+    webAppUrl: text('web_app_url'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [check('password_reset_settings_singleton_check', sql`${table.id} = 1`)],
+)
+
 const productAttributes = sqliteTable(
   'product_attributes',
   {
@@ -262,6 +307,9 @@ const orderItems = sqliteTable(
 
 const schema = {
   users,
+  passwordRecoveryCodes,
+  passwordResetTokens,
+  passwordResetSettings,
   products,
   customers,
   companySettings,

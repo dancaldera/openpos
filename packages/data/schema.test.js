@@ -5,6 +5,9 @@ describe('@openpos/data Drizzle schema exports', () => {
   it('exposes the OpenPOS schema and derived replicated table metadata', () => {
     expect(typeof schema).toBe('object')
     expect(schema.users).toBeDefined()
+    expect(schema.passwordRecoveryCodes).toBeDefined()
+    expect(schema.passwordResetTokens).toBeDefined()
+    expect(schema.passwordResetSettings).toBeDefined()
     expect(schema.products).toBeDefined()
     expect(replicatedTables.map((table) => table.tableName)).toEqual([
       'users',
