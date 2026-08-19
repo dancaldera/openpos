@@ -57,14 +57,12 @@ Example:
 
 ```json
 {
-  "tursoDatabaseUrl": "libsql://your-db.turso.io",
-  "tursoAuthToken": "your-token-here",
   "apiUrl": "https://your-api.example.com",
   "thermalPrinterName": "Thermal_80mm"
 }
 ```
 
-Include only the fields needed for that install. Public GitHub releases must not embed `TURSO_AUTH_TOKEN`, `JWT_SECRET`, or other backend secrets.
+Stores are created or joined from the app with a connection key and seed. Database URL, auth token, and Turso platform credentials are configured in Settings and stored encrypted in the database. Do not put them in this file. Public GitHub releases must not embed `JWT_SECRET` or other backend secrets.
 
 On macOS and Linux, receipt printing uses the native `lp -o raw` command and sends formatted ESC/POS receipt bytes (including feed and paper-cut commands) to the printer queue. macOS includes `lp` by default. On Linux, install CUPS if `lp` is missing:
 
