@@ -5,6 +5,9 @@
   "license": "MIT",
   "repository": "github:dancaldera/openpos",
   "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "dev": "tsx scripts/dev-runner.ts dev",
     "dev:desktop": "tsx scripts/dev-runner.ts dev:desktop",

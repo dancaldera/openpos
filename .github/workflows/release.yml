@@ -73,6 +73,9 @@ jobs:
       - name: Check desktop app
         run: pnpm -C apps/desktop check
 
+      - name: Run test suite
+        run: pnpm run test
+
       - name: Build Linux artifacts
         run: pnpm -C apps/desktop build:desktop:linux
 
