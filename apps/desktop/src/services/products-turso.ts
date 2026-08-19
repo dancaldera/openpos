@@ -594,7 +594,7 @@ export class ProductService {
     const variant = await productVariantsService.getVariantByBarcode(normalizedBarcode)
     if (variant) {
       const product = await this.getProduct(variant.parentProductId)
-      if (!product || !product.isActive) {
+      if (!product?.isActive) {
         return null
       }
 

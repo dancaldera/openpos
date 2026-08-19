@@ -556,7 +556,7 @@ export default function Orders() {
 
       // Verify variant exists and is active
       const variant = productVariants?.variants?.find((v) => v.id === selectedVariantId)
-      if (!variant || !variant.isActive) {
+      if (!variant?.isActive) {
         toast.error(`Selected variant is not available for ${productName}`)
         return
       }
@@ -754,7 +754,7 @@ export default function Orders() {
 
     try {
       // Validate order data
-      if (!order || !order.id || !order.items || order.items.length === 0) {
+      if (!order?.id || !order.items || order.items.length === 0) {
         throw new Error('Invalid order data')
       }
 
