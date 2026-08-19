@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm run build",
+  "buildCommand": "npx --yes pnpm@11.18.0 run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install -g pnpm@11.18.0 && pnpm install --filter @openpos/landing...",
+  "installCommand": "which pnpm || true; npx --yes pnpm@11.18.0 install --filter @openpos/landing...",
   "framework": "astro"
 }
