@@ -259,6 +259,14 @@ export function UpdateBadge() {
     <div ref={wrapperRef} class="no-drag fixed bottom-4 left-4 z-50 flex flex-col items-start gap-2">
       {popoverOpen.value && (
         <div
+          class="fixed inset-0 -z-10"
+          onClick={() => {
+            popoverOpen.value = false
+          }}
+        />
+      )}
+      {popoverOpen.value && (
+        <div
           class={`mb-1 w-72 rounded-cards border ${viewModel.borderClass} bg-canvas shadow-sm text-xs text-graphite overflow-hidden`}
         >
           <div class="px-4 py-3 border-b border-fog-border">
