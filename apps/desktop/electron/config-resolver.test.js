@@ -110,32 +110,30 @@ describe('resolveDesktopRuntimeConfigPath', () => {
 })
 
 describe('resolveDesktopConnectionConfig', () => {
-  it('prefers runtime config over process env and dotenv values', () => {
+  it('uses the active connection envelope for remote database config', () => {
     const result = resolveDesktopConnectionConfig({
       runtimeConfig: {
-        tursoDatabaseUrl: 'libsql://runtime-db',
-        tursoAuthToken: 'runtime-token',
         apiUrl: 'https://runtime-api.example.com',
       },
       runtimeConfigSource: 'userData',
       configPath: '/home/ana/.config/OpenPOS/config.json',
       processEnv: {
-        TURSO_DATABASE_URL: 'libsql://process-db',
-        TURSO_AUTH_TOKEN: 'process-token',
         VITE_API_URL: 'https://process-api.example.com',
       },
       envConfig: {
-        TURSO_DATABASE_URL: 'libsql://dotenv-db',
-        TURSO_AUTH_TOKEN: 'dotenv-token',
         VITE_API_URL: 'https://dotenv-api.example.com',
       },
       defaultApiUrl: 'http://localhost:3001',
+      connectionRemote: {
+        url: 'libsql://store-db',
+        authToken: 'store-token',
+      },
     })
 
     expect(result).toEqual({
       remote: {
-        url: 'libsql://runtime-db',
-        authToken: 'runtime-token',
+        url: 'libsql://store-db',
+        authToken: 'store-token',
         configured: true,
       },
       api: {
@@ -144,6 +142,48 @@ describe('resolveDesktopConnectionConfig', () => {
         source: 'userData',
         configPath: '/home/ana/.config/OpenPOS/config.json',
       },
+    })
+  })
+
+  it('does not read Turso values from env or runtime config', () => {
+    const result = resolveDesktopConnectionConfig({
+      runtimeConfig: {
+        tursoDatabaseUrl: 'libsql://runtime-db',
+        tursoAuthToken: 'runtime-token',
+      },
+      processEnv: {
+        TURSO_DATABASE_URL: 'libsql://process-db',
+        TURSO_AUTH_TOKEN: 'process-token',
+      },
+      envConfig: {
+        TURSO_DATABASE_URL: 'libsql://dotenv-db',
+        TURSO_AUTH_TOKEN: 'dotenv-token',
+      },
+      connectionRemote: {},
+    })
+
+    expect(result.remote).toEqual({
+      url: undefined,
+      authToken: undefined,
+      configured: false,
+    })
+  })
+
+  it('treats a file envelope as configured without an auth token', () => {
+    const result = resolveDesktopConnectionConfig({
+      runtimeConfig: {},
+      processEnv: {},
+      envConfig: {},
+      connectionRemote: {
+        url: 'file:/tmp/store.sqlite',
+        authToken: undefined,
+      },
+    })
+
+    expect(result.remote).toEqual({
+      url: 'file:/tmp/store.sqlite',
+      authToken: undefined,
+      configured: true,
     })
   })
 

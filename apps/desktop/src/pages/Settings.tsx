@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import { ChangePasswordCard } from '../components/ChangePasswordCard'
+import { DatabaseSettingsCard } from '../components/DatabaseSettingsCard'
 import { ObjectStorageSettingsCard } from '../components/ObjectStorageSettingsCard'
 import { PasswordResetEmailCard } from '../components/PasswordResetEmailCard'
 import { RecoveryCodesCard } from '../components/RecoveryCodesCard'
 import { Button, Dialog, Input, LanguageSelector, PageLoader, Select } from '../components/ui'
 import { useTranslation } from '../hooks/useTranslation'
 import { requireDesktopApi } from '../lib/desktop'
+import { isDesktop } from '../lib/platform'
 import { type CompanySettings, companySettingsService, SUPPORTED_CURRENCIES } from '../services/company-settings-turso'
+import { clearStoredConnectionKey, getStoredConnectionKey } from '../services/connections'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 const FIXED_APP_NAME = 'OpenPOS'
@@ -28,6 +31,9 @@ export default function Settings() {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
   const [isResetLocalDbDialogOpen, setIsResetLocalDbDialogOpen] = useState(false)
   const [isResettingLocalDb, setIsResettingLocalDb] = useState(false)
+  const [connectionInfo, setConnectionInfo] = useState<{ key: string; storeName?: string; published?: boolean } | null>(
+    null,
+  )
 
   useEffect(() => {
     loadSettings()
@@ -41,6 +47,13 @@ export default function Settings() {
       setSettings(fixedSettings)
       setLocalSettings(fixedSettings)
       setHasChanges(false)
+      if (isDesktop) {
+        const active = await requireDesktopApi().connection.getActive()
+        setConnectionInfo(active)
+      } else {
+        const key = getStoredConnectionKey()
+        setConnectionInfo(key ? { key } : null)
+      }
     } catch (err: unknown) {
       toast.error((err as Error)?.message || t('errors.generic'))
     } finally {
@@ -321,8 +334,41 @@ export default function Settings() {
                 <RecoveryCodesCard />
                 <PasswordResetEmailCard />
                 <ObjectStorageSettingsCard />
+                <DatabaseSettingsCard />
               </div>
             </div>
+
+            {/* Store connection */}
+            {connectionInfo?.key ? (
+              <div class={`${panelClass} p-6`}>
+                <h2 class={sectionTitleClass}>{t('connection.connectionTitle')}</h2>
+                <p class={`${helperTextClass} mb-3 break-all`}>
+                  {t('connection.key')}: {connectionInfo.key}
+                </p>
+                <p class={`${helperTextClass} mb-4`}>
+                  {connectionInfo.published ? t('connection.published') : t('connection.notPublished')}
+                </p>
+                {isDesktop ? (
+                  <div>
+                    <p class={`${helperTextClass} mb-3`}>{t('connection.leaveStoreDesc')}</p>
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          await requireDesktopApi().connection.leave()
+                          clearStoredConnectionKey()
+                          window.location.reload()
+                        } catch (error) {
+                          toast.error(error instanceof Error ? error.message : t('connection.leaveFailed'))
+                        }
+                      }}
+                    >
+                      {t('connection.leaveStore')}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {/* Developer Tools */}
             <div class={`${panelClass} p-6`}>

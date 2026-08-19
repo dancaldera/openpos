@@ -102,6 +102,37 @@ const objectStorageSettings = sqliteTable(
   (table) => [check('object_storage_settings_singleton_check', sql`${table.id} = 1`)],
 )
 
+const connectionMeta = sqliteTable(
+  'connection_meta',
+  {
+    id: integer('id').primaryKey(),
+    connectionKey: text('connection_key').notNull(),
+    seedVerifier: text('seed_verifier').notNull(),
+    storeName: text('store_name').notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    uniqueIndex('idx_connection_meta_connection_key_unique').on(table.connectionKey),
+    check('connection_meta_singleton_check', sql`${table.id} = 1`),
+  ],
+)
+
+const databaseSettings = sqliteTable(
+  'database_settings',
+  {
+    id: integer('id').primaryKey(),
+    databaseUrl: text('database_url'),
+    authTokenEncrypted: text('auth_token_encrypted'),
+    apiTokenEncrypted: text('api_token_encrypted'),
+    org: text('org'),
+    groupName: text('group_name'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [check('database_settings_singleton_check', sql`${table.id} = 1`)],
+)
+
 const productAttributes = sqliteTable(
   'product_attributes',
   {
@@ -378,6 +409,8 @@ const schema = {
   passwordResetTokens,
   passwordResetSettings,
   objectStorageSettings,
+  connectionMeta,
+  databaseSettings,
   products,
   customers,
   companySettings,

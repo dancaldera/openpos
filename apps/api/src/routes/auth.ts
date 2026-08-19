@@ -27,6 +27,7 @@ import {
 } from '../lib/password-reset-email.js'
 import { execute, query } from '../lib/turso.js'
 import { generateRecoveryCodes, hashRecoveryCode, validatePasswordStrength } from '../lib/password-recovery.js'
+import { readCurrentConnectionMeta } from '../lib/connection.js'
 import { authMiddleware, signToken, type JwtPayload } from '../middleware/auth.js'
 
 const BCRYPT_ROUNDS = 12
@@ -125,6 +126,7 @@ authRouter.post('/login', async (c) => {
   await query('UPDATE users SET last_login = ? WHERE id = ?', [new Date().toISOString(), dbUser.id])
 
   const permissions: string[] = JSON.parse(dbUser.permissions)
+  const connection = await readCurrentConnectionMeta()
 
   const tokenPayload: Omit<JwtPayload, 'iat' | 'exp'> = {
     sub: dbUser.id.toString(),
@@ -132,6 +134,7 @@ authRouter.post('/login', async (c) => {
     name: dbUser.name,
     role: dbUser.role,
     permissions,
+    ...(connection ? { connectionKey: connection.key } : {}),
   }
 
   const token = signToken(tokenPayload)

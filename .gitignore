@@ -17,6 +17,9 @@ dist-web
 *.local
 *.env
 
+# Local file-backed store databases created by the API connection adapter
+apps/api/data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

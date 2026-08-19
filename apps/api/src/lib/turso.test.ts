@@ -12,31 +12,20 @@ const { execute, createClient } = vi.hoisted(() => ({
 
 vi.mock('@libsql/client', () => ({ createClient }))
 
-const originalTursoDatabaseUrl = process.env.TURSO_DATABASE_URL
-const originalTursoAuthToken = process.env.TURSO_AUTH_TOKEN
-
-process.env.TURSO_DATABASE_URL = 'libsql://example.turso.io'
-process.env.TURSO_AUTH_TOKEN = 'token'
-
-const { query } = await import('./turso')
+const { createDataPlaneClient, query, resetDataPlaneClientsForTests, runWithDataPlane } = await import('./turso')
 
 afterEach(() => {
-  if (originalTursoDatabaseUrl === undefined) {
-    delete process.env.TURSO_DATABASE_URL
-  } else {
-    process.env.TURSO_DATABASE_URL = originalTursoDatabaseUrl
-  }
-
-  if (originalTursoAuthToken === undefined) {
-    delete process.env.TURSO_AUTH_TOKEN
-  } else {
-    process.env.TURSO_AUTH_TOKEN = originalTursoAuthToken
-  }
+  resetDataPlaneClientsForTests()
+  createClient.mockClear()
 })
 
 describe('Turso client', () => {
   it('requests bigint integers and serializes unsafe integers as strings', async () => {
-    const rows = await query('SELECT safe_id, unsafe_id, name FROM products')
+    const client = createDataPlaneClient({
+      url: 'libsql://example.turso.io',
+      authToken: 'token',
+    })
+    const rows = await runWithDataPlane(client, () => query('SELECT safe_id, unsafe_id, name FROM products'))
 
     expect(createClient).toHaveBeenCalledWith({
       url: 'libsql://example.turso.io',
@@ -50,5 +39,16 @@ describe('Turso client', () => {
         name: 'barcode product',
       },
     ])
+  })
+
+  it('does not require a data plane from env when a client is provided', async () => {
+
+    const client = createDataPlaneClient({ url: 'file:/tmp/openpos-test.sqlite' })
+    await runWithDataPlane(client, () => query('SELECT 1'))
+
+    expect(createClient).toHaveBeenCalledWith({
+      url: 'file:/tmp/openpos-test.sqlite',
+      intMode: 'bigint',
+    })
   })
 })

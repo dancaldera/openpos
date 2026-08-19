@@ -32,9 +32,11 @@ export interface DesktopConnectivitySnapshot extends DesktopSyncStatusSnapshot {
 }
 
 export interface DesktopFirstRunStatus {
-  status: 'needsRemoteConfig' | 'syncingInitialData' | 'initialSyncFailed' | 'readyForSignIn'
+  status: 'needsConnection' | 'needsEmergencyKit' | 'syncingInitialData' | 'initialSyncFailed' | 'readyForSignIn'
   remoteConfigured: boolean
   activeUserCount: number
+  connectionKey?: string | null
+  storeName?: string | null
   lastError?: string | null
   lastCheckedAt?: string | null
   lastSyncedAt?: string | null
@@ -51,6 +53,7 @@ export type UpdateFormat = 'appimage' | 'deb' | 'mac-zip' | null
 
 export interface DesktopRuntimeConfigSummary {
   apiUrl: string
+  connectionKey?: string
   configPath: string
   configSource: 'userData' | 'fallback' | 'env' | 'bundled'
   userDataConfigPath: string
@@ -84,6 +87,50 @@ export interface DesktopApi {
     getStatus(): Promise<DesktopFirstRunStatus>
     initialize(): Promise<DesktopFirstRunStatus>
     retry(): Promise<DesktopFirstRunStatus>
+  }
+  connection: {
+    getActive(): Promise<{
+      key: string
+      storeName: string
+      published: boolean
+      emergencyKitConfirmed: boolean
+      hasWrappedSeed: boolean
+    } | null>
+    create(payload: { storeName: string; adminName: string; adminEmail: string; adminPassword: string }): Promise<{
+      key: string
+      seed?: string
+      storeName: string
+      published: boolean
+      status: DesktopFirstRunStatus
+    }>
+    join(payload: { key: string; seed: string }): Promise<{
+      key: string
+      storeName: string
+      published: boolean
+      status: DesktopFirstRunStatus
+    }>
+    importRemote(payload: { url: string; authToken: string }): Promise<{
+      key: string
+      seed?: string
+      storeName: string
+      published: boolean
+      status: DesktopFirstRunStatus
+    }>
+    applyRemote(payload: {
+      key?: string
+      storeName?: string
+      published?: boolean
+      dataPlane: { url: string; authToken?: string }
+    }): Promise<{
+      key: string
+      storeName: string
+      published: boolean
+      emergencyKitConfirmed: boolean
+      hasWrappedSeed: boolean
+    } | null>
+    confirmEmergencyKit(): Promise<DesktopFirstRunStatus>
+    getEmergencyKit(): Promise<{ key: string; seed: string | null; storeName: string }>
+    leave(): Promise<DesktopFirstRunStatus>
   }
   orders: {
     syncAggregate(orderId: string, operation: 'UPSERT' | 'DELETE'): Promise<{ queued: boolean }>

@@ -20,6 +20,7 @@ export function resetApiUrlCacheForTests(): void {
 function buildFallbackDesktopConfig(): DesktopRuntimeConfigSummary {
   return {
     apiUrl: resolveApiBaseUrl(null),
+    connectionKey: '',
     configPath: '',
     configSource: DEFAULT_CONFIG_SOURCE,
     userDataConfigPath: '',
@@ -37,6 +38,7 @@ export async function getDesktopApiConfig(): Promise<DesktopRuntimeConfigSummary
             configPath: config.configPath || '',
             configSource: config.configSource || DEFAULT_CONFIG_SOURCE,
             userDataConfigPath: config.userDataConfigPath || '',
+            connectionKey: config.connectionKey || '',
           }
         : buildFallbackDesktopConfig()
     } else {

@@ -75,15 +75,10 @@ function resolveDesktopConnectionConfig({
   processEnv = process.env,
   envConfig = {},
   defaultApiUrl,
+  connectionRemote = {},
 } = {}) {
-  const remoteUrl =
-    normalizeString(runtimeConfig.tursoDatabaseUrl) ||
-    normalizeString(processEnv.TURSO_DATABASE_URL) ||
-    normalizeString(envConfig.TURSO_DATABASE_URL)
-  const remoteAuthToken =
-    normalizeString(runtimeConfig.tursoAuthToken) ||
-    normalizeString(processEnv.TURSO_AUTH_TOKEN) ||
-    normalizeString(envConfig.TURSO_AUTH_TOKEN)
+  const remoteUrl = normalizeString(connectionRemote.url)
+  const remoteAuthToken = normalizeString(connectionRemote.authToken)
   const apiUrl =
     normalizeString(runtimeConfig.apiUrl) ||
     normalizeString(processEnv.VITE_API_URL) ||
@@ -100,7 +95,7 @@ function resolveDesktopConnectionConfig({
     remote: {
       url: remoteUrl,
       authToken: remoteAuthToken,
-      configured: Boolean(remoteUrl && remoteAuthToken),
+      configured: Boolean(remoteUrl && (remoteAuthToken || remoteUrl.startsWith('file:'))),
     },
     api: {
       url: apiUrl,

@@ -15,21 +15,11 @@ export default function FirstRunSync({ status, isRetrying, onRetry }: FirstRunSy
   const { t } = useTranslation()
   const { appName } = appSettingsStore
 
-  const isMissingConfig = status.status === 'needsRemoteConfig'
   const isSyncing = status.status === 'syncingInitialData'
   const isFailed = status.status === 'initialSyncFailed'
 
-  const title = isMissingConfig
-    ? t('startup.needsRemoteConfigTitle')
-    : isSyncing
-      ? t('startup.syncingTitle')
-      : t('startup.initialSyncFailedTitle')
-
-  const description = isMissingConfig
-    ? t('startup.needsRemoteConfigDescription')
-    : isSyncing
-      ? t('startup.syncingDescription')
-      : t('startup.initialSyncFailedDescription')
+  const title = isSyncing ? t('startup.syncingTitle') : t('startup.initialSyncFailedTitle')
+  const description = isSyncing ? t('startup.syncingDescription') : t('startup.initialSyncFailedDescription')
 
   return (
     <div class="min-h-screen flex items-center justify-center p-4 bg-chalk">
@@ -46,7 +36,7 @@ export default function FirstRunSync({ status, isRetrying, onRetry }: FirstRunSy
                 {isSyncing ? (
                   <SpinnerIcon class="h-5 w-5 animate-spin" />
                 ) : (
-                  <span class="text-lg font-semibold">{isMissingConfig ? '!' : 'x'}</span>
+                  <span class="text-lg font-semibold">x</span>
                 )}
               </div>
               <div class="text-left">
@@ -66,8 +56,6 @@ export default function FirstRunSync({ status, isRetrying, onRetry }: FirstRunSy
           </div>
 
           <div class="mt-6 space-y-3">
-            {isMissingConfig ? <p class="text-sm text-graphite">{t('startup.configureRemoteHint')}</p> : null}
-
             {isFailed ? (
               <button
                 type="button"

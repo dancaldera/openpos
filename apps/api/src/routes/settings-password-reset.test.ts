@@ -33,6 +33,14 @@ vi.mock('../lib/turso.js', () => ({
   query,
 }))
 
+vi.mock('../lib/connection.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/connection')>()
+  return {
+    ...actual,
+    applyRemoteToConnection: vi.fn(),
+  }
+})
+
 process.env.JWT_SECRET = 'password-reset-settings-test-secret'
 
 const { settingsRouter } = await import('./settings')
@@ -242,5 +250,74 @@ describe('password reset email settings', () => {
     expect(decryptSecret(savedParams[4] as string)).toBe('secret-key')
     expect(savedParams[0]).toBe('https://account.r2.cloudflarestorage.com')
     expect(savedParams[5]).toBe(1800)
+  })
+
+  it('returns database settings without exposing tokens', async () => {
+    query.mockResolvedValue([
+      {
+        id: 1,
+        database_url: 'libsql://store.turso.io',
+        auth_token_encrypted: encryptSecret('db-token'),
+        api_token_encrypted: encryptSecret('platform-token'),
+        org: 'acme',
+        group_name: 'default',
+        created_at: '2025-01-01T00:00:00.000Z',
+        updated_at: '2025-01-02T00:00:00.000Z',
+      },
+    ])
+
+    const response = await createApp().request('/api/settings/database')
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body).toEqual({
+      settings: {
+        configured: true,
+        hostedProvisioning: true,
+        databaseUrl: 'libsql://store.turso.io',
+        org: 'acme',
+        group: 'default',
+        updatedAt: '2025-01-02T00:00:00.000Z',
+      },
+    })
+    expect(JSON.stringify(body)).not.toContain('db-token')
+    expect(JSON.stringify(body)).not.toContain('platform-token')
+  })
+
+  it('encrypts database tokens before saving them', async () => {
+    query.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        id: 1,
+        database_url: 'libsql://store.turso.io',
+        auth_token_encrypted: 'encrypted-auth',
+        api_token_encrypted: 'encrypted-api',
+        org: 'acme',
+        group_name: 'default',
+        created_at: '2025-01-01T00:00:00.000Z',
+        updated_at: '2025-01-01T00:00:00.000Z',
+      },
+    ])
+
+    const response = await createApp().request('/api/settings/database', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        databaseUrl: 'libsql://store.turso.io',
+        authToken: 'db-token',
+        apiToken: 'platform-token',
+        org: 'acme',
+        group: 'default',
+      }),
+    })
+
+    expect(response.status).toBe(200)
+    const savedParams = execute.mock.calls[0]?.[1] as unknown[]
+    expect(savedParams[1]).not.toBe('db-token')
+    expect(savedParams[2]).not.toBe('platform-token')
+    expect(decryptSecret(savedParams[1] as string)).toBe('db-token')
+    expect(decryptSecret(savedParams[2] as string)).toBe('platform-token')
+    expect(savedParams[0]).toBe('libsql://store.turso.io')
+    expect(savedParams[3]).toBe('acme')
+    expect(savedParams[4]).toBe('default')
   })
 })

@@ -88,8 +88,6 @@ prompt_value() {
 }
 
 write_config() {
-  TURSO_DATABASE_URL="$turso_database_url" \
-  TURSO_AUTH_TOKEN="$turso_auth_token" \
   API_URL="$api_url" \
   CONFIG_PATH="$CONFIG_PATH" \
   python3 <<'PY'
@@ -98,12 +96,6 @@ import os
 from pathlib import Path
 
 config = {}
-
-if os.environ["TURSO_DATABASE_URL"].strip():
-    config["tursoDatabaseUrl"] = os.environ["TURSO_DATABASE_URL"].strip()
-
-if os.environ["TURSO_AUTH_TOKEN"].strip():
-    config["tursoAuthToken"] = os.environ["TURSO_AUTH_TOKEN"].strip()
 
 if os.environ["API_URL"].strip():
     config["apiUrl"] = os.environ["API_URL"].strip()
@@ -156,8 +148,6 @@ if [[ -f "$CONFIG_PATH" ]]; then
   confirm_overwrite
 fi
 
-prompt_value turso_database_url "Turso database URL"
-prompt_value turso_auth_token "Turso auth token" true
 prompt_value api_url "API URL"
 
 write_config

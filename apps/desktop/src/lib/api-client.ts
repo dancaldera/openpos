@@ -27,6 +27,13 @@ export async function requestApi(path: string, options: ApiRequestOptions = {}):
     requestHeaders.set('Authorization', `Bearer ${token}`)
   }
 
+  if (typeof localStorage !== 'undefined') {
+    const connectionKey = localStorage.getItem('openpos_connection_key')
+    if (connectionKey) {
+      requestHeaders.set('X-OpenPOS-Connection', connectionKey)
+    }
+  }
+
   return fetch(await getApiUrl(path), {
     ...init,
     headers: requestHeaders,

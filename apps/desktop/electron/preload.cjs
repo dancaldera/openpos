@@ -27,6 +27,16 @@ contextBridge.exposeInMainWorld('openposDesktop', {
     initialize: () => ipcRenderer.invoke('desktop:startup-initialize'),
     retry: () => ipcRenderer.invoke('desktop:startup-retry'),
   },
+  connection: {
+    getActive: () => ipcRenderer.invoke('desktop:connection-get'),
+    create: (payload) => ipcRenderer.invoke('desktop:connection-create', payload),
+    join: (payload) => ipcRenderer.invoke('desktop:connection-join', payload),
+    importRemote: (payload) => ipcRenderer.invoke('desktop:connection-import', payload),
+    applyRemote: (payload) => ipcRenderer.invoke('desktop:connection-apply-remote', payload),
+    confirmEmergencyKit: () => ipcRenderer.invoke('desktop:connection-confirm-kit'),
+    getEmergencyKit: () => ipcRenderer.invoke('desktop:connection-emergency-kit'),
+    leave: () => ipcRenderer.invoke('desktop:connection-leave'),
+  },
   orders: {
     syncAggregate: (orderId, operation) =>
       ipcRenderer.invoke('desktop:orders-sync-aggregate', {

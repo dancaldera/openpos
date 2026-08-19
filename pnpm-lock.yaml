@@ -38,6 +38,9 @@ importers:
       '@libsql/client':
         specifier: ^0.15.15
         version: 0.15.15
+      '@openpos/data':
+        specifier: workspace:*
+        version: link:../../packages/data
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3

@@ -13,6 +13,17 @@ const { formatPrinterCommandError, resolvePrinterConfig } = require('./printer-c
 const { isLegacyLocalImageKey } = require('./product-image-keys.cjs')
 const { createSyncManager, ensureLocalSyncSchema, resetLocalDatabase } = require('@openpos/sync')
 const {
+  adoptLegacyLocalDatabase,
+  clearActiveConnection,
+  getConnectionDbPath,
+  publicEnvelope,
+  readActiveConnection,
+  readEnvelope,
+  revealSeed,
+  writeActiveConnection,
+  writeEnvelope,
+} = require('./connection-store.cjs')
+const {
   assertUpdateFilePath,
   buildDebInstallCommand,
   resolveMacAppBundlePath,
@@ -162,7 +173,23 @@ function getRuntimeConfigSelection() {
 }
 
 function getDbPath() {
-  return path.join(app.getPath('userData'), 'postpos.db')
+  const userDataPath = app.getPath('userData')
+  const active = readActiveConnection(userDataPath)
+  if (active?.key) {
+    return getConnectionDbPath(userDataPath, active.key)
+  }
+
+  return path.join(userDataPath, 'postpos.db')
+}
+
+function getActiveEnvelope() {
+  const userDataPath = app.getPath('userData')
+  const active = readActiveConnection(userDataPath)
+  if (!active?.key) return { active: null, envelope: null }
+  return {
+    active,
+    envelope: readEnvelope(userDataPath, active.key),
+  }
 }
 
 function getUpdateTempDir() {
@@ -528,6 +555,7 @@ function getRuntimeConfig() {
 
 function resolveConnectionConfig() {
   const runtimeConfig = getRuntimeConfig()
+  const { envelope } = getActiveEnvelope()
   return resolveDesktopConnectionConfig({
     runtimeConfig: runtimeConfig.config,
     runtimeConfigSource: runtimeConfig.configSource,
@@ -535,6 +563,12 @@ function resolveConnectionConfig() {
     processEnv: process.env,
     envConfig: getDotEnvConfig(),
     defaultApiUrl: isDev() ? 'http://localhost:3001' : undefined,
+    connectionRemote: envelope
+      ? {
+          url: envelope.url,
+          authToken: envelope.authToken,
+        }
+      : {},
   })
 }
 
@@ -607,47 +641,136 @@ function getActiveUserCount(database = ensureDatabase()) {
   return Number(row?.count ?? 0)
 }
 
-function getFirstRunStatus(database = ensureDatabase()) {
-  const activeUserCount = getActiveUserCount(database)
+function closeDatabase() {
+  if (syncManager) {
+    syncManager.stop()
+  }
+  if (db) {
+    db.close()
+    db = null
+  }
+  cachedRemoteClient = null
+  cachedRemoteConfigKey = null
+}
+
+function startSyncIfPossible() {
+  if (syncManager && readActiveConnection(app.getPath('userData'))) {
+    syncManager.start()
+  }
+}
+
+function bindConnection(result, options = {}) {
+  const userDataPath = app.getPath('userData')
+  closeDatabase()
+  writeEnvelope(userDataPath, {
+    key: result.key,
+    storeName: result.storeName,
+    url: result.dataPlane.url,
+    authToken: result.dataPlane.authToken,
+    seed: result.seed,
+    published: result.published,
+  })
+  writeActiveConnection(userDataPath, {
+    key: result.key,
+    emergencyKitConfirmed: Boolean(options.emergencyKitConfirmed),
+  })
+  if (options.adoptLegacy) {
+    adoptLegacyLocalDatabase(userDataPath, result.key)
+  }
+  ensureDatabase()
+  if (!options.adoptLegacy) {
+    resetLocalDatabase(db)
+  }
+  startSyncIfPossible()
+}
+
+async function requestApiConnection(pathname, payload) {
+  const apiConfig = getApiConnectionConfig()
+  if (!apiConfig.configured || !apiConfig.url) {
+    throw new Error('API URL is not configured')
+  }
+
+  const response = await fetch(new URL(pathname, apiConfig.url), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {}),
+  })
+  const result = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(result.error || `Request failed with ${response.status}`)
+  }
+  return result
+}
+
+async function importRemoteConnectionOnDesktop(payload) {
+  return await requestApiConnection('/api/connections/import', payload)
+}
+
+function getFirstRunStatus(database = db) {
+  const { active, envelope } = getActiveEnvelope()
   const remoteConfig = getDbConnectionConfig()
-  const syncSnapshot = syncManager ? syncManager.getStatusSnapshot(database) : null
+  const syncSnapshot = syncManager && database ? syncManager.getStatusSnapshot(database) : null
+  const activeUserCount = database ? getActiveUserCount(database) : 0
   let nextStatus = null
 
-  if (activeUserCount > 0) {
+  if (!envelope) {
+    nextStatus = {
+      status: 'needsConnection',
+      remoteConfigured: Boolean(remoteConfig.configured),
+      activeUserCount: 0,
+      lastError: null,
+      lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
+      lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
+    }
+    logStartup('first-run status resolved', nextStatus)
+    return nextStatus
+  }
+
+  const readyDatabase = database || ensureDatabase()
+  const users = getActiveUserCount(readyDatabase)
+  const readySnapshot = syncManager ? syncManager.getStatusSnapshot(readyDatabase) : syncSnapshot
+
+  if (!active?.emergencyKitConfirmed) {
+    nextStatus = {
+      status: 'needsEmergencyKit',
+      remoteConfigured: true,
+      activeUserCount: users,
+      connectionKey: envelope.key,
+      storeName: envelope.storeName,
+      lastError: null,
+      lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
+      lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
+    }
+    logStartup('first-run status resolved', nextStatus)
+    return nextStatus
+  }
+
+  if (users > 0) {
     initialSyncError = null
     nextStatus = {
       status: 'readyForSignIn',
-      remoteConfigured: Boolean(remoteConfig.configured),
-      activeUserCount,
+      remoteConfigured: true,
+      activeUserCount: users,
+      connectionKey: envelope.key,
+      storeName: envelope.storeName,
       lastError: null,
-      lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
-      lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
+      lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
+      lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
     }
     logStartup('first-run status resolved', nextStatus)
     return nextStatus
   }
 
-  if (!remoteConfig.configured) {
-    nextStatus = {
-      status: 'needsRemoteConfig',
-      remoteConfigured: false,
-      activeUserCount,
-      lastError: null,
-      lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
-      lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
-    }
-    logStartup('first-run status resolved', nextStatus)
-    return nextStatus
-  }
-
-  if (initialSyncPromise || syncSnapshot?.status === 'syncing') {
+  if (initialSyncPromise || readySnapshot?.status === 'syncing') {
     nextStatus = {
       status: 'syncingInitialData',
       remoteConfigured: true,
-      activeUserCount,
+      activeUserCount: users,
+      connectionKey: envelope.key,
+      storeName: envelope.storeName,
       lastError: null,
-      lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
-      lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
+      lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
+      lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
     }
     logStartup('first-run status resolved', nextStatus)
     return nextStatus
@@ -657,10 +780,12 @@ function getFirstRunStatus(database = ensureDatabase()) {
     nextStatus = {
       status: 'initialSyncFailed',
       remoteConfigured: true,
-      activeUserCount,
+      activeUserCount: users,
+      connectionKey: envelope.key,
+      storeName: envelope.storeName,
       lastError: initialSyncError,
-      lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
-      lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
+      lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
+      lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
     }
     logStartup('first-run status resolved', nextStatus)
     return nextStatus
@@ -669,10 +794,12 @@ function getFirstRunStatus(database = ensureDatabase()) {
   nextStatus = {
     status: 'syncingInitialData',
     remoteConfigured: true,
-    activeUserCount,
+    activeUserCount: users,
+    connectionKey: envelope.key,
+    storeName: envelope.storeName,
     lastError: null,
-    lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
-    lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
+    lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
+    lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
   }
 
   logStartup('first-run status resolved', nextStatus)
@@ -687,7 +814,11 @@ async function initializeFirstRun() {
     remoteConfigured: status.remoteConfigured,
   })
 
-  if (status.status === 'readyForSignIn' || status.status === 'needsRemoteConfig') {
+  if (status.status === 'readyForSignIn' || status.status === 'needsEmergencyKit') {
+    return status
+  }
+
+  if (status.status === 'needsConnection') {
     return status
   }
 
@@ -715,7 +846,7 @@ async function initializeFirstRun() {
         logStartup('initial sync populated local users', { activeUserCount: getActiveUserCount() })
         resolvedStatus = getFirstRunStatus()
       } else {
-        initialSyncError = syncSnapshot?.lastError || 'Initial sync completed, but no active users were mirrored from Turso.'
+        initialSyncError = syncSnapshot?.lastError || 'Initial sync completed, but no active users were mirrored from the store.'
         logStartup('initial sync completed without local users', {
           activeUserCount: getActiveUserCount(),
           lastError: initialSyncError,
@@ -944,7 +1075,12 @@ function ensureDatabase() {
     return db
   }
 
-  fs.mkdirSync(app.getPath('userData'), { recursive: true })
+  const { envelope } = getActiveEnvelope()
+  if (!envelope) {
+    throw new Error('Store connection required')
+  }
+
+  fs.mkdirSync(path.dirname(getDbPath()), { recursive: true })
 
   const dbPath = getDbPath()
   logStartup('ensuring local database', { dbPath })
@@ -1291,13 +1427,100 @@ function registerIpcHandlers() {
   ipcMain.handle('desktop:startup-status', () => getFirstRunStatus())
   ipcMain.handle('desktop:startup-initialize', () => initializeFirstRun())
   ipcMain.handle('desktop:startup-retry', () => initializeFirstRun())
+  ipcMain.handle('desktop:connection-get', () => {
+    const { active, envelope } = getActiveEnvelope()
+    return publicEnvelope(envelope, active)
+  })
+  ipcMain.handle('desktop:connection-create', async (_event, payload) => {
+    const result = await requestApiConnection('/api/connections', payload)
+    bindConnection(result, { emergencyKitConfirmed: false })
+    const status = await initializeFirstRun()
+    return {
+      ...result,
+      status,
+    }
+  })
+  ipcMain.handle('desktop:connection-join', async (_event, payload) => {
+    const result = await requestApiConnection('/api/connections/join', payload)
+    bindConnection(result, { emergencyKitConfirmed: !result.seed })
+    const status = await initializeFirstRun()
+    return {
+      ...result,
+      status,
+    }
+  })
+  ipcMain.handle('desktop:connection-import', async (_event, payload) => {
+    const result = await importRemoteConnectionOnDesktop(payload)
+    bindConnection(result, { adoptLegacy: true, emergencyKitConfirmed: !result.seed })
+    const status = await initializeFirstRun()
+    return {
+      ...result,
+      status,
+    }
+  })
+  ipcMain.handle('desktop:connection-apply-remote', async (_event, payload) => {
+    const { envelope, active } = getActiveEnvelope()
+    if (!envelope) {
+      throw new Error('Store connection required')
+    }
+    writeEnvelope(app.getPath('userData'), {
+      key: payload.key || envelope.key,
+      storeName: payload.storeName || envelope.storeName,
+      url: payload.dataPlane.url,
+      authToken: payload.dataPlane.authToken,
+      published: payload.published,
+    })
+    if (payload.key && payload.key !== envelope.key) {
+      writeActiveConnection(app.getPath('userData'), {
+        key: payload.key,
+        emergencyKitConfirmed: Boolean(active?.emergencyKitConfirmed),
+      })
+    }
+    closeDatabase()
+    ensureDatabase()
+    startSyncIfPossible()
+    return publicEnvelope(readEnvelope(app.getPath('userData'), payload.key || envelope.key), readActiveConnection(app.getPath('userData')))
+  })
+  ipcMain.handle('desktop:connection-confirm-kit', () => {
+    const { active } = getActiveEnvelope()
+    if (!active?.key) {
+      throw new Error('Store connection required')
+    }
+    writeActiveConnection(app.getPath('userData'), {
+      key: active.key,
+      emergencyKitConfirmed: true,
+    })
+    return getFirstRunStatus()
+  })
+  ipcMain.handle('desktop:connection-emergency-kit', () => {
+    const { active, envelope } = getActiveEnvelope()
+    if (!active?.key || !envelope) {
+      throw new Error('Store connection required')
+    }
+    return {
+      key: envelope.key,
+      seed: revealSeed(app.getPath('userData'), envelope.key),
+      storeName: envelope.storeName,
+    }
+  })
+  ipcMain.handle('desktop:connection-leave', async () => {
+    const snapshot = syncManager && db ? syncManager.getStatusSnapshot(db) : null
+    if ((snapshot?.pendingWrites || 0) > 0) {
+      throw new Error('Unsynced local changes must be synced or discarded before leaving this store')
+    }
+    closeDatabase()
+    clearActiveConnection(app.getPath('userData'))
+    return getFirstRunStatus()
+  })
   ipcMain.handle('desktop:orders-sync-aggregate', (_event, payload) =>
     syncOrderAggregate(payload.orderId, payload.operation),
   )
   ipcMain.handle('desktop:config', () => {
     const config = resolveConnectionConfig()
+    const { envelope } = getActiveEnvelope()
     return {
       apiUrl: config.api.url || '',
+      connectionKey: envelope?.key || '',
       configPath: config.api.configPath || getUserDataConfigPath(),
       configSource: config.api.source,
       userDataConfigPath: getUserDataConfigPath(),
@@ -1517,7 +1740,9 @@ function registerThemeHandlers() {
 app.whenReady().then(() => {
   setAppIcon()
   Menu.setApplicationMenu(buildAppMenu())
-  ensureDatabase()
+  if (readActiveConnection(app.getPath('userData'))) {
+    ensureDatabase()
+  }
   syncManager = createSyncManager({
     getDatabase: ensureDatabase,
     getRemoteConfig: getDbConnectionConfig,
@@ -1526,7 +1751,7 @@ app.whenReady().then(() => {
   registerIpcHandlers()
   registerThemeHandlers()
   createWindow()
-  syncManager.start()
+  startSyncIfPossible()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

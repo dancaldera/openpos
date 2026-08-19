@@ -1,11 +1,18 @@
 /**
- * Turso client singleton for the API server.
+ * Request-scoped data-plane client.
+ *
+ * Callers use query/execute. The active client comes from AsyncLocalStorage
+ * (set per request after a connection is resolved), not from process env.
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { createClient } from '@libsql/client'
 
-interface QueryableClient {
-  execute(sql: string, params?: unknown[]): Promise<{
+export interface QueryableClient {
+  execute(
+    sql: string,
+    params?: unknown[],
+  ): Promise<{
     columns: string[]
     rows: Array<Record<string, unknown> | unknown[]>
     lastInsertRowid?: number | bigint
@@ -13,7 +20,13 @@ interface QueryableClient {
   }>
 }
 
-let _client: QueryableClient | null = null
+export interface DataPlaneConfig {
+  url: string
+  authToken?: string
+}
+
+const dataPlaneStore = new AsyncLocalStorage<QueryableClient>()
+const clients = new Map<string, QueryableClient>()
 
 function coerceBigInts(value: unknown): unknown {
   if (typeof value === 'bigint') {
@@ -32,46 +45,44 @@ function coerceBigInts(value: unknown): unknown {
   return value
 }
 
-export interface TursoConfig {
-  url?: string
-  authToken?: string
-  configured: boolean
+function clientCacheKey(config: DataPlaneConfig): string {
+  return `${config.url}::${config.authToken || ''}`
 }
 
-export function getTursoConfig(): TursoConfig {
-  const url = process.env.TURSO_DATABASE_URL
-  const authToken = process.env.TURSO_AUTH_TOKEN
-
-  return {
-    url: url || undefined,
-    authToken: authToken || undefined,
-    configured: Boolean(url && authToken),
+export function createDataPlaneClient(config: DataPlaneConfig): QueryableClient {
+  if (!config.url) {
+    throw new Error('Store connection required')
   }
+
+  const key = clientCacheKey(config)
+  const cached = clients.get(key)
+  if (cached) return cached
+
+  const client = createClient({
+    url: config.url,
+    ...(config.authToken ? { authToken: config.authToken } : {}),
+    intMode: 'bigint',
+  }) as QueryableClient
+
+  clients.set(key, client)
+  return client
+}
+
+export function runWithDataPlane<T>(client: QueryableClient, fn: () => T | Promise<T>): Promise<T> {
+  return Promise.resolve(dataPlaneStore.run(client, fn))
 }
 
 export function getTursoClient(): QueryableClient {
-  if (_client) return _client
-
-  const { url, authToken, configured } = getTursoConfig()
-
-  if (!configured || !url || !authToken) {
-    throw new Error(
-      'Missing TURSO_DATABASE_URL or TURSO_AUTH_TOKEN environment variables. ' +
-        'Set these in your Vercel project settings or local .env file.',
-    )
-  }
-
-  _client = createClient({ url, authToken, intMode: 'bigint' }) as QueryableClient
-  return _client
+  const fromStore = dataPlaneStore.getStore()
+  if (fromStore) return fromStore
+  throw new Error('Store connection required')
 }
 
-/** Run a SELECT query and return typed rows as objects with column names. */
-export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
-  const client = getTursoClient()
-  const result = await client.execute(sql, params)
-
-  const columns = result.columns
-  return result.rows.map((row: Record<string, unknown> | unknown[]) => {
+export function mapQueryRows<T>(
+  columns: string[],
+  rows: Array<Record<string, unknown> | unknown[]>,
+): T[] {
+  return rows.map((row: Record<string, unknown> | unknown[]) => {
     if (!Array.isArray(row)) {
       return coerceBigInts(row) as T
     }
@@ -84,12 +95,20 @@ export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]
   })
 }
 
-/** Run an INSERT/UPDATE/DELETE and return metadata. */
-export async function execute(
+export async function queryWithClient<T>(
+  client: QueryableClient,
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  const result = await client.execute(sql, params)
+  return mapQueryRows<T>(result.columns, result.rows)
+}
+
+export async function executeWithClient(
+  client: QueryableClient,
   sql: string,
   params: unknown[] = [],
 ): Promise<{ lastInsertId: number; rowsAffected: number }> {
-  const client = getTursoClient()
   const result = await client.execute(sql, params)
   const rawId = result.lastInsertRowid
   const lastInsertId = typeof rawId === 'bigint' ? Number(rawId) : (rawId ?? 0)
@@ -99,14 +118,39 @@ export async function execute(
   }
 }
 
-export async function probeTursoConnection(): Promise<boolean> {
-  const { configured } = getTursoConfig()
-  if (!configured) return false
+/** Run a SELECT query and return typed rows as objects with column names. */
+export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
+  return queryWithClient<T>(getTursoClient(), sql, params)
+}
 
+/** Run an INSERT/UPDATE/DELETE and return metadata. */
+export async function execute(
+  sql: string,
+  params: unknown[] = [],
+): Promise<{ lastInsertId: number; rowsAffected: number }> {
+  return executeWithClient(getTursoClient(), sql, params)
+}
+
+export async function probeDataPlane(config: DataPlaneConfig): Promise<boolean> {
   try {
-    await getTursoClient().execute('SELECT 1')
+    await createDataPlaneClient(config).execute('SELECT 1')
     return true
   } catch {
     return false
   }
+}
+
+export async function probeTursoConnection(): Promise<boolean> {
+  const fromStore = dataPlaneStore.getStore()
+  if (!fromStore) return false
+  try {
+    await fromStore.execute('SELECT 1')
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function resetDataPlaneClientsForTests(): void {
+  clients.clear()
 }

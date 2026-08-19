@@ -36,9 +36,11 @@ async function main() {
 
   const { TURSO_DATABASE_URL: url, TURSO_AUTH_TOKEN: token } = loadEnv(envPath)
   if (!url || !token) {
-    console.error('Error: TURSO_DATABASE_URL and TURSO_AUTH_TOKEN required in apps/api/.env')
+    console.error('Error: create a store from the app, or import an existing database URL from Settings.')
     process.exit(1)
   }
+
+  console.warn('Warning: create-admin using a URL/token is deprecated. Create stores from the app, then configure the database in Settings.')
 
   const client = createClient({ url, authToken: token })
 

@@ -17,6 +17,7 @@ export interface JwtPayload {
   name: string
   role: 'admin' | 'manager' | 'user'
   permissions: string[]
+  connectionKey?: string
   iat?: number
   exp?: number
 }
