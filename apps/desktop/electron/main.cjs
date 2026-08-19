@@ -759,7 +759,7 @@ async function getRemoteDbClient() {
   }
 
   if (!cachedRemoteConnectModule) {
-    cachedRemoteConnectModule = (await import('@tursodatabase/serverless')).connect
+    cachedRemoteConnectModule = (await import('@libsql/client')).createClient
   }
 
   cachedRemoteClient = cachedRemoteConnectModule({

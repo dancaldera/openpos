@@ -12,8 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@openpos/data": "workspace:*",
-    "@tursodatabase/serverless": "^0.2.4"
+    "@libsql/client": "^0.15.15",
+    "@openpos/data": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^4.1.10"

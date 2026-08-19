@@ -103,7 +103,7 @@ export function useFormState<T extends Record<string, unknown>>(
    */
   const validateField = useCallback(
     (field: keyof T): string | undefined => {
-      if (!validationRules || !validationRules[field]) {
+      if (!validationRules?.[field]) {
         return undefined
       }
 

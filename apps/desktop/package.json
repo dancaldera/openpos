@@ -34,11 +34,11 @@
     "db:migrate": "pnpm -C ../../packages/data run migrate:remote"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.15",
     "@openpos/data": "workspace:*",
     "@openpos/sync": "workspace:*",
     "@preact/signals": "^2.11.1",
     "@tailwindcss/vite": "^4.3.3",
-    "@tursodatabase/serverless": "^0.2.4",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "preact": "^10.29.8",

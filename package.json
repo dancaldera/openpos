@@ -38,6 +38,7 @@
     "test:api": "pnpm -C apps/api run test"
   },
   "devDependencies": {
+    "@libsql/client": "^0.15.15",
     "@types/node": "^24.13.3",
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",

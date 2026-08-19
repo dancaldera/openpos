@@ -181,7 +181,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     }
 
     if (!cachedConnectModule) {
-      cachedConnectModule = (await import('@tursodatabase/serverless')).connect
+      cachedConnectModule = (await import('@libsql/client')).createClient
     }
 
     logSync('creating Turso client')

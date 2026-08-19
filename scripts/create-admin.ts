@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 
 import { fileURLToPath } from 'node:url'
-import { connect } from '@tursodatabase/serverless'
+import { createClient } from '@libsql/client'
 import bcrypt from 'bcryptjs'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
@@ -40,7 +40,7 @@ async function main() {
     process.exit(1)
   }
 
-  const client = connect({ url, authToken: token })
+  const client = createClient({ url, authToken: token })
 
   const existing = await client.execute('SELECT id FROM users WHERE email = ? LIMIT 1', [email.toLowerCase()])
   if (existing.rows.length > 0) {
