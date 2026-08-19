@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "installCommand": "pnpm install",
+  "installCommand": "npm install -g pnpm@11.18.0 && pnpm install --filter openpos-desktop...",
   "buildCommand": "pnpm run build:web",
   "outputDirectory": "dist-web"
 }
