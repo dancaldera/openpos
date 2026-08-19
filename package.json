@@ -9,11 +9,11 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun scripts/dev-runner.ts dev",
-    "dev:desktop": "bun scripts/dev-runner.ts dev:desktop",
-    "dev:desktop:web": "bun scripts/dev-runner.ts dev:desktop:web",
-    "dev:api": "bun scripts/dev-runner.ts dev:api",
-    "dev:landing": "bun scripts/dev-runner.ts dev:landing",
+    "dev": "tsx scripts/dev-runner.ts dev",
+    "dev:desktop": "tsx scripts/dev-runner.ts dev:desktop",
+    "dev:desktop:web": "tsx scripts/dev-runner.ts dev:desktop:web",
+    "dev:api": "tsx scripts/dev-runner.ts dev:api",
+    "dev:landing": "tsx scripts/dev-runner.ts dev:landing",
     "build": "pnpm run build:desktop",
     "build:desktop": "pnpm -C apps/desktop run build:desktop",
     "build:desktop:mac": "pnpm -C apps/desktop run build:desktop:mac",
@@ -24,11 +24,11 @@
     "build:api": "pnpm -C apps/api run build",
     "build:landing": "pnpm -C apps/landing run build",
     "db:migrate:remote": "pnpm -C packages/data run migrate:remote",
-    "db:create-admin": "bun scripts/create-admin.ts",
+    "db:create-admin": "tsx scripts/create-admin.ts",
     "db:build-bootstrap": "pnpm -C packages/data run build:bootstrap",
     "install:appimage": "bash scripts/install-latest-appimage.sh",
     "config:desktop": "bash scripts/create-desktop-config.sh",
-    "version:bump": "bun scripts/bump-version.ts",
+    "version:bump": "tsx scripts/bump-version.ts",
     "check": "tsc -p scripts/tsconfig.json && pnpm -C apps/desktop run check && pnpm -C apps/api run check",
     "test": "pnpm run test:scripts && pnpm run test:data && pnpm run test:sync && pnpm run test:desktop && pnpm run test:api",
     "test:scripts": "vitest run",
@@ -40,6 +40,7 @@
   "devDependencies": {
     "@types/node": "^24.13.3",
     "bun-types": "^1.3.14",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
   }

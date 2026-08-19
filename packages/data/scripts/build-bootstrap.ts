@@ -1,8 +1,6 @@
-#!/usr/bin/env bun
-
 import { mkdirSync, rmSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { Database } from 'bun:sqlite'
+import { DatabaseSync } from 'node:sqlite'
 const { runLocalMigrations } = require('@dancaldera/libsql-bridge')
 const { bootstrapDatabasePath, migrationsDir } = require('../src/project')
 
@@ -10,7 +8,7 @@ async function main() {
   mkdirSync(dirname(bootstrapDatabasePath), { recursive: true })
   rmSync(bootstrapDatabasePath, { force: true })
 
-  const client = new Database(bootstrapDatabasePath, { create: true })
+  const client = new DatabaseSync(bootstrapDatabasePath)
   client.exec('PRAGMA foreign_keys = ON')
 
   try {

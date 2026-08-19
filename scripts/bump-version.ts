@@ -1,10 +1,9 @@
-#!/usr/bin/env bun
 /**
  * Bump version across multiple files in the project.
  *
  * Usage:
- *   bun run version:bump <version>
- *   bun run version:bump 0.3.0
+ *   pnpm run version:bump <version>
+ *   pnpm run version:bump 0.3.0
  */
 
 import { readFile, writeFile } from 'node:fs/promises'
@@ -119,8 +118,8 @@ async function bumpVersion(newVersion: string) {
 const version = process.argv[2]
 
 if (!version) {
-  console.error('Usage: bun run version:bump <version>')
-  console.error('Example: bun run version:bump 0.3.0')
+  console.error('Usage: pnpm run version:bump <version>')
+  console.error('Example: pnpm run version:bump 0.3.0')
   process.exit(1)
 }
 

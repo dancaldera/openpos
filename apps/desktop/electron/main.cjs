@@ -955,7 +955,7 @@ function ensureDatabase() {
     if (!bootstrapDbPath || !fs.existsSync(bootstrapDbPath)) {
       throw new Error(
         `Bootstrap database not found at ${bootstrapDbPath ?? '@openpos/data/assets/openpos-bootstrap.sqlite'}. ` +
-        `If running from source, run "bun run prepare:bootstrap" first.`
+        `If running from source, run "pnpm run prepare:bootstrap" first.`
       )
     }
 

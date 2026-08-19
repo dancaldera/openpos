@@ -1,11 +1,10 @@
-#!/usr/bin/env bun
-
 import { existsSync } from 'node:fs'
 import { Socket } from 'node:net'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn, type ChildProcess } from 'node:child_process'
 import {
+  PACKAGE_RUNNER,
   PORT_WAIT_TIMEOUT_MS,
   VITE_PORT,
   runDesktopMode as runDesktopModeWithApi,
@@ -218,7 +217,7 @@ async function runSingleProcessMode(command: string, args: string[], cwd: string
 
 async function main(): Promise<void> {
   if (!isDevMode(mode)) {
-    console.error(`Usage: bun scripts/dev-runner.ts <${DEV_MODES.join('|')}>`)
+    console.error(`Usage: pnpm run dev:<${DEV_MODES.join('|')}>`)
     process.exit(1)
   }
 
@@ -246,13 +245,13 @@ async function main(): Promise<void> {
       )
       return
     case 'dev:desktop:web':
-      await runSingleProcessMode(process.execPath, ['run', 'dev:web'], desktopDir)
+      await runSingleProcessMode(PACKAGE_RUNNER, ['run', 'dev:web'], desktopDir)
       return
     case 'dev:api':
-      await runSingleProcessMode(process.execPath, ['run', 'dev'], apiDir)
+      await runSingleProcessMode(PACKAGE_RUNNER, ['run', 'dev'], apiDir)
       return
     case 'dev:landing':
-      await runSingleProcessMode(process.execPath, ['run', 'dev'], landingDir)
+      await runSingleProcessMode(PACKAGE_RUNNER, ['run', 'dev'], landingDir)
       return
   }
 }

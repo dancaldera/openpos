@@ -1,9 +1,7 @@
-#!/usr/bin/env bun
-
 /**
  * Create Admin User (Interactive)
  *
- * bun run db:create-admin
+ * pnpm run db:create-admin
  */
 
 import { readFileSync } from 'node:fs'
