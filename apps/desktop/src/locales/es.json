@@ -239,6 +239,7 @@
     "variantStock": "Inventario de Variante",
     "variantPrice": "Precio de Variante",
     "variantCost": "Costo de Variante",
+    "variantAttributesRequired": "Una variante debe tener al menos un atributo",
     "variantImage": "Imagen de Variante",
     "noVariants": "No se encontraron variantes",
     "createVariant": "Crear Variante",

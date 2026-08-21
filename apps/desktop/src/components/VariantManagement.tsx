@@ -105,6 +105,15 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [attributes, setAttributes] = useState<ProductAttribute[]>([])
+
+  useEffect(() => {
+    if (!isOpen) return
+    productVariantsService
+      .getAttributes()
+      .then(setAttributes)
+      .catch(() => setAttributes([]))
+  }, [isOpen])
 
   useEffect(() => {
     if (variant && isOpen) {
@@ -136,6 +145,12 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault()
+
+    if (Object.keys(formData.attributes).length === 0) {
+      setError(t('variants.variantAttributesRequired'))
+      return
+    }
+
     setIsLoading(true)
     setError('')
 
@@ -210,6 +225,36 @@ export function EditVariantModal({ variant, productId, isOpen, onClose, onSave }
                 }
               />
             </div>
+          </div>
+
+          {/* Attributes */}
+          <div>
+            <div class="text-sm font-medium text-void mb-2">{t('variants.attributes')}</div>
+            {attributes.length === 0 ? (
+              <p class="text-sm text-graphite">{t('variants.addAttributeFirst')}</p>
+            ) : (
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {attributes.map((attr) => (
+                  <Select
+                    key={attr.id}
+                    label={attr.name}
+                    value={formData.attributes[attr.slug] || ''}
+                    onChange={(e) => {
+                      const value = (e.target as HTMLSelectElement).value
+                      const nextAttributes = { ...formData.attributes }
+                      if (value) {
+                        nextAttributes[attr.slug] = value
+                      } else {
+                        delete nextAttributes[attr.slug]
+                      }
+                      setFormData({ ...formData, attributes: nextAttributes })
+                    }}
+                    options={[{ value: '', label: '—' }, ...attr.values.map((value) => ({ value, label: value }))]}
+                    class="bg-canvas"
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Price, Cost, Stock */}

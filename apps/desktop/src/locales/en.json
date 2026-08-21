@@ -239,6 +239,7 @@
     "variantStock": "Variant Stock",
     "variantPrice": "Variant Price",
     "variantCost": "Variant Cost",
+    "variantAttributesRequired": "A variant must have at least one attribute",
     "variantImage": "Variant Image",
     "noVariants": "No variants found",
     "createVariant": "Create Variant",
