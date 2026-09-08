@@ -10,3 +10,4 @@ apps/desktop/dist-electron
 apps/api/dist
 apps/releases/dist
 apps/landing/dist
+.delta

@@ -21,9 +21,6 @@ dist-releases
 # Local file-backed store databases created by the API connection adapter
 apps/api/data/
 
-# Local agent instructions (untracked)
-AGENTS.md
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
