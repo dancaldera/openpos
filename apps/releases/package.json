@@ -1,7 +1,7 @@
 {
   "name": "@openpos/releases",
   "private": true,
-  "version": "0.3.10",
+  "version": "0.3.11",
   "license": "UNLICENSED",
   "packageManager": "pnpm@11.18.0",
   "engines": {

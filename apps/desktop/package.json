@@ -1,7 +1,7 @@
 {
   "name": "openpos-desktop",
   "private": true,
-  "version": "0.3.10",
+  "version": "0.3.11",
   "packageManager": "pnpm@11.18.0",
   "engines": {
     "node": "24.x"
