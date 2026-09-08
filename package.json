@@ -1,0 +1,58 @@
+{
+  "name": "openpos",
+  "version": "0.3.10",
+  "private": true,
+  "license": "UNLICENSED",
+  "repository": "github:dancaldera/openpos",
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "tsx scripts/dev-runner.ts dev",
+    "dev:desktop": "tsx scripts/dev-runner.ts dev:desktop",
+    "dev:desktop:web": "tsx scripts/dev-runner.ts dev:desktop:web",
+    "dev:api": "tsx scripts/dev-runner.ts dev:api",
+    "dev:releases": "pnpm -C apps/releases run dev",
+    "dev:landing": "tsx scripts/dev-runner.ts dev:landing",
+    "build": "pnpm run build:desktop",
+    "build:desktop": "pnpm -C apps/desktop run build:desktop",
+    "build:desktop:mac": "pnpm -C apps/desktop run build:desktop:mac",
+    "build:desktop:linux": "pnpm -C apps/desktop run build:desktop:linux",
+    "build:desktop:linux:appimage": "pnpm -C apps/desktop run build:desktop:linux:appimage",
+    "build:desktop:linux:deb": "pnpm -C apps/desktop run build:desktop:linux:deb",
+    "build:desktop:linux:container": "bash scripts/build-linux-in-container.sh",
+    "build:desktop:web": "pnpm -C apps/desktop run build:web",
+    "build:api": "pnpm -C apps/api run build",
+    "build:releases": "pnpm -C apps/releases run build",
+    "build:landing": "pnpm -C apps/landing run build",
+    "db:migrate:remote": "pnpm -C packages/data run migrate:remote",
+    "db:create-admin": "tsx scripts/create-admin.ts",
+    "db:build-bootstrap": "pnpm -C packages/data run build:bootstrap",
+    "install:appimage": "bash scripts/install-latest-appimage.sh",
+    "install:deb": "bash scripts/install-local-deb.sh",
+    "install:printer": "bash scripts/install-pos80-printer.sh",
+    "setup:pos": "bash scripts/setup-pos-station.sh",
+    "config:desktop": "bash scripts/create-desktop-config.sh",
+    "version:bump": "tsx scripts/bump-version.ts",
+    "release": "tsx scripts/release.ts",
+    "check": "tsc -p scripts/tsconfig.json && pnpm -C apps/desktop run check && pnpm -C apps/api run check && pnpm -C apps/releases run check",
+    "test": "pnpm run test:scripts && pnpm run test:data && pnpm run test:sync && pnpm run test:desktop && pnpm run test:api && pnpm run test:releases",
+    "test:scripts": "vitest run",
+    "test:data": "pnpm -C packages/data run test",
+    "test:sync": "pnpm -C packages/sync run test",
+    "test:desktop": "pnpm -C apps/desktop run test",
+    "test:api": "pnpm -C apps/api run test",
+    "test:releases": "pnpm -C apps/releases run test"
+  },
+  "devDependencies": {
+    "@libsql/client": "^0.15.15",
+    "@types/node": "^24.13.3",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1112.0"
+  }
+}

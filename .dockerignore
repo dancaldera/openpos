@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+**/.pnpm-store
+.pnpm-store
+.git
+**/.cache
+apps/desktop/dist
+apps/desktop/dist-web
+apps/desktop/dist-electron
+apps/api/dist
+apps/releases/dist
+apps/landing/dist

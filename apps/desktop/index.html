@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenPOS</title>
+    <style>
+      html,
+      body,
+      #root {
+        height: 100%;
+        margin: 0;
+        background: #ffffff;
+        color: #111111;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      #boot-splash {
+        min-height: 100%;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        gap: 0.75rem;
+        padding: 1.5rem;
+      }
+      #boot-splash strong {
+        font-size: 1.25rem;
+        letter-spacing: 0.02em;
+      }
+      #boot-splash span {
+        width: 1.5rem;
+        height: 1.5rem;
+        border: 2px solid #e5e7eb;
+        border-top-color: #666666;
+        border-radius: 9999px;
+        animation: boot-spin 0.8s linear infinite;
+        display: inline-block;
+      }
+      #boot-splash button,
+      #boot-splash p {
+        display: none;
+      }
+      #boot-splash p {
+        max-width: 22rem;
+        color: #666666;
+        font-size: 0.95rem;
+      }
+      #boot-splash button {
+        margin-top: 0.5rem;
+        padding: 0.55rem 1rem;
+        font-size: 0.95rem;
+        cursor: pointer;
+      }
+      #boot-splash.is-slow p,
+      #boot-splash.is-slow button {
+        display: block;
+      }
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root">
+      <div id="boot-splash" aria-live="polite">
+        <strong>OpenPOS</strong>
+        <span aria-hidden="true"></span>
+        <p>Still starting up. If this screen stays blank, reload.</p>
+        <button type="button" id="boot-reload">Reload</button>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var splash = document.getElementById('boot-splash')
+        var reloadButton = document.getElementById('boot-reload')
+        if (reloadButton) {
+          reloadButton.addEventListener('click', function () {
+            location.reload()
+          })
+        }
+        setTimeout(function () {
+          if (splash && document.body.contains(splash)) {
+            splash.className += ' is-slow'
+          }
+        }, 8000)
+      })()
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

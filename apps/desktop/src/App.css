@@ -1,0 +1,555 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'OpenAI Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-openai-sans: 'OpenAI Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --color-void: #000000;
+  --color-fog-border: #e5e7eb;
+  --color-chalk: #f1f1f1;
+  --color-graphite: #666666;
+  --color-ash: #8f8f8f;
+  --color-canvas: #ffffff;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fef2f2;
+  --color-accent: #000000;
+
+  --text-caption: 13px;
+  --text-heading: 22px;
+  --text-heading-lg: 28px;
+  --text-display: 48px;
+
+  --radius-cards: 6.08px;
+  --radius-chips: 9999px;
+  --radius-input: 9999px;
+  --radius-links: 4px;
+  --radius-buttons: 9999px;
+  --radius-softbutton: 40px;
+
+  --shadow-sm: rgba(0, 0, 0, 0.02) 0px 4px 6px 0px, rgba(0, 0, 0, 0.05) 0px 0px 2px 0px;
+}
+
+:root {
+  color-scheme: light;
+  --page-max-width: 1200px;
+  --section-gap: 80px;
+  --card-padding: 32px;
+  --element-gap: 16px;
+  --shadow-sm: rgba(0, 0, 0, 0.02) 0px 4px 6px 0px, rgba(0, 0, 0, 0.05) 0px 0px 2px 0px;
+}
+
+/* The renderer always sets data-mode to the resolved light/dark value (system
+   preference included) and data-palette to the active palette id. */
+[data-mode='dark'] {
+  color-scheme: dark;
+  --color-void: #ffffff;
+  --color-fog-border: #2a2a2a;
+  --color-chalk: #1f1f1f;
+  --color-graphite: #b3b3b3;
+  --color-ash: #7a7a7a;
+  --color-canvas: #0f0f0f;
+  --color-accent: #ffffff;
+  --color-danger: #f87171;
+  --color-danger-soft: #3f1212;
+  --shadow-sm: rgba(0, 0, 0, 0.35) 0px 4px 8px 0px;
+}
+
+/* Business palettes; `classic` is the default above. Each ships a light and a
+   dark variant. Danger colors stay shared so destructive actions stay red. */
+[data-palette='coffee'] {
+  --color-void: #2b211a;
+  --color-fog-border: #e3d6c4;
+  --color-chalk: #f1e9dd;
+  --color-graphite: #6d5c4b;
+  --color-ash: #99897a;
+  --color-canvas: #faf6f0;
+  --color-accent: #8a5a2e;
+  --signin-hue-a: #b3784a;
+  --signin-hue-b: #e6c9a2;
+  --signin-hue-c: #6b4526;
+}
+
+[data-mode='dark'][data-palette='coffee'] {
+  --color-void: #f6efe6;
+  --color-fog-border: #3b2d23;
+  --color-chalk: #231a14;
+  --color-graphite: #c6b5a3;
+  --color-ash: #8f7f6f;
+  --color-canvas: #171210;
+  --color-accent: #d9a874;
+}
+
+[data-palette='ocean'] {
+  --color-void: #142838;
+  --color-fog-border: #d4e0ea;
+  --color-chalk: #e9f0f6;
+  --color-graphite: #4f6b80;
+  --color-ash: #7d95a8;
+  --color-canvas: #f4f8fb;
+  --color-accent: #1f5f8b;
+  --signin-hue-a: #2e7ea6;
+  --signin-hue-b: #82c5d8;
+  --signin-hue-c: #1d4b70;
+}
+
+[data-mode='dark'][data-palette='ocean'] {
+  --color-void: #e9f2f9;
+  --color-fog-border: #24384a;
+  --color-chalk: #14222e;
+  --color-graphite: #aac2d6;
+  --color-ash: #718da3;
+  --color-canvas: #0c141b;
+  --color-accent: #82b8dd;
+}
+
+[data-palette='forest'] {
+  --color-void: #16281c;
+  --color-fog-border: #d1e2d2;
+  --color-chalk: #e7f0e7;
+  --color-graphite: #4e6b58;
+  --color-ash: #7d968a;
+  --color-canvas: #f4f9f4;
+  --color-accent: #2f6b46;
+  --signin-hue-a: #3f8a5a;
+  --signin-hue-b: #a5d6b5;
+  --signin-hue-c: #1f5236;
+}
+
+[data-mode='dark'][data-palette='forest'] {
+  --color-void: #eaf6ee;
+  --color-fog-border: #28422f;
+  --color-chalk: #16251c;
+  --color-graphite: #abc7b6;
+  --color-ash: #70907e;
+  --color-canvas: #0e1712;
+  --color-accent: #7fc79b;
+}
+
+[data-palette='sunset'] {
+  --color-void: #2f1d12;
+  --color-fog-border: #f0d7c4;
+  --color-chalk: #f9e9dd;
+  --color-graphite: #7a5a44;
+  --color-ash: #a3826c;
+  --color-canvas: #fdf6f1;
+  --color-accent: #c2551e;
+  --signin-hue-a: #e07b3f;
+  --signin-hue-b: #f4c48e;
+  --signin-hue-c: #a04318;
+}
+
+[data-mode='dark'][data-palette='sunset'] {
+  --color-void: #faefe4;
+  --color-fog-border: #44301c;
+  --color-chalk: #271a10;
+  --color-graphite: #d6baa4;
+  --color-ash: #9c8266;
+  --color-canvas: #1a120b;
+  --color-accent: #f2a06b;
+}
+
+[data-palette='berry'] {
+  --color-void: #2b1620;
+  --color-fog-border: #f0d3e0;
+  --color-chalk: #f9e8f0;
+  --color-graphite: #7a5566;
+  --color-ash: #a3848f;
+  --color-canvas: #fdf5f8;
+  --color-accent: #b02a63;
+  --signin-hue-a: #c94a7c;
+  --signin-hue-b: #efb2cc;
+  --signin-hue-c: #7e2450;
+}
+
+[data-mode='dark'][data-palette='berry'] {
+  --color-void: #f9edf3;
+  --color-fog-border: #402a38;
+  --color-chalk: #261722;
+  --color-graphite: #d0aec0;
+  --color-ash: #96808c;
+  --color-canvas: #1a0f14;
+  --color-accent: #e87fae;
+}
+
+[data-palette='lavender'] {
+  --color-void: #1f1830;
+  --color-fog-border: #dcd4ec;
+  --color-chalk: #ede8f6;
+  --color-graphite: #625a7a;
+  --color-ash: #8d86a3;
+  --color-canvas: #f8f6fc;
+  --color-accent: #6d4fae;
+  --signin-hue-a: #8a6cc8;
+  --signin-hue-b: #cabcee;
+  --signin-hue-c: #553a8f;
+}
+
+[data-mode='dark'][data-palette='lavender'] {
+  --color-void: #f0ecf9;
+  --color-fog-border: #342c47;
+  --color-chalk: #1e192b;
+  --color-graphite: #b8add4;
+  --color-ash: #867f9c;
+  --color-canvas: #14101d;
+  --color-accent: #b39ae8;
+}
+
+[data-palette='slate'] {
+  --color-void: #16202a;
+  --color-fog-border: #d5dbdf;
+  --color-chalk: #e9edef;
+  --color-graphite: #4f6270;
+  --color-ash: #7d8f9c;
+  --color-canvas: #f5f7f8;
+  --color-accent: #33566e;
+  --signin-hue-a: #5a7d94;
+  --signin-hue-b: #a8c4d4;
+  --signin-hue-c: #2e4658;
+}
+
+[data-mode='dark'][data-palette='slate'] {
+  --color-void: #eaf0f4;
+  --color-fog-border: #2a3641;
+  --color-chalk: #182028;
+  --color-graphite: #a7b8c4;
+  --color-ash: #71828e;
+  --color-canvas: #10161b;
+  --color-accent: #8fb4cc;
+}
+
+[data-palette='oxblood'] {
+  --color-void: #241314;
+  --color-fog-border: #e7d8d5;
+  --color-chalk: #f3e7e4;
+  --color-graphite: #6f5551;
+  --color-ash: #9d8380;
+  --color-canvas: #faf5f3;
+  --color-accent: #7c2d2d;
+  --signin-hue-a: #8a3535;
+  --signin-hue-b: #dcb4ae;
+  --signin-hue-c: #4a1a1a;
+}
+
+[data-mode='dark'][data-palette='oxblood'] {
+  --color-void: #f7ebe9;
+  --color-fog-border: #3d2a28;
+  --color-chalk: #241716;
+  --color-graphite: #c2a5a1;
+  --color-ash: #8a7471;
+  --color-canvas: #170e0d;
+  --color-accent: #d99a9a;
+}
+
+[data-palette='iron'] {
+  --color-void: #171a1d;
+  --color-fog-border: #d9dddf;
+  --color-chalk: #ebeeee;
+  --color-graphite: #565f66;
+  --color-ash: #828b91;
+  --color-canvas: #f6f7f7;
+  --color-accent: #3e4a52;
+  --signin-hue-a: #566470;
+  --signin-hue-b: #b9c4cb;
+  --signin-hue-c: #232a30;
+}
+
+[data-mode='dark'][data-palette='iron'] {
+  --color-void: #eef1f2;
+  --color-fog-border: #2c3336;
+  --color-chalk: #1b2023;
+  --color-graphite: #a9b3b9;
+  --color-ash: #747e85;
+  --color-canvas: #101315;
+  --color-accent: #9fb2bd;
+}
+
+[data-palette='grain'] {
+  --color-void: #262015;
+  --color-fog-border: #e6dfcc;
+  --color-chalk: #f2ecd9;
+  --color-graphite: #6e6350;
+  --color-ash: #9b9078;
+  --color-canvas: #faf6ea;
+  --color-accent: #7f611c;
+  --signin-hue-a: #a5822f;
+  --signin-hue-b: #e0cfa0;
+  --signin-hue-c: #5c4517;
+}
+
+[data-mode='dark'][data-palette='grain'] {
+  --color-void: #f5efe0;
+  --color-fog-border: #3b3423;
+  --color-chalk: #232015;
+  --color-graphite: #c0b49a;
+  --color-ash: #8b8168;
+  --color-canvas: #16130c;
+  --color-accent: #cfa84e;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--color-canvas);
+  color: var(--color-void);
+  font-family: var(--font-openai-sans);
+}
+
+body {
+  margin: 0;
+}
+
+.shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.signin-page {
+  isolation: isolate;
+  --signin-page-background:
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.88), transparent 36%),
+    linear-gradient(145deg, #eaf6ff 0%, #fbfcff 52%, #f5f0ff 100%);
+  --signin-cyan-glow: rgba(24, 174, 202, 0.18);
+  --signin-violet-glow: rgba(122, 74, 220, 0.16);
+  --signin-vignette: radial-gradient(ellipse at center, transparent 28%, rgba(255, 255, 255, 0.28) 100%);
+  --signin-wave-back-from: #1d8caa;
+  --signin-wave-back-mid: #3868d8;
+  --signin-wave-back-to: #8c4bd6;
+  --signin-wave-middle-from: #3bc7d8;
+  --signin-wave-middle-mid: #4d8cff;
+  --signin-wave-middle-to: #9b6cff;
+  --signin-wave-front-from: #75e5e5;
+  --signin-wave-front-mid: #719dff;
+  --signin-wave-front-to: #c08cff;
+  background:
+    var(--signin-page-background);
+}
+
+.signin-glow {
+  position: absolute;
+  width: min(42vw, 560px);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  filter: blur(72px);
+  opacity: 0.48;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.signin-glow--cyan {
+  top: -26%;
+  left: -12%;
+  background: var(--signin-cyan-glow);
+  animation: signin-glow-cyan 18s ease-in-out infinite alternate;
+}
+
+.signin-glow--violet {
+  right: -12%;
+  bottom: -28%;
+  background: var(--signin-violet-glow);
+  animation: signin-glow-violet 22s ease-in-out infinite alternate;
+}
+
+.signin-waves {
+  z-index: -1;
+  width: 100%;
+  height: 108%;
+}
+
+.signin-wave {
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.signin-wave--back {
+  animation: signin-wave-back 20s ease-in-out infinite alternate;
+}
+
+.signin-wave--middle {
+  animation: signin-wave-middle 15s ease-in-out infinite alternate-reverse;
+}
+
+.signin-wave--front {
+  animation: signin-wave-front 11s ease-in-out infinite alternate;
+}
+
+.signin-vignette {
+  z-index: -1;
+  background: var(--signin-vignette);
+}
+
+[data-mode='dark'] .signin-page {
+  --signin-page-background:
+    radial-gradient(circle at 50% 42%, rgba(30, 85, 139, 0.2), transparent 34%),
+    linear-gradient(145deg, #060d18 0%, #0a1321 52%, #101026 100%);
+  --signin-cyan-glow: rgba(24, 174, 202, 0.22);
+  --signin-violet-glow: rgba(122, 74, 220, 0.24);
+  --signin-vignette: radial-gradient(ellipse at center, transparent 28%, rgba(1, 5, 11, 0.42) 100%);
+}
+
+/* Non-classic palettes: the wallpaper derives from each palette's brand hues
+   (--signin-hue-a/b/c) instead of the classic aurora above. */
+:root:not([data-palette='classic']) .signin-page {
+  --signin-page-background:
+    radial-gradient(
+      circle at 50% 42%,
+      color-mix(in srgb, var(--color-canvas) 88%, transparent),
+      transparent 36%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--signin-hue-a) 14%, var(--color-canvas)) 0%,
+      var(--color-canvas) 52%,
+      color-mix(in srgb, var(--signin-hue-c) 10%, var(--color-canvas)) 100%
+    );
+  --signin-cyan-glow: color-mix(in srgb, var(--signin-hue-a) 20%, transparent);
+  --signin-violet-glow: color-mix(in srgb, var(--signin-hue-c) 18%, transparent);
+  --signin-vignette: radial-gradient(
+    ellipse at center,
+    transparent 28%,
+    color-mix(in srgb, var(--color-canvas) 30%, transparent) 100%
+  );
+  --signin-wave-back-from: var(--signin-hue-a);
+  --signin-wave-back-mid: color-mix(in srgb, var(--signin-hue-a) 55%, var(--signin-hue-b));
+  --signin-wave-back-to: var(--signin-hue-b);
+  --signin-wave-middle-from: var(--signin-hue-b);
+  --signin-wave-middle-mid: var(--signin-hue-a);
+  --signin-wave-middle-to: color-mix(in srgb, var(--signin-hue-b) 45%, var(--signin-hue-c));
+  --signin-wave-front-from: color-mix(in srgb, var(--signin-hue-c) 35%, var(--signin-hue-a));
+  --signin-wave-front-mid: var(--signin-hue-b);
+  --signin-wave-front-to: var(--signin-hue-c);
+}
+
+[data-mode='dark']:not([data-palette='classic']) .signin-page {
+  --signin-page-background:
+    radial-gradient(
+      circle at 50% 42%,
+      color-mix(in srgb, var(--signin-hue-a) 22%, transparent),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--signin-hue-c) 26%, var(--color-canvas)) 0%,
+      color-mix(in srgb, var(--signin-hue-c) 10%, var(--color-canvas)) 52%,
+      color-mix(in srgb, var(--signin-hue-a) 10%, var(--color-canvas)) 100%
+    );
+  --signin-cyan-glow: color-mix(in srgb, var(--signin-hue-a) 26%, transparent);
+  --signin-violet-glow: color-mix(in srgb, var(--signin-hue-b) 28%, transparent);
+  --signin-vignette: radial-gradient(
+    ellipse at center,
+    transparent 28%,
+    color-mix(in srgb, var(--color-canvas) 55%, transparent) 100%
+  );
+}
+
+@keyframes signin-wave-back {
+  from {
+    transform: translate3d(-1.5%, 1.5%, 0) scale(1.04, 1);
+  }
+  to {
+    transform: translate3d(1.5%, -1%, 0) scale(1.08, 1.04);
+  }
+}
+
+@keyframes signin-wave-middle {
+  from {
+    transform: translate3d(1.2%, 1%, 0) scale(1.05, 1.02);
+  }
+  to {
+    transform: translate3d(-1.2%, -1.5%, 0) scale(1.09, 1.06);
+  }
+}
+
+@keyframes signin-wave-front {
+  from {
+    transform: translate3d(-1%, 0.8%, 0) scale(1.05, 1.03);
+  }
+  to {
+    transform: translate3d(1%, -1.2%, 0) scale(1.1, 1.08);
+  }
+}
+
+@keyframes signin-glow-cyan {
+  from {
+    transform: translate3d(-3%, 1%, 0) scale(0.95);
+  }
+  to {
+    transform: translate3d(10%, 9%, 0) scale(1.08);
+  }
+}
+
+@keyframes signin-glow-violet {
+  from {
+    transform: translate3d(2%, -4%, 0) scale(0.92);
+  }
+  to {
+    transform: translate3d(-9%, -11%, 0) scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signin-glow,
+  .signin-wave {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .signin-glow {
+    width: 70vw;
+    filter: blur(56px);
+  }
+
+  .signin-waves {
+    height: 88%;
+    top: auto;
+    bottom: -4%;
+  }
+}
+
+/* Titlebar drag regions (macOS) */
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+::selection {
+  background: var(--color-void);
+  color: var(--color-canvas);
+}
+
+/* Native checkbox and radio marks follow the active palette accent. */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--color-accent);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-graphite) 35%, transparent);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-graphite) 55%, transparent);
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}

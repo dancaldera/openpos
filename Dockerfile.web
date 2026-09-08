@@ -1,0 +1,22 @@
+# OpenPOS web (browser build of apps/desktop)
+FROM node:24-alpine AS build
+RUN corepack enable
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/desktop/package.json apps/desktop/
+COPY packages/data/package.json packages/data/
+COPY packages/sync/package.json packages/sync/
+RUN pnpm install --frozen-lockfile --ignore-scripts --filter openpos-desktop...
+COPY apps/desktop apps/desktop
+COPY packages/data packages/data
+COPY packages/sync packages/sync
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+RUN pnpm --filter openpos-desktop run build:web
+
+FROM nginx:1.27-alpine AS runtime
+COPY nginx.web.conf /etc/nginx/templates/default.conf.template
+COPY --from=build /app/apps/desktop/dist-web /usr/share/nginx/html
+ENV NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
+ENV PORT=8080
+EXPOSE 8080

@@ -1,0 +1,70 @@
+---
+const steps = [
+  {
+    number: '1',
+    title: 'Download & install',
+    description: 'Grab the installer for your platform. Linux, macOS, or Windows builds are designed for quick setup.',
+    details: ['Linux', 'macOS', 'Windows'],
+  },
+  {
+    number: '2',
+    title: 'Set up your store',
+    description: 'Add products, set prices, configure taxes, and import existing catalog data when needed.',
+    details: ['CSV import', 'Product images'],
+  },
+  {
+    number: '3',
+    title: 'Start selling',
+    description: 'Process orders, manage customers, print receipts, and keep your data available offline.',
+    details: ['Checkout', 'Reports'],
+  },
+]
+---
+
+<section id="how-it-works" class="bg-canvas px-4 py-20 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-[1200px]">
+    <div class="mx-auto mb-16 max-w-3xl text-center">
+      <p class="text-caption font-medium tracking-[0.011em] text-graphite">Getting started</p>
+      <h2 class="mt-4 text-heading-lg font-semibold leading-[1.21] tracking-[-0.01em] text-void sm:text-display sm:leading-[1.16] sm:tracking-[-1.44px]">
+        Up and running in minutes
+      </h2>
+      <p class="mt-5 text-base leading-[1.65] text-graphite sm:text-[18px]">
+        No complex setup, no configuration headaches. Download, install, and start selling.
+      </p>
+    </div>
+
+    <div class="grid gap-10 md:grid-cols-3 md:gap-8">
+      {steps.map((step, index) => (
+        <article class="relative text-center">
+          {index < steps.length - 1 && (
+            <div class="absolute left-1/2 top-6 hidden h-px w-full border-t border-fog-border md:block" aria-hidden="true"></div>
+          )}
+          <div class="relative z-10 mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-buttons border border-fog-border bg-canvas text-sm font-semibold text-void">
+            {step.number}
+          </div>
+          <h3 class="text-heading font-semibold leading-[1.26] text-void">{step.title}</h3>
+          <p class="mt-3 text-sm leading-relaxed text-graphite sm:text-base">{step.description}</p>
+          <div class="mt-5 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm text-ash">
+            {step.details.map(detail => (
+              <span>{detail}</span>
+            ))}
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <div class="mt-16 text-center">
+      <a
+        href="https://github.com/dancaldera/openpos/releases"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-2 rounded-buttons bg-void px-6 py-3 text-sm font-medium text-canvas shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
+      >
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4v12m0 0 5-5m-5 5-5-5M5 20h14" />
+        </svg>
+        Download latest release
+      </a>
+    </div>
+  </div>
+</section>

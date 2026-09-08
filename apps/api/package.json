@@ -1,0 +1,31 @@
+{
+  "name": "@openpos/api",
+  "version": "0.3.10",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "build": "tsc",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1112.0",
+    "@aws-sdk/s3-request-presigner": "^3.1112.0",
+    "@hono/node-server": "^2.1.1",
+    "@libsql/client": "^0.15.15",
+    "@openpos/data": "workspace:*",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.44.7",
+    "hono": "^4.13.2",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.13.3",
+    "tsx": "^4.23.12",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

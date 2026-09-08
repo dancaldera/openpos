@@ -1,0 +1,31 @@
+{
+  "name": "@openpos/releases",
+  "private": true,
+  "version": "0.3.10",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": "24.x"
+  },
+  "description": "Public proxy in front of the OpenPOS releases bucket (update manifest + artifacts)",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "check": "biome check src && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1112.0",
+    "@hono/node-server": "^2.1.1",
+    "hono": "^4.13.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.9",
+    "@types/node": "^24.13.3",
+    "tsx": "^4.23.12",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

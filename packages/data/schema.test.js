@@ -1,0 +1,31 @@
+import { describe, expect, it } from 'vitest'
+const { generateConnectionKey, replicatedTables, replicatedTablesByName, schema } = await import('./src/index.js')
+
+describe('@openpos/data Drizzle schema exports', () => {
+  it('exposes the OpenPOS schema and derived replicated table metadata', () => {
+    expect(typeof schema).toBe('object')
+    expect(schema.users).toBeDefined()
+    expect(schema.connectionMeta).toBeDefined()
+    expect(schema.databaseSettings).toBeDefined()
+    expect(schema.syncMetadata).toBeDefined()
+    expect(schema.syncOutbox).toBeDefined()
+    expect(schema.syncState).toBeDefined()
+    expect(schema.orderSyncQueue).toBeDefined()
+    expect(schema.products).toBeDefined()
+    expect(typeof generateConnectionKey).toBe('function')
+    expect(replicatedTables.map((table) => table.tableName)).toEqual([
+      'users',
+      'products',
+      'customers',
+      'company_settings',
+      'orders',
+      'order_items',
+      'product_attributes',
+      'product_variants',
+      'product_variant_settings',
+    ])
+    expect(replicatedTablesByName.products.columns).toContain('barcode_normalized')
+    expect(replicatedTablesByName.users.columns).toContain('pin_enabled')
+    expect(replicatedTablesByName.users.columns).toContain('pin_hash')
+  })
+})

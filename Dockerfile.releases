@@ -1,0 +1,20 @@
+# OpenPOS Releases Service
+# Builds the apps/releases workspace package and runs its compiled output.
+FROM node:24-alpine AS base
+RUN corepack enable
+WORKDIR /app
+
+FROM base AS build
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/releases/package.json apps/releases/
+RUN pnpm install --frozen-lockfile --filter @openpos/releases
+COPY apps/releases apps/releases
+RUN pnpm --filter @openpos/releases build
+
+FROM base AS runtime
+ENV NODE_ENV=production
+# Copy the whole workspace so pnpm's relative node_modules symlinks stay intact.
+COPY --from=build /app /app
+WORKDIR /app/apps/releases
+EXPOSE 3100
+CMD ["node", "dist/index.js"]

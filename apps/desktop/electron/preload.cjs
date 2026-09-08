@@ -1,0 +1,112 @@
+const { contextBridge, ipcRenderer } = require('electron')
+
+function sendRendererSignal(phase) {
+  try {
+    ipcRenderer.send('desktop:renderer-signal', { phase, ts: Date.now() })
+  } catch {
+    // Preload can run before IPC is ready during a crashed/recreated window.
+  }
+}
+
+contextBridge.exposeInMainWorld('__OPENPOS_DESKTOP__', {
+  isElectron: true,
+  platform: process.platform,
+})
+
+contextBridge.exposeInMainWorld('openposDesktop', {
+  getInfo: () => ipcRenderer.invoke('desktop:info'),
+  greet: (name) => ipcRenderer.invoke('desktop:greet', name),
+  hashPassword: (password) => ipcRenderer.invoke('desktop:hash-password', password),
+  verifyPassword: (password, hash) => ipcRenderer.invoke('desktop:verify-password', password, hash),
+  encryptSecret: (value) => ipcRenderer.invoke('desktop:encrypt-secret', value),
+  decryptSecret: (value) => ipcRenderer.invoke('desktop:decrypt-secret', value),
+  printThermalReceipt: (receiptData) => ipcRenderer.invoke('desktop:print-thermal-receipt', receiptData),
+  getConfig: () => ipcRenderer.invoke('desktop:config'),
+  setApiUrl: (apiUrl) => ipcRenderer.invoke('desktop:config-set-api-url', apiUrl),
+  resetSettings: (resetKey) => ipcRenderer.invoke('desktop:config-reset', resetKey),
+  sync: {
+    getStatus: () => ipcRenderer.invoke('desktop:sync-status'),
+    trigger: () => ipcRenderer.invoke('desktop:sync-trigger'),
+    getConflicts: () => ipcRenderer.invoke('desktop:sync-conflicts'),
+    resetLocal: () => ipcRenderer.invoke('desktop:sync-reset-local'),
+  },
+  connectivity: {
+    getStatus: () => ipcRenderer.invoke('desktop:connectivity-status'),
+    refresh: () => ipcRenderer.invoke('desktop:connectivity-refresh'),
+  },
+  startup: {
+    rendererReady: () => sendRendererSignal('painted'),
+    getStatus: () => ipcRenderer.invoke('desktop:startup-status'),
+    initialize: () => ipcRenderer.invoke('desktop:startup-initialize'),
+    retry: () => ipcRenderer.invoke('desktop:startup-retry'),
+  },
+  connection: {
+    getActive: () => ipcRenderer.invoke('desktop:connection-get'),
+    getRegisterPayload: () => ipcRenderer.invoke('desktop:connection-register-payload'),
+    create: (payload) => ipcRenderer.invoke('desktop:connection-create', payload),
+    join: (payload) => ipcRenderer.invoke('desktop:connection-join', payload),
+    importRemote: (payload) => ipcRenderer.invoke('desktop:connection-import', payload),
+    bootstrapOwner: (payload) => ipcRenderer.invoke('desktop:connection-bootstrap-owner', payload),
+    applyRemote: (payload) => ipcRenderer.invoke('desktop:connection-apply-remote', payload),
+    confirmEmergencyKit: () => ipcRenderer.invoke('desktop:connection-confirm-kit'),
+    getEmergencyKit: () => ipcRenderer.invoke('desktop:connection-emergency-kit'),
+    leave: () => ipcRenderer.invoke('desktop:connection-leave'),
+    factoryReset: () => ipcRenderer.invoke('desktop:connection-factory-reset'),
+  },
+  orders: {
+    syncAggregate: (orderId, operation) =>
+      ipcRenderer.invoke('desktop:orders-sync-aggregate', {
+        orderId,
+        operation,
+      }),
+  },
+  db: {
+    query: (sql, params) => ipcRenderer.invoke('desktop:db-query', sql, params),
+    execute: (sql, params) => ipcRenderer.invoke('desktop:db-execute', sql, params),
+    transaction: (statements) => ipcRenderer.invoke('desktop:db-transaction', statements),
+  },
+  images: {
+    save: (payload) => ipcRenderer.invoke('desktop:image-save', payload),
+    resolve: (keys) => ipcRenderer.invoke('desktop:image-resolve', keys),
+    delete: (key) => ipcRenderer.invoke('desktop:image-delete', key),
+  },
+  theme: {
+    get: () => ipcRenderer.invoke('desktop:theme'),
+    set: (theme) => ipcRenderer.invoke('desktop:set-theme', theme),
+    onChange: (cb) => {
+      const wrapped = (_event, theme) => cb(theme)
+      ipcRenderer.on('desktop:theme-changed', wrapped)
+      return () => { ipcRenderer.removeListener('desktop:theme-changed', wrapped) }
+    },
+  },
+  navigation: {
+    onNavigate: (cb) => {
+      const wrapped = (_event, page) => cb(page)
+      ipcRenderer.on('navigate', wrapped)
+      return () => { ipcRenderer.removeListener('navigate', wrapped) }
+    },
+  },
+  updates: {
+    openReleasePage: (url) => ipcRenderer.invoke('desktop:open-external', url),
+    relaunch: () => ipcRenderer.invoke('desktop:relaunch'),
+    downloadAppImageUpdate: (url, version, sha256) =>
+      ipcRenderer.invoke('desktop:update-download-appimage', { url, version, sha256 }),
+    downloadDebUpdate: (url, version, sha256) =>
+      ipcRenderer.invoke('desktop:update-download-deb', { url, version, sha256 }),
+    installDownloadedAppImage: (tempPath) => ipcRenderer.invoke('desktop:update-install-appimage', { tempPath }),
+    installDownloadedDeb: (tempPath) => ipcRenderer.invoke('desktop:update-install-deb', { tempPath }),
+    restartFromInstalledAppImage: () => ipcRenderer.invoke('desktop:update-restart-appimage'),
+    restartFromInstalledDeb: () => ipcRenderer.invoke('desktop:update-restart-deb'),
+    downloadMacZipUpdate: (url, version, sha256) =>
+      ipcRenderer.invoke('desktop:update-download-mac-zip', { url, version, sha256 }),
+    installDownloadedMacZip: (tempPath) => ipcRenderer.invoke('desktop:update-install-mac-zip', { tempPath }),
+    restartFromUpdatedMacApp: () => ipcRenderer.invoke('desktop:update-restart-mac'),
+    onStatusChange: (listener) => {
+      const wrapped = (_event, payload) => listener(payload)
+      ipcRenderer.on('desktop:update-status', wrapped)
+      return () => {
+        ipcRenderer.removeListener('desktop:update-status', wrapped)
+      }
+    },
+  },
+})

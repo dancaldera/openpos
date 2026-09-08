@@ -1,0 +1,78 @@
+---
+const platforms = [
+  {
+    name: 'Linux',
+    status: 'Production ready',
+    updates: 'Supported',
+    formats: 'AppImage, .deb',
+  },
+  {
+    name: 'macOS',
+    status: 'Development',
+    updates: 'Planned',
+    formats: '.dmg, .zip',
+  },
+  {
+    name: 'Windows',
+    status: 'Development',
+    updates: 'Planned',
+    formats: '.exe, .msi',
+  },
+]
+---
+
+<section id="platforms" class="bg-canvas px-4 py-20 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-[1200px]">
+    <div class="mx-auto mb-16 max-w-3xl text-center">
+      <p class="text-caption font-medium tracking-[0.011em] text-graphite">Cross-platform</p>
+      <h2 class="mt-4 text-heading-lg font-semibold leading-[1.21] tracking-[-0.01em] text-void sm:text-display sm:leading-[1.16] sm:tracking-[-1.44px]">
+        One app, all platforms
+      </h2>
+      <p class="mt-5 text-base leading-[1.65] text-graphite sm:text-[18px]">
+        Built with Electron for a consistent desktop experience across Linux, macOS, and Windows.
+      </p>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-3">
+      {platforms.map(platform => (
+        <article class="rounded-cards border border-fog-border bg-canvas p-8 transition-colors hover:bg-chalk">
+          <h3 class="text-heading font-semibold leading-[1.26] text-void">{platform.name}</h3>
+          <dl class="mt-6 space-y-3 text-sm">
+            <div class="flex items-center justify-between gap-4">
+              <dt class="text-graphite">Status</dt>
+              <dd class="text-right text-void">{platform.status}</dd>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <dt class="text-graphite">Auto-update</dt>
+              <dd class="text-right text-void">{platform.updates}</dd>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <dt class="text-graphite">Formats</dt>
+              <dd class="text-right text-void">{platform.formats}</dd>
+            </div>
+          </dl>
+          <a
+            href="https://github.com/dancaldera/openpos/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-6 inline-flex w-full items-center justify-center rounded-buttons border border-fog-border px-4 py-2.5 text-sm font-medium text-void transition-colors hover:bg-chalk focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
+          >
+            Download for {platform.name}
+          </a>
+        </article>
+      ))}
+    </div>
+
+    <p class="mt-12 text-center text-sm text-graphite">
+      Want to build from source?
+      <a
+        href="https://github.com/dancaldera/openpos"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="rounded-links text-void underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-void"
+      >
+        View the repository
+      </a>
+    </p>
+  </div>
+</section>

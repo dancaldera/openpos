@@ -1,0 +1,187 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+class MemoryStorage {
+  private values = new Map<string, string>()
+
+  get length(): number {
+    return this.values.size
+  }
+
+  getItem(key: string): string | null {
+    return this.values.get(key) ?? null
+  }
+
+  key(index: number): string | null {
+    return Array.from(this.values.keys())[index] ?? null
+  }
+
+  setItem(key: string, value: string): void {
+    this.values.set(key, value)
+  }
+
+  removeItem(key: string): void {
+    this.values.delete(key)
+  }
+
+  clear(): void {
+    this.values.clear()
+  }
+}
+
+const { requestApiJson, execute, query } = vi.hoisted(() => ({
+  requestApiJson: vi.fn(
+    async (): Promise<Record<string, unknown>> => ({
+      user: {
+        id: '1',
+        email: 'ana@example.com',
+        name: 'Ana',
+        role: 'admin' as const,
+        permissions: ['*'],
+        createdAt: '2026-03-27T00:00:00.000Z',
+      },
+    }),
+  ),
+  execute: vi.fn(async () => ({ lastInsertId: 0, rowsAffected: 0 })),
+  query: vi.fn(async () => []),
+}))
+
+vi.mock('../lib/api-client', () => ({
+  requestApiJson,
+}))
+
+vi.mock('../lib/db-adapter', () => ({
+  execute,
+  query,
+}))
+
+vi.mock('../lib/desktop', () => ({
+  requireDesktopApi: vi.fn(() => {
+    throw new Error('Desktop API should not be used in web mode tests')
+  }),
+}))
+
+vi.mock('../lib/platform', () => ({
+  isDesktop: false,
+}))
+
+const { AuthService } = await import('./auth-turso')
+const { AuthExpiredError } = await import('../lib/auth-session')
+
+describe('AuthService.restoreCurrentUser', () => {
+  let storage: MemoryStorage
+  const service = AuthService.getInstance()
+
+  beforeEach(() => {
+    storage = new MemoryStorage()
+    globalThis.localStorage = storage as unknown as Storage
+    service.signOut()
+    requestApiJson.mockReset()
+  })
+
+  it('validates the stored token and refreshes the persisted user from /api/auth/me', async () => {
+    storage.setItem(
+      'pos_user',
+      JSON.stringify({
+        id: 'stale',
+        email: 'stale@example.com',
+        name: 'Stale User',
+        role: 'user',
+        permissions: [],
+        createdAt: '',
+      }),
+    )
+    storage.setItem('auth_token', 'valid-token')
+    requestApiJson.mockImplementation(async () => ({
+      user: {
+        id: '1',
+        email: 'ana@example.com',
+        name: 'Ana',
+        role: 'admin',
+        permissions: ['*'],
+        createdAt: '2026-03-27T00:00:00.000Z',
+      },
+    }))
+
+    const restoredUser = await service.restoreCurrentUser()
+
+    expect(requestApiJson).toHaveBeenCalledWith('/api/auth/me', { requireAuth: true })
+    expect(restoredUser?.email).toBe('ana@example.com')
+    expect(storage.getItem('pos_user')).toBe(
+      JSON.stringify({
+        id: '1',
+        email: 'ana@example.com',
+        name: 'Ana',
+        role: 'admin',
+        permissions: ['*'],
+        createdAt: '2026-03-27T00:00:00.000Z',
+      }),
+    )
+  })
+
+  it('clears persisted auth when the stored token is expired', async () => {
+    storage.setItem(
+      'pos_user',
+      JSON.stringify({
+        id: '1',
+        email: 'ana@example.com',
+        name: 'Ana',
+        role: 'admin',
+        permissions: ['*'],
+        createdAt: '2026-03-27T00:00:00.000Z',
+      }),
+    )
+    storage.setItem('auth_token', 'expired-token')
+    requestApiJson.mockImplementation(async () => {
+      throw new AuthExpiredError()
+    })
+
+    const restoredUser = await service.restoreCurrentUser()
+
+    expect(restoredUser).toBeNull()
+    expect(storage.getItem('auth_token')).toBeNull()
+    expect(storage.getItem('pos_user')).toBeNull()
+  })
+})
+
+describe('AuthService.signInWithPin web', () => {
+  let storage: MemoryStorage
+  const service = AuthService.getInstance()
+
+  beforeEach(() => {
+    storage = new MemoryStorage()
+    globalThis.localStorage = storage as unknown as Storage
+    service.signOut()
+    requestApiJson.mockReset()
+  })
+
+  it('stores the token from PIN login', async () => {
+    requestApiJson.mockResolvedValueOnce({
+      token: 'pin-jwt',
+      user: {
+        id: '1',
+        email: 'ana@example.com',
+        name: 'Ana',
+        role: 'admin',
+        permissions: ['*'],
+        createdAt: '2026-03-27T00:00:00.000Z',
+        pinEnabled: true,
+      },
+    })
+
+    const result = await service.signInWithPin('1', '246810')
+
+    expect(requestApiJson).toHaveBeenCalledWith('/api/auth/login', {
+      method: 'POST',
+      body: { userId: '1', pin: '246810' },
+    })
+    expect(result.success).toBe(true)
+    expect(storage.getItem('auth_token')).toBe('pin-jwt')
+  })
+
+  it('rejects a PIN that is not six digits without calling the API', async () => {
+    const result = await service.signInWithPin('1', '123')
+
+    expect(result).toEqual({ success: false, error: 'Invalid PIN' })
+    expect(requestApiJson).not.toHaveBeenCalled()
+  })
+})

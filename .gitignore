@@ -1,0 +1,41 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lCerna-debug.log*
+bun-debug.log*
+
+node_modules
+.astro
+dist
+dist-electron
+dist-ssr
+dist-web
+dist-releases
+*.local
+*.env
+
+# Local file-backed store databases created by the API connection adapter
+apps/api/data/
+
+# Local agent instructions (untracked)
+AGENTS.md
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vercel
+.cache
+.pnpm-store
+
+.delta

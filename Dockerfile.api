@@ -1,0 +1,21 @@
+# OpenPOS API
+# Builds the apps/api workspace package and runs its compiled output.
+FROM node:24-alpine AS base
+RUN corepack enable
+WORKDIR /app
+
+FROM base AS build
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json apps/api/
+COPY packages/data/package.json packages/data/
+RUN pnpm install --frozen-lockfile --filter @openpos/api...
+COPY apps/api apps/api
+COPY packages/data packages/data
+RUN pnpm --filter @openpos/api build
+
+FROM base AS runtime
+ENV NODE_ENV=production
+COPY --from=build /app /app
+WORKDIR /app/apps/api
+EXPOSE 3001
+CMD ["node", "dist/index.js"]
