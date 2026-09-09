@@ -15,6 +15,7 @@ dist-electron
 dist-ssr
 dist-web
 dist-releases
+coverage
 *.local
 *.env
 
