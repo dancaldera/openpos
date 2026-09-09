@@ -3,8 +3,7 @@ const { applyRemoteMigrations } = require('../src/migration-runner.cjs')
 const { loadEnv } = require('../src/internal/env')
 const { repoRoot } = require('../src/project')
 
-async function main() {
-  const env = loadEnv({ repoRoot })
+export async function runRemoteMigrations({ env, createClientFn, applyMigrations }) {
   const url = env.TURSO_DATABASE_URL
   const authToken = env.TURSO_AUTH_TOKEN
   if (!url) {
@@ -15,12 +14,13 @@ async function main() {
     throw new Error('TURSO_AUTH_TOKEN is not set in .env.local')
   }
 
-  const client = createClient({ url, authToken })
+  const client = createClientFn({ url, authToken })
   try {
-    const result = await applyRemoteMigrations(client)
+    const result = await applyMigrations(client)
     console.log('OpenPOS remote Drizzle migrations')
     console.log(`Found ${result.migrations.length} migration files`)
     console.log(`Applied ${result.appliedCount}, skipped ${result.skippedCount}`)
+    return result
   } finally {
     if (typeof client.close === 'function') {
       client.close()
@@ -28,7 +28,14 @@ async function main() {
   }
 }
 
-main().catch((error) => {
+export function reportScriptFailure(error) {
   console.error(error instanceof Error ? error.message : error)
   process.exit(1)
-})
+}
+
+/* istanbul ignore if: production entrypoint (unit tests call runRemoteMigrations directly). */
+if (require.main === module) {
+  runRemoteMigrations({ env: loadEnv({ repoRoot }), createClientFn: createClient, applyMigrations: applyRemoteMigrations }).catch(
+    reportScriptFailure,
+  )
+}

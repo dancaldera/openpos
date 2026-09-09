@@ -73,4 +73,37 @@ describe('api-config', () => {
       userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
     })
   })
+
+  it('falls back when the runtime config cannot be read', async () => {
+    globalThis.window = {
+      openposDesktop: {
+        getConfig: async () => {
+          throw new Error('no bridge')
+        },
+      },
+    } as Window & typeof globalThis
+
+    const config = await getDesktopApiConfig()
+    expect(config).toMatchObject({
+      connectionKey: '',
+      configPath: '',
+      configSource: 'bundled',
+      userDataConfigPath: '',
+    })
+    expect(typeof config.apiUrl).toBe('string')
+  })
+
+  it('defaults the config source when the runtime omits it', async () => {
+    globalThis.window = {
+      openposDesktop: {
+        getConfig: async () => ({
+          apiUrl: 'https://runtime-api.example.com',
+        }),
+      },
+    } as Window & typeof globalThis
+
+    const config = await getDesktopApiConfig()
+    expect(config.configSource).toBe('bundled')
+    expect(config.configPath).toBe('')
+  })
 })

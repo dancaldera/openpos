@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DatabaseSync as Database } from 'node:sqlite'
-const { createSyncManager, ensureLocalSyncSchema } = await import('./src/index.cjs')
+const { createSyncManager } = await import('./src/sync-manager.cjs')
+const { ensureLocalSyncSchema } = await import('./src/schema.cjs')
 
 function createRemoteClient(database) {
   return {

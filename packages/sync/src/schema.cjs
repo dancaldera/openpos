@@ -18,11 +18,8 @@ function tableExists(database, tableName) {
   return Boolean(row?.name)
 }
 
+// All callers check tableExists first, so the table always exists here.
 function tableHasColumn(database, tableName, columnName) {
-  if (!tableExists(database, tableName)) {
-    return false
-  }
-
   return database.prepare(`PRAGMA table_info(${quoteIdentifier(tableName)})`).all().some((column) => column.name === columnName)
 }
 

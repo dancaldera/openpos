@@ -46,7 +46,7 @@ function validatePasswordStrength(password) {
   return null
 }
 
-function hasAnyOwnerInput(input = {}) {
+function hasAnyOwnerInput(input) {
   return Boolean(input.storeName?.trim() || input.adminName?.trim() || input.adminEmail?.trim() || input.adminPassword)
 }
 
@@ -54,21 +54,22 @@ function parseStoreOwnerInput(input = {}) {
   const storeName = String(input.storeName || '').trim()
   const adminName = String(input.adminName || '').trim()
   const adminEmail = String(input.adminEmail || '').trim().toLowerCase()
-  const passwordError = validatePasswordStrength(input.adminPassword || '')
+  const adminPassword = input.adminPassword || ''
+  const passwordError = validatePasswordStrength(adminPassword)
 
   if (!storeName) throw new Error('Store name is required')
   if (!adminName) throw new Error('Admin name is required')
   if (!isValidEmail(adminEmail)) throw new Error('A valid admin email is required')
   if (passwordError) throw new Error(passwordError)
 
-  return { storeName, adminName, adminEmail, adminPassword: input.adminPassword || '' }
+  return { storeName, adminName, adminEmail, adminPassword }
 }
 
-function runSqlite(database, sql, params = []) {
+function runSqlite(database, sql, params) {
   database.prepare(sql).run(...params)
 }
 
-function querySqlite(database, sql, params = []) {
+function querySqlite(database, sql, params) {
   return database.prepare(sql).all(...params)
 }
 
@@ -79,7 +80,7 @@ function countActiveUsersSqlite(database) {
 
 async function seedSqliteStore(database, owner, key, seed) {
   const passwordHash = await bcrypt.hash(owner.adminPassword, BCRYPT_ROUNDS)
-  await seedFreshStore((sql, params) => runSqlite(database, sql, params || []), {
+  await seedFreshStore((sql, params) => runSqlite(database, sql, params), {
     storeName: owner.storeName,
     adminName: owner.adminName,
     adminEmail: owner.adminEmail,
@@ -117,11 +118,11 @@ function rowsFromExecute(result) {
   })
 }
 
-async function runRemote(client, sql, params = []) {
+async function runRemote(client, sql, params) {
   await client.execute(sql, params)
 }
 
-async function queryRemote(client, sql, params = []) {
+async function queryRemote(client, sql, params) {
   const result = await client.execute(sql, params)
   return rowsFromExecute(result)
 }
@@ -231,13 +232,13 @@ async function attachRemoteStore(input) {
       key = parsed
       storeName = owner.storeName
       const passwordHash = await bcrypt.hash(owner.adminPassword, BCRYPT_ROUNDS)
-      await ensureStoreOwner((sql, params) => runRemote(client, sql, params || []), {
+      await ensureStoreOwner((sql, params) => runRemote(client, sql, params), {
         storeName: owner.storeName,
         adminName: owner.adminName,
         adminEmail: owner.adminEmail,
         adminPasswordHash: passwordHash,
       })
-      await writeConnectionMeta((sql, params) => runRemote(client, sql, params || []), {
+      await writeConnectionMeta((sql, params) => runRemote(client, sql, params), {
         connectionKey: key,
         seedVerifier: String(existing.seed_verifier),
         storeName,
@@ -247,7 +248,7 @@ async function attachRemoteStore(input) {
       seed = generateConnectionSeed()
       storeName = owner.storeName
       const passwordHash = await bcrypt.hash(owner.adminPassword, BCRYPT_ROUNDS)
-      await seedFreshStore((sql, params) => runRemote(client, sql, params || []), {
+      await seedFreshStore((sql, params) => runRemote(client, sql, params), {
         storeName: owner.storeName,
         adminName: owner.adminName,
         adminEmail: owner.adminEmail,
@@ -266,7 +267,7 @@ async function attachRemoteStore(input) {
     seed = generateConnectionSeed()
     const company = (await queryRemote(client, 'SELECT name FROM company_settings WHERE id = 1 LIMIT 1'))[0]
     storeName = String(company?.name || 'OpenPOS')
-    await writeConnectionMeta((sql, params) => runRemote(client, sql, params || []), {
+    await writeConnectionMeta((sql, params) => runRemote(client, sql, params), {
       connectionKey: key,
       seedVerifier: hashConnectionSeed(seed),
       storeName,
@@ -290,14 +291,14 @@ async function bootstrapLocalOwner(database, ownerInput) {
 
   const passwordHash = await bcrypt.hash(owner.adminPassword, BCRYPT_ROUNDS)
   const existing = await readConnectionMeta((sql, params) => querySqlite(database, sql, params || []))
-  await ensureStoreOwner((sql, params) => runSqlite(database, sql, params || []), {
+  await ensureStoreOwner((sql, params) => runSqlite(database, sql, params), {
     storeName: owner.storeName,
     adminName: owner.adminName,
     adminEmail: owner.adminEmail,
     adminPasswordHash: passwordHash,
   })
   if (existing?.connection_key && existing.seed_verifier) {
-    await writeConnectionMeta((sql, params) => runSqlite(database, sql, params || []), {
+    await writeConnectionMeta((sql, params) => runSqlite(database, sql, params), {
       connectionKey: String(existing.connection_key),
       seedVerifier: String(existing.seed_verifier),
       storeName: owner.storeName,

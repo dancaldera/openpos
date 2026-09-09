@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { handleVirtualKeypadKeyDown } from './VirtualKeypad'
+import { handleVirtualKeypadKeyDown, isEditableKeyTarget } from './VirtualKeypad'
 
 function keyEvent(
   key: string,
@@ -56,5 +56,31 @@ describe('handleVirtualKeypadKeyDown', () => {
 
     expect(onDigitPress).not.toHaveBeenCalled()
     expect(onBackspace).not.toHaveBeenCalled()
+  })
+
+  it('ignores keys with ctrl or alt modifiers', () => {
+    const onDigitPress = vi.fn(() => {})
+    const onBackspace = vi.fn(() => {})
+
+    expect(
+      handleVirtualKeypadKeyDown(keyEvent('2', { ctrlKey: true }), { disabled: false, onDigitPress, onBackspace }),
+    ).toBe(false)
+    expect(
+      handleVirtualKeypadKeyDown(keyEvent('2', { altKey: true }), { disabled: false, onDigitPress, onBackspace }),
+    ).toBe(false)
+    expect(onDigitPress).not.toHaveBeenCalled()
+    expect(onBackspace).not.toHaveBeenCalled()
+  })
+})
+
+describe('isEditableKeyTarget', () => {
+  it('detects editable targets', () => {
+    expect(isEditableKeyTarget(null)).toBe(false)
+    expect(isEditableKeyTarget('text' as unknown as EventTarget)).toBe(false)
+    expect(isEditableKeyTarget({ tagName: 'TEXTAREA' } as unknown as EventTarget)).toBe(true)
+    expect(isEditableKeyTarget({ tagName: 'SELECT' } as unknown as EventTarget)).toBe(true)
+    expect(isEditableKeyTarget({ tagName: 'DIV', isContentEditable: true } as unknown as EventTarget)).toBe(true)
+    expect(isEditableKeyTarget({ tagName: 'DIV' } as unknown as EventTarget)).toBe(false)
+    expect(isEditableKeyTarget({} as unknown as EventTarget)).toBe(false)
   })
 })

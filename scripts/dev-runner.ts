@@ -22,21 +22,20 @@ const desktopDir = join(rootDir, 'apps/desktop')
 const apiDir = join(rootDir, 'apps/api')
 const landingDir = join(rootDir, 'apps/landing')
 
-const mode = process.argv[2] as DevMode | undefined
 const children = new Set<ChildProcess>()
 let shuttingDown = false
 
-function delay(ms: number): Promise<void> {
+export function delay(ms: number): Promise<void> {
   return new Promise((resolveDelay) => {
     setTimeout(resolveDelay, ms)
   })
 }
 
-function isDevMode(value: string | undefined): value is DevMode {
+export function isDevMode(value: string | undefined): value is DevMode {
   return value !== undefined && DEV_MODES.includes(value as DevMode)
 }
 
-function registerChild(child: ChildProcess): ChildProcess {
+export function registerChild(child: ChildProcess): ChildProcess {
   children.add(child)
   child.once('exit', () => {
     children.delete(child)
@@ -44,7 +43,7 @@ function registerChild(child: ChildProcess): ChildProcess {
   return child
 }
 
-function waitForChildExit(child: ChildProcess): Promise<number> {
+export function waitForChildExit(child: ChildProcess): Promise<number> {
   return new Promise((resolveChild, rejectChild) => {
     child.once('error', rejectChild)
     child.once('exit', (code, signal) => {
@@ -58,7 +57,7 @@ function waitForChildExit(child: ChildProcess): Promise<number> {
   })
 }
 
-async function runCommand(command: string, args: string[], cwd: string, env = process.env): Promise<void> {
+export async function runCommand(command: string, args: string[], cwd: string, env = process.env): Promise<void> {
   const child = registerChild(
     spawn(command, args, {
       cwd,
@@ -73,7 +72,7 @@ async function runCommand(command: string, args: string[], cwd: string, env = pr
   }
 }
 
-function spawnLongRunning(command: string, args: string[], cwd: string, env = process.env): ChildProcess {
+export function spawnLongRunning(command: string, args: string[], cwd: string, env = process.env): ChildProcess {
   return registerChild(
     spawn(command, args, {
       cwd,
@@ -83,8 +82,12 @@ function spawnLongRunning(command: string, args: string[], cwd: string, env = pr
   )
 }
 
-function resolveWorkspaceBinary(workspaceDir: string, binaryName: string): string {
-  const extension = process.platform === 'win32' ? '.cmd' : ''
+export function resolveWorkspaceBinary(
+  workspaceDir: string,
+  binaryName: string,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  const extension = platform === 'win32' ? '.cmd' : ''
   const candidates = [
     join(workspaceDir, 'node_modules', '.bin', `${binaryName}${extension}`),
     join(rootDir, 'node_modules', '.bin', `${binaryName}${extension}`),
@@ -98,7 +101,7 @@ function resolveWorkspaceBinary(workspaceDir: string, binaryName: string): strin
   return match
 }
 
-function getWorkspacePackagePath(workspaceDir: string, packageName: string): string {
+export function getWorkspacePackagePath(workspaceDir: string, packageName: string): string {
   const candidates = [join(workspaceDir, 'node_modules', packageName), join(rootDir, 'node_modules', packageName)]
 
   const match = candidates.find((candidate) => existsSync(candidate))
@@ -109,7 +112,7 @@ function getWorkspacePackagePath(workspaceDir: string, packageName: string): str
   return match
 }
 
-async function ensureElectronBinaryInstalled(workspaceDir: string): Promise<void> {
+export async function ensureElectronBinaryInstalled(workspaceDir: string): Promise<void> {
   const electronDir = getWorkspacePackagePath(workspaceDir, 'electron')
   const pathFile = join(electronDir, 'path.txt')
   const distDir = join(electronDir, 'dist')
@@ -126,7 +129,7 @@ async function ensureElectronBinaryInstalled(workspaceDir: string): Promise<void
   })
 }
 
-async function canConnectToPort(port: number, host: string): Promise<boolean> {
+export async function canConnectToPort(port: number, host: string): Promise<boolean> {
   return new Promise<boolean>((resolvePort) => {
     const socket = new Socket()
 
@@ -144,7 +147,7 @@ async function canConnectToPort(port: number, host: string): Promise<boolean> {
   })
 }
 
-async function waitForPort(port: number, timeoutMs: number): Promise<void> {
+export async function waitForPort(port: number, timeoutMs: number): Promise<void> {
   const startedAt = Date.now()
 
   while (Date.now() - startedAt < timeoutMs) {
@@ -161,7 +164,7 @@ async function waitForPort(port: number, timeoutMs: number): Promise<void> {
   throw new Error(`Timed out waiting for port ${port}`)
 }
 
-async function terminateChildren(signal: NodeJS.Signals = 'SIGTERM'): Promise<void> {
+export async function terminateChildren(signal: NodeJS.Signals = 'SIGTERM'): Promise<void> {
   if (children.size === 0) {
     return
   }
@@ -186,7 +189,7 @@ async function terminateChildren(signal: NodeJS.Signals = 'SIGTERM'): Promise<vo
   }
 }
 
-async function shutdown(exitCode: number, signal: NodeJS.Signals = 'SIGTERM'): Promise<never> {
+export async function shutdown(exitCode: number, signal: NodeJS.Signals = 'SIGTERM'): Promise<never> {
   if (!shuttingDown) {
     shuttingDown = true
     await terminateChildren(signal)
@@ -195,7 +198,7 @@ async function shutdown(exitCode: number, signal: NodeJS.Signals = 'SIGTERM'): P
   process.exit(exitCode)
 }
 
-function installSignalHandlers(): void {
+export function installSignalHandlers(): void {
   const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM']
 
   for (const signal of signals) {
@@ -206,24 +209,40 @@ function installSignalHandlers(): void {
   }
 }
 
-async function runSingleProcessMode(command: string, args: string[], cwd: string): Promise<void> {
+export async function runSingleProcessMode(command: string, args: string[], cwd: string): Promise<void> {
   const child = spawnLongRunning(command, args, cwd)
   const exitCode = await waitForChildExit(child)
   await shutdown(exitCode)
 }
 
-async function main(): Promise<void> {
+export type { DevMode }
+
+export interface DevRunners {
+  runDesktop: typeof runDesktopModeWithApi
+  runSingle: typeof runSingleProcessMode
+  installHandlers: typeof installSignalHandlers
+}
+
+const defaultRunners: DevRunners = {
+  runDesktop: runDesktopModeWithApi,
+  runSingle: runSingleProcessMode,
+  installHandlers: installSignalHandlers,
+}
+
+export async function main(argv: string[] = process.argv.slice(2), runners: DevRunners = defaultRunners): Promise<void> {
+  const mode = argv[0]
   if (!isDevMode(mode)) {
     console.error(`Usage: pnpm run dev:<${DEV_MODES.join('|')}>`)
     process.exit(1)
+    return
   }
 
-  installSignalHandlers()
+  runners.installHandlers()
 
   switch (mode) {
     case 'dev':
     case 'dev:desktop':
-      await runDesktopModeWithApi(
+      await runners.runDesktop(
         {
           rootDir,
           desktopDir,
@@ -242,18 +261,21 @@ async function main(): Promise<void> {
       )
       return
     case 'dev:desktop:web':
-      await runSingleProcessMode(PACKAGE_RUNNER, ['run', 'dev:web'], desktopDir)
+      await runners.runSingle(PACKAGE_RUNNER, ['run', 'dev:web'], desktopDir)
       return
     case 'dev:api':
-      await runSingleProcessMode(PACKAGE_RUNNER, ['run', 'dev'], apiDir)
+      await runners.runSingle(PACKAGE_RUNNER, ['run', 'dev'], apiDir)
       return
     case 'dev:landing':
-      await runSingleProcessMode(PACKAGE_RUNNER, ['run', 'dev'], landingDir)
+      await runners.runSingle(PACKAGE_RUNNER, ['run', 'dev'], landingDir)
       return
   }
 }
 
-main().catch(async (error) => {
-  console.error(error instanceof Error ? error.message : String(error))
-  await shutdown(1)
-})
+/* c8 ignore next: production entrypoint (tests call main directly). */
+if (!process.env.VITEST) {
+  main().catch(async (error) => {
+    console.error(error instanceof Error ? error.message : String(error))
+    await shutdown(1)
+  })
+}

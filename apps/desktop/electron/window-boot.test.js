@@ -7,8 +7,13 @@ const {
   hasGraphicsFallbackFlag,
   isBlankFrame,
   isDisplayGeometryReady,
+  luminanceVariance,
   relaunchArgvWithGraphicsFallback,
+  resolveBootTimeoutMs,
+  resolveDelayedDisplaySettleMs,
+  resolveDisplayWaitMs,
   resolveFullscreenMode,
+  resolvePaintSettleMs,
   resolveWindowBootAction,
   shouldQuitOnLastWindow,
 } = await import('./window-boot.cjs')
@@ -197,5 +202,88 @@ describe('Linux graphics switches', () => {
       '--fullscreen',
       GRAPHICS_FALLBACK_FLAG,
     ])
+  })
+})
+
+describe('window boot branches', () => {
+  it('resolves timeouts from env with defaults', () => {
+    expect(resolveBootTimeoutMs()).toBe(6000)
+    expect(resolvePaintSettleMs()).toBe(450)
+    expect(resolveDisplayWaitMs()).toBe(12000)
+    expect(resolveDelayedDisplaySettleMs()).toBe(2000)
+
+    expect(resolveBootTimeoutMs({ OPENPOS_BOOT_TIMEOUT_MS: '1000' })).toBe(1000)
+    expect(resolvePaintSettleMs({ OPENPOS_PAINT_SETTLE_MS: '  ' })).toBe(450)
+    expect(resolveDisplayWaitMs({ OPENPOS_DISPLAY_WAIT_MS: 'soon' })).toBe(12000)
+    expect(resolveDelayedDisplaySettleMs({ OPENPOS_SESSION_SETTLE_MS: '-5' })).toBe(2000)
+    expect(resolveBootTimeoutMs({ OPENPOS_BOOT_TIMEOUT_MS: 500 })).toBe(6000)
+  })
+
+  it('treats true and yes as truthy flags', () => {
+    expect(hasGraphicsFallbackFlag({ env: { OPENPOS_GRAPHICS_FALLBACK: 'true' } })).toBe(true)
+    expect(hasGraphicsFallbackFlag({ env: { OPENPOS_GRAPHICS_FALLBACK: 'yes' } })).toBe(true)
+    expect(hasGraphicsFallbackFlag({ env: { OPENPOS_GRAPHICS_FALLBACK: 'no' } })).toBe(false)
+  })
+
+  it('defaults helpers without input', () => {
+    expect(hasGraphicsFallbackFlag()).toBe(false)
+    expect(relaunchArgvWithGraphicsFallback()).toEqual([GRAPHICS_FALLBACK_FLAG])
+    expect(compositorNudgeBounds()).toEqual({ x: undefined, y: undefined, width: 1200, height: 801 })
+    expect(luminanceVariance(null)).toBe(0)
+    expect(isBlankFrame(null)).toBe(true)
+    expect(resolveFullscreenMode()).toBe('none')
+    expect(resolveWindowBootAction()).toEqual({ action: 'wait' })
+    expect(typeof shouldQuitOnLastWindow()).toBe('boolean')
+    expect(applyLinuxRuntimeSwitches()).toEqual({ applied: [] })
+    expect(applyLinuxGraphicsSwitches()).toEqual({ applied: [] })
+  })
+
+  it('rebuilds relaunch argv without duplication', () => {
+    expect(relaunchArgvWithGraphicsFallback('nope')).toEqual([GRAPHICS_FALLBACK_FLAG])
+    expect(relaunchArgvWithGraphicsFallback(['openpos', GRAPHICS_FALLBACK_FLAG])).toEqual([
+      GRAPHICS_FALLBACK_FLAG,
+    ])
+  })
+
+  it('nudges invalid bounds to defaults', () => {
+    expect(compositorNudgeBounds({})).toEqual({ x: undefined, y: undefined, width: 1200, height: 801 })
+    expect(compositorNudgeBounds({ width: 'wide', height: -5, x: 1, y: 2 })).toEqual({
+      x: 1,
+      y: 2,
+      width: 1200,
+      height: 801,
+    })
+  })
+
+  it('scores empty or tiny frames as blank', () => {
+    expect(luminanceVariance(null, { width: 4, height: 4 })).toBe(0)
+    expect(luminanceVariance(Buffer.alloc(4), { width: 1, height: 1 })).toBe(0)
+    expect(isBlankFrame(null, {})).toBe(true)
+    expect(isBlankFrame(Buffer.alloc(4), {})).toBe(true)
+  })
+
+  it('uses the default variance threshold', () => {
+    const bitmap = solidBitmap(4, 4, [10, 10, 10])
+    expect(isBlankFrame(bitmap, { width: 4, height: 4 })).toBe(true)
+  })
+
+  it('honors an explicit variance threshold', () => {
+    const bitmap = solidBitmap(4, 4, [10, 10, 10])
+    expect(isBlankFrame(bitmap, { width: 4, height: 4 }, { maxVariance: 0 })).toBe(true)
+    expect(isBlankFrame(bitmap, { width: 4, height: 4 }, { maxVariance: -1 })).toBe(false)
+  })
+
+  it('skips linux switches off linux', () => {
+    expect(applyLinuxRuntimeSwitches(null, { platform: 'darwin' })).toEqual({ applied: [] })
+    expect(applyLinuxGraphicsSwitches(null, { platform: 'darwin', isPackaged: true })).toEqual({ applied: [] })
+  })
+
+  it('skips graphics switches in development without force', () => {
+    const commandLine = { appendSwitch: () => {} }
+    expect(applyLinuxGraphicsSwitches(commandLine, { platform: 'linux', isPackaged: false })).toEqual({ applied: [] })
+    expect(applyLinuxGraphicsSwitches(commandLine, { platform: 'linux', isPackaged: true })).toEqual({
+      applied: [],
+      graphicsFallback: false,
+    })
   })
 })

@@ -9,13 +9,16 @@
     "src"
   ],
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",
     "@openpos/data": "workspace:*"
   },
   "devDependencies": {
+    "@vitest/coverage-istanbul": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10",
     "vitest": "^4.1.10"
   }
 }

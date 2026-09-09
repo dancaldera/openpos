@@ -175,6 +175,173 @@ describe('requestApi error handling', () => {
       'The API server at https://api.example.com did not respond in time',
     )
   })
+})
+
+describe('requestApi headers and bodies', () => {
+  let storage: MemoryStorage
+
+  beforeEach(() => {
+    vi.stubEnv('VITE_API_URL', '')
+    storage = new MemoryStorage()
+    globalThis.localStorage = storage as unknown as Storage
+    resetApiUrlCacheForTests()
+    Reflect.deleteProperty(globalThis, 'window')
+  })
+
+  it('serializes JSON bodies with a JSON content type', async () => {
+    const seen: RequestInit[] = []
+    globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push(init ?? {})
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    }) as unknown as typeof fetch
+
+    await requestApi('/api/items', { method: 'POST', body: { name: 'apple' } })
+
+    const headers = new Headers(seen[0]?.headers)
+    expect(headers.get('Content-Type')).toBe('application/json')
+    expect(seen[0]?.body).toBe(JSON.stringify({ name: 'apple' }))
+  })
+
+  it('keeps an explicit content type untouched', async () => {
+    const seen: RequestInit[] = []
+    globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push(init ?? {})
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    }) as unknown as typeof fetch
+
+    await requestApi('/api/items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: 'hello',
+    })
+
+    expect(new Headers(seen[0]?.headers).get('Content-Type')).toBe('text/plain')
+  })
+
+  it('sends FormData without forcing a JSON content type', async () => {
+    const seen: RequestInit[] = []
+    globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push(init ?? {})
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    }) as unknown as typeof fetch
+    const form = new FormData()
+    form.append('file', 'bytes')
+
+    await requestApi('/api/upload', { method: 'POST', body: form })
+
+    expect(new Headers(seen[0]?.headers).has('Content-Type')).toBe(false)
+    expect(seen[0]?.body).toBe(form)
+  })
+
+  it('attaches the bearer token and connection key when available', async () => {
+    storage.setItem('auth_token', 'jwt-token')
+    storage.setItem('openpos_connection_key', 'conn-123')
+    const seen: RequestInit[] = []
+    globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push(init ?? {})
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    }) as unknown as typeof fetch
+
+    await requestApi('/api/query', { requireAuth: true })
+
+    const headers = new Headers(seen[0]?.headers)
+    expect(headers.get('Authorization')).toBe('Bearer jwt-token')
+    expect(headers.get('X-OpenPOS-Connection')).toBe('conn-123')
+  })
+
+  it('omits the connection header when no key is stored', async () => {
+    const seen: RequestInit[] = []
+    globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push(init ?? {})
+      return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    }) as unknown as typeof fetch
+
+    await requestApi('/api/query')
+
+    expect(new Headers(seen[0]?.headers).has('X-OpenPOS-Connection')).toBe(false)
+  })
+})
+
+describe('requestApiJson responses', () => {
+  let storage: MemoryStorage
+  const sessionExpiredHandler = vi.fn(() => {})
+
+  beforeEach(() => {
+    vi.stubEnv('VITE_API_URL', '')
+    storage = new MemoryStorage()
+    globalThis.localStorage = storage as unknown as Storage
+    sessionExpiredHandler.mockClear()
+    setSessionExpiredHandler(sessionExpiredHandler)
+    resetApiUrlCacheForTests()
+    Reflect.deleteProperty(globalThis, 'window')
+  })
+
+  it('returns undefined for 204 responses', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 204 })) as unknown as typeof fetch
+
+    await expect(requestApiJson('/api/items')).resolves.toBeUndefined()
+  })
+
+  it('returns the parsed JSON payload', async () => {
+    globalThis.fetch = vi.fn(
+      async () => new Response(JSON.stringify({ items: [1, 2] }), { status: 200 }),
+    ) as unknown as typeof fetch
+
+    await expect(requestApiJson<{ items: number[] }>('/api/items')).resolves.toEqual({ items: [1, 2] })
+  })
+
+  it('expires the session when a forbidden response reports an expired token', async () => {
+    storage.setItem('auth_token', 'jwt-token')
+    storage.setItem('pos_user', JSON.stringify({ id: '1' }))
+    globalThis.fetch = vi.fn(
+      async () => new Response(JSON.stringify({ error: 'expired token, sign in again' }), { status: 403 }),
+    ) as unknown as typeof fetch
+
+    await expect(requestApiJson('/api/query', { requireAuth: true })).rejects.toBeInstanceOf(AuthExpiredError)
+
+    expect(storage.getItem('auth_token')).toBeNull()
+    expect(sessionExpiredHandler).toHaveBeenCalledTimes(1)
+  })
+
+  it('falls back to the status text when JSON carries no error', async () => {
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: false }), {
+          status: 400,
+          statusText: 'Bad request',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    ) as unknown as typeof fetch
+
+    await expect(requestApiJson('/api/items')).rejects.toThrow('Bad request')
+  })
+
+  it('falls back to the status text when JSON parsing fails', async () => {
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response('not json', {
+          status: 400,
+          statusText: 'Bad request',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    ) as unknown as typeof fetch
+
+    await expect(requestApiJson('/api/items')).rejects.toThrow('Bad request')
+  })
+
+  it('falls back to the status text when the body is blank', async () => {
+    globalThis.fetch = vi.fn(
+      async () => new Response('', { status: 500, statusText: 'Server exploded' }),
+    ) as unknown as typeof fetch
+
+    await expect(requestApiJson('/api/items')).rejects.toThrow('Server exploded')
+  })
+
+  it('falls back to a generic message when nothing else is available', async () => {
+    globalThis.fetch = vi.fn(async () => new Response('   ', { status: 500 })) as unknown as typeof fetch
+
+    await expect(requestApiJson('/api/items')).rejects.toThrow('API request failed')
+  })
 
   it('preserves caller cancellation instead of reporting it as an API outage', async () => {
     const controller = new AbortController()
@@ -200,5 +367,77 @@ describe('requestApi error handling', () => {
     controller.abort()
 
     await expect(request).rejects.toMatchObject({ name: 'AbortError' })
+  })
+})
+
+describe('requestApiJson error details', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_API_URL', '')
+    globalThis.localStorage = new MemoryStorage() as unknown as Storage
+    setSessionExpiredHandler(null)
+    resetApiUrlCacheForTests()
+    Reflect.deleteProperty(globalThis, 'window')
+  })
+
+  it('surfaces JSON error payloads', async () => {
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: 'boom' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    ) as unknown as typeof fetch
+
+    await expect(requestApiJson('/api/items')).rejects.toThrow('boom')
+  })
+
+  it('ignores non-string JSON error payloads', async () => {
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: 42 }), {
+          status: 400,
+          statusText: 'Bad request',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    ) as unknown as typeof fetch
+
+    await expect(requestApiJson('/api/items')).rejects.toThrow('Bad request')
+  })
+
+  it('handles responses without a content type', async () => {
+    globalThis.fetch = vi.fn(async () => {
+      const response = new Response('', { status: 500, statusText: 'Nope' })
+      response.headers.delete('content-type')
+      return response
+    }) as unknown as typeof fetch
+
+    await expect(requestApiJson('/api/items')).rejects.toThrow('Nope')
+  })
+
+  it('skips connection headers when localStorage is unavailable', async () => {
+    vi.stubGlobal('localStorage', undefined)
+    try {
+      const seen: RequestInit[] = []
+      globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        seen.push(init ?? {})
+        return new Response(JSON.stringify({ ok: true }), { status: 200 })
+      }) as unknown as typeof fetch
+
+      await requestApi('/api/query')
+
+      expect(new Headers(seen[0]?.headers).has('X-OpenPOS-Connection')).toBe(false)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('reports unreachable servers without a configured base url', async () => {
+    globalThis.fetch = vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    }) as unknown as typeof fetch
+
+    await expect(requestApi('/api/connections/assigned')).rejects.toThrow(
+      'Cannot reach the API server. Check your internet connection and the configured API URL.',
+    )
   })
 })

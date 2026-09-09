@@ -10,6 +10,8 @@ const {
   buildDebRestartCommand,
   isDebianLikeOsRelease,
   isLinuxDebInstall,
+  normalizeArchTokens,
+  parseOsRelease,
   privilegedSpawnEnv,
   resolveLinuxUpdateFormat,
   resolveMacAppBundlePath,
@@ -375,5 +377,77 @@ describe('resolveUpdateDownloadFileName', () => {
     expect(() =>
       resolveUpdateDownloadFileName('https://example.com/file.exe', '0.9.0', 'x64', 'exe'),
     ).toThrow('Unsupported update format')
+  })
+})
+
+describe('update installer branches', () => {
+  it('parses os-release loosely', () => {
+    expect(parseOsRelease(undefined)).toEqual({})
+    expect(parseOsRelease('# comment\n\nID=debian\ngarbage-line\nID_LIKE="debian ubuntu"\n')).toEqual({
+      ID: 'debian',
+      ID_LIKE: 'debian ubuntu',
+    })
+  })
+
+  it('detects debian from ID alone', () => {
+    expect(isDebianLikeOsRelease('ID=debian\n')).toBe(true)
+    expect(isDebianLikeOsRelease('ID=arch\n')).toBe(false)
+    expect(isDebianLikeOsRelease('ID_LIKE="ubuntu debian"\n')).toBe(true)
+  })
+
+  it('rejects empty install paths', () => {
+    expect(isLinuxDebInstall('')).toBe(false)
+    expect(isLinuxDebInstall(undefined)).toBe(false)
+  })
+
+  it('skips linux formats off linux and on read errors', () => {
+    expect(resolveLinuxUpdateFormat({ platform: 'darwin' })).toBeNull()
+    expect(
+      resolveLinuxUpdateFormat({
+        platform: 'linux',
+        isPackaged: true,
+        exePath: '/opt/OpenPOS/openpos',
+        readFileSync: () => {
+          throw new Error('no file')
+        },
+      }),
+    ).toBeNull()
+  })
+
+  it('normalizes arch tokens', () => {
+    expect(normalizeArchTokens('arm64')).toEqual(['arm64', 'aarch64'])
+    expect(normalizeArchTokens('x64')).toEqual(['x86_64', 'amd64', 'x64'])
+    expect(normalizeArchTokens('ia32')).toEqual(['ia32'])
+  })
+
+  it('rejects non-https download urls and defaults versions', () => {
+    expect(() => resolveUpdateDownloadFileName('http://example.com/f.zip', '1.0.0', 'arm64', 'mac-zip')).toThrow(
+      'Only https: URLs allowed',
+    )
+    expect(resolveUpdateDownloadFileName('https://example.com/download/latest', undefined, 'x64', 'deb')).toBe(
+      'openpos-latest-x64.deb',
+    )
+  })
+
+  it('requires a downloaded file path', () => {
+    expect(() => assertUpdateFilePath({})).toThrow('Downloaded update was not found')
+  })
+
+  it('skips unavailable privilege escalations', () => {
+    const commands = buildDebInstallCommands({
+      debPath: '/tmp/openpos.deb',
+      isRoot: false,
+      availableCommands: { pkcon: true, pkexec: false },
+    })
+    expect(commands).toHaveLength(1)
+    expect(commands[0].command).toBe('/usr/bin/pkcon')
+  })
+
+  it('defaults helpers without input', () => {
+    expect(privilegedSpawnEnv()).toEqual({ DEBIAN_FRONTEND: 'noninteractive', PATH: '/usr/sbin:/usr/bin:/sbin:/bin' })
+    const commands = buildDebInstallCommands()
+    expect(commands).toHaveLength(2)
+    const restart = buildDebRestartCommand({ currentPid: 1, exePath: '/usr/bin/openpos' })
+    expect(restart.args).toContain('/usr/bin/openpos')
   })
 })

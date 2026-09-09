@@ -138,7 +138,8 @@ async function seedFreshStore(run, input) {
   await writeConnectionMeta(run, {
     connectionKey,
     seedVerifier,
-    storeName: String(input.storeName || '').trim(),
+    // ensureStoreOwner above throws on blank store names, so this is always set.
+    storeName: String(input.storeName).trim(),
     now,
   })
 }

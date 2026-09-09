@@ -140,6 +140,77 @@ describe('getUpdateBadgeViewModel', () => {
     expect(viewModel.error).toBe('pkexec denied the action')
   })
 
+  it('returns the installing state', () => {
+    const viewModel = getUpdateBadgeViewModel({
+      available: true,
+      checking: false,
+      checkedAt: 0,
+      downloadProgress: 100,
+      downloading: false,
+      error: null,
+      installedVersion: '0.3.1',
+      installing: true,
+      latestVersion: '0.3.2',
+      readyToInstall: false,
+      releaseNotes: null,
+      releaseUrl: null,
+      updateAssetName: 'openpos-0.3.2-x86_64.AppImage',
+      updateAssetUrl: 'https://example.com/openpos.AppImage',
+      labels,
+    })
+
+    expect(viewModel.actionLabel).toBe('Installing update...')
+    expect(viewModel.actionDisabled).toBe(true)
+  })
+
+  it('returns the downloading state before progress starts', () => {
+    const viewModel = getUpdateBadgeViewModel({
+      available: true,
+      checking: false,
+      checkedAt: 0,
+      downloadProgress: 0,
+      downloading: true,
+      error: null,
+      installedVersion: '0.3.1',
+      installing: false,
+      latestVersion: '0.3.2',
+      readyToInstall: false,
+      releaseNotes: null,
+      releaseUrl: null,
+      updateAssetName: 'openpos-0.3.2-x86_64.AppImage',
+      updateAssetUrl: 'https://example.com/openpos.AppImage',
+      labels,
+    })
+
+    expect(viewModel.primaryLabel).toBe('Downloading...')
+    expect(viewModel.actionLabel).toBe('Downloading...')
+    expect(viewModel.statusLabel).toBe('Downloading...')
+  })
+
+  it('keeps the default badge label when the version is unknown', () => {
+    const viewModel = getUpdateBadgeViewModel({
+      available: true,
+      checking: true,
+      checkedAt: 0,
+      downloadProgress: 0,
+      downloading: false,
+      error: null,
+      installedVersion: '0.3.1',
+      installing: false,
+      latestVersion: null,
+      readyToInstall: false,
+      releaseNotes: null,
+      releaseUrl: null,
+      updateAssetName: null,
+      updateAssetUrl: 'https://example.com/openpos.AppImage',
+      labels,
+    })
+
+    expect(viewModel.primaryLabel).toBe('Updates')
+    expect(viewModel.checkingLabel).toBe('Checking...')
+    expect(viewModel.actionDisabled).toBe(true)
+  })
+
   it('falls back to release-view mode when no auto-install asset is available', () => {
     const viewModel = getUpdateBadgeViewModel({
       available: true,

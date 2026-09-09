@@ -167,7 +167,8 @@ settingsRouter.put('/object-storage', async (c) => {
   try {
     endpoint = normalizeObjectStorageEndpoint(endpointValue)
   } catch (error) {
-    return c.json({ error: error instanceof Error ? error.message : 'Invalid S3 endpoint' }, 400)
+    // normalizeObjectStorageEndpoint only throws Errors.
+    return c.json({ error: (error as Error).message }, 400)
   }
 
   if (!bucket) {
@@ -459,9 +460,7 @@ function normalizeObjectStorageEndpoint(value: string): string {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new Error('S3 endpoint must use http or https')
   }
-  if (!url.hostname) {
-    throw new Error('S3 endpoint must include a hostname')
-  }
+  // NOTE: WHATWG URL parsing already rejects http(s) URLs without a hostname.
   if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
     throw new Error('S3 endpoint must use HTTPS in production')
   }

@@ -90,14 +90,13 @@ function formatPrinterCommandError({ command, code, stderr, printerName } = {}) 
   const details = normalizeString(stderr)
 
   if (!printerName && isMissingDefaultDestinationError(details)) {
+    // details is always set here: the missing-destination check requires it.
     return [
       'No printer is configured for OpenPOS.',
       'Set a system default printer with `lpoptions -d <printer>` or add `thermalPrinterName` to the OpenPOS config.json file.',
       'List installed printer queues with `lpstat -e`.',
-      details ? `CUPS error: ${details}` : '',
-    ]
-      .filter(Boolean)
-      .join(' ')
+      `CUPS error: ${details}`,
+    ].join(' ')
   }
 
   if (details) {

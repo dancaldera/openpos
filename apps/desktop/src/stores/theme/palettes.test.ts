@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeThemePalette, THEME_PALETTES } from './palettes'
+import { normalizeThemeMode, normalizeThemePalette, THEME_PALETTES } from './palettes'
 
 describe('THEME_PALETTES', () => {
   it('exposes a unique id and translation key per palette', () => {
@@ -28,5 +28,20 @@ describe('normalizeThemePalette', () => {
     expect(normalizeThemePalette(null)).toBe('classic')
     expect(normalizeThemePalette(undefined)).toBe('classic')
     expect(normalizeThemePalette(42)).toBe('classic')
+  })
+})
+
+describe('normalizeThemeMode', () => {
+  it('keeps known modes', () => {
+    expect(normalizeThemeMode('system')).toBe('system')
+    expect(normalizeThemeMode('light')).toBe('light')
+    expect(normalizeThemeMode('dark')).toBe('dark')
+  })
+
+  it('clears unknown or missing stored values', () => {
+    expect(normalizeThemeMode('neon')).toBeUndefined()
+    expect(normalizeThemeMode(null)).toBeUndefined()
+    expect(normalizeThemeMode(undefined)).toBeUndefined()
+    expect(normalizeThemeMode(42)).toBeUndefined()
   })
 })

@@ -205,4 +205,42 @@ describe('dashboard stats helpers', () => {
     expect(second.lowStockProducts).toBe(1)
     expect(queryMock).toHaveBeenCalledTimes(6)
   })
+
+  it('zeroes missing aggregate rows and defaults the reference date', async () => {
+    const runQuery = async <T,>(): Promise<T[]> => []
+
+    const stats = await fetchDashboardStats(runQuery)
+    expect(stats).toEqual({
+      totalSales: 0,
+      ordersToday: 0,
+      averageOrderValue: 0,
+      lowStockProducts: 0,
+      pendingOrders: 0,
+    })
+  })
+
+  it('refetches stale entries and keeps unrelated cache keys', async () => {
+    const runQuery = async <T,>(sql: string): Promise<T[]> => {
+      if (sql.includes('orders_today')) return [{ total_sales: 1, orders_today: 1, average_order_value: 1 }] as T[]
+      if (sql.includes('low_stock_products')) return [{ low_stock_products: 0 }] as T[]
+      return [{ pending_orders: 0 }] as T[]
+    }
+
+    await loadDashboardStats('shop-a', runQuery, { now: 1_000, referenceDate: new Date(2026, 3, 3) })
+    await loadDashboardStats('shop-b', runQuery, { now: 1_000, referenceDate: new Date(2026, 3, 3) })
+    invalidateDashboardStatsCache('shop-a')
+
+    const queryMock = vi.fn(runQuery)
+    await loadDashboardStats('shop-b', queryMock, { now: 2_000, referenceDate: new Date(2026, 3, 3) })
+    expect(queryMock).not.toHaveBeenCalled()
+
+    await loadDashboardStats('shop-b', queryMock, {
+      now: 1_000 + DASHBOARD_STATS_TTL_MS + 1,
+      referenceDate: new Date(2026, 3, 3),
+    })
+    expect(queryMock).toHaveBeenCalledTimes(3)
+
+    await loadDashboardStats('shop-c', queryMock)
+    expect(queryMock).toHaveBeenCalledTimes(6)
+  })
 })

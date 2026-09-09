@@ -28,6 +28,10 @@ describe('resolveReleasePlatforms', () => {
     expect(resolveReleasePlatforms(['linux', 'deb'], 'darwin')).toEqual(['linux'])
     expect(resolveReleasePlatforms(['deb'], 'darwin')).toEqual(['deb'])
   })
+
+  it('deduplicates repeated flags', () => {
+    expect(resolveReleasePlatforms(['mac', 'mac', 'linux', 'linux'], 'darwin')).toEqual(['mac', 'linux'])
+  })
 })
 
 describe('buildCommandForPlatform', () => {

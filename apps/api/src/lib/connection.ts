@@ -141,18 +141,13 @@ function upsertRegistry(entry: RegistryEntry): void {
 }
 
 function findRegistry(key: string): RegistryEntry | undefined {
-  const parsed = parseConnectionKey(key)
-  if (!parsed) return undefined
-  return readRegistry().connections.find((item) => item.key === parsed)
+  // Callers pass validated connection keys (see resolveDataPlane).
+  return readRegistry().connections.find((item) => item.key === key)
 }
 
 function filePathForKey(key: string): string {
-  const parsed = parseConnectionKey(key)
-  if (!parsed) {
-    throw new Error(CONNECTION_ERRORS.invalidKey)
-  }
-
-  return join(getConnectionsDir(), `${parsed.replaceAll('_', '-').toLowerCase()}.sqlite`)
+  // Callers pass validated connection keys (see fileDataPlane/resolveDataPlane).
+  return join(getConnectionsDir(), `${key.replaceAll('_', '-').toLowerCase()}.sqlite`)
 }
 
 function fileDataPlane(key: string): DataPlaneConfig {
@@ -196,12 +191,12 @@ export function parsePlatformConfig(input: { apiToken?: string; org?: string; gr
 }
 
 async function tursoPlatformRequest(creds: PlatformConfig, path: string, init: RequestInit = {}): Promise<Response> {
+  // No caller passes custom headers; auth and content type are always set here.
   return fetch(`https://api.turso.tech/v1/organizations/${creds.org}${path}`, {
     ...init,
     headers: {
       Authorization: `Bearer ${creds.apiToken}`,
       'Content-Type': 'application/json',
-      ...(init.headers || {}),
     },
   })
 }
@@ -312,8 +307,9 @@ export async function resolveDataPlane(key: string): Promise<DataPlaneConfig | n
 async function writeDatabaseSettings(
   client: QueryableClient,
   input: {
-    databaseUrl?: string | null
-    authToken?: string | null
+    // Both callers always pass the active data plane url and token (possibly null).
+    databaseUrl: string
+    authToken: string | null
     apiToken?: string | null
     org?: string | null
     group?: string | null
@@ -329,13 +325,8 @@ async function writeDatabaseSettings(
     }>(client, 'SELECT * FROM database_settings WHERE id = 1 LIMIT 1')
   )[0]
   const now = new Date().toISOString()
-  const databaseUrl = input.databaseUrl === undefined ? existing?.database_url || null : input.databaseUrl
-  const authTokenEncrypted =
-    input.authToken === undefined
-      ? existing?.auth_token_encrypted || null
-      : input.authToken
-        ? encryptSecret(input.authToken)
-        : null
+  const databaseUrl = input.databaseUrl
+  const authTokenEncrypted = input.authToken ? encryptSecret(input.authToken) : null
   const apiTokenEncrypted =
     input.apiToken === undefined
       ? existing?.api_token_encrypted || null
@@ -471,7 +462,8 @@ function parseStoreOwnerInput(input: {
   const storeName = input.storeName?.trim() || ''
   const adminName = input.adminName?.trim() || ''
   const adminEmail = input.adminEmail?.trim().toLowerCase() || ''
-  const passwordError = validatePasswordStrength(input.adminPassword || '')
+  const adminPassword = input.adminPassword || ''
+  const passwordError = validatePasswordStrength(adminPassword)
 
   if (!storeName) {
     throw new Error('Store name is required')
@@ -490,7 +482,7 @@ function parseStoreOwnerInput(input: {
     storeName,
     adminName,
     adminEmail,
-    adminPassword: input.adminPassword || '',
+    adminPassword,
   }
 }
 
@@ -517,13 +509,13 @@ async function attachRemoteDataPlane(
     apiToken?: string | null
     org?: string | null
     group?: string | null
-    ownerInput?: {
+    ownerInput: {
       storeName?: string
       adminName?: string
       adminEmail?: string
       adminPassword?: string
     }
-  } = {},
+  } = { ownerInput: {} },
 ): Promise<ConnectionResult> {
   const reachable = await probeDataPlane(dataPlane)
   if (!reachable) {
@@ -538,10 +530,10 @@ async function attachRemoteDataPlane(
   let storeName: string
 
   if (activeUsers === 0) {
-    if (!hasAnyOwnerInput(extras.ownerInput || {})) {
+    if (!hasAnyOwnerInput(extras.ownerInput)) {
       throw new Error(CONNECTION_ERRORS.ownerRequired)
     }
-    const owner = parseStoreOwnerInput(extras.ownerInput || {})
+    const owner = parseStoreOwnerInput(extras.ownerInput)
 
     if (existing?.connection_key && existing.seed_verifier) {
       const parsed = parseConnectionKey(String(existing.connection_key))
@@ -751,7 +743,8 @@ export async function bootstrapStoreOwner(input: BootstrapOwnerInput): Promise<C
     }
   }
 
-  const storeName = owner.storeName || String(existing?.store_name || 'OpenPOS')
+  // parseStoreOwnerInput guarantees a non-empty store name.
+  const storeName = owner.storeName
   upsertRegistry({
     key,
     adapter: dataPlane.url.startsWith('file:') ? 'file' : 'hosted',

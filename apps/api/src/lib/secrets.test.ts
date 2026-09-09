@@ -38,4 +38,15 @@ describe('secrets', () => {
     expect(verifyInternalSecret('operator-admin-secret')).toBe(true)
     expect(verifyInternalSecret('wrong-secret')).toBe(false)
   })
+
+  it('requires JWT_SECRET for encryption', () => {
+    delete process.env.JWT_SECRET
+    expect(() => encryptSecret('x')).toThrow('JWT_SECRET must be configured')
+  })
+
+  it('rejects malformed encrypted secrets', () => {
+    for (const malformed of ['junk', 'v1', 'v1.abc', 'v1.abc.def']) {
+      expect(() => decryptSecret(malformed)).toThrow('Unsupported encrypted secret format')
+    }
+  })
 })

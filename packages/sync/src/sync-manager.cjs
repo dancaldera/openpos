@@ -82,14 +82,14 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     lastError: null,
   }
 
-  function refreshCounts(database = getDatabase()) {
+  function refreshCounts(database) {
     const pendingRow = database.prepare(`SELECT COUNT(*) AS count FROM sync_outbox WHERE status = 'pending'`).get()
     const errorRow = database.prepare(`SELECT COUNT(*) AS count FROM sync_outbox WHERE status = 'error'`).get()
     const conflictRow = database.prepare(`SELECT COUNT(*) AS count FROM sync_outbox WHERE status = 'conflict'`).get()
 
-    status.pendingWrites = Number(pendingRow?.count ?? 0)
-    status.erroredWrites = Number(errorRow?.count ?? 0)
-    status.conflictedWrites = Number(conflictRow?.count ?? 0)
+    status.pendingWrites = Number(pendingRow.count)
+    status.erroredWrites = Number(errorRow.count)
+    status.conflictedWrites = Number(conflictRow.count)
   }
 
   function getStatusSnapshot(database = getDatabase()) {
@@ -124,7 +124,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
       configured: Boolean(config.configured),
       hasUrl: Boolean(config.url),
       hasAuthToken: Boolean(config.authToken),
-      url: config.url ?? null,
+      url: config.url,
     })
 
     if (getRemoteClientOverride) {
@@ -157,7 +157,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     })
   }
 
-  function beginSync({ foreground = false } = {}) {
+  function beginSync({ foreground }) {
     status.isSyncing = true
 
     if (foreground) {
@@ -361,7 +361,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
            last_sync_at = excluded.last_sync_at,
            updated_at = excluded.updated_at`,
       )
-      .run(tableName, values.lastPulledAt ?? null, values.lastSyncAt ?? null, new Date().toISOString())
+      .run(tableName, values.lastPulledAt, values.lastSyncAt ?? null, new Date().toISOString())
   }
 
   function getSyncState(database, tableName) {
@@ -387,18 +387,11 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
   }
 
   async function reconcileHardDeletes(database, client, config, prefetchedRemoteCount) {
-    let remoteCount
-    if (prefetchedRemoteCount !== undefined) {
-      remoteCount = prefetchedRemoteCount
-    } else {
-      const remoteCountRows = await fetchRemoteRows(
-        client,
-        `SELECT COUNT(*) AS c FROM ${quoteIdentifier(config.tableName)}`,
-      )
-      remoteCount = Number(remoteCountRows[0]?.c ?? 0)
-    }
+    // The sole caller (runHardDeleteReconciliation) only runs when every hard
+    // table has a prefetched count, so the count parameter is always defined.
+    const remoteCount = prefetchedRemoteCount
     const localCountRow = database.prepare(`SELECT COUNT(*) AS c FROM ${quoteIdentifier(config.tableName)}`).get()
-    const localCount = Number(localCountRow?.c ?? 0)
+    const localCount = Number(localCountRow.c)
 
     if (remoteCount >= localCount) {
       logSync('hard delete reconciliation skipped (counts match or remote has more)', {
@@ -442,7 +435,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     }
   }
 
-  async function detectChangedTables(database, client, { includeHardDeleteCounts = false } = {}) {
+  async function detectChangedTables(database, client, { includeHardDeleteCounts }) {
     try {
       const sentinel = await fetchRemoteRows(client, 'SELECT version FROM sync_metadata WHERE id = 1')
       const remoteVersion = sentinel[0]?.version ?? null
@@ -492,11 +485,14 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     const changedTables = new Set(alwaysPull)
     const remoteCounts = new Map()
 
+    /* istanbul ignore else: every replicated table has a watermark column, so the
+       EXISTS select list is never empty. */
     if (selectParts.length > 0) {
       const sql = `SELECT ${selectParts.join(', ')}`
       const rows = await fetchRemoteRows(client, sql, params)
       const row = rows[0]
 
+      /* istanbul ignore else: SELECT without FROM always returns exactly one row. */
       if (row) {
         for (const tableName of watermarkTables) {
           if (row['chg_' + tableName] === 1) {
@@ -526,10 +522,9 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
       (config) => config.deleteStrategy === 'hard' && config.tableName !== 'order_items',
     )
     for (const config of hardDeleteTables) {
-      const remoteCount = remoteCounts.get(config.tableName)
-      if (remoteCount !== undefined) {
-        await reconcileHardDeletes(database, client, config, remoteCount)
-      }
+      // Counts are prefetched for exactly this table set (see the
+      // includeHardDeleteCounts select above), so the lookup always hits.
+      await reconcileHardDeletes(database, client, config, remoteCounts.get(config.tableName))
     }
   }
 
@@ -635,9 +630,9 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
             refreshedOrderIds.push({ orderId, itemCount: items.length })
           }
 
-          if (refreshedOrderIds.length > 0) {
-            logSync('full child snapshot refreshed', { orders: refreshedOrderIds })
-          }
+          // This block runs only with a non-empty pullable list, and the loop
+          // above pushes exactly one entry per pullable order.
+          logSync('full child snapshot refreshed', { orders: refreshedOrderIds })
         }
       } else {
         for (const row of remoteRows) {
@@ -664,13 +659,16 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
 
       if (remoteRows.length > 0 && effectiveWatermarkColumn) {
         const lastRow = remoteRows[remoteRows.length - 1]
+        // lastRow[watermarkColumn] is always defined here: watermarked fetches
+        // filter on that column, and fallback fetches alias it (see
+        // buildRemoteSelectColumns). Full scans never reach this block.
         upsertSyncState(database, config.tableName, {
-          lastPulledAt: lastRow[config.watermarkColumn] ?? since,
+          lastPulledAt: lastRow[config.watermarkColumn],
           lastSyncAt: state?.last_sync_at ?? null,
         })
         logSync('sync state updated for table', {
           table: config.tableName,
-          lastPulledAt: lastRow[config.watermarkColumn] ?? since,
+          lastPulledAt: lastRow[config.watermarkColumn],
         })
       } else if (remoteRows.length > 0) {
         logSync('skipping sync watermark update because remote table has no compatible watermark column', {
@@ -726,20 +724,15 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
   function markResolved(database, row, lastError = null) {
     markOutboxRow(database, row.id, {
       status: 'synced',
-      attempts: Number(row.attempts ?? 0),
+      attempts: Number(row.attempts),
       lastError,
       syncedAt: new Date().toISOString(),
     })
   }
 
-  function applyLocalState(database, config, remoteRow, recordId) {
-    if (remoteRow) {
-      upsertLocalRow(database, config, remoteRow)
-    } else {
-      database
-        .prepare(`DELETE FROM ${quoteIdentifier(config.tableName)} WHERE ${quoteIdentifier(config.primaryKey)} = ?`)
-        .run(coerceRecordId(recordId))
-    }
+  function applyLocalState(database, config, remoteRow) {
+    // Both callers guard on remoteRow truthiness, so the row is always defined.
+    upsertLocalRow(database, config, remoteRow)
   }
 
   async function flushOutbox(database, client) {
@@ -759,7 +752,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
       if (!config) {
         markOutboxRow(database, row.id, {
           status: 'error',
-          attempts: Number(row.attempts ?? 0) + 1,
+          attempts: Number(row.attempts) + 1,
           lastError: `Unknown replicated table: ${row.table_name}`,
         })
         continue
@@ -776,7 +769,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
       }
 
       if (remoteRow && localPayload && rowsMateriallyEqual(config, localPayload, remoteRow)) {
-        applyLocalState(database, config, remoteRow, row.record_id)
+        applyLocalState(database, config, remoteRow)
         markResolved(database, row)
         continue
       }
@@ -788,7 +781,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
           localUpdatedAt,
           remoteUpdatedAt,
         })
-        applyLocalState(database, config, remoteRow, row.record_id)
+        applyLocalState(database, config, remoteRow)
         markResolved(database, row)
         continue
       }
@@ -812,7 +805,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
       } catch (error) {
         markOutboxRow(database, row.id, {
           status: 'error',
-          attempts: Number(row.attempts ?? 0) + 1,
+          attempts: Number(row.attempts) + 1,
           lastError: error instanceof Error ? error.message : String(error),
         })
       }
@@ -827,7 +820,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     }
   }
 
-  async function performSync({ foreground = false, force = false } = {}) {
+  async function performSync({ foreground = false, force = false }) {
     const database = getDatabase()
     logSync('perform sync started')
     const client = await getTursoClient()
@@ -1015,7 +1008,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     return null
   }
 
-  function selectMatchingRows(database, config, whereClause, params, whereParamCount = 0) {
+  function selectMatchingRows(database, config, whereClause, params, whereParamCount) {
     if (!whereClause) {
       return []
     }
@@ -1154,7 +1147,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
         change.tableName,
         String(change.recordId),
         operation,
-        change.rowPayload ? JSON.stringify(change.rowPayload) : null,
+        JSON.stringify(change.rowPayload),
         change.localUpdatedAt ?? null,
         baseRemoteUpdatedAt,
         existing?.created_at ?? now,

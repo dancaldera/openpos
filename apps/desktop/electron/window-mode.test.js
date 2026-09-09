@@ -3,6 +3,7 @@ const {
   fullscreenToggleAccelerator,
   isFullscreenToggleInput,
   resolveLinuxSessionSettleMs,
+  shouldApplyFullscreenAfterLoad,
   shouldDisableLinuxHardwareAcceleration,
   shouldStartFullscreen,
 } = await import('./window-mode.cjs')
@@ -51,6 +52,27 @@ describe('shouldStartFullscreen', () => {
       env: { OPENPOS_FULLSCREEN: '1' },
     })).toBe(false)
   })
+
+  it('treats yes as truthy', () => {
+    expect(shouldStartFullscreen({
+      isPackaged: false,
+      env: { OPENPOS_FULLSCREEN: 'yes' },
+    })).toBe(true)
+  })
+
+  it('defaults to windowed without input', () => {
+    expect(shouldStartFullscreen()).toBe(false)
+    expect(resolveLinuxSessionSettleMs()).toBe(0)
+    expect(shouldDisableLinuxHardwareAcceleration()).toBe(false)
+  })
+})
+
+describe('shouldApplyFullscreenAfterLoad', () => {
+  it('mirrors shouldStartFullscreen with defaults', () => {
+    expect(shouldApplyFullscreenAfterLoad()).toBe(false)
+    expect(shouldApplyFullscreenAfterLoad({ isPackaged: true })).toBe(true)
+    expect(shouldApplyFullscreenAfterLoad({ argv: ['openpos', '--windowed'] })).toBe(false)
+  })
 })
 
 describe('resolveLinuxSessionSettleMs', () => {
@@ -78,6 +100,14 @@ describe('resolveLinuxSessionSettleMs', () => {
       env: { OPENPOS_SESSION_SETTLE_MS: '5000' },
     })).toBe(5000)
   })
+
+  it('ignores invalid settle values', () => {
+    expect(resolveLinuxSessionSettleMs({
+      isPackaged: true,
+      platform: 'linux',
+      env: { OPENPOS_SESSION_SETTLE_MS: 'soon' },
+    })).toBe(0)
+  })
 })
 
 describe('shouldDisableLinuxHardwareAcceleration', () => {
@@ -95,6 +125,17 @@ describe('shouldDisableLinuxHardwareAcceleration', () => {
       env: { OPENPOS_FORCE_GPU: '1' },
     })).toBe(false)
   })
+
+  it('only applies to packaged Linux', () => {
+    expect(shouldDisableLinuxHardwareAcceleration({
+      platform: 'darwin',
+      isPackaged: true,
+    })).toBe(false)
+    expect(shouldDisableLinuxHardwareAcceleration({
+      platform: 'linux',
+      isPackaged: false,
+    })).toBe(false)
+  })
 })
 
 describe('fullscreenToggleAccelerator', () => {
@@ -104,6 +145,10 @@ describe('fullscreenToggleAccelerator', () => {
 
   it('uses Control+Command+F on macOS', () => {
     expect(fullscreenToggleAccelerator('darwin')).toBe('Control+Command+F')
+  })
+
+  it('resolves the accelerator for the host platform', () => {
+    expect(fullscreenToggleAccelerator()).toBe(process.platform === 'darwin' ? 'Control+Command+F' : 'F11')
   })
 })
 
@@ -131,5 +176,35 @@ describe('isFullscreenToggleInput', () => {
 
   it('ignores plain F on macOS', () => {
     expect(isFullscreenToggleInput({ type: 'keyDown', key: 'f' }, 'darwin')).toBe(false)
+  })
+
+  it('matches uppercase F with modifiers on macOS', () => {
+    expect(isFullscreenToggleInput({
+      type: 'keyDown',
+      key: 'F',
+      control: true,
+      meta: true,
+    }, 'darwin')).toBe(true)
+  })
+
+  it('ignores other keys with modifiers on macOS', () => {
+    expect(isFullscreenToggleInput({
+      type: 'keyDown',
+      key: 'g',
+      control: true,
+      meta: true,
+    }, 'darwin')).toBe(false)
+  })
+
+  it('ignores missing keys on macOS', () => {
+    expect(isFullscreenToggleInput({
+      type: 'keyDown',
+      control: true,
+      meta: true,
+    }, 'darwin')).toBe(false)
+  })
+
+  it('rejects empty input on the host platform', () => {
+    expect(isFullscreenToggleInput(null)).toBe(false)
   })
 })

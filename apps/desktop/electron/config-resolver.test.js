@@ -56,6 +56,39 @@ describe('getDesktopRuntimeConfigCandidates', () => {
       },
     ])
   })
+
+  it('skips the macOS fallback without a home directory', () => {
+    const result = getDesktopRuntimeConfigCandidates({
+      userDataPath: '/Users/ana/Library/Application Support/OpenPOS',
+      platform: 'darwin',
+    })
+
+    expect(result).toEqual([
+      {
+        path: '/Users/ana/Library/Application Support/OpenPOS/config.json',
+        source: 'userData',
+      },
+    ])
+  })
+
+  it('dedupes identical candidates', () => {
+    const result = getDesktopRuntimeConfigCandidates({
+      homeDir: '/a',
+      userDataPath: '/a/.config/OpenPOS',
+      platform: 'darwin',
+    })
+
+    expect(result).toEqual([
+      {
+        path: '/a/.config/OpenPOS/config.json',
+        source: 'userData',
+      },
+    ])
+  })
+
+  it('defaults candidates without input', () => {
+    expect(getDesktopRuntimeConfigCandidates()).toEqual([])
+  })
 })
 
 describe('resolveDesktopRuntimeConfigPath', () => {
@@ -113,6 +146,22 @@ describe('resolveDesktopRuntimeConfigPath', () => {
       path: '/Users/ana/.config/OpenPOS/config.json',
       source: 'fallback',
       exists: true,
+    })
+  })
+
+  it('returns an empty selection with defaults', () => {
+    expect(resolveDesktopRuntimeConfigPath()).toEqual({
+      path: '',
+      source: 'userData',
+      exists: false,
+    })
+  })
+
+  it('checks candidates against the default file probe', () => {
+    expect(resolveDesktopRuntimeConfigPath({ userDataPath: '/home/ana/.config/OpenPOS' })).toEqual({
+      path: '/home/ana/.config/OpenPOS/config.json',
+      source: 'userData',
+      exists: false,
     })
   })
 })
@@ -249,6 +298,13 @@ describe('resolveDesktopConnectionConfig', () => {
       configPath: '/home/ana/.config/OpenPOS/config.json',
     })
   })
+
+  it('defaults everything without input', () => {
+    const result = resolveDesktopConnectionConfig()
+
+    expect(result.api).toEqual({ url: undefined, configured: false, source: 'userData', configPath: '' })
+    expect(result.remote).toEqual({ url: undefined, authToken: undefined, configured: false })
+  })
 })
 
 describe('createPublicConnectionConfig', () => {
@@ -285,6 +341,10 @@ describe('normalizeDesktopApiUrl', () => {
     expect(() => normalizeDesktopApiUrl('')).toThrow('API URL is required')
     expect(() => normalizeDesktopApiUrl('libsql://store.turso.io')).toThrow('API URL must start with http:// or https://')
   })
+
+  it('rejects malformed URLs', () => {
+    expect(() => normalizeDesktopApiUrl('notaurl')).toThrow('API URL is invalid')
+  })
 })
 
 describe('desktopFirstRunNeedsApiSetup', () => {
@@ -320,6 +380,7 @@ describe('desktopFirstRunNeedsApiSetup', () => {
         apiConfigured: true,
       }),
     ).toBe(false)
+    expect(desktopFirstRunNeedsApiSetup()).toBe(false)
   })
 })
 
@@ -360,5 +421,38 @@ describe('writeDesktopRuntimeConfig', () => {
 
     expect(written).toEqual({})
     expect(JSON.parse(readFileSync(configPath, 'utf8'))).toEqual({})
+  })
+
+  it('requires a config path', () => {
+    expect(() => writeDesktopRuntimeConfig('', {})).toThrow('Config path is required')
+    expect(() => writeDesktopRuntimeConfig('  ')).toThrow('Config path is required')
+    expect(() => resetDesktopRuntimeConfig('')).toThrow('Config path is required')
+  })
+
+  it('recovers from corrupt or non-object configs', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'openpos-runtime-config-'))
+    tempDirs.push(dir)
+
+    const corruptPath = join(dir, 'corrupt.json')
+    writeFileSync(corruptPath, '{nope')
+    expect(writeDesktopRuntimeConfig(corruptPath, { apiUrl: 'https://api.example.com' })).toEqual({
+      apiUrl: 'https://api.example.com',
+    })
+
+    const arrayPath = join(dir, 'array.json')
+    writeFileSync(arrayPath, '[1,2]\n')
+    expect(writeDesktopRuntimeConfig(arrayPath, { apiUrl: 'https://api.example.com' })).toEqual({
+      apiUrl: 'https://api.example.com',
+    })
+  })
+
+  it('skips undefined updates', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'openpos-runtime-config-'))
+    tempDirs.push(dir)
+    const configPath = join(dir, 'config.json')
+
+    expect(writeDesktopRuntimeConfig(configPath, { apiUrl: 'https://api.example.com', dropped: undefined })).toEqual({
+      apiUrl: 'https://api.example.com',
+    })
   })
 })

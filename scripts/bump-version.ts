@@ -13,14 +13,14 @@ import { fileURLToPath } from 'node:url'
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(scriptDir, '..')
 
-interface FileToUpdate {
+export interface FileToUpdate {
   path: string
   pattern: RegExp
   replacement: (version: string) => string
   name: string
 }
 
-const FILES_TO_UPDATE: FileToUpdate[] = [
+export const FILES_TO_UPDATE: FileToUpdate[] = [
   // Root workspace
   {
     name: 'Root workspace',
@@ -55,11 +55,12 @@ const FILES_TO_UPDATE: FileToUpdate[] = [
   },
 ]
 
-async function bumpVersion(newVersion: string) {
+export async function bumpVersion(newVersion: string, files: FileToUpdate[]): Promise<void> {
   if (!/^\d+\.\d+\.\d+$/.test(newVersion)) {
     console.error(`Invalid version format: ${newVersion}`)
     console.error('Expected format: X.Y.Z (e.g., 0.3.0)')
     process.exit(1)
+    return
   }
 
   console.log(`Bumping version to ${newVersion}...\n`)
@@ -68,7 +69,7 @@ async function bumpVersion(newVersion: string) {
   const skippedFiles: string[] = []
   const failedFiles: string[] = []
 
-  for (const file of FILES_TO_UPDATE) {
+  for (const file of files) {
     try {
       const content = await readFile(file.path, 'utf8')
       const updated = content.replace(file.pattern, file.replacement(newVersion))
@@ -121,12 +122,18 @@ async function bumpVersion(newVersion: string) {
   console.log(`  3. Tag and push: git tag v${newVersion} && git push origin main --tags`)
 }
 
-const version = process.argv[2]
+export async function runBumpVersion(version: string | undefined, files: FileToUpdate[]): Promise<void> {
+  if (!version) {
+    console.error('Usage: pnpm run version:bump <version>')
+    console.error('Example: pnpm run version:bump 0.3.0')
+    process.exit(1)
+    return
+  }
 
-if (!version) {
-  console.error('Usage: pnpm run version:bump <version>')
-  console.error('Example: pnpm run version:bump 0.3.0')
-  process.exit(1)
+  await bumpVersion(version, files)
 }
 
-bumpVersion(version)
+/* c8 ignore next: production entrypoint (tests call runBumpVersion directly). */
+if (!process.env.VITEST) {
+  await runBumpVersion(process.argv[2], FILES_TO_UPDATE)
+}

@@ -111,22 +111,22 @@ app.route('/api/settings', settingsRouter)
 // 404 catch-all
 app.notFound((c) => c.json({ error: `Route ${c.req.url} not found` }, 404))
 
-// Error handler
+// Error handler (Hono only routes Error instances here; anything else is rethrown)
 app.onError((err, c) => {
   console.error('[API] Unhandled error:', err)
-  return c.json({ error: err instanceof Error ? err.message : 'Internal server error' }, 500)
+  return c.json({ error: err.message }, 500)
 })
 
 export default app
 
-// ---------------------------------------------------------------------------
-// Standalone Node.js server (Railway, local dev, etc.)
-// ---------------------------------------------------------------------------
-if (import.meta.main && !process.env.VERCEL) {
+export function getServerPort(): number {
+  return Number(process.env.PORT ?? 3001)
+}
+
+export async function startServer(port: number) {
   const { serve } = await import('@hono/node-server')
-  const port = Number(process.env.PORT ?? 3001)
   const assigned = await readAssignedConnection()
-  serve({ fetch: app.fetch, port, hostname: '0.0.0.0' }, (info) => {
+  const server = serve({ fetch: app.fetch, port, hostname: '0.0.0.0' }, (info) => {
     console.log(`[API] Server running at http://localhost:${info.port}`)
     if (assigned) console.log(`[API] Store connected: ${assigned.storeName}`)
     console.log('[API] Routes:')
@@ -138,4 +138,13 @@ if (import.meta.main && !process.env.VERCEL) {
     console.log('  POST /api/auth/admin-reset-password')
     console.log('  ...and more')
   })
+  return server
+}
+
+// ---------------------------------------------------------------------------
+// Standalone Node.js server (Railway, local dev, etc.)
+// ---------------------------------------------------------------------------
+/* c8 ignore next 3 -- the launcher only runs as the main module entry point */
+if (import.meta.main && !process.env.VERCEL) {
+  await startServer(getServerPort())
 }

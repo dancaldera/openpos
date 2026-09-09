@@ -43,11 +43,21 @@
     "test:sync": "pnpm -C packages/sync run test",
     "test:desktop": "pnpm -C apps/desktop run test",
     "test:api": "pnpm -C apps/api run test",
-    "test:releases": "pnpm -C apps/releases run test"
+    "test:releases": "pnpm -C apps/releases run test",
+    "coverage": "pnpm run coverage:scripts && pnpm run coverage:data && pnpm run coverage:sync && pnpm run coverage:desktop && pnpm run coverage:api && pnpm run coverage:releases",
+    "coverage:scripts": "vitest run --coverage",
+    "coverage:data": "pnpm -C packages/data run coverage",
+    "coverage:sync": "pnpm -C packages/sync run coverage",
+    "coverage:desktop": "pnpm -C apps/desktop run coverage",
+    "coverage:api": "pnpm -C apps/api run coverage",
+    "coverage:releases": "pnpm -C apps/releases run coverage"
   },
   "devDependencies": {
     "@libsql/client": "^0.15.15",
     "@types/node": "^24.13.3",
+    "@vitest/coverage-v8": "4.1.10",
+    "bcryptjs": "^3.0.3",
+    "c8": "^12.0.0",
     "railway": "^3.11.0",
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",

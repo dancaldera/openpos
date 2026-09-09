@@ -16,4 +16,11 @@ describe('isLegacyLocalImageKey', () => {
     expect(isLegacyLocalImageKey('image.svg')).toBe(false)
     expect(isLegacyLocalImageKey('image')).toBe(false)
   })
+
+  it('rejects non-string keys', () => {
+    expect(isLegacyLocalImageKey(null)).toBe(false)
+    expect(isLegacyLocalImageKey(undefined)).toBe(false)
+    expect(isLegacyLocalImageKey(123)).toBe(false)
+    expect(isLegacyLocalImageKey('  ')).toBe(false)
+  })
 })

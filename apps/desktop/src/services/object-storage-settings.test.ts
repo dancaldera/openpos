@@ -113,6 +113,32 @@ describe('ObjectStorageSettingsService local mirror', () => {
     expect(insertSql).toContain('INSERT INTO object_storage_settings')
   })
 
+  it('reads settings through the API', async () => {
+    requestApiJson.mockResolvedValueOnce({ settings: apiSettings })
+
+    const result = await objectStorageSettingsService.getSettings()
+
+    expect(result).toEqual(apiSettings)
+    expect(requestApiJson).toHaveBeenCalledWith(
+      '/api/settings/object-storage',
+      expect.objectContaining({ requireAuth: true }),
+    )
+  })
+
+  it('nulls secrets when nothing was stored or entered', async () => {
+    requestApiJson.mockResolvedValueOnce({ settings: apiSettings })
+
+    await objectStorageSettingsService.saveSettings({
+      endpoint: apiSettings.endpoint,
+      region: apiSettings.region,
+      bucket: apiSettings.bucket,
+      urlTtlSeconds: 900,
+    })
+
+    const [, params] = execute.mock.calls[0]
+    expect(params).toContain(null)
+  })
+
   it('clears through the API and deletes the local mirror row', async () => {
     requestApiJson.mockResolvedValueOnce({ success: true })
 

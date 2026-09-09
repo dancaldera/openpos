@@ -37,6 +37,7 @@ import { createReadStream, existsSync, readFileSync } from 'node:fs'
 import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { S3ClientConfig } from '@aws-sdk/client-s3'
 import {
   assetKey,
   buildCommandForPlatform,
@@ -53,8 +54,9 @@ import {
 } from './release-lib'
 
 const repoRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '..')
+const releasesEnvFile = resolve(repoRoot, 'apps/releases/.env')
 
-interface CliOptions {
+export interface CliOptions {
   platforms: PlatformFamily[]
   notes: string | null
   skipCheck: boolean
@@ -64,7 +66,7 @@ interface CliOptions {
   localDir: string | null
 }
 
-function parseArgs(argv: string[]): CliOptions {
+export function parseArgs(argv: string[]): CliOptions {
   const platformFlags: PlatformFamily[] = []
   const options: CliOptions = {
     platforms: [],
@@ -107,7 +109,7 @@ function parseArgs(argv: string[]): CliOptions {
   return options
 }
 
-function applyEnvFile(path: string): void {
+export function applyEnvFile(path: string, env: NodeJS.ProcessEnv = process.env): void {
   if (!existsSync(path)) return
 
   for (const line of readFileSync(path, 'utf8').split('\n')) {
@@ -121,13 +123,16 @@ function applyEnvFile(path: string): void {
     if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
       value = value.slice(1, -1)
     }
-    if (process.env[key] === undefined) process.env[key] = value
+    if (env[key] === undefined) env[key] = value
   }
 }
 
 /** Loads apps/releases/.env and maps Railway bucket names onto the upload variables. */
-function loadReleaseCredentials(): void {
-  applyEnvFile(resolve(repoRoot, 'apps/releases/.env'))
+export function loadReleaseCredentials(
+  env: NodeJS.ProcessEnv = process.env,
+  envFilePath: string = releasesEnvFile,
+): void {
+  applyEnvFile(envFilePath, env)
 
   const aliases: Array<[from: string, to: string]> = [
     ['BUCKET', 'RELEASE_S3_BUCKET'],
@@ -137,18 +142,18 @@ function loadReleaseCredentials(): void {
     ['REGION', 'RELEASE_S3_REGION'],
   ]
   for (const [from, to] of aliases) {
-    const source = process.env[from]
-    if (!process.env[to] && source) process.env[to] = source
+    const source = env[from]
+    if (!env[to] && source) env[to] = source
   }
 }
 
-async function readPackageVersion(relativePath: string): Promise<string> {
+export async function readPackageVersion(relativePath: string): Promise<string> {
   const fullPath = resolve(repoRoot, relativePath)
   const json = JSON.parse(await readFile(fullPath, 'utf8')) as { version?: string }
-  return String(json.version ?? '')
+  return String(json.version)
 }
 
-function run(command: string, args: string[], env: NodeJS.ProcessEnv = {}): void {
+export function run(command: string, args: string[], env: NodeJS.ProcessEnv = {}): void {
   console.log(`\n$ ${command} ${args.join(' ')}`)
   const result = spawnSync(command, args, {
     cwd: repoRoot,
@@ -161,20 +166,19 @@ function run(command: string, args: string[], env: NodeJS.ProcessEnv = {}): void
   }
 }
 
-function buildCommands(platforms: PlatformFamily[]): Array<{ command: string; args: string[] }> {
+export function buildCommands(platforms: PlatformFamily[]): Array<{ command: string; args: string[] }> {
   return platforms.map((platform) => buildCommandForPlatform(platform, process.platform))
 }
 
-function requireEnv(name: string): string {
-  const value = process.env[name]
+export function requireEnv(name: string, env: NodeJS.ProcessEnv = process.env): string {
+  const value = env[name]
   if (!value) {
-    console.error(`Missing required environment variable: ${name}`)
-    process.exit(1)
+    throw new Error(`Missing required environment variable: ${name}`)
   }
   return value
 }
 
-async function uploadFile(client: unknown, bucketName: string, key: string, filePath: string): Promise<void> {
+export async function uploadFile(client: unknown, bucketName: string, key: string, filePath: string): Promise<void> {
   // Imported lazily so --dry-run works without credentials configured.
   const { PutObjectCommand } = await import('@aws-sdk/client-s3')
   const s3Client = client as { send: (command: unknown) => Promise<unknown> }
@@ -188,7 +192,7 @@ async function uploadFile(client: unknown, bucketName: string, key: string, file
   )
 }
 
-function contentTypeFor(key: string): string {
+export function contentTypeFor(key: string): string {
   if (key.endsWith('.json')) return 'application/json'
   if (key.endsWith('.deb')) return 'application/vnd.debian.binary-package'
   if (key.endsWith('.zip')) return 'application/zip'
@@ -197,7 +201,7 @@ function contentTypeFor(key: string): string {
   return 'application/octet-stream'
 }
 
-async function publishLocal(
+export async function publishLocal(
   localDir: string,
   prefix: string,
   version: string,
@@ -218,143 +222,236 @@ async function publishLocal(
   console.log(`Copied latest.json → ${destManifest}`)
 }
 
-async function main() {
-  loadReleaseCredentials()
-  const options = parseArgs(process.argv.slice(2))
+const versionFiles: Array<[string, string]> = [
+  ['Root workspace', 'package.json'],
+  ['Desktop app', 'apps/desktop/package.json'],
+  ['API', 'apps/api/package.json'],
+  ['Releases service', 'apps/releases/package.json'],
+  ['Landing page', 'apps/landing/package.json'],
+]
 
-  console.log(`OpenPOS release — platforms: ${options.platforms.join(', ')}`)
+/** Step 1: validate package versions. Returns the expected version. */
+export async function checkVersions(
+  readVersionFile: (relativePath: string) => Promise<string> = readPackageVersion,
+): Promise<string> {
+  const expectedVersion = await readVersionFile('apps/desktop/package.json')
 
-  // 1. Validate package versions.
-  const expectedVersion = JSON.parse(await readFile(resolve(repoRoot, 'apps/desktop/package.json'), 'utf8'))
-    .version as string
-
-  const versionFiles: Array<[string, string]> = [
-    ['Root workspace', 'package.json'],
-    ['Desktop app', 'apps/desktop/package.json'],
-    ['API', 'apps/api/package.json'],
-    ['Releases service', 'apps/releases/package.json'],
-    ['Landing page', 'apps/landing/package.json'],
-  ]
   const packages: Record<string, string> = {}
   for (const [name, path] of versionFiles) {
-    packages[name] = await readPackageVersion(path)
+    packages[name] = await readVersionFile(path)
   }
 
   const versionErrors = validatePackageVersions(expectedVersion, packages)
   if (versionErrors.length > 0) {
-    console.error(`\nVersion mismatch against apps/desktop (${expectedVersion}):`)
-    for (const error of versionErrors) console.error(`  - ${error}`)
-    console.error('\nRun `pnpm run version:bump <x.y.z>` first.')
-    process.exit(1)
+    throw new Error(
+      `Version mismatch against apps/desktop (${expectedVersion}):\n${versionErrors.map((error) => `  - ${error}`).join('\n')}\n\nRun \`pnpm run version:bump <x.y.z>\` first.`,
+    )
   }
   console.log(`✓ Package versions match v${expectedVersion}`)
+  return expectedVersion
+}
 
-  // 2. Check + tests.
-  if (!options.skipCheck) run('pnpm', ['run', 'check'])
+export type RunCommand = (command: string, args: string[]) => void
+
+/** Step 2+3: check, tests, and desktop builds. */
+export async function runValidationSteps(options: CliOptions, runCommand: RunCommand): Promise<void> {
+  if (!options.skipCheck) runCommand('pnpm', ['run', 'check'])
   else console.log('\nSkipping check (--skip-check)')
 
-  if (!options.skipTest) run('pnpm', ['run', 'test'])
+  if (!options.skipTest) runCommand('pnpm', ['run', 'test'])
   else console.log('\nSkipping tests (--skip-test)')
 
-  // 3. Build artifacts.
   if (!options.skipBuild) {
     for (const { command, args } of buildCommands(options.platforms)) {
-      run(command, args)
+      runCommand(command, args)
     }
   } else {
     console.log('\nSkipping desktop build (--skip-build)')
   }
+}
 
-  // 4. Verify and hash artifacts.
-  const distDir = resolve(repoRoot, 'apps/desktop/dist-electron')
-  const artifacts: ReleaseArtifact[] = filterArtifactsForPlatforms(await collectArtifacts(distDir), options.platforms)
-  const missing = findMissingArtifacts(artifacts, options.platforms)
+export interface HashedArtifact {
+  name: string
+  filePath: string
+  sha256: string
+  size: number
+}
+
+/** Step 4: verify and hash artifacts. */
+export async function collectHashedArtifacts(distDir: string, platforms: PlatformFamily[]): Promise<HashedArtifact[]> {
+  const artifacts: ReleaseArtifact[] = filterArtifactsForPlatforms(await collectArtifacts(distDir), platforms)
+  const missing = findMissingArtifacts(artifacts, platforms)
   if (missing.length > 0) {
-    console.error(`\nMissing artifacts in apps/desktop/dist-electron:`)
-    for (const item of missing) console.error(`  - ${item}`)
-    process.exit(1)
+    throw new Error(`Missing artifacts in apps/desktop/dist-electron:\n${missing.map((item) => `  - ${item}`).join('\n')}`)
   }
 
-  const prefix = process.env.RELEASE_PREFIX || 'releases'
-  const hashedArtifacts: Array<{ name: string; sha256: string; size: number }> = []
+  const hashedArtifacts: HashedArtifact[] = []
   for (const artifact of artifacts) {
     const sha256 = await sha256File(artifact.filePath)
     const { size } = await stat(artifact.filePath)
-    hashedArtifacts.push({ name: artifact.name, sha256, size })
+    hashedArtifacts.push({ name: artifact.name, filePath: artifact.filePath, sha256, size })
     console.log(`✓ ${artifact.name} (${Math.round(size / 1024 / 1024)} MiB) sha256=${sha256.slice(0, 12)}…`)
   }
+  return hashedArtifacts
+}
 
-  // 5. Build the update manifest consumed by the desktop app.
-  const cdnBaseUrl = process.env.RELEASE_CDN_BASE_URL || 'https://releases.openpos.xyz'
-
+/** Step 5: build the update manifest consumed by the desktop app. */
+export async function writeManifestFile(
+  distDir: string,
+  options: { version: string; notes: string | null; cdnBaseUrl: string; prefix: string; artifacts: HashedArtifact[] },
+): Promise<string> {
   const manifest = buildManifest({
-    version: expectedVersion,
+    version: options.version,
     notes: options.notes,
     publishedAt: new Date(),
-    cdnBaseUrl,
-    prefix,
-    artifacts: hashedArtifacts,
+    cdnBaseUrl: options.cdnBaseUrl,
+    prefix: options.prefix,
+    artifacts: options.artifacts,
   })
 
   const manifestPath = resolve(distDir, 'latest.json')
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
   console.log(`\nManifest written to ${manifestPath}`)
+  return manifestPath
+}
+
+export interface PublishOptions {
+  artifacts: HashedArtifact[]
+  manifestPath: string
+  version: string
+  localDir: string | null
+  cdnBaseUrl: string
+  prefix: string
+}
+
+export interface PublishDeps {
+  env?: NodeJS.ProcessEnv
+  createClient?: (config: Record<string, unknown>) => Promise<unknown>
+  upload?: typeof uploadFile
+  publishLocalFiles?: typeof publishLocal
+}
+
+/** Step 6: publish to a local dir and/or the S3-compatible bucket. */
+export async function publishRelease(publish: PublishOptions, deps: PublishDeps = {}): Promise<void> {
+  const env = deps.env ?? process.env
+  const upload = deps.upload ?? uploadFile
+  const publishLocalFiles = deps.publishLocalFiles ?? publishLocal
+
+  const localDir = publish.localDir ? resolve(repoRoot, publish.localDir) : null
+  if (localDir) {
+    await publishLocalFiles(localDir, publish.prefix, publish.version, publish.artifacts, publish.manifestPath)
+  }
+
+  const bucketName = env.RELEASE_S3_BUCKET
+  if (!bucketName && !localDir) {
+    throw new Error('Missing RELEASE_S3_BUCKET. Pass --local-dir to publish on this machine instead.')
+  }
+
+  if (bucketName) {
+    requireEnv('AWS_ACCESS_KEY_ID', env)
+    requireEnv('AWS_SECRET_ACCESS_KEY', env)
+    if (!deps.createClient) {
+      throw new Error('Missing S3 client factory')
+    }
+
+    const s3Config: Record<string, unknown> = {
+      region: env.RELEASE_S3_REGION || 'auto',
+    }
+    if (env.RELEASE_S3_ENDPOINT) {
+      s3Config.endpoint = env.RELEASE_S3_ENDPOINT
+    }
+    if (env.RELEASE_S3_PATH_STYLE === '1') {
+      s3Config.forcePathStyle = true
+    }
+
+    const client = await deps.createClient(s3Config)
+
+    for (const artifact of publish.artifacts) {
+      const key = assetKey(publish.prefix, publish.version, artifact.name)
+      console.log(`Uploading ${artifact.name} → ${bucketName}/${key}`)
+      await upload(client, bucketName, key, artifact.filePath)
+    }
+
+    const mKey = manifestKey(publish.prefix)
+    console.log(`Uploading latest.json → ${bucketName}/${mKey}`)
+    await upload(client, bucketName, mKey, publish.manifestPath)
+  }
+
+  console.log(`\n✅ Release v${publish.version} published.`)
+  if (localDir) {
+    console.log(`   Local layout: ${localDir}/${manifestKey(publish.prefix)}`)
+  }
+  if (bucketName) {
+    console.log(`   Manifest: ${publish.cdnBaseUrl.replace(/\/+$/, '')}/${manifestKey(publish.prefix)}`)
+  }
+}
+
+export interface ReleaseSteps {
+  loadCredentials: () => void
+  checkVersions: () => Promise<string>
+  runValidation: (options: CliOptions) => Promise<void>
+  collectHashed: (options: CliOptions) => Promise<HashedArtifact[]>
+  writeManifest: (options: CliOptions, version: string, hashed: HashedArtifact[]) => Promise<string>
+  publish: (options: CliOptions, version: string, hashed: HashedArtifact[], manifestPath: string) => Promise<void>
+}
+
+export async function runRelease(argv: string[], steps: ReleaseSteps): Promise<void> {
+  steps.loadCredentials()
+  const options = parseArgs(argv)
+
+  console.log(`OpenPOS release — platforms: ${options.platforms.join(', ')}`)
+
+  const expectedVersion = await steps.checkVersions()
+  await steps.runValidation(options)
+  const hashedArtifacts = await steps.collectHashed(options)
+  const manifestPath = await steps.writeManifest(options, expectedVersion, hashedArtifacts)
 
   if (options.dryRun) {
     console.log('\nDry run complete — nothing was uploaded.')
     return
   }
 
-  const localDir = options.localDir ? resolve(repoRoot, options.localDir) : null
-  if (localDir) {
-    await publishLocal(localDir, prefix, expectedVersion, artifacts, manifestPath)
-  }
-
-  // 6. Upload to the S3-compatible bucket when credentials are present.
-  const bucketName = process.env.RELEASE_S3_BUCKET
-  if (!bucketName && !localDir) {
-    console.error('Missing RELEASE_S3_BUCKET. Pass --local-dir to publish on this machine instead.')
-    process.exit(1)
-  }
-
-  if (bucketName) {
-    requireEnv('AWS_ACCESS_KEY_ID')
-    requireEnv('AWS_SECRET_ACCESS_KEY')
-    const { S3Client } = await import('@aws-sdk/client-s3')
-
-    const s3Config: ConstructorParameters<typeof S3Client>[0] = {
-      region: process.env.RELEASE_S3_REGION || 'auto',
-    }
-    if (process.env.RELEASE_S3_ENDPOINT) {
-      s3Config.endpoint = process.env.RELEASE_S3_ENDPOINT
-    }
-    if (process.env.RELEASE_S3_PATH_STYLE === '1') {
-      s3Config.forcePathStyle = true
-    }
-
-    const client = new S3Client(s3Config)
-
-    for (const artifact of artifacts) {
-      const key = assetKey(prefix, expectedVersion, artifact.name)
-      console.log(`Uploading ${artifact.name} → ${bucketName}/${key}`)
-      await uploadFile(client, bucketName, key, artifact.filePath)
-    }
-
-    const mKey = manifestKey(prefix)
-    console.log(`Uploading latest.json → ${bucketName}/${mKey}`)
-    await uploadFile(client, bucketName, mKey, manifestPath)
-  }
-
-  console.log(`\n✅ Release v${expectedVersion} published.`)
-  if (localDir) {
-    console.log(`   Local layout: ${localDir}/${manifestKey(prefix)}`)
-  }
-  if (bucketName) {
-    console.log(`   Manifest: ${cdnBaseUrl.replace(/\/+$/, '')}/${manifestKey(prefix)}`)
-  }
+  await steps.publish(options, expectedVersion, hashedArtifacts, manifestPath)
 }
 
-main().catch((error) => {
+export function reportFailure(error: unknown): never {
   console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`)
   process.exit(1)
-})
+}
+
+/* c8 ignore next: production entrypoint (tests call runRelease directly). */
+if (!process.env.VITEST) {
+  const productionSteps: ReleaseSteps = {
+    loadCredentials: () => loadReleaseCredentials(),
+    checkVersions: () => checkVersions(),
+    runValidation: (options) => runValidationSteps(options, run),
+    collectHashed: (options) =>
+      collectHashedArtifacts(resolve(repoRoot, 'apps/desktop/dist-electron'), options.platforms),
+    writeManifest: (options, version, hashed) =>
+      writeManifestFile(resolve(repoRoot, 'apps/desktop/dist-electron'), {
+        version,
+        notes: options.notes,
+        cdnBaseUrl: process.env.RELEASE_CDN_BASE_URL || 'https://releases.openpos.xyz',
+        prefix: process.env.RELEASE_PREFIX || 'releases',
+        artifacts: hashed,
+      }),
+    publish: (options, version, hashed, manifestPath) =>
+      publishRelease(
+        {
+          artifacts: hashed,
+          manifestPath,
+          version,
+          localDir: options.localDir,
+          cdnBaseUrl: process.env.RELEASE_CDN_BASE_URL || 'https://releases.openpos.xyz',
+          prefix: process.env.RELEASE_PREFIX || 'releases',
+        },
+        {
+          createClient: async (config) => {
+            const { S3Client } = await import('@aws-sdk/client-s3')
+            return new S3Client(config as S3ClientConfig)
+          },
+        },
+      ),
+  }
+  await runRelease(process.argv.slice(2), productionSteps).catch(reportFailure)
+}

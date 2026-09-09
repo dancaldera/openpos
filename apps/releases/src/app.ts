@@ -70,7 +70,7 @@ app.get('/releases/latest.json', async (c) => {
 
 // Versioned release artifacts. Keys are immutable per version, so they can be
 // cached aggressively. The public URL in latest.json is /releases/v/<ver>/<file>.
-async function serveArtifact(c: Context): Promise<Response> {
+export async function serveArtifact(c: Context): Promise<Response> {
   const version = c.req.param('version') ?? ''
   const name = c.req.param('name') ?? ''
 
@@ -97,9 +97,11 @@ app.get('/v/:version/:name', serveArtifact)
 
 app.notFound((c) => c.json({ error: `Route ${c.req.url} not found` }, 404))
 
-app.onError((err, c) => {
+export function handleError(err: Error, c: Context): Response {
   console.error('[Releases] Unhandled error:', err)
   return c.json({ error: 'Internal server error' }, 500)
-})
+}
+
+app.onError(handleError)
 
 export default app

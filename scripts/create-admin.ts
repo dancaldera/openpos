@@ -14,7 +14,7 @@ import bcrypt from 'bcryptjs'
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(scriptDir, '..')
 
-function loadEnv(path: string): Record<string, string> {
+export function loadEnv(path: string): Record<string, string> {
   const content = readFileSync(path, 'utf-8')
   const env: Record<string, string> = {}
   for (const line of content.split('\n')) {
@@ -27,32 +27,43 @@ function loadEnv(path: string): Record<string, string> {
   return env
 }
 
-async function main() {
-  const envPath = resolve(repoRoot, 'apps/api/.env')
+export interface CreateAdminClient {
+  execute: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }>
+}
 
-  const email = process.argv[2] || 'admin@danpos.com'
-  const name = process.argv[3] || 'Admin User'
-  const password = process.argv[4] || 'admin123'
+export interface CreateAdminDeps {
+  envPath: string
+  loadEnvFile: (path: string) => Record<string, string>
+  createClient: (config: { url: string; authToken: string }) => CreateAdminClient
+  hashPassword: (password: string) => Promise<string>
+}
 
-  const { TURSO_DATABASE_URL: url, TURSO_AUTH_TOKEN: token } = loadEnv(envPath)
+export async function runCreateAdmin(argv: string[], deps: CreateAdminDeps): Promise<void> {
+  const email = argv[0] || 'admin@danpos.com'
+  const name = argv[1] || 'Admin User'
+  const password = argv[2] || 'admin123'
+
+  const { TURSO_DATABASE_URL: url, TURSO_AUTH_TOKEN: token } = deps.loadEnvFile(deps.envPath)
   if (!url || !token) {
     console.error('Error: create a store from the app, or import an existing database URL from Settings.')
     process.exit(1)
+    return
   }
 
   console.warn(
     'Warning: create-admin using a URL/token is deprecated. Create stores from the app, then configure the database in Settings.',
   )
 
-  const client = createClient({ url, authToken: token })
+  const client = deps.createClient({ url, authToken: token })
 
   const existing = await client.execute('SELECT id FROM users WHERE email = ? LIMIT 1', [email.toLowerCase()])
   if (existing.rows.length > 0) {
     console.error(`Error: User already exists: ${email}`)
     process.exit(1)
+    return
   }
 
-  const hash = await bcrypt.hash(password, 12)
+  const hash = await deps.hashPassword(password)
   await client.execute(
     `INSERT INTO users (email, password, name, role, permissions, created_at, password_hashed)
      VALUES (?, ?, ?, 'admin', '["*"]', ?, 1)`,
@@ -62,7 +73,17 @@ async function main() {
   console.log(`\n✅ Created: ${email}`)
 }
 
-main().catch((err) => {
-  console.error('Error:', err.message)
+export function reportFailure(err: unknown): never {
+  console.error('Error:', (err as Error).message)
   process.exit(1)
-})
+}
+
+/* c8 ignore next: production entrypoint (tests call runCreateAdmin directly). */
+if (!process.env.VITEST) {
+  await runCreateAdmin(process.argv.slice(2), {
+    envPath: resolve(repoRoot, 'apps/api/.env'),
+    loadEnvFile: loadEnv,
+    createClient,
+    hashPassword: (password) => bcrypt.hash(password, 12),
+  }).catch(reportFailure)
+}

@@ -165,6 +165,62 @@ describe('pickMacZipAsset', () => {
   })
 })
 
+describe('pick asset edge cases', () => {
+  it('returns null when no asset matches the extension', () => {
+    expect(pickAppImageAsset([{ name: 'openpos-amd64.deb', url: 'https://example.com/deb' }], 'x64')).toBeNull()
+    expect(pickDebAsset([], 'x64')).toBeNull()
+    expect(pickMacZipAsset(undefined, 'arm64')).toBeNull()
+  })
+
+  it('ignores assets without a usable name or url', () => {
+    expect(pickAppImageAsset([{ url: 'https://example.com/x' }, { name: 'openpos.AppImage' }], 'x64')).toBeNull()
+  })
+
+  it('returns null when several assets match but none fits the arch', () => {
+    const asset = pickAppImageAsset(
+      [
+        { name: 'openpos-x86_64.AppImage', url: 'https://example.com/x64' },
+        { name: 'openpos-riscv64.AppImage', url: 'https://example.com/riscv' },
+      ],
+      'arm64',
+    )
+
+    expect(asset).toBeNull()
+  })
+
+  it('falls back to a lone asset on unknown architectures', () => {
+    const asset = pickDebAsset([{ name: 'openpos-riscv64.deb', url: 'https://example.com/deb' }], 'riscv64')
+
+    expect(asset?.url).toBe('https://example.com/deb')
+  })
+
+  it('matches aarch64 tokens for arm64 downloads', () => {
+    const asset = pickAppImageAsset(
+      [
+        { name: 'openpos-x86_64.AppImage', url: 'https://example.com/x64' },
+        { name: 'openpos-aarch64.AppImage', url: 'https://example.com/arm64' },
+      ],
+      'arm64',
+    )
+
+    expect(asset?.url).toBe('https://example.com/arm64')
+  })
+
+  it('rejects malformed versions on both sides', () => {
+    expect(isNewerVersion('1.2.x', '1.2.3')).toBe(false)
+    expect(isNewerVersion('1.2.3', '1.2.x')).toBe(false)
+    expect(isNewerVersion('abc', 'def')).toBe(false)
+  })
+
+  it('defaults missing asset lists to empty', async () => {
+    const { pickUpdateAsset } = await import('./updateActions')
+
+    expect(pickAppImageAsset(undefined, 'x64')).toBeNull()
+    expect(pickDebAsset(undefined, 'x64')).toBeNull()
+    expect(pickUpdateAsset(undefined, 'x64', 'appimage')).toEqual({ asset: null, format: 'appimage' })
+  })
+})
+
 describe('updateActions.checkForUpdate', () => {
   beforeEach(() => {
     desktopInfo = {

@@ -287,4 +287,174 @@ describe('product image service desktop routing', () => {
     )
     expect(requestApiJson).not.toHaveBeenCalled()
   })
+
+  it('falls back to userData config path and config.json for session errors', async () => {
+    getDesktopApiConfig
+      .mockResolvedValueOnce({
+        apiUrl: '',
+        configPath: '/home/ana/.config/OpenPOS/config.json',
+        configSource: 'userData',
+        userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
+      })
+      .mockResolvedValueOnce({
+        apiUrl: '',
+        configPath: '',
+        configSource: 'userData',
+        userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
+      })
+
+    await expect(uploadProductImage(imageFile)).rejects.toThrow(
+      `${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::/home/ana/.config/OpenPOS/config.json`,
+    )
+
+    getDesktopApiConfig
+      .mockResolvedValueOnce({
+        apiUrl: '',
+        configPath: '',
+        configSource: 'userData',
+        userDataConfigPath: '',
+      })
+      .mockResolvedValueOnce({
+        apiUrl: '',
+        configPath: '',
+        configSource: 'userData',
+        userDataConfigPath: '',
+      })
+
+    await expect(uploadProductImage(imageFile)).rejects.toThrow(`${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::config.json`)
+  })
+})
+
+describe('product image service message helpers', () => {
+  it('extracts config paths and session details', async () => {
+    const {
+      createDesktopApiNotConfiguredMessage,
+      createDesktopRemoteSessionUnavailableMessage,
+      extractDesktopApiConfigPath,
+      extractDesktopRemoteSessionDetails,
+    } = await import('./product-images')
+
+    expect(extractDesktopApiConfigPath(`${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::/tmp/config.json`)).toBe(
+      '/tmp/config.json',
+    )
+    expect(extractDesktopApiConfigPath('something else')).toBeNull()
+    expect(createDesktopApiNotConfiguredMessage('/tmp/config.json')).toBe(
+      `${DESKTOP_API_NOT_CONFIGURED_MESSAGE}::/tmp/config.json`,
+    )
+
+    expect(extractDesktopRemoteSessionDetails(`${DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE}::boom`)).toBe('boom')
+    expect(extractDesktopRemoteSessionDetails('something else')).toBeNull()
+    expect(createDesktopRemoteSessionUnavailableMessage('  boom  ')).toBe(
+      `${DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE}::boom`,
+    )
+    expect(createDesktopRemoteSessionUnavailableMessage('   ')).toBe(DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE)
+    expect(createDesktopRemoteSessionUnavailableMessage()).toBe(DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE)
+    expect(createDesktopRemoteSessionUnavailableMessage(null)).toBe(DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE)
+  })
+
+  it('classifies extensionless and blank keys', async () => {
+    const { isLegacyLocalImageKey: isLegacy, isRemoteImageKey: isRemote } = await import('./product-images')
+
+    expect(isLegacy('README')).toBe(false)
+    expect(isLegacy('   ')).toBe(false)
+    expect(isLegacy('photo.PNG')).toBe(true)
+    expect(isLegacy('a\\b.jpg')).toBe(false)
+    expect(isRemote('')).toBe(false)
+    expect(isRemote('   ')).toBe(false)
+    expect(isRemote('README')).toBe(true)
+  })
+
+  it('rejects invalid files before uploading', async () => {
+    const { validateProductImageFile } = await import('./product-images')
+
+    expect(validateProductImageFile(new File(['x'], 'doc.pdf', { type: 'application/pdf' }))).toBe(
+      'Unsupported image type. Allowed types: JPEG, PNG, WEBP.',
+    )
+    expect(
+      validateProductImageFile(new File([new Uint8Array(6 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' })),
+    ).toBe('Image exceeds maximum size of 5 MB.')
+
+    await expect(uploadProductImage(new File(['x'], 'doc.pdf', { type: 'application/pdf' }))).rejects.toThrow(
+      'Unsupported image type',
+    )
+  })
+})
+
+describe('product image service desktop edge cases', () => {
+  let storage: MemoryStorage
+
+  beforeEach(() => {
+    storage = new MemoryStorage()
+    globalThis.localStorage = storage as unknown as Storage
+    requestApiJson.mockReset()
+    getApiBaseUrl.mockReset()
+    getDesktopApiConfig.mockReset()
+    resolveImages.mockReset()
+    deleteImage.mockReset()
+    logError.mockReset()
+    requireDesktopApi.mockClear()
+    getApiBaseUrl.mockResolvedValue('https://api.example.com')
+    getDesktopApiConfig.mockResolvedValue({
+      apiUrl: 'https://api.example.com',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
+      configSource: 'userData',
+      userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
+    })
+  })
+
+  it('returns an empty map for blank keys', async () => {
+    await expect(resolveProductImageUrls([])).resolves.toEqual({})
+    await expect(resolveProductImageUrls(['   '])).resolves.toEqual({})
+    expect(requestApiJson).not.toHaveBeenCalled()
+    expect(resolveImages).not.toHaveBeenCalled()
+  })
+
+  it('defaults to an empty map when the API returns no urls', async () => {
+    storage.setItem('auth_token', 'desktop-token')
+    requestApiJson.mockResolvedValueOnce({})
+
+    await expect(resolveProductImageUrls(['products/2026/03/object.jpg'])).resolves.toEqual({})
+  })
+
+  it('resolves remote-only keys without touching local IPC', async () => {
+    storage.setItem('auth_token', 'desktop-token')
+    requestApiJson.mockResolvedValueOnce({ urls: { 'products/2026/03/object.jpg': 'https://cdn.example.com/o.jpg' } })
+
+    const resolved = await resolveProductImageUrls(['products/2026/03/object.jpg'])
+
+    expect(resolved).toEqual({ 'products/2026/03/object.jpg': 'https://cdn.example.com/o.jpg' })
+    expect(resolveImages).not.toHaveBeenCalled()
+  })
+
+  it('keeps remote results when local resolution fails', async () => {
+    storage.setItem('auth_token', 'desktop-token')
+    requestApiJson.mockResolvedValueOnce({ urls: { 'products/2026/03/object.jpg': 'https://cdn.example.com/o.jpg' } })
+    resolveImages.mockRejectedValueOnce(new Error('ipc down'))
+
+    const resolved = await resolveProductImageUrls(['products/2026/03/object.jpg', 'local-image.jpg'])
+
+    expect(resolved).toEqual({ 'products/2026/03/object.jpg': 'https://cdn.example.com/o.jpg' })
+  })
+
+  it('ignores blank keys on delete', async () => {
+    await deleteProductImage('   ')
+
+    expect(deleteImage).not.toHaveBeenCalled()
+    expect(requestApiJson).not.toHaveBeenCalled()
+  })
+
+  it('preserves auth-expired errors from the remote delete path', async () => {
+    storage.setItem('auth_token', 'desktop-token')
+    requestApiJson.mockRejectedValueOnce(new AuthExpiredError())
+
+    await expect(deleteProductImage('products/2026/03/object.jpg')).rejects.toBeInstanceOf(AuthExpiredError)
+  })
+
+  it('rethrows remote delete failures after logging', async () => {
+    storage.setItem('auth_token', 'desktop-token')
+    requestApiJson.mockRejectedValueOnce(new Error('offline'))
+
+    await expect(deleteProductImage('products/2026/03/object.jpg')).rejects.toThrow('offline')
+    expect(logError).toHaveBeenCalled()
+  })
 })
