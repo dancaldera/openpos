@@ -229,7 +229,7 @@ export default function SignIn() {
             </p>
           </div>
 
-          <div class="flex-1 flex flex-col justify-center min-h-[380px]">
+          <div class="flex-1 flex flex-col justify-start min-h-[380px]">
             {isPinInitLoading ? (
               <div class="flex flex-1 items-center justify-center">
                 <SpinnerIcon class="h-6 w-6 animate-spin text-graphite" aria-hidden="true" />
