@@ -8,7 +8,7 @@ export default defineRailway(() => {
   const openposReleases = bucket("openpos-releases", { region: "iad" });
   const demoApi = service("demo api", {
     source: openpos,
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.api", watchPatterns: ["/apps/api/**", "/packages/data/**", "/Dockerfile.api", "/package.json", "/pnpm-workspace.yaml", "/pnpm-lock.yaml"] },
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.api", watchPatterns: ["/apps/api/**", "/packages/data/**", "/packages/domain/**", "/Dockerfile.api", "/package.json", "/pnpm-workspace.yaml", "/pnpm-lock.yaml"] },
     healthcheck: "/api/health",
     healthcheckTimeout: 60,
     replicas: { "us-east4-eqdc4a": 1 },
@@ -18,7 +18,7 @@ export default defineRailway(() => {
   });
   const demoWeb = service("demo web", {
     source: openpos,
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.web", watchPatterns: ["/apps/desktop/**", "/packages/data/**", "/packages/sync/**", "/Dockerfile.web", "/nginx.web.conf", "/package.json", "/pnpm-workspace.yaml", "/pnpm-lock.yaml"] },
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.web", watchPatterns: ["/apps/desktop/**", "/packages/data/**", "/packages/domain/**", "/packages/sync/**", "/Dockerfile.web", "/nginx.web.conf", "/package.json", "/pnpm-workspace.yaml", "/pnpm-lock.yaml"] },
     healthcheck: "/health",
     healthcheckTimeout: 60,
     replicas: { "us-east4-eqdc4a": 1 },
@@ -38,7 +38,7 @@ export default defineRailway(() => {
   });
   const aldoApi = service("aldo api", {
     source: openpos,
-    build: { buildCommand: "", buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.api", watchPatterns: ["/apps/api/**", "/packages/data/**", "/Dockerfile.api", "/package.json", "/pnpm-workspace.yaml", "/pnpm-lock.yaml"] },
+    build: { buildCommand: "", buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.api", watchPatterns: ["/apps/api/**", "/packages/data/**", "/packages/domain/**", "/Dockerfile.api", "/package.json", "/pnpm-workspace.yaml", "/pnpm-lock.yaml"] },
     start: "node dist/index.js",
     healthcheck: "/api/health",
     healthcheckTimeout: 60,
@@ -49,7 +49,7 @@ export default defineRailway(() => {
   });
   const aldoWeb = service("aldo web", {
     source: openpos,
-    build: { buildCommand: "", buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.web", watchPatterns: ["/apps/desktop/**", "/packages/data/**", "/packages/sync/**", "/Dockerfile.web", "/nginx.web.conf", "/package.json", "/pnpm-workspace.yaml", "/pnpm-lock.yaml"] },
+    build: { buildCommand: "", buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.web", watchPatterns: ["/apps/desktop/**", "/packages/data/**", "/packages/domain/**", "/packages/sync/**", "/Dockerfile.web", "/nginx.web.conf", "/package.json", "/pnpm-workspace.yaml", "/pnpm-lock.yaml"] },
     start: "",
     healthcheck: "/health",
     healthcheckTimeout: 60,

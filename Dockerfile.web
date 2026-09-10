@@ -5,10 +5,12 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/desktop/package.json apps/desktop/
 COPY packages/data/package.json packages/data/
+COPY packages/domain/package.json packages/domain/
 COPY packages/sync/package.json packages/sync/
 RUN pnpm install --frozen-lockfile --ignore-scripts --filter openpos-desktop...
 COPY apps/desktop apps/desktop
 COPY packages/data packages/data
+COPY packages/domain packages/domain
 COPY packages/sync packages/sync
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL

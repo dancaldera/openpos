@@ -1,5 +1,5 @@
 /** Same strength policy used by sign-up and user management flows. */
-function validatePasswordStrength(password) {
+export function validatePasswordStrength(password) {
   if (password.length < 8) return 'Password must be at least 8 characters'
   if (!/[A-Z]/.test(password)) return 'Password must contain an uppercase letter'
   if (!/[a-z]/.test(password)) return 'Password must contain a lowercase letter'
@@ -9,12 +9,12 @@ function validatePasswordStrength(password) {
 }
 
 /** Optional tablet sign-in PIN: exactly six digits. */
-function validatePin(pin) {
+export function validatePin(pin) {
   if (!/^\d{6}$/.test(pin)) return 'PIN must be exactly 6 digits'
   return null
 }
 
-function normalizeBarcode(barcode) {
+export function normalizeBarcode(barcode) {
   if (!barcode) {
     return undefined
   }
@@ -27,27 +27,16 @@ function normalizeBarcode(barcode) {
   return normalized.length > 0 ? normalized : undefined
 }
 
-function formatBarcodeForStorage(barcode) {
+export function formatBarcodeForStorage(barcode) {
   const trimmed = barcode?.trim()
   return trimmed ? trimmed : undefined
 }
 
 /** Null-returning variants for SQL parameter binding on the API side. */
-function normalizeBarcodeOrNull(barcode) {
+export function normalizeBarcodeOrNull(barcode) {
   return normalizeBarcode(barcode) ?? null
 }
 
-function formatBarcodeForStorageOrNull(barcode) {
+export function formatBarcodeForStorageOrNull(barcode) {
   return formatBarcodeForStorage(barcode) ?? null
-}
-
-// Named shorthand exports (not spreads of require() results) so Node's ESM
-// interop can statically detect them when imported from ES modules.
-module.exports = {
-  validatePasswordStrength,
-  validatePin,
-  normalizeBarcode,
-  formatBarcodeForStorage,
-  normalizeBarcodeOrNull,
-  formatBarcodeForStorageOrNull,
 }

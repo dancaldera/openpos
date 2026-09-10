@@ -3,13 +3,8 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     include: ['**/*.test.js'],
-    // Single-process run: one process keeps per-line attribution truthful
-    // for CJS loaded through the transform pipeline.
-    isolate: false,
     coverage: {
-      // istanbul: V8 reports phantom gaps on this CJS source (verified
-      // against passing assertions); istanbul attributes truthfully here.
-      provider: 'istanbul',
+      provider: 'v8',
       reporter: ['text'],
       all: true,
       include: ['src/**/*.js'],

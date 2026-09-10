@@ -8,9 +8,11 @@ FROM base AS build
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/
 COPY packages/data/package.json packages/data/
+COPY packages/domain/package.json packages/domain/
 RUN pnpm install --frozen-lockfile --filter @openpos/api...
 COPY apps/api apps/api
 COPY packages/data packages/data
+COPY packages/domain packages/domain
 RUN pnpm --filter @openpos/api build
 
 FROM base AS runtime

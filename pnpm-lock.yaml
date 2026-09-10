@@ -238,9 +238,6 @@ importers:
 
   packages/domain:
     devDependencies:
-      '@vitest/coverage-istanbul':
-        specifier: 4.1.10
-        version: 4.1.10(supports-color@7.2.0)(vitest@4.1.10)
       '@vitest/coverage-v8':
         specifier: 4.1.10
         version: 4.1.10(vitest@4.1.10)
