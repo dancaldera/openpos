@@ -8,9 +8,9 @@
  * DELETE /api/users/:id       — soft-delete user
  */
 
+import { validatePasswordStrength, validatePin } from '@openpos/domain'
 import bcrypt from 'bcryptjs'
 import { Hono } from 'hono'
-import { validatePasswordStrength, validatePin } from '../lib/password.js'
 import { execute, query } from '../lib/turso.js'
 import { authMiddleware, type JwtPayload } from '../middleware/auth.js'
 

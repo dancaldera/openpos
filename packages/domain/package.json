@@ -1,0 +1,20 @@
+{
+  "name": "@openpos/domain",
+  "private": true,
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-istanbul": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10",
+    "vitest": "^4.1.10"
+  }
+}

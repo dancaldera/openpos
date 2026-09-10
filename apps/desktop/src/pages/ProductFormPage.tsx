@@ -1,8 +1,8 @@
+import { normalizeBarcode } from '@openpos/domain'
 import { useEffect, useMemo, useState } from 'preact/hooks'
 import { Button, DialogConfirm, Input, Select, Textarea } from '../components/ui'
 import { ChevronLeftIcon } from '../components/ui/icons'
 import { useTranslation } from '../hooks/useTranslation'
-import { normalizeBarcode } from '../lib/barcodes'
 import {
   DESKTOP_REMOTE_SESSION_UNAVAILABLE_MESSAGE,
   deleteProductImage,

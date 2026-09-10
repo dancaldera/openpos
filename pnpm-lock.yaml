@@ -57,6 +57,9 @@ importers:
       '@openpos/data':
         specifier: workspace:*
         version: link:../../packages/data
+      '@openpos/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -97,6 +100,9 @@ importers:
       '@openpos/data':
         specifier: workspace:*
         version: link:../../packages/data
+      '@openpos/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@openpos/sync':
         specifier: workspace:*
         version: link:../../packages/sync
@@ -226,6 +232,18 @@ importers:
       tsx:
         specifier: ^4.23.12
         version: 4.23.12
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.14.0)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
+
+  packages/domain:
+    devDependencies:
+      '@vitest/coverage-istanbul':
+        specifier: 4.1.10
+        version: 4.1.10(supports-color@7.2.0)(vitest@4.1.10)
+      '@vitest/coverage-v8':
+        specifier: 4.1.10
+        version: 4.1.10(vitest@4.1.10)
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.14.0)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
@@ -5050,6 +5068,27 @@ snapshots:
 
   '@babel/compat-data@7.29.7': {}
 
+  '@babel/core@7.29.7':
+    dependencies:
+      '@babel/code-frame': 7.29.7
+      '@babel/generator': 7.29.8
+      '@babel/helper-compilation-targets': 7.29.7
+      '@babel/helper-module-transforms': 7.29.7(@babel/core@7.29.7)
+      '@babel/helpers': 7.29.7
+      '@babel/parser': 7.29.8
+      '@babel/template': 7.29.7
+      '@babel/traverse': 7.29.8(supports-color@7.2.0)
+      '@babel/types': 7.29.8
+      '@jridgewell/remapping': 2.3.5
+      convert-source-map: 2.0.0
+      debug: 4.4.3(supports-color@7.2.0)
+      gensync: 1.0.0-beta.2
+      json5: 2.2.3
+      semver: 6.3.1
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
+
   '@babel/core@7.29.7(supports-color@7.2.0)':
     dependencies:
       '@babel/code-frame': 7.29.7
@@ -5107,6 +5146,16 @@ snapshots:
       '@babel/traverse': 7.29.8(supports-color@7.2.0)
     transitivePeerDependencies:
       - supports-color
+
+  '@babel/helper-module-transforms@7.29.7(@babel/core@7.29.7)':
+    dependencies:
+      '@babel/core': 7.29.7
+      '@babel/helper-module-imports': 7.29.7(supports-color@7.2.0)
+      '@babel/helper-validator-identifier': 7.29.7
+      '@babel/traverse': 7.29.8(supports-color@7.2.0)
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
 
   '@babel/helper-plugin-utils@7.29.7': {}
 
@@ -6415,6 +6464,23 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@vitest/coverage-istanbul@4.1.10(vitest@4.1.10)':
+    dependencies:
+      '@babel/core': 7.29.7
+      '@istanbuljs/schema': 0.1.6
+      '@jridgewell/gen-mapping': 0.3.13
+      '@jridgewell/trace-mapping': 0.3.31
+      istanbul-lib-coverage: 3.2.2
+      istanbul-lib-report: 3.0.1
+      istanbul-reports: 3.2.0
+      magicast: 0.5.4
+      obug: 2.1.4
+      tinyrainbow: 3.1.1
+      vitest: 4.1.10(@types/node@24.13.3)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.14.0)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
+
   '@vitest/coverage-v8@4.1.10(vitest@4.1.10)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
@@ -6427,7 +6493,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.10(@types/node@24.13.3)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.14.0)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12))
+      vitest: 4.1.10(@types/node@24.13.3)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.14.0)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12))
 
   '@vitest/expect@4.1.10':
     dependencies:
@@ -9156,7 +9222,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.13.3
-      '@vitest/coverage-istanbul': 4.1.10(supports-color@7.2.0)(vitest@4.1.10)
+      '@vitest/coverage-istanbul': 4.1.10(vitest@4.1.10)
       '@vitest/coverage-v8': 4.1.10(vitest@4.1.10)
       happy-dom: 20.14.0
     transitivePeerDependencies:

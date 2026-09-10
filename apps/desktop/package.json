@@ -38,6 +38,7 @@
   "dependencies": {
     "@libsql/client": "^0.15.15",
     "@openpos/data": "workspace:*",
+    "@openpos/domain": "workspace:*",
     "@openpos/sync": "workspace:*",
     "@preact/signals": "^2.11.1",
     "@tailwindcss/vite": "^4.3.3",

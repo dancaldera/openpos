@@ -1,3 +1,4 @@
+import { validatePin } from '@openpos/domain'
 import { useEffect, useMemo, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import {
@@ -21,7 +22,6 @@ import {
 import { ChevronLeftIcon } from '../components/ui/icons'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
-import { validatePin } from '../lib/password'
 import { authService, type User } from '../services/auth-turso'
 
 interface MemberFormPageProps {

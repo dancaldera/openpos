@@ -10,6 +10,7 @@
  */
 
 import { parseConnectionKey } from '@openpos/data'
+import { validatePasswordStrength, validatePin } from '@openpos/domain'
 import bcrypt from 'bcryptjs'
 import { Hono } from 'hono'
 import {
@@ -19,7 +20,6 @@ import {
   registerConnection,
   resolveDataPlane,
 } from '../lib/connection.js'
-import { validatePasswordStrength, validatePin } from '../lib/password.js'
 import { isValidEmail, verifyInternalSecret } from '../lib/secrets.js'
 import { createDataPlaneClient, execute, query, runWithDataPlane } from '../lib/turso.js'
 import { authMiddleware, type JwtPayload, signToken } from '../middleware/auth.js'

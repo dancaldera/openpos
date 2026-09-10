@@ -1,6 +1,6 @@
+import { normalizeBarcode } from '@openpos/domain'
 import { useEffect, useState } from 'preact/hooks'
 import { useTranslation } from '../hooks/useTranslation'
-import { normalizeBarcode } from '../lib/barcodes'
 import {
   type ProductAttribute,
   type ProductVariant,

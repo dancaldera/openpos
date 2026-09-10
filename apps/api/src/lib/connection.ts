@@ -20,8 +20,8 @@ import {
   seedFreshStore,
   writeConnectionMeta,
 } from '@openpos/data'
+import { validatePasswordStrength } from '@openpos/domain'
 import bcrypt from 'bcryptjs'
-import { validatePasswordStrength } from './password.js'
 import { encryptSecret, isValidEmail } from './secrets.js'
 import {
   createDataPlaneClient,

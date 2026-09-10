@@ -1,9 +1,9 @@
+import { validatePasswordStrength, validatePin } from '@openpos/domain'
 import { requestApiJson } from '../lib/api-client'
 import { getDesktopApiConfig } from '../lib/api-config'
 import { clearPersistedAuth, isAuthExpiredError } from '../lib/auth-session'
 import { execute, query } from '../lib/db-adapter'
 import { requireDesktopApi } from '../lib/desktop'
-import { validatePasswordStrength, validatePin } from '../lib/password'
 import { isDesktop } from '../lib/platform'
 import { registerStoreConnection } from './connections'
 

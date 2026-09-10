@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-OpenPOS is a pnpm workspace monorepo. Main apps live in `apps/`: `desktop/` for the Electron + Preact client, `api/` for the Hono backend, `releases/` for the public update proxy, and `landing/` for the Astro marketing site. Shared code lives in `packages/`: `data/` contains schema, migrations, and bootstrap assets, while `sync/` holds sync logic. Repository tooling and release helpers are in `scripts/`. Tests are usually colocated with source as `*.test.ts` or `*.test.js`.
+OpenPOS is a pnpm workspace monorepo. Main apps live in `apps/`: `desktop/` for the Electron + Preact client, `api/` for the Hono backend, `releases/` for the public update proxy, and `landing/` for the Astro marketing site. Shared code lives in `packages/`: `data/` contains schema, migrations, and bootstrap assets, `sync/` holds sync logic, and `domain/` holds dependency-free shared validators and normalizers (password, barcode). Repository tooling and release helpers are in `scripts/`. Tests are usually colocated with source as `*.test.ts` or `*.test.js`.
 
 ## Build, Test, and Development Commands
 

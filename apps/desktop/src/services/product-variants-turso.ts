@@ -1,4 +1,4 @@
-import { formatBarcodeForStorage, normalizeBarcode } from '../lib/barcodes'
+import { formatBarcodeForStorage, normalizeBarcode } from '@openpos/domain'
 import { execute, query } from '../lib/db-adapter'
 
 // Types

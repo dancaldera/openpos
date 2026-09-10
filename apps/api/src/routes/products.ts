@@ -8,6 +8,7 @@
  * DELETE /api/products/:id       — soft-delete product
  */
 
+import { formatBarcodeForStorageOrNull, normalizeBarcodeOrNull } from '@openpos/domain'
 import { Hono } from 'hono'
 import { execute, query } from '../lib/turso.js'
 import { authMiddleware } from '../middleware/auth.js'
@@ -36,24 +37,8 @@ productsRouter.use('/*', authMiddleware)
 
 const productSelectClause = 'SELECT * FROM products'
 
-function normalizeBarcode(barcode?: string | null): string | null {
-  if (!barcode) return null
-
-  const normalized = barcode
-    .trim()
-    .replace(/[\r\n\t]+/g, '')
-    .replace(/\s+/g, '')
-
-  return normalized.length > 0 ? normalized : null
-}
-
 function parseProductId(rawId: string) {
   return Number(rawId)
-}
-
-function formatBarcodeForStorage(barcode?: string | null): string | null {
-  const formatted = barcode?.trim()
-  return formatted && formatted.length > 0 ? formatted : null
 }
 
 async function isBarcodeInUse(normalizedBarcode: string, excludeProductId?: number): Promise<boolean> {
@@ -81,7 +66,7 @@ async function isBarcodeInUse(normalizedBarcode: string, excludeProductId?: numb
 productsRouter.get('/', async (c) => {
   const search = c.req.query('search') ?? ''
   const category = c.req.query('category') ?? ''
-  const normalizedBarcode = normalizeBarcode(search)
+  const normalizedBarcode = normalizeBarcodeOrNull(search)
   const page = Math.max(1, Number(c.req.query('page') ?? '1'))
   const limit = Math.min(100, Math.max(1, Number(c.req.query('limit') ?? '50')))
   const offset = (page - 1) * limit
@@ -128,8 +113,8 @@ productsRouter.get('/:id', async (c) => {
 productsRouter.post('/', async (c) => {
   const body = await c.req.json<Partial<DatabaseProduct>>()
   const now = new Date().toISOString()
-  const barcode = formatBarcodeForStorage(body.barcode)
-  const barcodeNormalized = normalizeBarcode(barcode)
+  const barcode = formatBarcodeForStorageOrNull(body.barcode)
+  const barcodeNormalized = normalizeBarcodeOrNull(barcode)
 
   if (barcodeNormalized && (await isBarcodeInUse(barcodeNormalized))) {
     return c.json({ error: 'Barcode is already assigned to another product or variant' }, 409)
@@ -162,8 +147,8 @@ productsRouter.put('/:id', async (c) => {
   const id = parseProductId(c.req.param('id'))
   const body = await c.req.json<Partial<DatabaseProduct>>()
   const now = new Date().toISOString()
-  const barcode = formatBarcodeForStorage(body.barcode)
-  const barcodeNormalized = normalizeBarcode(barcode)
+  const barcode = formatBarcodeForStorageOrNull(body.barcode)
+  const barcodeNormalized = normalizeBarcodeOrNull(barcode)
 
   if (barcodeNormalized && (await isBarcodeInUse(barcodeNormalized, id))) {
     return c.json({ error: 'Barcode is already assigned to another product or variant' }, 409)
