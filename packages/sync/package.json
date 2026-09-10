@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "commonjs",
+  "engines": {
+    "node": "24.x"
+  },
   "main": "src/index.cjs",
   "types": "src/index.d.ts",
   "files": [

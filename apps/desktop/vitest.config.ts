@@ -6,6 +6,10 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.{ts,tsx}', 'electron/**/*.test.js'],
+    // Fail fast on the wrong Node major: newer runtimes ship globals that
+    // break happy-dom (e.g. Node 26's experimental localStorage), producing
+    // confusing per-test failures instead of one clear error.
+    globalSetup: ['./vitest.global-setup.ts'],
     coverage: {
       // istanbul: electron/*.cjs loads both natively and through the
       // transform pipeline under one URL, which corrupts V8 range
