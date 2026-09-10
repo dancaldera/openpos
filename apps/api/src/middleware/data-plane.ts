@@ -13,11 +13,7 @@ const { verify } = jwt
 
 const DATA_PREFIXES = [
   '/api/auth',
-  '/api/products',
-  '/api/orders',
-  '/api/customers',
-  '/api/users',
-  '/api/analytics',
+  '/api/products/images',
   '/api/settings',
   '/api/query',
   '/api/execute',

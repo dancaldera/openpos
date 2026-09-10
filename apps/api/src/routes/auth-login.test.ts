@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { generateConnectionKey } from '@openpos/data'
+import bcrypt from 'bcryptjs'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 const connectionsDir = mkdtempSync(join(tmpdir(), 'openpos-api-auth-login-'))
@@ -52,6 +53,22 @@ async function createStoreAndLogin() {
   return { key: created.key, token: login.token, user: login.user }
 }
 
+async function setUserPin(key: string, token: string, userId: string, pin: string | null) {
+  const response = await app.request('/api/execute', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-OpenPOS-Connection': key,
+    },
+    body: JSON.stringify({
+      sql: 'UPDATE users SET pin_enabled = ?, pin_hash = ?, updated_at = ? WHERE id = ?',
+      params: [pin === null ? 0 : 1, pin === null ? null : await bcrypt.hash(pin, 12), new Date().toISOString(), Number(userId)],
+    }),
+  })
+  expect(response.status).toBe(200)
+}
+
 describe('PIN login', () => {
   beforeEach(() => {
     rmSync(connectionsDir, { recursive: true, force: true })
@@ -73,19 +90,7 @@ describe('PIN login', () => {
     expect(listedBefore.users[0].pin_hash).toBeUndefined()
     expect(listedBefore.users[0].pinHash).toBeUndefined()
 
-    const enablePin = await app.request(`/api/users/${user.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        'X-OpenPOS-Connection': key,
-      },
-      body: JSON.stringify({ pinEnabled: true, pin: memberPin }),
-    })
-    expect(enablePin.status).toBe(200)
-    const updated = (await enablePin.json()) as { user: { pinEnabled: boolean; pin_hash?: string } }
-    expect(updated.user.pinEnabled).toBe(true)
-    expect(updated.user.pin_hash).toBeUndefined()
+    await setUserPin(key, token, user.id, memberPin)
 
     const usersAfter = await app.request('/api/auth/users', {
       headers: { 'X-OpenPOS-Connection': key },
@@ -121,15 +126,7 @@ describe('PIN login', () => {
     expect(disabledLogin.status).toBe(401)
     expect(await disabledLogin.json()).toEqual({ error: 'Invalid PIN' })
 
-    await app.request(`/api/users/${user.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        'X-OpenPOS-Connection': key,
-      },
-      body: JSON.stringify({ pinEnabled: true, pin: memberPin }),
-    })
+    await setUserPin(key, token, user.id, memberPin)
 
     const wrongPin = await app.request('/api/auth/login', {
       method: 'POST',
@@ -142,15 +139,7 @@ describe('PIN login', () => {
     expect(wrongPin.status).toBe(401)
     expect(await wrongPin.json()).toEqual({ error: 'Invalid PIN' })
 
-    await app.request(`/api/users/${user.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        'X-OpenPOS-Connection': key,
-      },
-      body: JSON.stringify({ pinEnabled: false }),
-    })
+    await setUserPin(key, token, user.id, null)
 
     const afterDisable = await app.request('/api/auth/login', {
       method: 'POST',

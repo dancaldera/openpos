@@ -12,15 +12,10 @@ import { execute, probeDataPlane, query } from './lib/turso.js'
 import { authMiddleware } from './middleware/auth.js'
 import { corsMiddleware } from './middleware/cors.js'
 import { dataPlaneMiddleware } from './middleware/data-plane.js'
-import { analyticsRouter } from './routes/analytics.js'
 import { authRouter } from './routes/auth.js'
 import { connectionsRouter } from './routes/connections.js'
-import { customersRouter } from './routes/customers.js'
-import { ordersRouter } from './routes/orders.js'
 import { productImagesRouter } from './routes/product-images.js'
-import { productsRouter } from './routes/products.js'
 import { settingsRouter } from './routes/settings.js'
-import { usersRouter } from './routes/users.js'
 
 export const app = new Hono()
 
@@ -101,11 +96,6 @@ app.post('/api/execute', authMiddleware, async (c) => {
 app.route('/api/connections', connectionsRouter)
 app.route('/api/auth', authRouter)
 app.route('/api/products/images', productImagesRouter)
-app.route('/api/products', productsRouter)
-app.route('/api/orders', ordersRouter)
-app.route('/api/customers', customersRouter)
-app.route('/api/users', usersRouter)
-app.route('/api/analytics', analyticsRouter)
 app.route('/api/settings', settingsRouter)
 
 // 404 catch-all

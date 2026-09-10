@@ -40,7 +40,7 @@ afterEach(() => {
 function createApp() {
   const app = new Hono()
   app.use('/*', dataPlaneMiddleware)
-  app.get('/api/products', (c) => c.json({ ok: true }))
+  app.get('/api/query', (c) => c.json({ ok: true }))
   app.get('/api/auth/login', (c) => c.json({ ok: true }))
   app.post('/api/auth/login', (c) => c.json({ ok: true }))
   app.get('/api/settings/public', (c) => c.json({ ok: true }))
@@ -67,10 +67,10 @@ describe('dataPlaneMiddleware', () => {
   it('rejects data paths without an authorization header', async () => {
     const app = createApp()
 
-    const res = await app.request('/api/products')
+    const res = await app.request('/api/query')
     expect(res.status).toBe(401)
 
-    const malformed = await app.request('/api/products', { headers: { Authorization: 'Token x' } })
+    const malformed = await app.request('/api/query', { headers: { Authorization: 'Token x' } })
     expect(malformed.status).toBe(401)
   })
 
@@ -78,7 +78,7 @@ describe('dataPlaneMiddleware', () => {
     const app = createApp()
     const key = generateConnectionKey()
 
-    const res = await app.request('/api/products', {
+    const res = await app.request('/api/query', {
       headers: { Authorization: bearer({ sub: '1' }), 'X-OpenPOS-Connection': key },
     })
 
@@ -92,7 +92,7 @@ describe('dataPlaneMiddleware', () => {
     const app = createApp()
     const key = generateConnectionKey()
 
-    const res = await app.request('/api/products', {
+    const res = await app.request('/api/query', {
       headers: { Authorization: bearer({ sub: '1', connectionKey: key }) },
     })
 
@@ -105,7 +105,7 @@ describe('dataPlaneMiddleware', () => {
     const key = generateConnectionKey()
     readAssignedConnection.mockResolvedValue({ key })
 
-    const res = await app.request('/api/products', { headers: { Authorization: bearer({ sub: '1' }) } })
+    const res = await app.request('/api/query', { headers: { Authorization: bearer({ sub: '1' }) } })
 
     expect(res.status).toBe(200)
     expect(resolveDataPlane).toHaveBeenCalledWith(key)
@@ -116,7 +116,7 @@ describe('dataPlaneMiddleware', () => {
     const key = generateConnectionKey()
     readAssignedConnection.mockResolvedValue({ key })
 
-    const res = await app.request('/api/products', { headers: { Authorization: 'Bearer not-a-token' } })
+    const res = await app.request('/api/query', { headers: { Authorization: 'Bearer not-a-token' } })
 
     expect(res.status).toBe(200)
     expect(resolveDataPlane).toHaveBeenCalledWith(key)
@@ -160,7 +160,7 @@ describe('dataPlaneMiddleware', () => {
     const key = generateConnectionKey()
     resolveDataPlane.mockResolvedValue(null)
 
-    const res = await app.request('/api/products', {
+    const res = await app.request('/api/query', {
       headers: { Authorization: bearer({ sub: '1' }), 'X-OpenPOS-Connection': key },
     })
 
