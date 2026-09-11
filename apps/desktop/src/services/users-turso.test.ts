@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { query } = vi.hoisted(() => ({
-  query: vi.fn(async () => []),
+  query: vi.fn(async (_sql: string, _params?: unknown[]): Promise<Record<string, unknown>[]> => []),
 }))
 
 vi.mock('../lib/db-adapter', () => ({

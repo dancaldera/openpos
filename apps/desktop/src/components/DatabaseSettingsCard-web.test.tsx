@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const { getSettingsMock, saveSettingsMock, clearSettingsMock, toastErrorMock } = vi.hoisted(() => ({
   getSettingsMock: vi.fn(async () => ({
@@ -83,7 +84,9 @@ describe('DatabaseSettingsCard on web', () => {
     expect(screen.queryByRole('button', { name: 'settings.saveDatabaseSettings' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'settings.databaseClear' })).toBeNull()
 
-    fireEvent.submit(url.closest('form')!)
+    const form = url.closest('form')
+    if (!form) throw new Error('expected url input inside a form')
+    fireEvent.submit(form)
     expect(saveSettingsMock).not.toHaveBeenCalled()
 
     // Clearing is a no-op while read-only.

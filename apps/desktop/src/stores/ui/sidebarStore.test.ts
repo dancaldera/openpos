@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { setSidebarCollapsed, sidebarCollapsed } from './sidebarStore'
 
 afterEach(() => {
@@ -23,7 +23,8 @@ describe('sidebarStore', () => {
   it('reads the initial flag from storage', async () => {
     localStorage.setItem('sidebar_collapsed', '1')
 
-    const fresh = await import('./sidebarStore.ts?collapsed=on')
+    vi.resetModules()
+    const fresh = await import('./sidebarStore.ts')
     expect(fresh.sidebarCollapsed.value).toBe(true)
   })
 })

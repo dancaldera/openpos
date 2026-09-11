@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
+
+import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
 import type { JSX } from 'preact'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
 import { Input } from './Input'
 
 afterEach(cleanup)

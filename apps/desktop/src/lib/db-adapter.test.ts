@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { db } = vi.hoisted(() => ({
   db: {
-    query: vi.fn(async () => []),
+    query: vi.fn(async (_sql: string, _params?: unknown[]): Promise<Record<string, unknown>[]> => []),
     execute: vi.fn(async () => ({ lastInsertId: 0, rowsAffected: 0 })),
     transaction: vi.fn(async () => {}),
   },

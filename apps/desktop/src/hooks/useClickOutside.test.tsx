@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
-import type { RefObject } from 'preact'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { cleanup, fireEvent, render } from '@testing-library/preact'
+import type { RefObject } from 'preact'
 import { useRef } from 'preact/hooks'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useClickOutside } from './useClickOutside'
 
 afterEach(cleanup)

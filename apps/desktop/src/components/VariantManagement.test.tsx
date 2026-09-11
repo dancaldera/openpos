@@ -1,20 +1,31 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
 
-const {
-  getAttributesMock,
-  createVariantMock,
-  updateVariantMock,
-  generateVariantsMock,
-  convertToConfigurableMock,
-} = vi.hoisted(() => ({
-  getAttributesMock: vi.fn(async () => [] as unknown[]),
-  createVariantMock: vi.fn(async () => ({ success: true as boolean, variant: undefined as unknown, error: undefined as string | undefined })),
-  updateVariantMock: vi.fn(async () => ({ success: true as boolean, variant: undefined as unknown, error: undefined as string | undefined })),
-  generateVariantsMock: vi.fn(async () => ({ success: true as boolean, variants: [] as unknown[], error: undefined as string | undefined })),
-  convertToConfigurableMock: vi.fn(async () => ({ success: true as boolean, error: undefined as string | undefined })),
-}))
+import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+const { getAttributesMock, createVariantMock, updateVariantMock, generateVariantsMock, convertToConfigurableMock } =
+  vi.hoisted(() => ({
+    getAttributesMock: vi.fn(async () => [] as unknown[]),
+    createVariantMock: vi.fn(async () => ({
+      success: true as boolean,
+      variant: undefined as unknown,
+      error: undefined as string | undefined,
+    })),
+    updateVariantMock: vi.fn(async () => ({
+      success: true as boolean,
+      variant: undefined as unknown,
+      error: undefined as string | undefined,
+    })),
+    generateVariantsMock: vi.fn(async () => ({
+      success: true as boolean,
+      variants: [] as unknown[],
+      error: undefined as string | undefined,
+    })),
+    convertToConfigurableMock: vi.fn(async () => ({
+      success: true as boolean,
+      error: undefined as string | undefined,
+    })),
+  }))
 
 vi.mock('../hooks/useTranslation', () => ({
   useTranslation: () => ({
@@ -36,8 +47,9 @@ vi.mock('../services/products-turso', () => ({
   productService: { convertToConfigurable: convertToConfigurableMock },
 }))
 
-const { ProductVariantRow, EditVariantModal, VariantGenerator, VariantSettingsModal } =
-  await import('./VariantManagement')
+const { ProductVariantRow, EditVariantModal, VariantGenerator, VariantSettingsModal } = await import(
+  './VariantManagement'
+)
 
 const attrs = [
   { id: 'color', name: 'Color', slug: 'color', values: ['Red', 'Blue'], isActive: true, createdAt: '', updatedAt: '' },
@@ -101,9 +113,7 @@ describe('ProductVariantRow', () => {
     unmount()
     cleanup()
 
-    render(
-      <ProductVariantRow variant={{ ...baseVariant, stock: 25 }} onEdit={onEdit} onDelete={onDelete} />,
-    )
+    render(<ProductVariantRow variant={{ ...baseVariant, stock: 25 }} onEdit={onEdit} onDelete={onDelete} />)
     expect(screen.getByText('25')).toBeDefined()
   })
 })
@@ -209,9 +219,7 @@ describe('EditVariantModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common.add' }))
 
     await vi.waitFor(() =>
-      expect(createVariantMock).toHaveBeenCalledWith(
-        expect.objectContaining({ price: 0, cost: 0, stock: 0 }),
-      ),
+      expect(createVariantMock).toHaveBeenCalledWith(expect.objectContaining({ price: 0, cost: 0, stock: 0 })),
     )
     expect(onSave).toHaveBeenCalled()
   })
@@ -250,9 +258,7 @@ describe('VariantGenerator', () => {
 
   it('shows a spinner while attributes load', async () => {
     let resolveAttrs!: (value: typeof attrs) => void
-    getAttributesMock.mockImplementationOnce(
-      () => new Promise<typeof attrs>((resolve) => (resolveAttrs = resolve)),
-    )
+    getAttributesMock.mockImplementationOnce(() => new Promise<typeof attrs>((resolve) => (resolveAttrs = resolve)))
     render(<VariantGenerator productId="1" isOpen onClose={() => {}} onGenerated={() => {}} />)
     await vi.waitFor(() => expect(document.querySelector('.animate-spin')).toBeDefined())
     resolveAttrs(attrs)
@@ -333,11 +339,7 @@ describe('VariantGenerator', () => {
     fireEvent.click(screen.getByRole('button', { name: 'variants.generateVariants' }))
 
     await vi.waitFor(() =>
-      expect(generateVariantsMock).toHaveBeenCalledWith(
-        '1',
-        { color: ['Red'] },
-        { price: 15, cost: 0, stock: 0 },
-      ),
+      expect(generateVariantsMock).toHaveBeenCalledWith('1', { color: ['Red'] }, { price: 15, cost: 0, stock: 0 }),
     )
     expect(onGenerated).toHaveBeenCalledWith(generated)
     expect(onClose).toHaveBeenCalled()

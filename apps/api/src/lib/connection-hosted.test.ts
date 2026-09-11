@@ -8,13 +8,21 @@ process.env.JWT_SECRET = 'connection-hosted-secret-connection-hosted'
 const { createDataPlaneClient, executeWithClient, fetchMock, probeDataPlane, query, queryWithClient, mockBcryptHash, mockApplyRemoteMigrations } =
   vi.hoisted(() => ({
     createDataPlaneClient: vi.fn((config: unknown) => ({ fakeClient: true, config })),
-    executeWithClient: vi.fn(async () => {}),
-    fetchMock: vi.fn(async () => {
+    executeWithClient: vi.fn(
+      async (
+        _client: unknown,
+        _sql: string,
+        _params?: unknown[],
+      ): Promise<{ lastInsertId: number; rowsAffected: number } | undefined> => undefined,
+    ),
+    fetchMock: vi.fn(async (_url: string, _init?: { method?: string }): Promise<unknown> => {
       throw new Error('unexpected fetch')
     }),
     probeDataPlane: vi.fn(async () => true),
-    query: vi.fn(async () => []),
-    queryWithClient: vi.fn(async () => []),
+    query: vi.fn(async (_sql: string, _params?: unknown[]): Promise<Record<string, unknown>[]> => []),
+    queryWithClient: vi.fn(
+      async (_client: unknown, _sql: string, _params?: unknown[]): Promise<Record<string, unknown>[]> => [],
+    ),
     mockBcryptHash: vi.fn(async (value: string) => `hashed:${value}`),
     mockApplyRemoteMigrations: vi.fn(async () => {}),
   }))
@@ -138,7 +146,7 @@ beforeEach(() => {
   }
   createDataPlaneClient.mockImplementation((config: unknown) => ({ fakeClient: true, config }))
   executeWithClient.mockResolvedValue(undefined)
-  fetchMock.mockImplementation((url: string, init?: { method?: string }) => fetchHandler(url, init))
+  fetchMock.mockImplementation(async (url: string, init?: { method?: string }) => fetchHandler(url, init))
   probeDataPlane.mockResolvedValue(true)
   query.mockImplementation(async () => script.ambientRows)
   queryWithClient.mockImplementation(async (_client: unknown, sql: string) => {

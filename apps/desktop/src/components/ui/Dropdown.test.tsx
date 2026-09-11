@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Dropdown } from './Dropdown'
 
 function openMenu(triggerText = 'Open') {
@@ -88,11 +89,7 @@ describe('Dropdown', () => {
 
   it('repositions on resize and scroll, and aligns left', () => {
     render(
-      <Dropdown
-        trigger={<span>Left</span>}
-        align="left"
-        items={[{ id: 'one', label: 'One', onClick: () => {} }]}
-      />,
+      <Dropdown trigger={<span>Left</span>} align="left" items={[{ id: 'one', label: 'One', onClick: () => {} }]} />,
     )
     fireEvent.click(screen.getByText('Left'))
     expect(screen.getByRole('menu')).toBeDefined()

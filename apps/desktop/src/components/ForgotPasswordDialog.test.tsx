@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const { resetPasswordMock, toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
   resetPasswordMock: vi.fn(async () => ({ success: true as boolean, error: undefined as string | undefined })),
@@ -36,7 +37,8 @@ function fill(email: string, secret: string, next: string, confirm: string) {
 
 function submit() {
   const form = screen.getByRole('button', { name: 'auth.recovery.submit' }).closest('form')
-  fireEvent.submit(form!)
+  if (!form) throw new Error('expected submit button inside a form')
+  fireEvent.submit(form)
 }
 
 afterEach(() => {
@@ -72,9 +74,7 @@ describe('ForgotPasswordDialog', () => {
     fill('  op@example.com  ', 'secret', 'New!pass1', 'New!pass1')
     submit()
 
-    await vi.waitFor(() =>
-      expect(resetPasswordMock).toHaveBeenCalledWith('op@example.com', 'secret', 'New!pass1'),
-    )
+    await vi.waitFor(() => expect(resetPasswordMock).toHaveBeenCalledWith('op@example.com', 'secret', 'New!pass1'))
     expect(toastSuccessMock).toHaveBeenCalledWith('auth.recovery.resetSuccess')
     expect(onClose).toHaveBeenCalled()
   })

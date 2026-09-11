@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from 'vitest'
+
 import { cleanup, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it } from 'vitest'
 import { DashboardSkeleton, FullPageLoader, PageLoader } from './PageLoader'
 
 afterEach(cleanup)

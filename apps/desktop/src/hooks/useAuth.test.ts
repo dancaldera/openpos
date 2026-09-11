@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { useAuth } from './useAuth'
 import { user } from '../stores/auth/authStore'
+import { useAuth } from './useAuth'
 
 describe('useAuth', () => {
   it('exposes auth state and actions', () => {

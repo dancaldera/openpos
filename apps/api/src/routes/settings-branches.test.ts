@@ -5,9 +5,20 @@ process.env.JWT_SECRET = 'settings-test-secret-settings-test-secret'
 
 const { applyRemoteToConnection, execute, query, mockJwtPayload } = vi.hoisted(() => ({
   applyRemoteToConnection: vi.fn(async () => ({ published: false, key: 'OPK_k', storeName: 'Shop' })),
-  execute: vi.fn(async () => ({ lastInsertId: 1, rowsAffected: 1 })),
-  query: vi.fn(async () => []),
-  mockJwtPayload: { value: { role: 'admin', permissions: [], connectionKey: 'OPK_k' } },
+  execute: vi.fn(async (_sql: string, _params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }> => ({
+    lastInsertId: 1,
+    rowsAffected: 1,
+  })),
+  query: vi.fn(
+    async (_sql: string, _params?: unknown[]): Promise<Record<string, unknown>[]> => [],
+  ),
+  mockJwtPayload: {
+    value: { role: 'admin', permissions: [], connectionKey: 'OPK_k' } as {
+      role: string
+      permissions: string[]
+      connectionKey?: string
+    },
+  },
 }))
 
 vi.mock('../lib/connection.js', () => ({

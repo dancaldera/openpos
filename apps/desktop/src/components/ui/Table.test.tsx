@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from 'vitest'
+
 import { cleanup, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it } from 'vitest'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './Table'
 
 afterEach(cleanup)

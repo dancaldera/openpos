@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { useUpdateChecker } from './useUpdateChecker'
 import { updateAvailable, updateVersion } from '../stores/update/updateStore'
+import { useUpdateChecker } from './useUpdateChecker'
 
 describe('useUpdateChecker', () => {
   it('exposes update state and actions', () => {

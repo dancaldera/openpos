@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { companySettingsService, translationService } = vi.hoisted(() => ({
   companySettingsService: {
-    getSettings: vi.fn(async () => ({ language: 'es' })),
+    getSettings: vi.fn(async (): Promise<{ language?: string }> => ({ language: 'es' })),
     updateSettings: vi.fn(async () => ({})),
   },
   translationService: {

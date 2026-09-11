@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const { changePasswordMock, toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
   changePasswordMock: vi.fn(async () => ({ success: true as boolean, error: undefined as string | undefined })),
@@ -31,7 +32,8 @@ function fillPasswords(current: string, next: string, confirm: string) {
 
 function submit() {
   const form = screen.getByRole('button', { name: /settings\.changePassword|common\.loading/ }).closest('form')
-  fireEvent.submit(form!)
+  if (!form) throw new Error('expected submit button inside a form')
+  fireEvent.submit(form)
 }
 
 afterEach(() => {

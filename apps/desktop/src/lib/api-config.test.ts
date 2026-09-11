@@ -81,7 +81,7 @@ describe('api-config', () => {
           throw new Error('no bridge')
         },
       },
-    } as Window & typeof globalThis
+    } as unknown as Window & typeof globalThis
 
     const config = await getDesktopApiConfig()
     expect(config).toMatchObject({

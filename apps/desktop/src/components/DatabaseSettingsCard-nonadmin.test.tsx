@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { cleanup, render } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const { getSettingsMock } = vi.hoisted(() => ({
   getSettingsMock: vi.fn(async () => ({

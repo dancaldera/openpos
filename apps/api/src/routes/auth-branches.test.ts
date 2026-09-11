@@ -16,12 +16,15 @@ const {
   bcryptCompare: vi.fn(async (value: string, hash: string) => hash === `hashed:${value}`),
   bcryptHash: vi.fn(async (value: string) => `hashed:${value}`),
   connectionErrorStatus: vi.fn(() => 503),
-  execute: vi.fn(async () => ({ lastInsertId: 1, rowsAffected: 1 })),
-  query: vi.fn(async () => []),
-  readAssignedConnection: vi.fn(async () => ({ key: 'OPK_assigned' })),
-  readCurrentConnectionMeta: vi.fn(async () => ({ key: 'OPK_meta' })),
+  execute: vi.fn(async (_sql: string, _params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }> => ({
+    lastInsertId: 1,
+    rowsAffected: 1,
+  })),
+  query: vi.fn(async (_sql: string, _params?: unknown[]): Promise<Record<string, unknown>[]> => []),
+  readAssignedConnection: vi.fn(async (): Promise<{ key: string } | null> => ({ key: 'OPK_assigned' })),
+  readCurrentConnectionMeta: vi.fn(async (): Promise<{ key: string } | null> => ({ key: 'OPK_meta' })),
   registerConnection: vi.fn(async () => ({ dataPlane: { fake: 'plane2' } })),
-  resolveDataPlane: vi.fn(async () => ({ fake: 'plane' })),
+  resolveDataPlane: vi.fn(async (): Promise<Record<string, unknown> | null> => ({ fake: 'plane' })),
   signToken: vi.fn(() => 'test-token'),
 }))
 

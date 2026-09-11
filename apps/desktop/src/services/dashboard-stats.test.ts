@@ -207,7 +207,7 @@ describe('dashboard stats helpers', () => {
   })
 
   it('zeroes missing aggregate rows and defaults the reference date', async () => {
-    const runQuery = async <T,>(): Promise<T[]> => []
+    const runQuery = async <T>(): Promise<T[]> => []
 
     const stats = await fetchDashboardStats(runQuery)
     expect(stats).toEqual({
@@ -220,7 +220,7 @@ describe('dashboard stats helpers', () => {
   })
 
   it('refetches stale entries and keeps unrelated cache keys', async () => {
-    const runQuery = async <T,>(sql: string): Promise<T[]> => {
+    const runQuery = async <T>(sql: string): Promise<T[]> => {
       if (sql.includes('orders_today')) return [{ total_sales: 1, orders_today: 1, average_order_value: 1 }] as T[]
       if (sql.includes('low_stock_products')) return [{ low_stock_products: 0 }] as T[]
       return [{ pending_orders: 0 }] as T[]
@@ -230,17 +230,22 @@ describe('dashboard stats helpers', () => {
     await loadDashboardStats('shop-b', runQuery, { now: 1_000, referenceDate: new Date(2026, 3, 3) })
     invalidateDashboardStatsCache('shop-a')
 
-    const queryMock = vi.fn(runQuery)
+    // Hand-rolled spy: vi.fn() erases the generic signature that QueryRunner needs.
+    const calls: Array<[string, unknown[]?]> = []
+    const queryMock = async <T>(sql: string, params?: unknown[]): Promise<T[]> => {
+      calls.push([sql, params])
+      return runQuery(sql)
+    }
     await loadDashboardStats('shop-b', queryMock, { now: 2_000, referenceDate: new Date(2026, 3, 3) })
-    expect(queryMock).not.toHaveBeenCalled()
+    expect(calls).toHaveLength(0)
 
     await loadDashboardStats('shop-b', queryMock, {
       now: 1_000 + DASHBOARD_STATS_TTL_MS + 1,
       referenceDate: new Date(2026, 3, 3),
     })
-    expect(queryMock).toHaveBeenCalledTimes(3)
+    expect(calls).toHaveLength(3)
 
     await loadDashboardStats('shop-c', queryMock)
-    expect(queryMock).toHaveBeenCalledTimes(6)
+    expect(calls).toHaveLength(6)
   })
 })

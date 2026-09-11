@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Pagination } from './Pagination'
 
 vi.mock('../../hooks/useTranslation', () => ({
@@ -45,9 +46,7 @@ describe('Pagination', () => {
   it('renders ellipsis windows for many pages', () => {
     const onPageChange = vi.fn()
     // Middle: leading 1 + ellipsis, trailing ellipsis + last
-    const { unmount } = render(
-      <Pagination currentPage={5} totalPages={10} onPageChange={onPageChange} {...base} />,
-    )
+    const { unmount } = render(<Pagination currentPage={5} totalPages={10} onPageChange={onPageChange} {...base} />)
     expect(screen.getByRole('button', { name: '1' })).toBeDefined()
     expect(screen.getByRole('button', { name: '10' })).toBeDefined()
     fireEvent.click(screen.getByRole('button', { name: '6' }))

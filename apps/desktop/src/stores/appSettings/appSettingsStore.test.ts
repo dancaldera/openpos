@@ -8,7 +8,12 @@ const { companySettingsService, applyCompanyTheme } = vi.hoisted(() => ({
       themeMode: 'dark',
       themePalette: 'coffee',
     })),
-    updateSettings: vi.fn(async () => ({ success: true, settings: { appName: 'TestPOS' } })),
+    updateSettings: vi.fn(
+      async (): Promise<{ success: boolean; settings?: { appName?: string; name?: string }; error?: string }> => ({
+        success: true,
+        settings: { appName: 'TestPOS' },
+      }),
+    ),
   },
   applyCompanyTheme: vi.fn(),
 }))

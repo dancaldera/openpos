@@ -15,7 +15,7 @@ const {
   importRemoteConnection: vi.fn(async () => ({ key: 'OPK_x', seed: 'OPS_y', storeName: 'Shop' })),
   joinConnection: vi.fn(async () => ({ key: 'OPK_x', storeName: 'Shop' })),
   readAssignedConnection: vi.fn(async () => null),
-  readCurrentConnectionMeta: vi.fn(async () => null),
+  readCurrentConnectionMeta: vi.fn(async (): Promise<{ key: string; storeName: string } | null> => null),
   registerConnection: vi.fn(async () => ({ key: 'OPK_x', storeName: 'Shop', published: false })),
 }))
 

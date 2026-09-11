@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 interface ObjectStorageSettingsShape {
   configured: boolean
@@ -13,22 +14,26 @@ interface ObjectStorageSettingsShape {
 
 const { getSettingsMock, saveSettingsMock, clearSettingsMock, toastErrorMock, toastSuccessMock, isAdminHolder } =
   vi.hoisted(() => ({
-    getSettingsMock: vi.fn(async (): Promise<ObjectStorageSettingsShape> => ({
-      configured: true,
-      endpoint: 'https://t3.storageapi.dev',
-      region: 'auto',
-      bucket: 'product-images',
-      urlTtlSeconds: 900,
-      updatedAt: null,
-    })),
-    saveSettingsMock: vi.fn(async (): Promise<ObjectStorageSettingsShape> => ({
-      configured: true,
-      endpoint: 'https://t3.storageapi.dev',
-      region: 'auto',
-      bucket: 'product-images',
-      urlTtlSeconds: 900,
-      updatedAt: null,
-    })),
+    getSettingsMock: vi.fn(
+      async (): Promise<ObjectStorageSettingsShape> => ({
+        configured: true,
+        endpoint: 'https://t3.storageapi.dev',
+        region: 'auto',
+        bucket: 'product-images',
+        urlTtlSeconds: 900,
+        updatedAt: null,
+      }),
+    ),
+    saveSettingsMock: vi.fn(
+      async (): Promise<ObjectStorageSettingsShape> => ({
+        configured: true,
+        endpoint: 'https://t3.storageapi.dev',
+        region: 'auto',
+        bucket: 'product-images',
+        urlTtlSeconds: 900,
+        updatedAt: null,
+      }),
+    ),
     clearSettingsMock: vi.fn(async () => {}),
     toastErrorMock: vi.fn(),
     toastSuccessMock: vi.fn(),
@@ -68,7 +73,8 @@ function getInput(label: string) {
 
 function submit() {
   const form = screen.getByRole('button', { name: 'settings.saveObjectStorageSettings' }).closest('form')
-  fireEvent.submit(form!)
+  if (!form) throw new Error('expected submit button inside a form')
+  fireEvent.submit(form)
 }
 
 afterEach(() => {

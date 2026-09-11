@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { query, mockSend, mockGetSignedUrl, MockS3Client } = vi.hoisted(() => {
-  const mockSend = vi.fn(async () => ({}))
-  const mockGetSignedUrl = vi.fn(async () => 'https://signed.example.com/object')
+  const mockSend = vi.fn(async (_command: { input: Record<string, unknown> }): Promise<unknown> => ({}))
+  const mockGetSignedUrl = vi.fn(
+    async (_client: unknown, _command: { input: unknown }, _options: { expiresIn: number }): Promise<string> =>
+      'https://signed.example.com/object',
+  )
   const MockS3Client = vi.fn(function (this: { send: unknown }, _config: unknown) {
     this.send = mockSend
   })

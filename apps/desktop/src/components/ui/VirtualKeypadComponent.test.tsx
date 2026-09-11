@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { VirtualKeypad } from './VirtualKeypad'
 
 vi.mock('../../hooks/useTranslation', () => ({
@@ -24,9 +25,7 @@ describe('VirtualKeypad', () => {
   })
 
   it('renders the large variant', () => {
-    const { container } = render(
-      <VirtualKeypad onDigitPress={() => {}} onBackspace={() => {}} size="large" />,
-    )
+    const { container } = render(<VirtualKeypad onDigitPress={() => {}} onBackspace={() => {}} size="large" />)
     expect(container.querySelector('.max-w-72')).toBeDefined()
     expect(screen.getByRole('button', { name: 'Digit 9' })).toBeDefined()
   })

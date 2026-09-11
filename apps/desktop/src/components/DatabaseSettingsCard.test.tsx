@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 interface DatabaseSettingsShape {
   configured: boolean
@@ -12,22 +13,26 @@ interface DatabaseSettingsShape {
 }
 
 const { getSettingsMock, saveSettingsMock, clearSettingsMock, toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
-  getSettingsMock: vi.fn(async (): Promise<DatabaseSettingsShape> => ({
-    configured: true,
-    hostedProvisioning: true,
-    databaseUrl: 'libsql://store.turso.io',
-    org: 'my-org',
-    group: 'default',
-    updatedAt: null,
-  })),
-  saveSettingsMock: vi.fn(async (): Promise<DatabaseSettingsShape> => ({
-    configured: true,
-    hostedProvisioning: true,
-    databaseUrl: 'libsql://store.turso.io',
-    org: 'my-org',
-    group: 'default',
-    updatedAt: null,
-  })),
+  getSettingsMock: vi.fn(
+    async (): Promise<DatabaseSettingsShape> => ({
+      configured: true,
+      hostedProvisioning: true,
+      databaseUrl: 'libsql://store.turso.io',
+      org: 'my-org',
+      group: 'default',
+      updatedAt: null,
+    }),
+  ),
+  saveSettingsMock: vi.fn(
+    async (): Promise<DatabaseSettingsShape> => ({
+      configured: true,
+      hostedProvisioning: true,
+      databaseUrl: 'libsql://store.turso.io',
+      org: 'my-org',
+      group: 'default',
+      updatedAt: null,
+    }),
+  ),
   clearSettingsMock: vi.fn(async () => {}),
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
@@ -65,7 +70,8 @@ function setInput(label: string, value: string) {
 
 function submit() {
   const form = screen.getByRole('button', { name: 'settings.saveDatabaseSettings' }).closest('form')
-  fireEvent.submit(form!)
+  if (!form) throw new Error('expected submit button inside a form')
+  fireEvent.submit(form)
 }
 
 afterEach(() => {
@@ -81,9 +87,7 @@ describe('DatabaseSettingsCard', () => {
   it('loads and shows the configured status', async () => {
     render(<DatabaseSettingsCard />)
     await screen.findByText('settings.databaseStatusConfigured')
-    expect((screen.getByLabelText('settings.databaseUrl') as HTMLInputElement).value).toBe(
-      'libsql://store.turso.io',
-    )
+    expect((screen.getByLabelText('settings.databaseUrl') as HTMLInputElement).value).toBe('libsql://store.turso.io')
   })
 
   it('shows the loading state while fetching', async () => {
@@ -129,14 +133,16 @@ describe('DatabaseSettingsCard', () => {
     setInput('settings.tursoGroup', 'group')
     submit()
 
-    await vi.waitFor(() => expect(saveSettingsMock).toHaveBeenCalledWith({
-      databaseUrl: 'libsql://new.turso.io',
-      authToken: 'token',
-      apiToken: 'api-token',
-      org: 'org',
-      group: 'group',
-      publish: false,
-    }))
+    await vi.waitFor(() =>
+      expect(saveSettingsMock).toHaveBeenCalledWith({
+        databaseUrl: 'libsql://new.turso.io',
+        authToken: 'token',
+        apiToken: 'api-token',
+        org: 'org',
+        group: 'group',
+        publish: false,
+      }),
+    )
     expect(toastSuccessMock).toHaveBeenCalledWith('settings.databaseSettingsSaved')
     await vi.waitFor(() => {
       expect((screen.getByLabelText('settings.databaseAuthToken') as HTMLInputElement).value).toBe('')

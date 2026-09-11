@@ -1,13 +1,16 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from 'vitest'
+
 import { cleanup, render } from '@testing-library/preact'
+import { afterEach, describe, expect, it } from 'vitest'
 import { useTranslation } from './useTranslation'
+
+type Translation = ReturnType<typeof useTranslation>
 
 afterEach(cleanup)
 
 describe('useTranslation', () => {
   it('exposes the translation service', async () => {
-    let captured: ReturnType<typeof useTranslation> | null = null
+    let captured: Translation | null = null
     function Probe() {
       captured = useTranslation()
       return null
@@ -15,9 +18,12 @@ describe('useTranslation', () => {
     render(<Probe />)
 
     expect(captured).not.toBeNull()
-    await captured?.setLocale('en')
-    expect(captured?.getCurrentLocale()).toBe('en')
-    expect(captured?.getSupportedLocales().map((locale) => locale.code)).toEqual(['en', 'es'])
-    expect(typeof captured?.t('missing.key')).toBe('string')
+    // The expect above guards at runtime; the cast defeats narrowing (tsc
+    // cannot see the assignment inside the rendered probe).
+    const t = captured as unknown as Translation
+    await t.setLocale('en')
+    expect(t.getCurrentLocale()).toBe('en')
+    expect(t.getSupportedLocales().map((locale) => locale.code)).toEqual(['en', 'es'])
+    expect(typeof t.t('missing.key')).toBe('string')
   })
 })

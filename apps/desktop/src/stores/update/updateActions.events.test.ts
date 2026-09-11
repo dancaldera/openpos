@@ -55,7 +55,7 @@ const {
   restartFromInstalledAppImage: vi.fn(async () => {}),
   restartFromInstalledDeb: vi.fn(async () => {}),
   restartFromUpdatedMacApp: vi.fn(async () => {}),
-  onStatusChange: vi.fn(() => () => {}),
+  onStatusChange: vi.fn((_listener: (event: DesktopUpdateStatusEvent) => void): (() => void) => () => {}),
 }))
 
 vi.mock('../../lib/desktop', () => ({

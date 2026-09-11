@@ -11,7 +11,7 @@ afterEach(() => {
 })
 
 function createApp() {
-  const app = new Hono()
+  const app = new Hono<{ Variables: { jwtPayload: unknown } }>()
   app.use('/*', authMiddleware)
   app.get('/protected', (c) => c.json({ payload: c.get('jwtPayload') }))
   return app

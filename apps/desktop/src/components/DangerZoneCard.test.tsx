@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const { signOutMock, toastErrorMock, factoryResetMock } = vi.hoisted(() => ({
   signOutMock: vi.fn(),
@@ -109,9 +110,7 @@ describe('DangerZoneCard', () => {
     confirm()
     await vi.waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('nope'))
     fireEvent.click(screen.getByRole('button', { name: 'common.cancel' }))
-    await vi.waitFor(() =>
-      expect(screen.getAllByRole('button', { name: 'settings.dangerZoneReset' })).toHaveLength(1),
-    )
+    await vi.waitFor(() => expect(screen.getAllByRole('button', { name: 'settings.dangerZoneReset' })).toHaveLength(1))
 
     factoryResetMock.mockRejectedValueOnce('string-failure')
     openDialog()

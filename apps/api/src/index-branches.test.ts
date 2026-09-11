@@ -7,11 +7,14 @@ const { dataPlaneMiddleware, execute, probeDataPlane, query, readAssignedConnect
     dataPlaneMiddleware: vi.fn(async (_c: unknown, next: () => Promise<void>) => {
       await next()
     }),
-    execute: vi.fn(async () => ({ lastInsertId: 1, rowsAffected: 1 })),
+    execute: vi.fn(async (_sql: string, _params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }> => ({
+      lastInsertId: 1,
+      rowsAffected: 1,
+    })),
     probeDataPlane: vi.fn(async () => true),
-    query: vi.fn(async () => []),
-    readAssignedConnection: vi.fn(async () => null),
-    resolveDataPlane: vi.fn(async () => null),
+    query: vi.fn(async (_sql: string, _params?: unknown[]): Promise<Record<string, unknown>[]> => []),
+    readAssignedConnection: vi.fn(async (): Promise<Record<string, unknown> | null> => null),
+    resolveDataPlane: vi.fn(async (): Promise<Record<string, unknown> | null> => null),
   }),
 )
 
