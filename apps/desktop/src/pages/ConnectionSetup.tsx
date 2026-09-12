@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
+import { AppLogo } from '../components/ui/AppLogo'
 import { Button } from '../components/ui/Button'
 import { Form } from '../components/ui/Form'
 import { Input } from '../components/ui/Input'
@@ -291,6 +292,7 @@ export default function ConnectionSetup({ status, onResolved }: ConnectionSetupP
       <div class="no-drag w-full max-w-sm relative z-10">
         <div class="bg-canvas backdrop-blur-xl rounded-cards shadow-sm border border-fog-border p-8">
           <div class="text-center mb-8">
+            <AppLogo class="mx-auto h-12 w-12 mb-3" />
             <h1 class="text-2xl font-bold text-void">{appName.value}</h1>
             <p class="text-sm text-graphite mt-2">{t(isDesktop ? 'connection.subtitle' : 'connection.webSubtitle')}</p>
           </div>

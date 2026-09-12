@@ -1,6 +1,7 @@
 import type { ComponentChildren, JSX } from 'preact'
 import { useEffect } from 'preact/hooks'
 import { clsx } from '../../lib/utils'
+import { AppLogo } from './AppLogo'
 
 interface SidebarItem {
   id: string
@@ -66,9 +67,12 @@ export function Sidebar({
         {/* Header */}
         <div class={clsx('p-4', isMac && !isMobileDrawer && 'pt-10')}>
           <div class={clsx('flex items-center', isCollapsed ? 'justify-center' : 'justify-between')}>
-            <h1 class={clsx('text-xl font-semibold tracking-[-0.01em] text-void truncate', isCollapsed && 'hidden')}>
-              {title}
-            </h1>
+            <div class={clsx('flex items-center gap-2 min-w-0', isCollapsed && 'justify-center')}>
+              <AppLogo class="h-8 w-8 shrink-0" />
+              <h1 class={clsx('text-xl font-semibold tracking-[-0.01em] text-void truncate', isCollapsed && 'hidden')}>
+                {title}
+              </h1>
+            </div>
             {isMobileDrawer ? (
               <button
                 type="button"

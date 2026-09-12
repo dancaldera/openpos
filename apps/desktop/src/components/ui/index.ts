@@ -1,4 +1,5 @@
 export { Button } from './Button'
+export { AppLogo } from './AppLogo'
 export { DbStatusBadge } from './DbStatusBadge'
 export { Dialog, DialogConfirm } from './Dialog'
 export { Dropdown, type DropdownItem } from './Dropdown'

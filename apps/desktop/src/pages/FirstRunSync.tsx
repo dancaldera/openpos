@@ -1,3 +1,4 @@
+import { AppLogo } from '../components/ui/AppLogo'
 import { DbStatusBadge } from '../components/ui/DbStatusBadge'
 import { SpinnerIcon } from '../components/ui/icons'
 import { UpdateBadge } from '../components/ui/UpdateBadge'
@@ -27,6 +28,7 @@ export default function FirstRunSync({ status, isRetrying, onRetry }: FirstRunSy
       <div class="no-drag relative z-10 w-full max-w-md">
         <div class="bg-canvas backdrop-blur-sm rounded-cards shadow-sm p-8">
           <div class="text-center mb-8">
+            <AppLogo class="mx-auto h-12 w-12 mb-3" />
             <h1 class="text-2xl font-bold text-void">{appName.value}</h1>
             <p class="text-sm text-graphite mt-2">{t('startup.subtitle')}</p>
           </div>

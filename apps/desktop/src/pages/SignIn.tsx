@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import { ForgotPasswordDialog } from '../components/ForgotPasswordDialog'
+import { AppLogo } from '../components/ui/AppLogo'
 import { Button } from '../components/ui/Button'
 import { DbStatusBadge } from '../components/ui/DbStatusBadge'
 import { Dialog } from '../components/ui/Dialog'
@@ -217,6 +218,7 @@ export default function SignIn() {
       <div class="no-drag w-full relative z-10 max-w-md">
         <div class="bg-canvas backdrop-blur-xl rounded-cards shadow-sm border border-fog-border p-8 min-h-[540px] flex flex-col">
           <div class="text-center mb-7">
+            <AppLogo class="mx-auto h-12 w-12 mb-3" />
             <h1 class="text-xl font-semibold text-void ">{appName.value}</h1>
             <p class="text-sm text-graphite mt-1">
               {isPinInitLoading
