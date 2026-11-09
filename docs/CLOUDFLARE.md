@@ -111,7 +111,45 @@ pnpm run deploy:landing
 6. Attach existing store databases from **Attach database** (slug, database,
    owner if the database has no users). Attaching keeps the store's existing
    connection key and publishes its web address.
-7. Put Cloudflare Access in front of `admin.pos.softmelody.dev` as a second gate.
+7. Put Cloudflare Access in front of `admin.pos.softmelody.dev` as a second gate
+   (see below).
+
+## Protecting the admin app
+
+`admin.pos.softmelody.dev` sits behind Cloudflare Access, so the root login is
+only reachable after an Access session. The app allows a single policy and only
+offers the One-time PIN identity provider, which emails a code.
+
+Zero Trust lives at <https://one.dash.cloudflare.com/> (also **Zero Trust** in
+the Cloudflare dashboard sidebar). Create it once per account, then add a
+self-hosted application for the admin host:
+
+```bash
+cat > access-app.json <<'JSON'
+{
+  "name": "OpenPOS Admin",
+  "domain": "admin.pos.softmelody.dev",
+  "type": "self_hosted",
+  "session_duration": "24h",
+  "allowed_idps": ["<one-time PIN identity provider id>"],
+  "auto_redirect_to_identity": true,
+  "destinations": [{ "type": "public", "uri": "admin.pos.softmelody.dev" }]
+}
+JSON
+
+ACCOUNT=<account id>
+curl -sS -X POST "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/access/apps" \
+  -H "Authorization: Bearer $CF_TOKEN" -H 'Content-Type: application/json' \
+  -d @access-app.json
+```
+
+Then add an `allow` policy to the returned app id with
+`"include": [{"email": {"email": "you@example.com"}}]`. Get the identity
+provider id from `GET /accounts/$ACCOUNT/access/identity_providers`; the token
+needs **Access: Apps and Policies: Edit**.
+
+Only protect this host. `api`, `releases`, the landing page, and every store
+host must stay public.
 
 ## Adding a store
 
