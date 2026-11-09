@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/preact'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { DesktopFirstRunStatus } from './lib/desktop'
 
@@ -59,18 +59,20 @@ vi.mock('./stores/language/languageActions', () => ({
 
 vi.mock('./stores/theme/themeStore', () => ({
   initializeTheme: vi.fn(async () => {}),
+  resolvedTheme: { value: 'light' },
 }))
 
-vi.mock('./components/Layout', () => ({ default: () => <div data-testid="layout" /> }))
-vi.mock('./components/ui/PageLoader', () => ({
+vi.mock('./components/shell/AppFrame', () => ({ AppFrame: () => <div data-testid="layout" /> }))
+vi.mock('./components/shell/ToastBridge', () => ({ ToastBridge: () => null }))
+vi.mock('./components/shell/FullPageStatus', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./components/shell/FullPageStatus')>()),
   FullPageLoader: () => <div data-testid="loader">loading</div>,
 }))
-vi.mock('sonner', () => ({ Toaster: () => null }))
 vi.mock('./pages/Dashboard', () => ({ default: () => null }))
-vi.mock('./pages/Orders', () => ({ default: () => null }))
-vi.mock('./pages/Products', () => ({ default: () => null }))
-vi.mock('./pages/Customers', () => ({ default: () => null }))
-vi.mock('./pages/Members', () => ({ default: () => null }))
+vi.mock('./pages/orders/OrdersSection', () => ({ default: () => null }))
+vi.mock('./pages/products/ProductsSection', () => ({ default: () => null }))
+vi.mock('./pages/customers/CustomersSection', () => ({ default: () => null }))
+vi.mock('./pages/members/MembersSection', () => ({ default: () => null }))
 vi.mock('./pages/Analytics', () => ({ default: () => null }))
 vi.mock('./pages/Settings', () => ({ default: () => null }))
 vi.mock('./pages/SignIn', () => ({ default: () => <div data-testid="page-SignIn" /> }))

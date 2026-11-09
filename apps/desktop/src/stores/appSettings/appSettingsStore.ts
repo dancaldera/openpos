@@ -1,4 +1,4 @@
-import { signal } from '@preact/signals'
+import { signal } from '@preact/signals-react'
 import { companySettingsService } from '../../services/company-settings-turso'
 import { applyCompanyTheme } from '../theme/themeStore'
 

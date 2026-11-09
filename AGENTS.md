@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-OpenPOS is a pnpm workspace monorepo. Main apps live in `apps/`: `desktop/` for the Electron + Preact client (also built for the browser), `api/` for the shared multi-tenant Hono API, `web/` for the Worker that serves the web client on every store subdomain, `admin/` for the root admin (stores, Turso databases, connection keys, domains), `releases/` for the public update proxy, and `landing/` for the Astro marketing site. Shared code lives in `packages/`: `data/` contains schema, migrations, and bootstrap assets, `control-plane/` holds the store registry and Turso provisioning used by the API and admin, `sync/` holds sync logic, and `domain/` holds dependency-free shared validators and normalizers (password, barcode). Repository tooling and release helpers are in `scripts/`. Tests are usually colocated with source as `*.test.ts` or `*.test.js`.
+OpenPOS is a pnpm workspace monorepo. Main apps live in `apps/`: `desktop/` for the Electron + React client built with the Astryx design system (also built for the browser), `api/` for the shared multi-tenant Hono API, `web/` for the Worker that serves the web client on every store subdomain, `admin/` for the root admin (stores, Turso databases, connection keys, domains), `releases/` for the public update proxy, and `landing/` for the Astro marketing site. Shared code lives in `packages/`: `data/` contains schema, migrations, and bootstrap assets, `control-plane/` holds the store registry and Turso provisioning used by the API and admin, `sync/` holds sync logic, and `domain/` holds dependency-free shared validators and normalizers (password, barcode). Repository tooling and release helpers are in `scripts/`. Tests are usually colocated with source as `*.test.ts` or `*.test.js`.
 
 ## Build, Test, and Development Commands
 
@@ -23,7 +23,7 @@ Use `pnpm -C apps/desktop test` when iterating on one area.
 
 ## Coding Style & Naming Conventions
 
-TypeScript is the default across active apps. Biome enforces 2-space indentation, single quotes, no semicolons, and import organization for `scripts/`, `apps/api/src/`, `apps/admin/src/`, `apps/web/src/`, `apps/releases/src/`, `packages/control-plane/src/`, and `apps/desktop/src/`. Follow existing naming: components and pages use `PascalCase.tsx`, hooks use `useX.ts`, stores use `*Store.ts` and `*Actions.ts`, and services follow `entity-sqlite.ts` or `entity-turso.ts`.
+TypeScript is the default across active apps. Biome enforces 2-space indentation, single quotes, no semicolons, and import organization for `scripts/`, `apps/api/src/`, `apps/admin/src/`, `apps/web/src/`, `apps/releases/src/`, `packages/control-plane/src/`, and `apps/desktop/src/`. The desktop/web client uses React 19 and Astryx (`@astryxdesign/core`, neutral theme): build UI from Astryx components (look APIs up with `pnpm -C apps/desktop exec astryx component <Name>`), give every create, edit, detail and confirm flow its own route or an in-page step (no dialogs), and keep emojis out of the UI. Routes are hash paths handled by `apps/desktop/src/lib/router.ts`; shared page chrome lives in `apps/desktop/src/components/page/`. Follow existing naming: components and pages use `PascalCase.tsx`, hooks use `useX.ts`, stores use `*Store.ts` and `*Actions.ts`, and services follow `entity-sqlite.ts` or `entity-turso.ts`.
 
 ## Testing Guidelines
 

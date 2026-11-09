@@ -1,18 +1,21 @@
-import { useEffect, useState } from 'preact/hooks'
-import { toast } from 'sonner'
-import { AppLogo } from '../components/ui/AppLogo'
-import { Button } from '../components/ui/Button'
-import { Form } from '../components/ui/Form'
-import { Input } from '../components/ui/Input'
-import { UpdateBadge } from '../components/ui/UpdateBadge'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Divider } from '@astryxdesign/core/Divider'
+import { VStack } from '@astryxdesign/core/Stack'
+import { Text } from '@astryxdesign/core/Text'
+import { TextInput } from '@astryxdesign/core/TextInput'
+import { KeyRound } from 'lucide-react'
+import { type FormEvent, useEffect, useState } from 'react'
+import { AccessScreen } from '../components/access/AccessScreen'
+import { ConfirmAction } from '../components/page/ConfirmAction'
 import { useTranslation } from '../hooks/useTranslation'
 import { resetApiUrlCache } from '../lib/api-config'
 import { APP_VERSION } from '../lib/app-version'
 import type { DesktopFirstRunStatus } from '../lib/desktop'
 import { requireDesktopApi } from '../lib/desktop'
 import { isDesktop } from '../lib/platform'
+import { toast } from '../lib/toast'
 import { connectWithKey } from '../services/connections'
-import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 interface ConnectionSetupProps {
   status: DesktopFirstRunStatus | null
@@ -27,13 +30,12 @@ const ERROR_KEYS: Record<string, string> = {
 /** Key-only onboarding: the admin app creates the store, devices just connect. */
 export default function ConnectionSetup({ status, onResolved }: ConnectionSetupProps) {
   const { t } = useTranslation()
-  const { appName } = appSettingsStore
   const [key, setKey] = useState('')
   const [apiUrl, setApiUrl] = useState(status?.apiUrl || '')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [resetArmed, setResetArmed] = useState(false)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: read the saved API URL once on mount
   useEffect(() => {
     if (!isDesktop || apiUrl) return
     let cancelled = false
@@ -48,7 +50,9 @@ export default function ConnectionSetup({ status, onResolved }: ConnectionSetupP
     }
   }, [])
 
-  const handleConnect = async () => {
+  const handleConnect = async (event?: FormEvent) => {
+    event?.preventDefault()
+    if (isSubmitting) return
     setError(null)
     if (isDesktop && !apiUrl.trim()) {
       setError(t('connection.apiUrlRequired'))
@@ -63,21 +67,13 @@ export default function ConnectionSetup({ status, onResolved }: ConnectionSetupP
       await onResolved(result.status)
     } catch (caught) {
       const raw = caught instanceof Error ? caught.message : ''
-      const message = ERROR_KEYS[raw] ? t(ERROR_KEYS[raw]) : raw || t('connection.connectFailed')
-      setError(message)
+      setError(ERROR_KEYS[raw] ? t(ERROR_KEYS[raw]) : raw || t('connection.connectFailed'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleFactoryReset = async () => {
-    if (!resetArmed) {
-      setResetArmed(true)
-      setTimeout(() => setResetArmed(false), 4000)
-      return
-    }
-
-    setResetArmed(false)
     try {
       const nextStatus = await requireDesktopApi().connection.factoryReset()
       toast.success(t('connection.factoryResetDone'))
@@ -88,76 +84,77 @@ export default function ConnectionSetup({ status, onResolved }: ConnectionSetupP
   }
 
   return (
-    <div class="drag-region signin-page min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      <div class="signin-glow signin-glow--cyan" aria-hidden="true" />
-      <div class="signin-glow signin-glow--violet" aria-hidden="true" />
-      <div class="no-drag w-full max-w-sm relative z-10">
-        <div class="bg-canvas backdrop-blur-xl rounded-cards shadow-sm border border-fog-border p-8">
-          <div class="text-center mb-8">
-            <AppLogo class="mx-auto h-12 w-12 mb-3" />
-            <h1 class="text-2xl font-bold text-void">{appName.value}</h1>
-            <p class="text-sm text-graphite mt-2">{t(isDesktop ? 'connection.subtitle' : 'connection.webSubtitle')}</p>
-          </div>
-
-          <Form onSubmit={() => void handleConnect()}>
-            <Input
-              label={t('connection.key')}
-              value={key}
-              onInput={(e) => {
-                setKey((e.target as HTMLInputElement).value)
+    <AccessScreen
+      title={t('connection.title')}
+      description={t(isDesktop ? 'connection.subtitle' : 'connection.webSubtitle')}
+      footer={[
+        <Text key="version" type="supporting" hasTabularNumbers>
+          {`v${APP_VERSION}`}
+        </Text>,
+      ]}
+    >
+      <form onSubmit={(event) => void handleConnect(event)} noValidate>
+        <VStack gap={4}>
+          {error && <Banner status="error" title={error} />}
+          <TextInput
+            label={t('connection.key')}
+            description={t('connection.keyHelp')}
+            value={key}
+            onChange={(value) => {
+              setKey(value)
+              setError(null)
+            }}
+            placeholder="OPK_XXXX-XXXX-XXXX-XXXX"
+            startIcon={KeyRound}
+            autoComplete="off"
+            hasSpellCheck={false}
+            hasAutoCorrect={false}
+            autoCapitalize="off"
+            isRequired
+            hasAutoFocus
+          />
+          {isDesktop && (
+            <TextInput
+              label={t('connection.apiUrl')}
+              description={t('connection.apiUrlHelp')}
+              type="url"
+              value={apiUrl}
+              onChange={(value) => {
+                setApiUrl(value)
                 setError(null)
               }}
-              placeholder="OPK_XXXX-XXXX-XXXX-XXXX"
-              autocomplete="off"
-              spellcheck={false}
-              required
-              helperText={t('connection.keyHelp')}
+              placeholder="https://api.pos.softmelody.dev"
+              autoComplete="url"
+              hasSpellCheck={false}
+              isRequired
             />
-            {isDesktop ? (
-              <Input
-                label={t('connection.apiUrl')}
-                type="url"
-                value={apiUrl}
-                onInput={(e) => {
-                  setApiUrl((e.target as HTMLInputElement).value)
-                  setError(null)
-                }}
-                placeholder="https://api.pos.softmelody.dev"
-                required
-                helperText={t('connection.apiUrlHelp')}
-              />
-            ) : null}
-            {error ? (
-              <p class="text-sm text-void" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <Button type="submit" variant="primary" size="lg" class="w-full" disabled={isSubmitting}>
-              {isSubmitting ? t('connection.connecting') : t('connection.connect')}
-            </Button>
-          </Form>
+          )}
+          <Button
+            label={isSubmitting ? t('connection.connecting') : t('connection.connect')}
+            type="submit"
+            variant="primary"
+            size="lg"
+            width="100%"
+            isLoading={isSubmitting}
+          />
+        </VStack>
+      </form>
 
-          <div class="mt-8 pt-6 border-t border-fog-border text-center">
-            <span class="text-xs text-graphite">v{APP_VERSION}</span>
-            {isDesktop ? (
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => void handleFactoryReset()}
-                class={`mt-3 w-full cursor-pointer rounded-buttons border px-4 py-2 text-sm transition-colors ${
-                  resetArmed
-                    ? 'border-danger bg-danger-soft text-danger'
-                    : 'border-fog-border text-danger hover:bg-danger-soft'
-                }`}
-              >
-                {resetArmed ? t('connection.factoryResetConfirm') : t('connection.factoryReset')}
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      <UpdateBadge />
-    </div>
+      {isDesktop && (
+        <VStack gap={3}>
+          <Divider />
+          <ConfirmAction
+            label={t('connection.factoryReset')}
+            title={t('connection.factoryResetTitle')}
+            description={t('connection.factoryResetDesc')}
+            confirmLabel={t('connection.factoryResetConfirm')}
+            cancelLabel={t('common.cancel')}
+            onConfirm={handleFactoryReset}
+            size="sm"
+            isDisabled={isSubmitting}
+          />
+        </VStack>
+      )}
+    </AccessScreen>
   )
 }

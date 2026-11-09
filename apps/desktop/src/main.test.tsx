@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { act } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('./App', () => ({
@@ -24,7 +25,10 @@ describe('main', () => {
     }) as typeof requestAnimationFrame
 
     vi.resetModules()
-    await import('./main')
+    // React 19 renders asynchronously; act() flushes the initial render.
+    await act(async () => {
+      await import('./main')
+    })
 
     expect(document.getElementById('root')?.textContent).toContain('app')
     expect(rendererReady).toHaveBeenCalledTimes(1)

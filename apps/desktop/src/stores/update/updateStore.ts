@@ -1,4 +1,4 @@
-import { computed, signal } from '@preact/signals'
+import { computed, signal } from '@preact/signals-react'
 
 /**
  * Update state signals for the auto-update system.

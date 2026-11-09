@@ -1,19 +1,23 @@
-import { useEffect, useState } from 'preact/hooks'
-import { Toaster } from 'sonner'
-import Layout from './components/Layout'
-import { FullPageLoader } from './components/ui/PageLoader'
+import { Theme } from '@astryxdesign/core/theme'
+import { neutralTheme } from '@astryxdesign/theme-neutral/built'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { AppFrame } from './components/shell/AppFrame'
+import { FullPageError, FullPageLoader } from './components/shell/FullPageStatus'
+import { ToastBridge } from './components/shell/ToastBridge'
 import { useAuth } from './hooks/useAuth'
 import { startDbStatusMonitor, stopDbStatusMonitor } from './lib/db-status'
 import { type DesktopFirstRunStatus, requireDesktopApi } from './lib/desktop'
 import { isDesktop } from './lib/platform'
+import { navigate, useRoute } from './lib/router'
 import Analytics from './pages/Analytics'
 import ConnectionSetup from './pages/ConnectionSetup'
-import Customers from './pages/Customers'
+import CustomersSection from './pages/customers/CustomersSection'
 import Dashboard from './pages/Dashboard'
 import FirstRunSync from './pages/FirstRunSync'
-import Members from './pages/Members'
-import Orders from './pages/Orders'
-import Products from './pages/Products'
+import MembersSection from './pages/members/MembersSection'
+import NotFoundPage from './pages/NotFoundPage'
+import OrdersSection from './pages/orders/OrdersSection'
+import ProductsSection from './pages/products/ProductsSection'
 import Settings from './pages/Settings'
 import SignIn from './pages/SignIn'
 import { resolveWebStore } from './services/connections'
@@ -21,17 +25,17 @@ import { updateService } from './services/update-service'
 import { appSettingsStore } from './stores/appSettings/appSettingsStore'
 import { authActions } from './stores/auth/authActions'
 import { languageActions } from './stores/language/languageActions'
-import { initializeTheme } from './stores/theme/themeStore'
+import { initializeTheme, resolvedTheme } from './stores/theme/themeStore'
 import './App.css'
 
-function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard')
+function AppContent() {
   const [startupStatus, setStartupStatus] = useState<DesktopFirstRunStatus | null>(null)
   const [needsWebConnection, setNeedsWebConnection] = useState(false)
   const [isStartupLoading, setIsStartupLoading] = useState(true)
   const [isRetryingStartup, setIsRetryingStartup] = useState(false)
   const [startupError, setStartupError] = useState<string | null>(null)
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
+  const route = useRoute()
 
   const enterSignIn = async () => {
     // Language comes from company settings, so on the web it waits for a store.
@@ -40,6 +44,7 @@ function App() {
     await authActions.initializeAuth()
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: startup runs once per mount; enterSignIn only calls module-level stores.
   useEffect(() => {
     let isCancelled = false
 
@@ -101,10 +106,14 @@ function App() {
     }
   }, [])
 
+  // Signing out lands the next session on the dashboard. Only a real sign-out
+  // counts, so a reload keeps its deep link while auth is still initializing.
+  const wasAuthenticated = useRef(isAuthenticated)
   useEffect(() => {
-    if (!isAuthenticated) {
-      setCurrentPage('dashboard')
+    if (wasAuthenticated.current && !isAuthenticated) {
+      navigate('dashboard', { replace: true })
     }
+    wasAuthenticated.current = isAuthenticated
   }, [isAuthenticated])
 
   const handleRetryStartup = async () => {
@@ -145,101 +154,74 @@ function App() {
     }
   }
 
-  const handleNavigate = (page: string) => {
-    setCurrentPage(page)
-  }
-
   const needsConnectionSetup =
     !isAuthenticated && (isDesktop ? startupStatus?.status === 'needsConnection' : needsWebConnection)
 
-  // Show loading spinner while checking authentication
   if (isStartupLoading || isLoading) {
     return <FullPageLoader />
   }
 
   if (startupError) {
     return (
-      <div class="drag-region min-h-screen bg-canvas flex items-center justify-center p-6">
-        <div class="no-drag max-w-md text-center space-y-4">
-          <h1 class="text-heading font-semibold text-void">OpenPOS failed to start</h1>
-          <p class="text-sm text-graphite break-words">{startupError}</p>
-          <button
-            type="button"
-            class="rounded-buttons bg-accent text-canvas px-4 py-2 text-sm"
-            onClick={() => {
-              window.location.reload()
-            }}
-          >
-            Retry
-          </button>
-        </div>
-        <Toaster position="top-right" />
-      </div>
+      <FullPageError
+        title="OpenPOS failed to start"
+        message={startupError}
+        actionLabel="Retry"
+        onAction={() => window.location.reload()}
+      />
     )
   }
 
   if (needsConnectionSetup) {
-    return (
-      <>
-        <ConnectionSetup status={startupStatus} onResolved={handleConnectionResolved} />
-        <Toaster position="top-right" />
-      </>
-    )
+    return <ConnectionSetup status={startupStatus} onResolved={handleConnectionResolved} />
   }
 
   if (isDesktop && !isAuthenticated && startupStatus && startupStatus.status !== 'readyForSignIn') {
-    return (
-      <>
-        <FirstRunSync status={startupStatus} isRetrying={isRetryingStartup} onRetry={handleRetryStartup} />
-        <Toaster position="top-right" />
-      </>
-    )
+    return <FirstRunSync status={startupStatus} isRetrying={isRetryingStartup} onRetry={handleRetryStartup} />
   }
 
-  // Show SignIn page if not authenticated
   if (!isAuthenticated) {
-    return (
-      <>
-        <SignIn />
-        <Toaster position="top-right" />
-      </>
-    )
+    return <SignIn />
   }
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard onNavigate={handleNavigate} />
-      case 'orders':
-        return <Orders />
-      case 'products':
-        return <Products />
-      case 'customers':
-        return <Customers />
-      case 'members':
-        return <Members />
-      case 'analytics':
-        return <Analytics />
-      case 'settings':
-        return <Settings />
-      default:
-        return (
-          <div class="bg-canvas rounded-cards border border-fog-border p-6">
-            <h3 class="text-lg font-semibold mb-4 capitalize text-void">{currentPage}</h3>
-            <p class="text-graphite">This page is under construction.</p>
-          </div>
-        )
-    }
+  const isManager = user?.role === 'admin' || user?.role === 'manager'
+  const isAdmin = user?.role === 'admin'
+
+  let page: ReactNode
+  switch (route.section) {
+    case 'dashboard':
+      page = <Dashboard />
+      break
+    case 'orders':
+      page = <OrdersSection params={route.params} />
+      break
+    case 'products':
+      page = <ProductsSection params={route.params} />
+      break
+    case 'customers':
+      page = <CustomersSection params={route.params} />
+      break
+    case 'members':
+      page = isManager ? <MembersSection params={route.params} /> : <NotFoundPage />
+      break
+    case 'analytics':
+      page = isAdmin ? <Analytics /> : <NotFoundPage />
+      break
+    case 'settings':
+      page = <Settings />
+      break
+    default:
+      page = <NotFoundPage />
   }
 
-  return (
-    <>
-      <Layout currentPage={currentPage} onNavigate={handleNavigate}>
-        {renderPage()}
-      </Layout>
-      <Toaster position="top-right" />
-    </>
-  )
+  return <AppFrame section={route.section}>{page}</AppFrame>
 }
 
-export default App
+export default function App() {
+  return (
+    <Theme theme={neutralTheme} mode={resolvedTheme.value}>
+      <ToastBridge />
+      <AppContent />
+    </Theme>
+  )
+}

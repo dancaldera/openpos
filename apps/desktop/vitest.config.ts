@@ -1,9 +1,8 @@
+import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  esbuild: {
-    jsx: 'automatic',
-  },
+  plugins: [react({ babel: { plugins: [['module:@preact/signals-react-transform', { mode: 'all' }]] } })],
   test: {
     include: ['src/**/*.test.{ts,tsx}', 'electron/**/*.test.js'],
     // Fail fast on the wrong Node major: newer runtimes ship globals that

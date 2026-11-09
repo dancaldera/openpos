@@ -1,4 +1,4 @@
-import { signal } from '@preact/signals'
+import { signal } from '@preact/signals-react'
 import { isDesktop } from './platform'
 
 export type ConnectionStatus = 'online' | 'offline' | 'syncing' | 'error'

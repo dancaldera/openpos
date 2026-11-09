@@ -1,5 +1,5 @@
-import { toast } from 'sonner'
 import { setSessionExpiredHandler } from '../../lib/auth-session'
+import { toast } from '../../lib/toast'
 import { authService, type User } from '../../services/auth-turso'
 import { error, isLoading, user } from './authStore'
 

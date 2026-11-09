@@ -1,10 +1,15 @@
 // @vitest-environment happy-dom
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/preact'
-import type { ComponentChildren } from 'preact'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const authState = { isAuthenticated: false, isLoading: false }
+const authState: { isAuthenticated: boolean; isLoading: boolean; user: { role: 'admin' | 'manager' | 'user' } | null } =
+  {
+    isAuthenticated: false,
+    isLoading: false,
+    user: null,
+  }
 const STORE = { id: 'store-1', name: 'Harbor', slug: 'harbor' }
 const mocks = vi.hoisted(() => ({
   initializeTheme: vi.fn(async () => {}),
@@ -49,56 +54,36 @@ vi.mock('./stores/language/languageActions', () => ({
 
 vi.mock('./stores/theme/themeStore', () => ({
   initializeTheme: mocks.initializeTheme,
+  resolvedTheme: { value: 'light' },
 }))
 
-vi.mock('./components/Layout', () => ({
-  default: ({
-    children,
-    currentPage,
-    onNavigate,
-  }: {
-    children?: ComponentChildren
-    currentPage: string
-    onNavigate: (page: string) => void
-  }) => (
-    <div data-testid="layout" data-page={currentPage}>
-      {['dashboard', 'orders', 'products', 'customers', 'members', 'analytics', 'settings'].map((page) => (
-        <button key={page} type="button" onClick={() => onNavigate(page)}>
-          {`go-${page}`}
-        </button>
-      ))}
-      <button type="button" onClick={() => onNavigate('mystery')}>
-        go-mystery
-      </button>
+vi.mock('./components/shell/AppFrame', () => ({
+  AppFrame: ({ children, section }: { children?: ReactNode; section: string }) => (
+    <div data-testid="layout" data-section={section}>
       {children}
     </div>
   ),
 }))
 
-vi.mock('./components/ui/PageLoader', () => ({
+vi.mock('./components/shell/ToastBridge', () => ({ ToastBridge: () => null }))
+
+vi.mock('./components/shell/FullPageStatus', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./components/shell/FullPageStatus')>()),
   FullPageLoader: () => <div data-testid="loader">loading</div>,
 }))
 
-vi.mock('sonner', () => ({
-  Toaster: () => <div data-testid="toaster" />,
-}))
+const section =
+  (name: string) =>
+  ({ params }: { params: string[] }) => <div data-testid={`page-${name}`} data-params={params.join('/')} />
 
-vi.mock('./pages/Dashboard', () => ({
-  default: ({ onNavigate }: { onNavigate: (page: string) => void }) => (
-    <div data-testid="page-Dashboard">
-      <button type="button" onClick={() => onNavigate('orders')}>
-        dashboard-go-orders
-      </button>
-    </div>
-  ),
-}))
-
-vi.mock('./pages/Orders', () => ({ default: () => <div data-testid="page-Orders" /> }))
-vi.mock('./pages/Products', () => ({ default: () => <div data-testid="page-Products" /> }))
-vi.mock('./pages/Customers', () => ({ default: () => <div data-testid="page-Customers" /> }))
-vi.mock('./pages/Members', () => ({ default: () => <div data-testid="page-Members" /> }))
+vi.mock('./pages/Dashboard', () => ({ default: () => <div data-testid="page-Dashboard" /> }))
+vi.mock('./pages/orders/OrdersSection', () => ({ default: section('Orders') }))
+vi.mock('./pages/products/ProductsSection', () => ({ default: section('Products') }))
+vi.mock('./pages/customers/CustomersSection', () => ({ default: section('Customers') }))
+vi.mock('./pages/members/MembersSection', () => ({ default: section('Members') }))
 vi.mock('./pages/Analytics', () => ({ default: () => <div data-testid="page-Analytics" /> }))
 vi.mock('./pages/Settings', () => ({ default: () => <div data-testid="page-Settings" /> }))
+vi.mock('./pages/NotFoundPage', () => ({ default: () => <div data-testid="page-NotFound" /> }))
 vi.mock('./pages/SignIn', () => ({ default: () => <div data-testid="page-SignIn" /> }))
 vi.mock('./pages/ConnectionSetup', () => ({
   default: ({ status, onResolved }: { status: unknown; onResolved: () => Promise<void> }) => (
@@ -112,6 +97,7 @@ vi.mock('./pages/ConnectionSetup', () => ({
 vi.mock('./pages/FirstRunSync', () => ({ default: () => <div data-testid="page-FirstRunSync" /> }))
 
 const { default: App } = await import('./App')
+const { currentPath, navigate } = await import('./lib/router')
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -126,6 +112,8 @@ function deferred<T>() {
 function resetAll() {
   authState.isAuthenticated = false
   authState.isLoading = false
+  authState.user = null
+  navigate('dashboard', { replace: true })
   Object.values(mocks).forEach((mock) => {
     mock.mockClear()
   })
@@ -273,57 +261,80 @@ describe('App web startup', () => {
 })
 
 describe('App web navigation', () => {
-  it('renders the dashboard shell once authenticated', async () => {
+  it('renders the dashboard inside the shell once authenticated', async () => {
     authState.isAuthenticated = true
 
     render(<App />)
 
     expect(await screen.findByTestId('layout')).toBeTruthy()
+    expect(screen.getByTestId('layout').dataset.section).toBe('dashboard')
     expect(screen.getByTestId('page-Dashboard')).toBeTruthy()
   })
 
-  it('navigates between pages and handles unknown pages', async () => {
+  it('routes each section and passes nested params as pages', async () => {
+    authState.isAuthenticated = true
+    authState.user = { role: 'admin' }
+
+    render(<App />)
+    expect(await screen.findByTestId('page-Dashboard')).toBeTruthy()
+
+    act(() => navigate('orders/new'))
+    expect(screen.getByTestId('page-Orders').dataset.params).toBe('new')
+    act(() => navigate('orders/abc/edit'))
+    expect(screen.getByTestId('page-Orders').dataset.params).toBe('abc/edit')
+    act(() => navigate('products/p1'))
+    expect(screen.getByTestId('page-Products').dataset.params).toBe('p1')
+    act(() => navigate('customers'))
+    expect(screen.getByTestId('page-Customers').dataset.params).toBe('')
+    act(() => navigate('members/new'))
+    expect(screen.getByTestId('page-Members')).toBeTruthy()
+    act(() => navigate('analytics'))
+    expect(screen.getByTestId('page-Analytics')).toBeTruthy()
+    act(() => navigate('settings'))
+    expect(screen.getByTestId('page-Settings')).toBeTruthy()
+    act(() => navigate('mystery'))
+    expect(screen.getByTestId('page-NotFound')).toBeTruthy()
+  })
+
+  it('hides manager and admin sections from other roles', async () => {
+    authState.isAuthenticated = true
+    authState.user = { role: 'user' }
+
+    render(<App />)
+    expect(await screen.findByTestId('page-Dashboard')).toBeTruthy()
+
+    act(() => navigate('members'))
+    expect(screen.getByTestId('page-NotFound')).toBeTruthy()
+
+    authState.user = { role: 'manager' }
+    act(() => navigate('analytics'))
+    expect(screen.getByTestId('page-NotFound')).toBeTruthy()
+    act(() => navigate('members'))
+    expect(screen.getByTestId('page-Members')).toBeTruthy()
+  })
+
+  it('keeps a deep link while auth initializes', async () => {
+    navigate('orders/abc', { replace: true })
     authState.isAuthenticated = true
 
     render(<App />)
 
-    expect(await screen.findByTestId('page-Dashboard')).toBeTruthy()
-
-    for (const page of ['orders', 'products', 'customers', 'members', 'analytics', 'settings']) {
-      fireEvent.click(screen.getByText(`go-${page}`))
-      expect(screen.getByTestId(`page-${page[0]?.toUpperCase()}${page.slice(1)}`)).toBeTruthy()
-    }
-
-    fireEvent.click(screen.getByText('go-mystery'))
-
-    expect(screen.getByText('This page is under construction.')).toBeTruthy()
-    expect(screen.getByText('mystery')).toBeTruthy()
+    expect((await screen.findByTestId('page-Orders')).dataset.params).toBe('abc')
   })
 
-  it('navigates from the dashboard action', async () => {
-    authState.isAuthenticated = true
-
-    render(<App />)
-
-    expect(await screen.findByTestId('page-Dashboard')).toBeTruthy()
-
-    fireEvent.click(screen.getByText('dashboard-go-orders'))
-
-    expect(screen.getByTestId('page-Orders')).toBeTruthy()
-  })
-
-  it('returns to sign-in when authentication is lost', async () => {
+  it('returns to sign-in and resets the route when authentication is lost', async () => {
     authState.isAuthenticated = true
 
     const { rerender } = render(<App />)
     expect(await screen.findByTestId('page-Dashboard')).toBeTruthy()
 
-    fireEvent.click(screen.getByText('go-orders'))
+    act(() => navigate('orders'))
     expect(screen.getByTestId('page-Orders')).toBeTruthy()
 
     authState.isAuthenticated = false
     rerender(<App />)
 
     expect(await screen.findByTestId('page-SignIn')).toBeTruthy()
+    expect(currentPath.value).toBe('dashboard')
   })
 })

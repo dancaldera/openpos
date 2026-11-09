@@ -1,19 +1,28 @@
-import { useEffect, useState } from 'preact/hooks'
-import { toast } from 'sonner'
-import {
-  Button,
-  MetricCard,
-  PageLoader,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui'
+import { Avatar } from '@astryxdesign/core/Avatar'
+import { Button } from '@astryxdesign/core/Button'
+import type { ISODateString } from '@astryxdesign/core/Calendar'
+import { Card } from '@astryxdesign/core/Card'
+import { type DateRange, DateRangeInput } from '@astryxdesign/core/DateRangeInput'
+import { EmptyState } from '@astryxdesign/core/EmptyState'
+import { Grid } from '@astryxdesign/core/Grid'
+import { Link } from '@astryxdesign/core/Link'
+import { List, ListItem } from '@astryxdesign/core/List'
+import { ProgressBar } from '@astryxdesign/core/ProgressBar'
+import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl'
+import { Skeleton } from '@astryxdesign/core/Skeleton'
+import { HStack, VStack } from '@astryxdesign/core/Stack'
+import { StatusDot, type StatusDotVariant } from '@astryxdesign/core/StatusDot'
+import { pixel, proportional, Table, type TableColumn } from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
+import { Lock, RefreshCw } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Page } from '../components/page/Page'
+import { StatTile } from '../components/page/StatTile'
 import { useAuth } from '../hooks/useAuth'
 import { useTranslation } from '../hooks/useTranslation'
+import { formatDateTime, formatMoney, shortId } from '../lib/format'
+import { hrefFor } from '../lib/router'
+import { toast } from '../lib/toast'
 import {
   type AnalyticsMetrics,
   analyticsService,
@@ -23,92 +32,106 @@ import {
   type TopProduct,
 } from '../services/analytics-turso'
 import { companySettingsService } from '../services/company-settings-turso'
+import { fromISODate, InsightSection, RowsSkeleton, StatGridSkeleton, toISODate } from './insights/InsightParts'
+import { SalesTrendChart, type TrendBucket } from './insights/SalesTrendChart'
+
+type RangePreset = '7d' | '30d' | '90d' | 'custom'
+
+const PRESET_DAYS: Record<Exclude<RangePreset, 'custom'>, number> = { '7d': 7, '30d': 30, '90d': 90 }
+const TOP_PRODUCT_LIMIT = 10
+const ACTIVITY_LIMIT = 10
+/** Longest stretch of days the trend chart draws, so bars stay readable. */
+const MAX_TREND_DAYS = 120
+
+interface AnalyticsData {
+  metrics: AnalyticsMetrics | null
+  members: SalesByMember[]
+  topProducts: TopProduct[]
+  periods: SalesByPeriod[]
+  activity: RecentActivity[]
+}
+
+const EMPTY_DATA: AnalyticsData = { metrics: null, members: [], topProducts: [], periods: [], activity: [] }
+
+interface MemberRow extends Record<string, unknown> {
+  id: string
+  name: string
+  orders: number
+  revenue: number
+}
+
+interface ProductRow extends Record<string, unknown> {
+  id: string
+  rank: number
+  name: string
+  sold: number
+  revenue: number
+}
+
+const ACTIVITY: Record<RecentActivity['type'], { dot: StatusDotVariant; event: string; title: string }> = {
+  order_created: { dot: 'warning', event: 'insights.eventCreated', title: 'insights.activityCreated' },
+  order_completed: { dot: 'success', event: 'insights.eventCompleted', title: 'insights.activityCompleted' },
+  order_cancelled: { dot: 'neutral', event: 'insights.eventCancelled', title: 'insights.activityCancelled' },
+}
+
+function daysAgo(days: number): DateRange {
+  const end = new Date()
+  const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - days)
+  return { start: toISODate(start) as ISODateString, end: toISODate(end) as ISODateString }
+}
+
+/** ISO bounds the analytics queries take for a preset or a custom calendar range. */
+function rangeBounds(preset: RangePreset, custom: DateRange | null): { start: string; end: string } {
+  if (preset === 'custom' && custom) {
+    const start = fromISODate(custom.start)
+    const endDay = fromISODate(custom.end)
+    const end = new Date(endDay.getFullYear(), endDay.getMonth(), endDay.getDate() + 1)
+    return { start: start.toISOString(), end: end.toISOString() }
+  }
+  const now = new Date()
+  const start = new Date(now)
+  start.setDate(now.getDate() - (preset === 'custom' ? PRESET_DAYS['30d'] : PRESET_DAYS[preset]))
+  return { start: start.toISOString(), end: now.toISOString() }
+}
+
+/**
+ * One bucket per calendar day between the bounds, so quiet days show as gaps
+ * instead of disappearing. Days come from SQLite `DATE(created_at)`, which is UTC.
+ */
+function fillDays(periods: SalesByPeriod[], bounds: { start: string; end: string }): TrendBucket[] {
+  const byDay = new Map(periods.map((period) => [period.period, period]))
+  const buckets: TrendBucket[] = []
+  const cursor = new Date(`${bounds.start.slice(0, 10)}T00:00:00.000Z`)
+  const last = new Date(`${bounds.end.slice(0, 10)}T00:00:00.000Z`)
+  while (cursor <= last) {
+    const day = cursor.toISOString().slice(0, 10)
+    const period = byDay.get(day)
+    buckets.push({ day, revenue: period?.revenue ?? 0, orders: period?.orders ?? 0 })
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
+  }
+  return buckets.slice(-MAX_TREND_DAYS)
+}
+
+/** SQLite `SUM` over no rows is NULL, so empty periods come back with null counts. */
+function withZeroes(metrics: AnalyticsMetrics): AnalyticsMetrics {
+  return Object.fromEntries(
+    Object.entries(metrics).map(([key, value]) => [key, typeof value === 'number' ? value : 0]),
+  ) as unknown as AnalyticsMetrics
+}
 
 export default function Analytics() {
   const { t, getCurrentLocale } = useTranslation()
-  const panelClass = 'rounded-cards border border-fog-border bg-canvas '
-
-  const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null)
-  const [salesByMembers, setSalesByMembers] = useState<SalesByMember[]>([])
-  const [topProducts, setTopProducts] = useState<TopProduct[]>([])
-  const [salesByPeriod, setSalesByPeriod] = useState<SalesByPeriod[]>([])
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [currencySymbol, setCurrencySymbol] = useState('$')
-
-  // Date filters
-  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'custom'>('30d')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [customDateRange, setCustomDateRange] = useState(false)
-
   const { hasRole } = useAuth()
-
-  // Check if user is admin
   const isAdmin = hasRole('admin')
 
-  const formatCurrency = (amount: number) => {
-    return `${currencySymbol}${amount.toFixed(2)}`
-  }
+  const [preset, setPreset] = useState<RangePreset>('30d')
+  const [customRange, setCustomRange] = useState<DateRange | null>(null)
+  const [data, setData] = useState<AnalyticsData>(EMPTY_DATA)
+  const [isLoading, setIsLoading] = useState(true)
+  const [currencySymbol, setCurrencySymbol] = useState('$')
+  const requestId = useRef(0)
 
-  const getDateRange = () => {
-    const now = new Date()
-    const start = new Date()
-
-    if (customDateRange && startDate && endDate) {
-      return { start: startDate, end: endDate }
-    }
-
-    switch (dateRange) {
-      case '7d':
-        start.setDate(now.getDate() - 7)
-        break
-      case '30d':
-        start.setDate(now.getDate() - 30)
-        break
-      case '90d':
-        start.setDate(now.getDate() - 90)
-        break
-      default:
-        start.setDate(now.getDate() - 30)
-    }
-
-    return {
-      start: start.toISOString(),
-      end: now.toISOString(),
-    }
-  }
-
-  const loadAnalytics = async () => {
-    if (!isAdmin) {
-      toast.error(t('analytics.permissionDenied'))
-      setIsLoading(false)
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      const { start, end } = getDateRange()
-
-      const [metricsData, salesData, productsData, periodData, activityData] = await Promise.all([
-        analyticsService.getOverallMetrics(start, end),
-        analyticsService.getSalesByMembers(start, end),
-        analyticsService.getTopProducts(10, start, end),
-        analyticsService.getSalesByPeriod('day', start, end),
-        analyticsService.getRecentActivity(10),
-      ])
-
-      setMetrics(metricsData)
-      setSalesByMembers(salesData)
-      setTopProducts(productsData)
-      setSalesByPeriod(periodData)
-      setRecentActivity(activityData)
-    } catch (err: unknown) {
-      toast.error((err as Error)?.message || t('errors.generic'))
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const bounds = useMemo(() => rangeBounds(preset, customRange), [preset, customRange])
 
   // Currency symbol rarely changes, so load it once instead of on every range change.
   useEffect(() => {
@@ -118,289 +141,314 @@ export default function Analytics() {
       .catch(() => {})
   }, [])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `t` is recreated every render; the locale does not change these queries.
+  const load = useCallback(async () => {
+    if (!isAdmin) {
+      setIsLoading(false)
+      return
+    }
+    const current = ++requestId.current
+    setIsLoading(true)
+    try {
+      const [metrics, members, topProducts, periods, activity] = await Promise.all([
+        analyticsService.getOverallMetrics(bounds.start, bounds.end),
+        analyticsService.getSalesByMembers(bounds.start, bounds.end),
+        analyticsService.getTopProducts(TOP_PRODUCT_LIMIT, bounds.start, bounds.end),
+        analyticsService.getSalesByPeriod('day', bounds.start, bounds.end),
+        analyticsService.getRecentActivity(ACTIVITY_LIMIT),
+      ])
+      if (current === requestId.current) {
+        setData({ metrics: withZeroes(metrics), members, topProducts, periods, activity })
+      }
+    } catch (error) {
+      if (current === requestId.current) toast.error(error instanceof Error ? error.message : t('errors.generic'))
+    } finally {
+      if (current === requestId.current) setIsLoading(false)
+    }
+  }, [bounds, isAdmin])
+
   useEffect(() => {
-    loadAnalytics()
-  }, [dateRange, startDate, endDate, isAdmin])
+    void load()
+  }, [load])
 
-  const handleDateRangeChange = (newRange: '7d' | '30d' | '90d' | 'custom') => {
-    setDateRange(newRange)
-    setCustomDateRange(newRange === 'custom')
-    if (newRange !== 'custom') {
-      setStartDate('')
-      setEndDate('')
-    }
-  }
+  const money = (amount: number) => formatMoney(amount, currencySymbol)
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'order_created':
-        return '📝'
-      case 'order_completed':
-        return '✅'
-      case 'order_cancelled':
-        return '❌'
-      default:
-        return '📊'
-    }
-  }
+  const formatDay = (day: string) =>
+    new Intl.DateTimeFormat(getCurrentLocale(), { month: 'short', day: 'numeric' }).format(fromISODate(day))
 
-  // Trend bars: service returns most-recent-first, so reverse to chronological
-  // and cap to the most recent buckets to keep the chart readable.
-  const trendBuckets = [...salesByPeriod].reverse().slice(-30)
-  const maxTrendRevenue = trendBuckets.reduce((max, b) => Math.max(max, b.revenue), 0)
-  const formatPeriodLabel = (period: string) => {
-    const parsed = new Date(period)
-    if (Number.isNaN(parsed.getTime())) return period
-    return new Intl.DateTimeFormat(getCurrentLocale(), { month: 'short', day: 'numeric' }).format(parsed)
-  }
+  const trend = useMemo(() => fillDays(data.periods, bounds), [data.periods, bounds])
+  const trendTotal = trend.reduce((sum, bucket) => sum + bucket.revenue, 0)
 
-  const profitMargin = metrics && metrics.totalRevenue > 0 ? (metrics.totalProfit / metrics.totalRevenue) * 100 : 0
+  const memberRows = useMemo<MemberRow[]>(
+    () =>
+      data.members.map((member) => ({
+        id: member.userId,
+        name: member.userName,
+        orders: member.totalOrders,
+        revenue: member.totalRevenue,
+      })),
+    [data.members],
+  )
+  const memberRevenue = memberRows.reduce((sum, row) => sum + row.revenue, 0)
+
+  const productRows = useMemo<ProductRow[]>(
+    () =>
+      data.topProducts.map((product, index) => ({
+        id: product.productId,
+        rank: index + 1,
+        name: product.productName,
+        sold: product.totalSold,
+        revenue: product.totalRevenue,
+      })),
+    [data.topProducts],
+  )
 
   if (!isAdmin) {
     return (
-      <div class="max-w-6xl mx-auto">
-        <div class={`${panelClass} p-12`}>
-          <div class="text-center">
-            <div class="text-6xl mb-6 drop-shadow-sm">🔒</div>
-            <h2 class="text-lg font-semibold mb-3 text-void ">{t('errors.unauthorized')}</h2>
-            <p class="text-graphite max-w-md mx-auto">{t('analytics.adminOnly')}</p>
-          </div>
-        </div>
-      </div>
+      <Page title={t('analytics.title')}>
+        <Card>
+          <EmptyState
+            icon={<Lock size={24} />}
+            title={t('insights.adminOnlyTitle')}
+            description={t('insights.adminOnlyDescription')}
+          />
+        </Card>
+      </Page>
     )
   }
 
-  if (isLoading) {
-    return <PageLoader message={t('analytics.loadingAnalytics')} />
-  }
+  const metrics = data.metrics
+  const profitMargin = metrics && metrics.totalRevenue > 0 ? (metrics.totalProfit / metrics.totalRevenue) * 100 : 0
+
+  const memberColumns: TableColumn<MemberRow>[] = [
+    {
+      key: 'name',
+      header: t('insights.member'),
+      width: proportional(1, { minWidth: 160 }),
+      renderCell: (row) => (
+        <HStack gap={2} vAlign="center">
+          <Avatar name={row.name} size="sm" tooltip={false} />
+          <Text maxLines={1}>{row.name}</Text>
+        </HStack>
+      ),
+    },
+    {
+      key: 'orders',
+      header: t('insights.ordersColumn'),
+      width: pixel(90),
+      align: 'end',
+      renderCell: (row) => <Text hasTabularNumbers>{row.orders}</Text>,
+    },
+    {
+      key: 'revenue',
+      header: t('insights.revenue'),
+      width: pixel(150),
+      renderCell: (row) => (
+        <VStack gap={1}>
+          <Text weight="medium" hasTabularNumbers>
+            {money(row.revenue)}
+          </Text>
+          <ProgressBar
+            label={t('insights.shareOfRevenue', {
+              value: memberRevenue > 0 ? ((row.revenue / memberRevenue) * 100).toFixed(0) : '0',
+            })}
+            isLabelHidden
+            value={row.revenue}
+            max={memberRevenue || 1}
+          />
+        </VStack>
+      ),
+    },
+  ]
+
+  const productColumns: TableColumn<ProductRow>[] = [
+    {
+      key: 'rank',
+      header: '#',
+      width: pixel(48),
+      renderCell: (row) => (
+        <Text color="secondary" hasTabularNumbers>
+          {row.rank}
+        </Text>
+      ),
+    },
+    {
+      key: 'name',
+      header: t('insights.product'),
+      width: proportional(1, { minWidth: 160 }),
+      renderCell: (row) => (
+        <Link href={hrefFor(`products/${row.id}`)}>
+          <Text type="inherit" maxLines={1}>
+            {row.name}
+          </Text>
+        </Link>
+      ),
+    },
+    {
+      key: 'sold',
+      header: t('insights.sold'),
+      width: pixel(80),
+      align: 'end',
+      renderCell: (row) => <Text hasTabularNumbers>{row.sold}</Text>,
+    },
+    {
+      key: 'revenue',
+      header: t('insights.revenue'),
+      width: pixel(120),
+      align: 'end',
+      renderCell: (row) => (
+        <Text weight="medium" hasTabularNumbers>
+          {money(row.revenue)}
+        </Text>
+      ),
+    },
+  ]
 
   return (
-    <div class="max-w-6xl mx-auto">
-      <div class="flex justify-end mb-6">
-        <Button class="w-full sm:w-auto" onClick={loadAnalytics} disabled={isLoading}>
-          {t('analytics.refreshData')}
-        </Button>
-      </div>
+    <Page
+      title={t('analytics.title')}
+      description={t('insights.analyticsDescription')}
+      actions={<Button label={t('insights.refresh')} icon={<RefreshCw size={16} />} clickAction={load} />}
+    >
+      <HStack gap={3} vAlign="end" wrap="wrap">
+        <SegmentedControl
+          label={t('insights.period')}
+          value={preset}
+          onChange={(value) => {
+            const next = value as RangePreset
+            setPreset(next)
+            if (next === 'custom' && !customRange) setCustomRange(daysAgo(PRESET_DAYS['30d']))
+          }}
+        >
+          <SegmentedControlItem value="7d" label={t('insights.last7Days')} />
+          <SegmentedControlItem value="30d" label={t('insights.last30Days')} />
+          <SegmentedControlItem value="90d" label={t('insights.last90Days')} />
+          <SegmentedControlItem value="custom" label={t('insights.customRange')} />
+        </SegmentedControl>
+        {preset === 'custom' && (
+          <DateRangeInput
+            label={t('insights.dateRange')}
+            isLabelHidden
+            value={customRange}
+            onChange={(value) => setCustomRange(value ?? daysAgo(PRESET_DAYS['30d']))}
+            max={toISODate(new Date()) as ISODateString}
+            hasClear={false}
+            width={300}
+          />
+        )}
+      </HStack>
 
-      {/* Date Range Filters */}
-      <div class={`${panelClass} p-6 mb-6`}>
-        <h3 class="text-lg font-semibold text-void mb-4">{t('analytics.dateRange')}</h3>
-        <div class="flex flex-wrap gap-4 items-end">
-          <div class="flex-1 min-w-48">
-            <Select
-              label={t('analytics.timePeriod')}
-              value={dateRange}
-              onChange={(e) =>
-                handleDateRangeChange((e.target as HTMLSelectElement).value as '7d' | '30d' | '90d' | 'custom')
-              }
-              options={[
-                { value: '7d', label: t('analytics.last7Days') },
-                { value: '30d', label: t('analytics.last30Days') },
-                { value: '90d', label: t('analytics.last90Days') },
-                { value: 'custom', label: t('analytics.customRange') },
-              ]}
-            />
-          </div>
-          {customDateRange && (
-            <>
-              <div class="flex-1 min-w-40">
-                <label for="analytics-start-date" class="block text-sm font-medium text-void mb-2">
-                  {t('analytics.startDate')}
-                </label>
-                <input
-                  id="analytics-start-date"
-                  type="date"
-                  value={startDate}
-                  onInput={(e) => setStartDate((e.target as HTMLInputElement).value)}
-                  class="w-full rounded-cards border border-fog-border bg-canvas px-4 py-2.5 text-sm text-void focus:border-fog-border focus:outline-none focus:ring-2 focus:ring-accent "
-                />
-              </div>
-              <div class="flex-1 min-w-40">
-                <label for="analytics-end-date" class="block text-sm font-medium text-void mb-2">
-                  {t('analytics.endDate')}
-                </label>
-                <input
-                  id="analytics-end-date"
-                  type="date"
-                  value={endDate}
-                  onInput={(e) => setEndDate((e.target as HTMLInputElement).value)}
-                  class="w-full rounded-cards border border-fog-border bg-canvas px-4 py-2.5 text-sm text-void focus:border-fog-border focus:outline-none focus:ring-2 focus:ring-accent "
-                />
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Key Metrics */}
-      {metrics && (
-        <>
-          <div class="mb-3 grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
-            <MetricCard label={t('analytics.totalRevenue')} value={formatCurrency(metrics.totalRevenue)} />
-            <MetricCard
-              label={t('analytics.totalProfit')}
-              value={formatCurrency(metrics.totalProfit)}
-              description={t('analytics.margin', { value: profitMargin.toFixed(1) })}
-            />
-            <MetricCard label={t('analytics.completedOrders')} value={metrics.completedOrders} />
-            <MetricCard label={t('analytics.averageOrderValue')} value={formatCurrency(metrics.averageOrderValue)} />
-          </div>
-
-          {/* Order status breakdown */}
-          <div class="mb-6 grid grid-cols-2 gap-3 sm:gap-6">
-            <MetricCard label={t('analytics.pendingOrders')} value={metrics.pendingOrders} />
-            <MetricCard label={t('analytics.cancelledOrders')} value={metrics.cancelledOrders} />
-          </div>
-        </>
+      {isLoading || !metrics ? (
+        <StatGridSkeleton count={6} minWidth={160} />
+      ) : (
+        <Grid columns={{ minWidth: 160 }} gap={4}>
+          <StatTile label={t('insights.revenue')} value={money(metrics.totalRevenue)} />
+          <StatTile
+            label={t('insights.profit')}
+            value={money(metrics.totalProfit)}
+            detail={t('insights.marginDetail', { value: profitMargin.toFixed(1) })}
+          />
+          <StatTile label={t('insights.completedOrders')} value={metrics.completedOrders} />
+          <StatTile label={t('insights.averageOrder')} value={money(metrics.averageOrderValue)} />
+          <StatTile label={t('insights.pendingOrders')} value={metrics.pendingOrders} />
+          <StatTile label={t('insights.cancelledOrders')} value={metrics.cancelledOrders} />
+        </Grid>
       )}
 
-      {/* Sales Trend */}
-      <div class={`${panelClass} p-6 mb-6`}>
-        <h3 class="text-lg font-semibold text-void mb-4">{t('analytics.salesTrends')}</h3>
-        {trendBuckets.length > 0 ? (
-          <div class="flex h-40 items-end gap-1">
-            {trendBuckets.map((bucket) => (
-              <div
-                key={bucket.period}
-                class="flex h-full flex-1 items-end"
-                title={`${formatPeriodLabel(bucket.period)} • ${formatCurrency(bucket.revenue)} • ${bucket.orders} ${t('analytics.orders').toLowerCase()}`}
-              >
-                <div
-                  class="w-full rounded-t-sm bg-void transition-all hover:opacity-80"
-                  style={{
-                    height: maxTrendRevenue > 0 ? `${Math.max((bucket.revenue / maxTrendRevenue) * 100, 2)}%` : '2%',
-                  }}
-                />
-              </div>
-            ))}
-          </div>
+      <InsightSection title={t('insights.salesTrend')} description={t('insights.salesTrendHint')}>
+        <Card>
+          {isLoading ? (
+            <Skeleton height={200} />
+          ) : trendTotal === 0 ? (
+            <EmptyState
+              isCompact
+              title={t('insights.noSalesInPeriod')}
+              description={t('insights.noSalesInPeriodHint')}
+            />
+          ) : (
+            <SalesTrendChart
+              buckets={trend}
+              label={t('insights.chartSummary', { days: trend.length, total: money(trendTotal) })}
+              formatDay={formatDay}
+              formatValue={money}
+              describeBucket={(bucket) =>
+                t('insights.trendBar', {
+                  date: formatDay(bucket.day),
+                  revenue: money(bucket.revenue),
+                  count: bucket.orders,
+                })
+              }
+            />
+          )}
+        </Card>
+      </InsightSection>
+
+      <Grid columns={{ minWidth: 380 }} gap={6} align="start">
+        <InsightSection title={t('insights.salesByMember')}>
+          {isLoading ? (
+            <RowsSkeleton rows={3} />
+          ) : memberRows.length === 0 ? (
+            <Card>
+              <EmptyState isCompact title={t('insights.noMemberSales')} />
+            </Card>
+          ) : (
+            <Card padding={0}>
+              <Table<MemberRow> data={memberRows} columns={memberColumns} idKey="id" density="balanced" />
+            </Card>
+          )}
+        </InsightSection>
+
+        <InsightSection title={t('insights.topProducts')} description={t('insights.topProductsByUnits')}>
+          {isLoading ? (
+            <RowsSkeleton rows={3} />
+          ) : productRows.length === 0 ? (
+            <Card>
+              <EmptyState isCompact title={t('insights.noProductSales')} />
+            </Card>
+          ) : (
+            <Card padding={0}>
+              <Table<ProductRow> data={productRows} columns={productColumns} idKey="id" density="balanced" />
+            </Card>
+          )}
+        </InsightSection>
+      </Grid>
+
+      <InsightSection title={t('insights.recentActivity')}>
+        {isLoading ? (
+          <RowsSkeleton rows={4} />
+        ) : data.activity.length === 0 ? (
+          <Card>
+            <EmptyState isCompact title={t('insights.noRecentActivity')} />
+          </Card>
         ) : (
-          <div class="py-8 text-center text-graphite ">
-            <div class="text-4xl mb-2">📈</div>
-            <p>{t('analytics.noData')}</p>
-          </div>
+          <Card>
+            <List hasDividers edge="outset">
+              {data.activity.map((activity) => (
+                <ListItem
+                  key={`${activity.id}-${activity.type}`}
+                  href={hrefFor(`orders/${activity.id}`)}
+                  startContent={
+                    <StatusDot variant={ACTIVITY[activity.type].dot} label={t(ACTIVITY[activity.type].event)} />
+                  }
+                  label={t(ACTIVITY[activity.type].title, { id: shortId(activity.id) })}
+                  description={
+                    activity.userName
+                      ? t('insights.activityBy', { user: activity.userName, time: formatDateTime(activity.timestamp) })
+                      : formatDateTime(activity.timestamp)
+                  }
+                  endContent={
+                    activity.amount !== undefined ? (
+                      <Text weight="medium" hasTabularNumbers>
+                        {money(activity.amount)}
+                      </Text>
+                    ) : undefined
+                  }
+                />
+              ))}
+            </List>
+          </Card>
         )}
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Sales by Members */}
-        <div class={`${panelClass} overflow-hidden`}>
-          <div class="p-6 border-b border-fog-border ">
-            <h3 class="text-lg font-semibold text-void ">{t('analytics.salesByMembers')}</h3>
-          </div>
-          <div class="max-h-96 overflow-y-auto">
-            <Table striped>
-              <TableHead>
-                <TableRow class="bg-chalk ">
-                  <TableHeader class="font-semibold">{t('analytics.member')}</TableHeader>
-                  <TableHeader class="font-semibold">{t('analytics.orders')}</TableHeader>
-                  <TableHeader class="font-semibold">{t('analytics.revenue')}</TableHeader>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {salesByMembers.map((member) => (
-                  <TableRow key={member.userId}>
-                    <TableCell>
-                      <div class="flex items-center">
-                        <div class="mr-3 flex h-8 w-8 items-center justify-center rounded-full bg-chalk text-sm font-semibold text-void ">
-                          {member.userName.charAt(0).toUpperCase()}
-                        </div>
-                        <div class="font-medium text-void ">{member.userName}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div class="font-semibold text-void ">{member.totalOrders}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div class="font-semibold text-void ">{formatCurrency(member.totalRevenue)}</div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {salesByMembers.length === 0 && (
-              <div class="p-8 text-center text-graphite ">
-                <div class="text-4xl mb-2">👥</div>
-                <p>{t('analytics.noSalesData')}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Top Products */}
-        <div class={`${panelClass} overflow-hidden`}>
-          <div class="p-6 border-b border-fog-border ">
-            <h3 class="text-lg font-semibold text-void ">{t('analytics.topProducts')}</h3>
-          </div>
-          <div class="max-h-96 overflow-y-auto">
-            <Table striped>
-              <TableHead>
-                <TableRow class="bg-chalk ">
-                  <TableHeader class="font-semibold">{t('analytics.product')}</TableHeader>
-                  <TableHeader class="font-semibold">{t('analytics.sold')}</TableHeader>
-                  <TableHeader class="font-semibold">{t('analytics.revenue')}</TableHeader>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {topProducts.map((product, index) => (
-                  <TableRow key={product.productId}>
-                    <TableCell>
-                      <div class="flex items-center">
-                        <div class="mr-3 flex h-8 w-8 items-center justify-center rounded-full bg-chalk text-sm font-semibold text-void ">
-                          {index + 1}
-                        </div>
-                        <div class="font-medium text-void ">{product.productName}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div class="font-semibold text-void ">{product.totalSold}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div class="font-semibold text-void ">{formatCurrency(product.totalRevenue)}</div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {topProducts.length === 0 && (
-              <div class="p-8 text-center text-graphite ">
-                <div class="text-4xl mb-2">📦</div>
-                <p>{t('analytics.noProductSales')}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div class={`${panelClass} p-6`}>
-        <h3 class="text-lg font-semibold text-void mb-4">{t('analytics.recentActivity')}</h3>
-        <div class="space-y-3 max-h-96 overflow-y-auto">
-          {recentActivity.map((activity) => (
-            <div
-              key={`${activity.id}-${activity.type}`}
-              class="flex items-center justify-between rounded-cards border border-fog-border bg-chalk p-3 "
-            >
-              <div class="flex items-center">
-                <span class="text-xl mr-3">{getActivityIcon(activity.type)}</span>
-                <div>
-                  <div class="font-medium text-void ">{activity.description}</div>
-                  <div class="text-sm text-graphite ">
-                    {t('analytics.by')} {activity.userName} • {new Date(activity.timestamp).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-              {activity.amount && <div class="font-semibold text-void ">{formatCurrency(activity.amount)}</div>}
-            </div>
-          ))}
-        </div>
-        {recentActivity.length === 0 && (
-          <div class="py-8 text-center text-graphite ">
-            <div class="text-4xl mb-2">🕒</div>
-            <p>{t('analytics.noRecentActivity')}</p>
-          </div>
-        )}
-      </div>
-    </div>
+      </InsightSection>
+    </Page>
   )
 }

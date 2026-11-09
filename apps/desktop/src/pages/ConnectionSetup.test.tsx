@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/preact'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DesktopFirstRunStatus } from '../lib/desktop'
 
@@ -27,26 +27,17 @@ vi.mock('../lib/platform', () => ({
 }))
 
 vi.mock('../lib/desktop', () => ({
+  getDesktopApi: () => null,
   requireDesktopApi: () => ({
     getConfig: mocks.getConfig,
     connection: { factoryReset: mocks.factoryReset },
   }),
 }))
 
-vi.mock('../lib/api-config', () => ({
-  resetApiUrlCache: mocks.resetApiUrlCache,
-}))
-
-vi.mock('../services/connections', () => ({
-  connectWithKey: mocks.connectWithKey,
-}))
-
-vi.mock('sonner', () => ({
-  toast: { success: mocks.toastSuccess, error: mocks.toastError },
-}))
-
-vi.mock('../components/ui/UpdateBadge', () => ({
-  UpdateBadge: () => null,
+vi.mock('../lib/api-config', () => ({ resetApiUrlCache: mocks.resetApiUrlCache }))
+vi.mock('../services/connections', () => ({ connectWithKey: mocks.connectWithKey }))
+vi.mock('../lib/toast', () => ({
+  toast: { success: mocks.toastSuccess, error: mocks.toastError, info: vi.fn(), warning: vi.fn() },
 }))
 
 const { default: ConnectionSetup } = await import('./ConnectionSetup')
@@ -59,7 +50,7 @@ function needsConnection(apiUrl?: string): DesktopFirstRunStatus {
 }
 
 function typeInto(placeholder: string, value: string) {
-  fireEvent.input(screen.getByPlaceholderText(placeholder), { target: { value } })
+  fireEvent.change(screen.getByPlaceholderText(placeholder), { target: { value } })
 }
 
 function submit() {
@@ -83,7 +74,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
-  vi.useRealTimers()
   for (const mock of [
     mocks.connectWithKey,
     mocks.resetApiUrlCache,
@@ -103,10 +93,12 @@ describe('ConnectionSetup on the web', () => {
 
     render(<ConnectionSetup status={null} onResolved={onResolved} />)
 
+    expect(screen.getByText('connection.title')).toBeTruthy()
     expect(screen.getByText('connection.webSubtitle')).toBeTruthy()
     expect(screen.queryByPlaceholderText(API_PLACEHOLDER)).toBeNull()
-    expect(screen.queryByText('connection.factoryReset')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'connection.factoryReset' })).toBeNull()
     expect(mocks.getConfig).not.toHaveBeenCalled()
+    expect(document.body.textContent).not.toMatch(/\p{Extended_Pictographic}/u)
 
     typeInto(KEY_PLACEHOLDER, 'OPK_A')
     submit()
@@ -117,7 +109,7 @@ describe('ConnectionSetup on the web', () => {
     expect(mocks.resetApiUrlCache).not.toHaveBeenCalled()
   })
 
-  it('disables the button while connecting', async () => {
+  it('shows the connecting state while the request runs', async () => {
     const pending = deferred<{ key: string; storeName: string }>()
     mocks.connectWithKey.mockReturnValueOnce(pending.promise)
 
@@ -125,8 +117,9 @@ describe('ConnectionSetup on the web', () => {
     typeInto(KEY_PLACEHOLDER, 'OPK_A')
     submit()
 
-    const button = await screen.findByRole('button', { name: 'connection.connecting' })
-    expect((button as HTMLButtonElement).disabled).toBe(true)
+    expect(await screen.findByRole('button', { name: /connection\.connecting/ })).toBeTruthy()
+    submit()
+    expect(mocks.connectWithKey).toHaveBeenCalledTimes(1)
 
     await act(async () => {
       pending.resolve({ key: 'OPK_A', storeName: 'Harbor' })
@@ -148,7 +141,7 @@ describe('ConnectionSetup on the web', () => {
     typeInto(KEY_PLACEHOLDER, 'OPK_bad')
     submit()
 
-    expect((await screen.findByRole('alert')).textContent).toBe(message)
+    expect(await screen.findByText(message)).toBeTruthy()
     expect(onResolved).not.toHaveBeenCalled()
   })
 
@@ -158,11 +151,11 @@ describe('ConnectionSetup on the web', () => {
     render(<ConnectionSetup status={null} onResolved={vi.fn()} />)
     typeInto(KEY_PLACEHOLDER, 'OPK_bad')
     submit()
-    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(await screen.findByText('connection.keyNotFound')).toBeTruthy()
 
     typeInto(KEY_PLACEHOLDER, 'OPK_other')
 
-    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByText('connection.keyNotFound')).toBeNull()
   })
 })
 
@@ -180,11 +173,11 @@ describe('ConnectionSetup on desktop', () => {
     typeInto(API_PLACEHOLDER, '   ')
     submit()
 
-    expect((await screen.findByRole('alert')).textContent).toBe('connection.apiUrlRequired')
+    expect(await screen.findByText('connection.apiUrlRequired')).toBeTruthy()
     expect(mocks.connectWithKey).not.toHaveBeenCalled()
 
     typeInto(API_PLACEHOLDER, 'https://api.example.com')
-    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByText('connection.apiUrlRequired')).toBeNull()
   })
 
   it('prefills the API URL from the startup status without reading the config', () => {
@@ -219,22 +212,11 @@ describe('ConnectionSetup on desktop', () => {
     expect((screen.getByPlaceholderText(API_PLACEHOLDER) as HTMLInputElement).value).toBe('https://typed.example.com')
   })
 
-  it('ignores config failures and late config after unmount', async () => {
+  it('ignores config failures', async () => {
     mocks.getConfig.mockRejectedValueOnce(new Error('no ipc'))
-    const first = render(<ConnectionSetup status={null} onResolved={vi.fn()} />)
+    render(<ConnectionSetup status={null} onResolved={vi.fn()} />)
     await waitFor(() => expect(mocks.getConfig).toHaveBeenCalledTimes(1))
     expect((screen.getByPlaceholderText(API_PLACEHOLDER) as HTMLInputElement).value).toBe('')
-    first.unmount()
-
-    const late = deferred<{ apiUrl: string }>()
-    mocks.getConfig.mockReturnValueOnce(late.promise)
-    const second = render(<ConnectionSetup status={null} onResolved={vi.fn()} />)
-    second.unmount()
-    await act(async () => {
-      late.resolve({ apiUrl: 'https://late.example.com' })
-    })
-
-    expect(mocks.getConfig).toHaveBeenCalledTimes(2)
   })
 
   it('connects with the API URL, resets the API cache, and passes the new status on', async () => {
@@ -252,7 +234,7 @@ describe('ConnectionSetup on desktop', () => {
     expect(mocks.toastSuccess).toHaveBeenCalledWith('connection.joined {"name":"Tienda"}')
   })
 
-  it('factory resets only on the second click', async () => {
+  it('factory resets only after an in-page confirmation', async () => {
     const onResolved = vi.fn(async () => {})
     mocks.factoryReset.mockResolvedValueOnce(needsConnection())
 
@@ -260,25 +242,21 @@ describe('ConnectionSetup on desktop', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'connection.factoryReset' }))
     expect(mocks.factoryReset).not.toHaveBeenCalled()
+    expect(screen.getByText('connection.factoryResetTitle')).toBeTruthy()
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'connection.factoryResetConfirm' }))
+    fireEvent.click(screen.getByRole('button', { name: 'connection.factoryResetConfirm' }))
 
     await waitFor(() => expect(onResolved).toHaveBeenCalledWith(needsConnection()))
     expect(mocks.factoryReset).toHaveBeenCalledTimes(1)
     expect(mocks.toastSuccess).toHaveBeenCalledWith('connection.factoryResetDone')
-    expect(screen.getByRole('button', { name: 'connection.factoryReset' })).toBeTruthy()
   })
 
-  it('disarms the factory reset after a few seconds', async () => {
-    vi.useFakeTimers()
+  it('cancels the factory reset', () => {
     render(<ConnectionSetup status={needsConnection('https://api.example.com')} onResolved={vi.fn()} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'connection.factoryReset' }))
-    expect(screen.getByRole('button', { name: 'connection.factoryResetConfirm' })).toBeTruthy()
-
-    await act(async () => {
-      vi.advanceTimersByTime(4000)
-    })
+    fireEvent.click(screen.getByRole('button', { name: 'common.cancel' }))
 
     expect(screen.getByRole('button', { name: 'connection.factoryReset' })).toBeTruthy()
     expect(mocks.factoryReset).not.toHaveBeenCalled()
@@ -293,7 +271,7 @@ describe('ConnectionSetup on desktop', () => {
 
     render(<ConnectionSetup status={needsConnection('https://api.example.com')} onResolved={onResolved} />)
     fireEvent.click(screen.getByRole('button', { name: 'connection.factoryReset' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'connection.factoryResetConfirm' }))
+    fireEvent.click(screen.getByRole('button', { name: 'connection.factoryResetConfirm' }))
 
     await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith(message))
     expect(onResolved).not.toHaveBeenCalled()

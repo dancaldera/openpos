@@ -1,11 +1,13 @@
-import { AppLogo } from '../components/ui/AppLogo'
-import { DbStatusBadge } from '../components/ui/DbStatusBadge'
-import { SpinnerIcon } from '../components/ui/icons'
-import { UpdateBadge } from '../components/ui/UpdateBadge'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList'
+import { ProgressBar } from '@astryxdesign/core/ProgressBar'
+import { VStack } from '@astryxdesign/core/Stack'
+import { Text } from '@astryxdesign/core/Text'
+import { AccessScreen } from '../components/access/AccessScreen'
 import { useTranslation } from '../hooks/useTranslation'
 import { APP_VERSION } from '../lib/app-version'
 import type { DesktopFirstRunStatus } from '../lib/desktop'
-import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 interface FirstRunSyncProps {
   status: DesktopFirstRunStatus
@@ -15,73 +17,55 @@ interface FirstRunSyncProps {
 
 export default function FirstRunSync({ status, isRetrying, onRetry }: FirstRunSyncProps) {
   const { t } = useTranslation()
-  const { appName } = appSettingsStore
 
   const isSyncing = status.status === 'syncingInitialData'
   const isFailed = status.status === 'initialSyncFailed'
 
-  const title = isSyncing ? t('startup.syncingTitle') : t('startup.initialSyncFailedTitle')
-  const description = isSyncing ? t('startup.syncingDescription') : t('startup.initialSyncFailedDescription')
-
   return (
-    <div class="drag-region relative min-h-screen flex items-center justify-center p-4 bg-chalk">
-      <div class="no-drag relative z-10 w-full max-w-md">
-        <div class="bg-canvas backdrop-blur-sm rounded-cards shadow-sm p-8">
-          <div class="text-center mb-8">
-            <AppLogo class="mx-auto h-12 w-12 mb-3" />
-            <h1 class="text-2xl font-bold text-void">{appName.value}</h1>
-            <p class="text-sm text-graphite mt-2">{t('startup.subtitle')}</p>
-          </div>
+    <AccessScreen
+      title={isSyncing ? t('startup.syncingTitle') : t('startup.initialSyncFailedTitle')}
+      description={isSyncing ? t('startup.syncingDescription') : t('startup.initialSyncFailedDescription')}
+      hasSyncStatus
+      footer={[
+        <Text key="version" type="supporting" hasTabularNumbers>
+          {`v${APP_VERSION}`}
+        </Text>,
+        <Text key="required" type="supporting">
+          {t('startup.firstRunRequired')}
+        </Text>,
+      ]}
+    >
+      <VStack gap={5}>
+        {isSyncing && <ProgressBar label={t('startup.syncingTitle')} isLabelHidden isIndeterminate />}
+        {isFailed && status.lastError ? (
+          <Banner status="error" title={t('startup.lastErrorLabel')} description={status.lastError} />
+        ) : null}
 
-          <div class="rounded-cards border border-fog-border bg-chalk px-4 py-5">
-            <div class="flex items-center gap-3 mb-4">
-              <div class="flex h-10 w-10 items-center justify-center rounded-buttons bg-accent text-canvas">
-                {isSyncing ? (
-                  <SpinnerIcon class="h-5 w-5 animate-spin" />
-                ) : (
-                  <span class="text-lg font-semibold">x</span>
-                )}
-              </div>
-              <div class="text-left">
-                <h2 class="text-lg font-semibold text-void">{title}</h2>
-                <p class="text-sm text-graphite">{description}</p>
-              </div>
-            </div>
+        <MetadataList>
+          <MetadataListItem label={t('startup.remoteConfiguredLabel')}>
+            {status.remoteConfigured ? t('common.yes') : t('common.no')}
+          </MetadataListItem>
+          {status.apiUrl ? (
+            <MetadataListItem label={t('startup.apiUrlLabel')}>
+              <Text wordBreak="break-all">{status.apiUrl}</Text>
+            </MetadataListItem>
+          ) : null}
+          <MetadataListItem label={t('startup.activeUsersLabel')}>
+            <Text hasTabularNumbers>{status.activeUserCount}</Text>
+          </MetadataListItem>
+        </MetadataList>
 
-            {status.lastError ? <p class="text-sm text-void mb-4">{status.lastError}</p> : null}
-
-            <div class="space-y-2 text-sm text-void">
-              <p>
-                {t('startup.remoteConfigured', { value: status.remoteConfigured ? t('common.yes') : t('common.no') })}
-              </p>
-              {status.apiUrl ? <p class="break-all">{t('startup.apiUrl', { url: status.apiUrl })}</p> : null}
-              <p>{t('startup.activeUsers', { count: status.activeUserCount })}</p>
-            </div>
-          </div>
-
-          <div class="mt-6 space-y-3">
-            {isFailed ? (
-              <button
-                type="button"
-                onClick={() => void onRetry()}
-                disabled={isRetrying}
-                class="w-full py-3 px-4 bg-accent text-canvas font-semibold rounded-buttons transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isRetrying ? t('common.loading') : t('startup.retry')}
-              </button>
-            ) : null}
-          </div>
-
-          <div class="mt-8 pt-6 border-t border-fog-border text-center">
-            <span class="text-xs text-graphite">
-              v{APP_VERSION} • {t('startup.firstRunRequired')}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <UpdateBadge />
-      <DbStatusBadge />
-    </div>
+        {isFailed && (
+          <Button
+            label={t('startup.retry')}
+            variant="primary"
+            size="lg"
+            width="100%"
+            isLoading={isRetrying}
+            onClick={() => void onRetry()}
+          />
+        )}
+      </VStack>
+    </AccessScreen>
   )
 }

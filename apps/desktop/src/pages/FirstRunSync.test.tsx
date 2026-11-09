@@ -1,21 +1,15 @@
 // @vitest-environment happy-dom
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/preact'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../../hooks/useTranslation', () => ({
+vi.mock('../hooks/useTranslation', () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, string | number>) => (params ? `${key} ${JSON.stringify(params)}` : key),
   }),
 }))
-
-vi.mock('../components/ui/DbStatusBadge', () => ({
-  DbStatusBadge: () => null,
-}))
-
-vi.mock('../components/ui/UpdateBadge', () => ({
-  UpdateBadge: () => null,
-}))
+vi.mock('../lib/platform', () => ({ isDesktop: false }))
+vi.mock('../lib/desktop', () => ({ getDesktopApi: () => null }))
 
 const { default: FirstRunSync } = await import('./FirstRunSync')
 const { appSettingsStore } = await import('../stores/appSettings/appSettingsStore')
@@ -33,13 +27,16 @@ describe('FirstRunSync', () => {
       />,
     )
 
-    expect(screen.getByText('Test Shop')).toBeDefined()
-    expect(screen.getByText('startup.syncingTitle')).toBeDefined()
-    expect(screen.getByText('startup.syncingDescription')).toBeDefined()
-    expect(screen.queryByText('startup.retry')).toBeNull()
+    expect(screen.getByText('Test Shop')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'startup.syncingTitle' })).toBeTruthy()
+    expect(screen.getByText('startup.syncingDescription')).toBeTruthy()
+    expect(screen.getByText('common.yes')).toBeTruthy()
+    expect(screen.queryByText('startup.apiUrlLabel')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'startup.retry' })).toBeNull()
+    expect(document.body.textContent).not.toMatch(/\p{Extended_Pictographic}/u)
   })
 
-  it('shows failures with retry and diagnostics', async () => {
+  it('shows failures with retry and diagnostics', () => {
     const onRetry = vi.fn(async () => {})
     const { rerender } = render(
       <FirstRunSync
@@ -55,8 +52,10 @@ describe('FirstRunSync', () => {
       />,
     )
 
-    expect(screen.getByText('startup.initialSyncFailedTitle')).toBeDefined()
-    expect(screen.getByText('boom')).toBeDefined()
+    expect(screen.getByText('startup.initialSyncFailedTitle')).toBeTruthy()
+    expect(screen.getByText('boom')).toBeTruthy()
+    expect(screen.getByText('https://api.example.com')).toBeTruthy()
+    expect(screen.getByText('2')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'startup.retry' }))
     expect(onRetry).toHaveBeenCalledTimes(1)
 
@@ -67,7 +66,8 @@ describe('FirstRunSync', () => {
         onRetry={onRetry}
       />,
     )
-    expect(screen.getByText('common.loading')).toBeDefined()
     expect(screen.queryByText('boom')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /startup\.retry/ }))
+    expect(onRetry).toHaveBeenCalledTimes(1)
   })
 })

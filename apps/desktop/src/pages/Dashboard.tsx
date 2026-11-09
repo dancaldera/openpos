@@ -1,316 +1,379 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
-import { toast } from 'sonner'
-import { ChevronLeftIcon, ChevronRightIcon } from '../components/ui/icons'
-import { DashboardSkeleton } from '../components/ui/PageLoader'
+import { Button } from '@astryxdesign/core/Button'
+import type { ISODateString } from '@astryxdesign/core/Calendar'
+import { Card } from '@astryxdesign/core/Card'
+import { DateInput } from '@astryxdesign/core/DateInput'
+import { EmptyState } from '@astryxdesign/core/EmptyState'
+import { Grid } from '@astryxdesign/core/Grid'
+import { Link } from '@astryxdesign/core/Link'
+import { List, ListItem } from '@astryxdesign/core/List'
+import { ProgressBar } from '@astryxdesign/core/ProgressBar'
+import { HStack, VStack } from '@astryxdesign/core/Stack'
+import { StatusDot } from '@astryxdesign/core/StatusDot'
+import { pixel, proportional, Table, type TableColumn } from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
+import { Plus } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { ProductThumb } from '../components/ProductThumb'
+import { Page } from '../components/page/Page'
 import { useTranslation } from '../hooks/useTranslation'
-import { dashboardService } from '../services/dashboard-turso'
+import { formatDate, formatMoney, formatTime, shortId } from '../lib/format'
+import { hrefFor } from '../lib/router'
+import { toast } from '../lib/toast'
+import { companySettingsService } from '../services/company-settings-turso'
+import { type DashboardStats, dashboardService, type TopProduct } from '../services/dashboard-turso'
+import type { Order } from '../services/orders-turso'
+import { resolveProductImageUrls } from '../services/product-images'
+import { type Product, productService } from '../services/products-turso'
+import {
+  fromISODate,
+  InsightSection,
+  LinkedStat,
+  RowsSkeleton,
+  StatGridSkeleton,
+  toISODate,
+} from './insights/InsightParts'
+import { type OrderStatus, orderStatusDot, orderStatusLabel } from './orders/orderMeta'
 
-interface DashboardProps {
-  onNavigate?: (page: string) => void
+/** Same threshold the dashboard stats query uses for "low stock". */
+const LOW_STOCK_THRESHOLD = 10
+const RECENT_ORDER_LIMIT = 6
+const LIST_LIMIT = 5
+
+interface RecentOrderRow extends Record<string, unknown> {
+  id: string
+  createdAt: string
+  itemSummary: string
+  status: OrderStatus
+  amount: number
 }
 
-function formatDateInputValue(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
+interface Overview {
+  recentOrders: Order[]
+  lowStock: Product[]
+  topProducts: TopProduct[]
+  imageUrls: Record<string, string>
 }
 
-function parseDateInputValue(value: string): Date {
-  const [year, month, day] = value.split('-').map(Number)
+const EMPTY_OVERVIEW: Overview = { recentOrders: [], lowStock: [], topProducts: [], imageUrls: {} }
 
-  if (!year || !month || !day) {
-    return new Date()
-  }
-
-  return new Date(year, month - 1, day)
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback
 }
 
-function isSameLocalDate(left: Date, right: Date): boolean {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  )
-}
-
-function formatPickerLabel(date: Date, locale: string, todayLabel: string, yesterdayLabel: string): string {
-  const today = new Date()
-  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)
-
-  if (isSameLocalDate(date, today)) {
-    return todayLabel
-  }
-
-  if (isSameLocalDate(date, yesterday)) {
-    return yesterdayLabel
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric',
-  }).format(date)
-}
-
-function addMonths(date: Date, amount: number): Date {
-  return new Date(date.getFullYear(), date.getMonth() + amount, 1)
-}
-
-function buildCalendarDays(visibleMonth: Date): Date[] {
-  const firstDayOfMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1)
-  const calendarStart = new Date(firstDayOfMonth)
-  calendarStart.setDate(firstDayOfMonth.getDate() - firstDayOfMonth.getDay())
-
-  return Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(calendarStart)
-    date.setDate(calendarStart.getDate() + index)
-    return date
-  })
-}
-
-export default function Dashboard({ onNavigate }: DashboardProps) {
-  const { t, getCurrentLocale } = useTranslation()
-  const statCardClass =
-    'text-left bg-canvas rounded-cards border border-fog-border p-3 sm:p-5 hover:border-fog-border hover:shadow-sm transition-all'
-  const statValueClass = 'text-xl font-semibold text-void sm:text-2xl '
-  const datePickerClass =
-    'relative inline-flex h-8 min-w-24 items-center justify-center rounded-cards border border-fog-border bg-canvas px-3 text-xs font-medium text-void shadow-sm transition-colors hover:border-fog-border hover:bg-chalk '
-  const resetDateButtonClass =
-    'inline-flex h-8 items-center justify-center rounded-cards border border-fog-border bg-canvas px-2 text-xs font-medium text-graphite shadow-sm transition-colors hover:border-fog-border hover:bg-chalk hover:text-void '
-  const monthButtonClass =
-    'inline-flex h-7 w-7 items-center justify-center rounded-cards text-graphite transition-colors hover:bg-chalk hover:text-void '
-
-  const [stats, setStats] = useState({
-    totalSales: 0,
-    ordersToday: 0,
-    averageOrderValue: 0,
-    lowStockProducts: 0,
-    pendingOrders: 0,
-  })
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(() => formatDateInputValue(new Date()))
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
-  const [visibleMonth, setVisibleMonth] = useState(() => parseDateInputValue(selectedDate))
-  const datePickerRef = useRef<HTMLDivElement>(null)
+export default function Dashboard() {
+  const { t } = useTranslation()
+  const today = toISODate(new Date())
+  const [selectedDate, setSelectedDate] = useState(today)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [isStatsLoading, setIsStatsLoading] = useState(true)
+  const [overview, setOverview] = useState<Overview>(EMPTY_OVERVIEW)
+  const [isOverviewLoading, setIsOverviewLoading] = useState(true)
+  const [currencySymbol, setCurrencySymbol] = useState('$')
+  const [taxEnabled, setTaxEnabled] = useState(true)
 
   useEffect(() => {
-    let shouldUpdate = true
+    companySettingsService
+      .getSettings()
+      .then((settings) => {
+        setCurrencySymbol(settings.currencySymbol)
+        setTaxEnabled(settings.taxEnabled)
+      })
+      .catch(() => {})
+  }, [])
 
-    const loadDashboardData = async () => {
-      try {
-        setIsLoading(true)
-        const dashboardStats = await dashboardService.getDashboardStats({
-          referenceDate: parseDateInputValue(selectedDate),
-        })
-
-        if (shouldUpdate) {
-          setStats(dashboardStats)
-        }
-      } catch (err: unknown) {
-        if (shouldUpdate) {
-          const message = err instanceof Error ? err.message : t('errors.generic')
-          toast.error(message)
-        }
-      } finally {
-        if (shouldUpdate) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    loadDashboardData()
-
+  // Day figures follow the selected date.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `t` is recreated every render; the locale does not change these queries.
+  useEffect(() => {
+    let isCancelled = false
+    setIsStatsLoading(true)
+    dashboardService
+      .getDashboardStats({ referenceDate: fromISODate(selectedDate) })
+      .then((result) => {
+        if (!isCancelled) setStats(result)
+      })
+      .catch((error: unknown) => {
+        if (!isCancelled) toast.error(errorMessage(error, t('errors.generic')))
+      })
+      .finally(() => {
+        if (!isCancelled) setIsStatsLoading(false)
+      })
     return () => {
-      shouldUpdate = false
+      isCancelled = true
     }
   }, [selectedDate])
 
+  // Recent orders, stock and best sellers are not tied to a single day.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `t` is recreated every render; the locale does not change these queries.
   useEffect(() => {
-    if (!isDatePickerOpen) {
-      return
-    }
-
-    const handleDocumentMouseDown = (event: MouseEvent) => {
-      if (!datePickerRef.current?.contains(event.target as Node)) {
-        setIsDatePickerOpen(false)
+    let isCancelled = false
+    const load = async () => {
+      try {
+        const [recentOrders, products, topProducts] = await Promise.all([
+          dashboardService.getRecentOrders(RECENT_ORDER_LIMIT),
+          productService.getProducts(),
+          dashboardService.getTopProducts(LIST_LIMIT),
+        ])
+        const lowStock = products
+          .filter((product) => product.isActive && product.stock > 0 && product.stock < LOW_STOCK_THRESHOLD)
+          .sort((a, b) => a.stock - b.stock || a.name.localeCompare(b.name))
+          .slice(0, LIST_LIMIT)
+        const imageKeys = Array.from(
+          new Set(lowStock.map((product) => product.image?.trim()).filter(Boolean)),
+        ) as string[]
+        const imageUrls = imageKeys.length > 0 ? await resolveProductImageUrls(imageKeys).catch(() => ({})) : {}
+        if (!isCancelled) setOverview({ recentOrders, lowStock, topProducts, imageUrls })
+      } catch (error) {
+        if (!isCancelled) toast.error(errorMessage(error, t('errors.generic')))
+      } finally {
+        if (!isCancelled) setIsOverviewLoading(false)
       }
     }
-
-    const handleDocumentKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsDatePickerOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleDocumentMouseDown)
-    document.addEventListener('keydown', handleDocumentKeyDown)
-
+    void load()
     return () => {
-      document.removeEventListener('mousedown', handleDocumentMouseDown)
-      document.removeEventListener('keydown', handleDocumentKeyDown)
+      isCancelled = true
     }
-  }, [isDatePickerOpen])
+  }, [])
 
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toFixed(2)}`
-  }
+  const money = (amount: number) => formatMoney(amount, currencySymbol)
+  const isToday = selectedDate === today
 
-  const selectedDateLabel = formatPickerLabel(
-    parseDateInputValue(selectedDate),
-    getCurrentLocale(),
-    t('dates.today'),
-    t('dates.yesterday'),
+  const recentRows = useMemo<RecentOrderRow[]>(
+    () =>
+      overview.recentOrders.map((order) => ({
+        id: order.id,
+        createdAt: order.createdAt,
+        itemSummary: order.items.map((item) => item.productName).join(', '),
+        status: order.status,
+        amount: taxEnabled ? order.total : order.subtotal,
+      })),
+    [overview.recentOrders, taxEnabled],
   )
 
-  const toggleDatePicker = () => {
-    setVisibleMonth(parseDateInputValue(selectedDate))
-    setIsDatePickerOpen((isOpen) => !isOpen)
-  }
+  const recentColumns: TableColumn<RecentOrderRow>[] = [
+    {
+      key: 'reference',
+      header: t('orders.orderHeader'),
+      width: pixel(120),
+      renderCell: (row) => (
+        <Link href={hrefFor(`orders/${row.id}`)}>
+          <Text type="inherit" weight="medium" hasTabularNumbers>
+            #{shortId(row.id)}
+          </Text>
+        </Link>
+      ),
+    },
+    {
+      key: 'date',
+      header: t('common.date'),
+      width: pixel(150),
+      renderCell: (row) => (
+        <VStack gap={0.5}>
+          <Text>{formatDate(row.createdAt)}</Text>
+          <Text type="supporting">{formatTime(row.createdAt)}</Text>
+        </VStack>
+      ),
+    },
+    {
+      key: 'items',
+      header: t('orders.items'),
+      width: proportional(1, { minWidth: 180 }),
+      renderCell: (row) => <Text maxLines={1}>{row.itemSummary}</Text>,
+    },
+    {
+      key: 'status',
+      header: t('common.status'),
+      width: pixel(130),
+      renderCell: (row) => (
+        <HStack gap={2} vAlign="center">
+          <StatusDot variant={orderStatusDot(row.status)} label={orderStatusLabel(row.status, t)} />
+          <Text>{orderStatusLabel(row.status, t)}</Text>
+        </HStack>
+      ),
+    },
+    {
+      key: 'total',
+      header: t('common.total'),
+      width: pixel(120),
+      align: 'end',
+      renderCell: (row) => (
+        <Text weight="medium" hasTabularNumbers>
+          {money(row.amount)}
+        </Text>
+      ),
+    },
+  ]
 
-  const selectCalendarDate = (date: Date) => {
-    setSelectedDate(formatDateInputValue(date))
-    setIsDatePickerOpen(false)
-  }
-
-  const selectedDateValue = parseDateInputValue(selectedDate)
-  const today = new Date()
-  const todayInputValue = formatDateInputValue(today)
-  const isTodaySelected = selectedDate === todayInputValue
-  const calendarDays = buildCalendarDays(visibleMonth)
-  const weekdayLabels = Array.from({ length: 7 }, (_, index) =>
-    new Intl.DateTimeFormat(getCurrentLocale(), { weekday: 'narrow' }).format(new Date(2026, 1, index + 1)),
-  )
-  const visibleMonthLabel = new Intl.DateTimeFormat(getCurrentLocale(), {
-    month: 'short',
-    year: 'numeric',
-  }).format(visibleMonth)
-  const resetDateLabel = `${t('common.reset')} ${t('common.date').toLowerCase()}`
-
-  if (isLoading) {
-    return <DashboardSkeleton />
-  }
+  const maxSold = overview.topProducts.reduce((max, product) => Math.max(max, product.sales), 0)
 
   return (
-    <div class="max-w-5xl mx-auto">
-      <div ref={datePickerRef} class="relative mb-4 flex justify-end gap-2">
-        {!isTodaySelected && (
-          <button
-            type="button"
-            class={resetDateButtonClass}
-            onClick={() => {
-              setSelectedDate(todayInputValue)
-              setVisibleMonth(today)
-              setIsDatePickerOpen(false)
-            }}
-            aria-label={resetDateLabel}
-          >
-            {t('dates.today')}
-          </button>
+    <Page
+      title={t('dashboard.title')}
+      description={t('insights.dashboardDescription')}
+      actions={
+        <>
+          {!isToday && <Button label={t('dates.today')} variant="ghost" onClick={() => setSelectedDate(today)} />}
+          <DateInput
+            label={t('insights.reportDate')}
+            isLabelHidden
+            value={selectedDate as ISODateString}
+            onChange={(value) => setSelectedDate(value ?? today)}
+            max={today as ISODateString}
+            format="date"
+            width={180}
+          />
+          <Button
+            label={t('orders.newOrder')}
+            variant="primary"
+            icon={<Plus size={16} />}
+            href={hrefFor('orders/new')}
+          />
+        </>
+      }
+    >
+      {isStatsLoading || !stats ? (
+        <StatGridSkeleton count={5} />
+      ) : (
+        <Grid columns={{ minWidth: 180 }} gap={4}>
+          <LinkedStat
+            label={t('insights.sales')}
+            value={money(stats.totalSales)}
+            detail={t('insights.salesDetail')}
+            href={hrefFor('orders')}
+          />
+          <LinkedStat
+            label={t('insights.orders')}
+            value={stats.ordersToday}
+            detail={isToday ? t('insights.ordersTodayDetail') : formatDate(fromISODate(selectedDate))}
+            href={hrefFor('orders')}
+          />
+          <LinkedStat
+            label={t('insights.averageOrder')}
+            value={money(stats.averageOrderValue)}
+            detail={t('insights.averageOrderDetail')}
+            href={hrefFor('orders')}
+          />
+          <LinkedStat
+            label={t('insights.pendingOrders')}
+            value={stats.pendingOrders}
+            detail={t('insights.pendingOrdersDetail')}
+            href={hrefFor('orders')}
+          />
+          <LinkedStat
+            label={t('insights.lowStock')}
+            value={stats.lowStockProducts}
+            detail={t('insights.lowStockDetail', { count: LOW_STOCK_THRESHOLD })}
+            href={hrefFor('products')}
+          />
+        </Grid>
+      )}
+
+      <InsightSection
+        title={t('insights.recentOrders')}
+        action={<Link href={hrefFor('orders')}>{t('insights.viewAllOrders')}</Link>}
+      >
+        {isOverviewLoading ? (
+          <RowsSkeleton rows={4} />
+        ) : recentRows.length === 0 ? (
+          <Card>
+            <EmptyState
+              isCompact
+              title={t('insights.noRecentOrders')}
+              description={t('insights.noRecentOrdersHint')}
+              actions={<Button label={t('orders.newOrder')} variant="primary" href={hrefFor('orders/new')} />}
+            />
+          </Card>
+        ) : (
+          <Card padding={0}>
+            <Table<RecentOrderRow> data={recentRows} columns={recentColumns} idKey="id" density="balanced" hasHover />
+          </Card>
         )}
+      </InsightSection>
 
-        <button type="button" class={datePickerClass} onClick={toggleDatePicker} aria-label={t('dates.selectDate')}>
-          {selectedDateLabel}
-        </button>
-
-        {isDatePickerOpen && (
-          <div class="absolute right-0 top-10 z-20 w-64 rounded-cards border border-fog-border bg-canvas p-3 shadow-sm ">
-            <div class="mb-3 flex items-center justify-between">
-              <button
-                type="button"
-                class={monthButtonClass}
-                onClick={() => setVisibleMonth((month) => addMonths(month, -1))}
-                aria-label={t('common.previous')}
-              >
-                <ChevronLeftIcon class="h-4 w-4" />
-              </button>
-              <div class="text-sm font-medium text-void ">{visibleMonthLabel}</div>
-              <button
-                type="button"
-                class={monthButtonClass}
-                onClick={() => setVisibleMonth((month) => addMonths(month, 1))}
-                aria-label={t('common.next')}
-              >
-                <ChevronRightIcon class="h-4 w-4" />
-              </button>
-            </div>
-
-            <div class="grid grid-cols-7 gap-1">
-              {weekdayLabels.map((label, index) => (
-                <div key={index} class="h-6 text-center text-[11px] font-medium text-graphite ">
-                  {label}
-                </div>
-              ))}
-
-              {calendarDays.map((date) => {
-                const isVisibleMonth = date.getMonth() === visibleMonth.getMonth()
-                const isSelectedDate = isSameLocalDate(date, selectedDateValue)
-                const isToday = isSameLocalDate(date, today)
-
-                return (
-                  <button
-                    key={formatDateInputValue(date)}
-                    type="button"
-                    onClick={() => selectCalendarDate(date)}
-                    class={`h-8 rounded-cards text-xs transition-colors ${
-                      isSelectedDate
-                        ? 'bg-void font-semibold text-canvas '
-                        : isToday
-                          ? 'font-semibold text-void hover:bg-chalk '
-                          : isVisibleMonth
-                            ? 'text-void hover:bg-chalk '
-                            : 'text-graphite hover:bg-chalk '
-                    }`}
-                  >
-                    {date.getDate()}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Main Stats */}
-      <div class="mb-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-        <button type="button" onClick={() => onNavigate?.('orders')} class={statCardClass}>
-          <p class="text-xs font-medium text-void uppercase tracking-wide mb-1">{t('dashboard.dailySales')}</p>
-          <p class={statValueClass}>{formatCurrency(stats.totalSales)}</p>
-          <p class="text-xs text-graphite mt-1">{t('dashboard.completedPaid')}</p>
-        </button>
-
-        <button type="button" onClick={() => onNavigate?.('orders')} class={statCardClass}>
-          <p class="text-xs font-medium text-void uppercase tracking-wide mb-1">{t('dashboard.orders')}</p>
-          <p class={statValueClass}>{stats.ordersToday}</p>
-          <p class="text-xs text-graphite mt-1">{t('dashboard.totalOrdersDesc')}</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigate?.('orders')}
-          class={`${statCardClass} col-span-2 lg:col-span-1`}
+      <Grid columns={{ minWidth: 340 }} gap={6} align="start">
+        <InsightSection
+          title={t('insights.lowStockProducts')}
+          description={t('insights.lowStockDetail', { count: LOW_STOCK_THRESHOLD })}
+          action={<Link href={hrefFor('products')}>{t('insights.viewAllProducts')}</Link>}
         >
-          <p class="text-xs font-medium text-void uppercase tracking-wide mb-1">{t('dashboard.avgOrderValue')}</p>
-          <p class={statValueClass}>{formatCurrency(stats.averageOrderValue)}</p>
-          <p class="text-xs text-graphite mt-1">{t('dashboard.perOrder')}</p>
-        </button>
-      </div>
+          {isOverviewLoading ? (
+            <RowsSkeleton rows={3} />
+          ) : overview.lowStock.length === 0 ? (
+            <Card>
+              <EmptyState
+                isCompact
+                title={t('insights.noLowStock')}
+                description={t('insights.noLowStockHint', { count: LOW_STOCK_THRESHOLD })}
+              />
+            </Card>
+          ) : (
+            <Card>
+              <List hasDividers edge="outset">
+                {overview.lowStock.map((product) => (
+                  <ListItem
+                    key={product.id}
+                    href={hrefFor(`products/${product.id}`)}
+                    label={product.name}
+                    description={product.category}
+                    startContent={
+                      <ProductThumb
+                        name={product.name}
+                        imageUrl={product.image ? overview.imageUrls[product.image.trim()] : undefined}
+                        size="sm"
+                      />
+                    }
+                    endContent={
+                      <HStack gap={2} vAlign="center">
+                        <StatusDot variant="warning" label={t('insights.lowStock')} />
+                        <Text hasTabularNumbers>{t('insights.unitsLeft', { count: product.stock })}</Text>
+                      </HStack>
+                    }
+                  />
+                ))}
+              </List>
+            </Card>
+          )}
+        </InsightSection>
 
-      {/* Secondary Stats */}
-      <div class="grid grid-cols-2 gap-3 sm:gap-4">
-        <button type="button" onClick={() => onNavigate?.('products')} class={statCardClass}>
-          <p class="text-xs font-medium text-void uppercase tracking-wide mb-1">{t('dashboard.lowStockAlert')}</p>
-          <p class={statValueClass}>{stats.lowStockProducts}</p>
-          <p class="text-xs text-graphite mt-1">{t('dashboard.needsRestocking')}</p>
-        </button>
-
-        <button type="button" onClick={() => onNavigate?.('orders')} class={statCardClass}>
-          <p class="text-xs font-medium text-void uppercase tracking-wide mb-1">{t('dashboard.pendingOrders')}</p>
-          <p class={statValueClass}>{stats.pendingOrders}</p>
-          <p class="text-xs text-graphite mt-1">{t('dashboard.awaitingProcessing')}</p>
-        </button>
-      </div>
-    </div>
+        <InsightSection title={t('insights.topProducts')} description={t('insights.topProductsHint')}>
+          {isOverviewLoading ? (
+            <RowsSkeleton rows={3} />
+          ) : overview.topProducts.length === 0 ? (
+            <Card>
+              <EmptyState isCompact title={t('insights.noTopProducts')} description={t('insights.noTopProductsHint')} />
+            </Card>
+          ) : (
+            <Card>
+              <List hasDividers edge="outset">
+                {overview.topProducts.map((product) => (
+                  <ListItem
+                    key={product.id}
+                    href={hrefFor(`products/${product.id}`)}
+                    label={product.name}
+                    description={
+                      <VStack gap={1}>
+                        <ProgressBar
+                          label={t('insights.unitsSold', { count: product.sales })}
+                          isLabelHidden
+                          value={product.sales}
+                          max={maxSold || 1}
+                        />
+                        <Text type="supporting" hasTabularNumbers>
+                          {t('insights.unitsSold', { count: product.sales })}
+                        </Text>
+                      </VStack>
+                    }
+                    endContent={
+                      <Text weight="medium" hasTabularNumbers>
+                        {money(product.revenue)}
+                      </Text>
+                    }
+                  />
+                ))}
+              </List>
+            </Card>
+          )}
+        </InsightSection>
+      </Grid>
+    </Page>
   )
 }

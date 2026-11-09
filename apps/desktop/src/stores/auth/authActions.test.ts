@@ -16,7 +16,7 @@ vi.mock('../../services/auth-turso', () => ({
   authService,
 }))
 
-vi.mock('sonner', () => ({
+vi.mock('../../lib/toast', () => ({
   toast: { warning: toastWarning },
 }))
 

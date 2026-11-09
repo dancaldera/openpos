@@ -4,7 +4,7 @@ OpenPOS is a pnpm workspace monorepo for a desktop-first point of sale system.
 
 [Live Demo](https://demo.pos.softmelody.dev) · [Releases](https://releases.pos.softmelody.dev)
 
-- `apps/desktop`: Electron + Preact POS client (also built for the browser)
+- `apps/desktop`: Electron + React POS client built with the Astryx design system (also built for the browser)
 - `apps/api`: shared multi-tenant Hono API (Cloudflare Worker)
 - `apps/web`: Worker that serves the web client on every store subdomain
 - `apps/admin`: root admin for stores, Turso databases, connection keys, and domains

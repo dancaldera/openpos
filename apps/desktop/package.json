@@ -6,7 +6,7 @@
   "engines": {
     "node": "24.x"
   },
-  "description": "OpenPOS desktop application powered by Electron and Preact",
+  "description": "OpenPOS desktop application powered by Electron and React",
   "desktopName": "OpenPOS",
   "author": {
     "name": "Daniel Caldera",
@@ -36,23 +36,34 @@
     "db:migrate": "pnpm -C ../../packages/data run migrate:remote"
   },
   "dependencies": {
+    "@astryxdesign/core": "0.7.11",
+    "@astryxdesign/theme-neutral": "0.7.11",
     "@libsql/client": "^0.15.15",
     "@openpos/data": "workspace:*",
     "@openpos/domain": "workspace:*",
     "@openpos/sync": "workspace:*",
-    "@preact/signals": "^2.11.1",
+    "@preact/signals-react": "^3.12.0",
+    "@stylexjs/stylex": "^0.19.1",
     "@tailwindcss/vite": "^4.3.3",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
-    "preact": "^10.29.8",
+    "lucide-react": "^1.70.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "sonner": "^2.0.8",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "@astryxdesign/cli": "0.7.11",
+    "@babel/core": "^8.1.0",
     "@biomejs/biome": "2.5.9",
-    "@preact/preset-vite": "^2.10.6",
-    "@testing-library/preact": "^3.2.4",
+    "@preact/signals-react-transform": "^0.8.3",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^24.13.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-istanbul": "4.1.10",
     "@vitest/coverage-v8": "4.1.10",
     "electron": "^37.10.3",

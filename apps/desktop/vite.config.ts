@@ -1,12 +1,18 @@
 import { defineConfig } from 'vite'
-import preact from '@preact/preset-vite'
+import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
   const isWeb = mode === 'web'
 
   return {
-    plugins: [preact(), tailwindcss()],
+    plugins: [
+      react({
+        // Components that read signals (`signal.value`) re-render when they change.
+        babel: { plugins: [['module:@preact/signals-react-transform', { mode: 'all' }]] },
+      }),
+      tailwindcss(),
+    ],
     clearScreen: isWeb ? undefined : false,
     base: isWeb ? undefined : './',
     define: {
@@ -41,8 +47,16 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id: string) {
-            if (id.includes('node_modules/preact') || id.includes('node_modules/@preact/signals')) {
+            if (
+              id.includes('node_modules/react/') ||
+              id.includes('node_modules/react-dom/') ||
+              id.includes('node_modules/scheduler/') ||
+              id.includes('node_modules/@preact/signals')
+            ) {
               return 'vendor'
+            }
+            if (id.includes('node_modules/@astryxdesign') || id.includes('node_modules/@stylexjs')) {
+              return 'astryx'
             }
             if (id.includes('node_modules/sonner')) {
               return 'ui'
