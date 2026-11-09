@@ -147,5 +147,8 @@ export async function runBumpVersion(version: string | undefined, files: FileToU
 
 /* c8 ignore next: production entrypoint (tests call runBumpVersion directly). */
 if (!process.env.VITEST) {
-  await runBumpVersion(process.argv[2], FILES_TO_UPDATE)
+  runBumpVersion(process.argv[2], FILES_TO_UPDATE).catch((error: unknown) => {
+    console.error(error)
+    process.exit(1)
+  })
 }

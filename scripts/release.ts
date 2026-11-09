@@ -452,5 +452,5 @@ if (!process.env.VITEST) {
         },
       ),
   }
-  await runRelease(process.argv.slice(2), productionSteps).catch(reportFailure)
+  void runRelease(process.argv.slice(2), productionSteps).catch(reportFailure)
 }
