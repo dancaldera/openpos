@@ -299,6 +299,24 @@ describe('admin stores', () => {
     expect(await (await http.get('/stores/attach')).text()).not.toContain('openpos-aldo')
   })
 
+  it('never offers or attaches the admin control plane database', async () => {
+    const reservedEnv: AdminEnv = { ...env, CONTROL_PLANE_URL: 'libsql://localhost' }
+    const app = makeApp()
+    await plane.createRootUser(ROOT.email, ROOT.password)
+    const http = client(app, reservedEnv)
+    await http.post('/login', ROOT)
+    expect(location(await http.post('/databases', { name: 'openpos-control' }))).toContain('openpos-control created')
+
+    expect(await (await http.get('/stores/attach')).text()).not.toContain('<option value="openpos-control"')
+    const byName = await http.post('/stores/attach', { slug: 'cp', databaseName: 'openpos-control', ...OWNER })
+    expect(byName.status).toBe(400)
+    expect(await byName.text()).toContain('admin database')
+    const byUrl = await http.post('/stores/attach', { slug: 'cp', url: 'libsql://localhost', ...OWNER })
+    expect(byUrl.status).toBe(400)
+    expect(await byUrl.text()).toContain('admin database')
+    expect(await plane.listStores()).toEqual([])
+  })
+
   it('explains what to configure when no provisioner is available', async () => {
     const http = await signedIn(makeApp({ provisioner: false }))
     expect(await (await http.get('/stores/new')).text()).toContain('TURSO_API_TOKEN')

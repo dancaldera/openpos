@@ -244,11 +244,42 @@ export function createAdminApp(overrides: Partial<AdminServices> = {}) {
     }
   })
 
+  /** Hostname of the admin's own database, which must never be attached to a store. */
+  function controlPlaneHost(env: AdminEnv): string | null {
+    const url = env.CONTROL_PLANE_URL?.trim()
+    if (!url || !/^(libsql|https?):\/\//.test(url)) return null
+    try {
+      return new URL(url.replace(/^libsql:/, 'https:')).hostname || null
+    } catch {
+      return null
+    }
+  }
+
   async function unassignedDatabases(c: AdminContext) {
     const provisioner = services.provisioner(c.env)
     if (!provisioner) return []
     const assigned = new Set((await c.var.plane.listStores()).map((store) => store.databaseName))
-    return (await provisioner.listDatabases()).filter((database) => !assigned.has(database.name))
+    const reserved = controlPlaneHost(c.env)
+    return (await provisioner.listDatabases()).filter(
+      (database) => !assigned.has(database.name) && database.hostname !== reserved,
+    )
+  }
+
+  async function assertNotControlPlane(env: AdminEnv, input: { databaseName: string; url: string }) {
+    const reserved = controlPlaneHost(env)
+    if (!reserved) return
+    let host: string | null = null
+    if (input.url) {
+      try {
+        host = new URL(input.url.replace(/^libsql:/, 'https:')).hostname
+      } catch {
+        return
+      }
+    } else if (input.databaseName) {
+      const databases = (await services.provisioner(env)?.listDatabases()) ?? []
+      host = databases.find((database) => database.name === input.databaseName)?.hostname ?? null
+    }
+    if (host === reserved) throw new ControlPlaneError('That is the admin database and cannot be attached to a store')
   }
 
   app.get('/stores/attach', async (c) => {
@@ -279,6 +310,7 @@ export function createAdminApp(overrides: Partial<AdminServices> = {}) {
     }
     const ownerPassword = String(form.ownerPassword ?? '')
     try {
+      await assertNotControlPlane(c.env, values)
       const { store } = await c.var.plane.attachDatabase(services.provisioner(c.env), {
         slug: values.slug,
         name: values.name || undefined,
