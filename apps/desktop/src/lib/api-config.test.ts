@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   getApiBaseUrl,
   getApiUrl,
@@ -91,6 +91,16 @@ describe('api-config', () => {
       userDataConfigPath: '',
     })
     expect(typeof config.apiUrl).toBe('string')
+  })
+
+  it('uses same-origin requests on the web even when VITE_API_URL is set', async () => {
+    vi.stubEnv('VITE_API_URL', 'https://api.example.com')
+    try {
+      await expect(getApiBaseUrl()).resolves.toBe('')
+      await expect(getApiUrl('/api/health')).resolves.toBe('/api/health')
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 
   it('defaults the config source when the runtime omits it', async () => {

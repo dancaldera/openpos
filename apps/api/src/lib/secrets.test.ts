@@ -17,16 +17,23 @@ afterAll(() => {
 })
 
 describe('secrets', () => {
-  it('round-trips encrypted secrets', () => {
-    const encrypted = encryptSecret('s3-access-key')
+  it('round-trips encrypted secrets', async () => {
+    const encrypted = await encryptSecret('s3-access-key')
     expect(encrypted).toMatch(/^v1\./)
     expect(encrypted).not.toContain('s3-access-key')
-    expect(decryptSecret(encrypted)).toBe('s3-access-key')
+    await expect(decryptSecret(encrypted)).resolves.toBe('s3-access-key')
+  })
+
+  it('cannot decrypt with a different JWT_SECRET', async () => {
+    const encrypted = await encryptSecret('s3-access-key')
+    process.env.JWT_SECRET = 'another-secret'
+    await expect(decryptSecret(encrypted)).rejects.toThrow()
   })
 
   it('validates emails', () => {
     expect(isValidEmail('admin@example.com')).toBe(true)
     expect(isValidEmail('not-an-email')).toBe(false)
+    expect(isValidEmail(`${'a'.repeat(250)}@example.com`)).toBe(false)
   })
 
   it('requires INTERNAL_SECRET', () => {
@@ -34,19 +41,21 @@ describe('secrets', () => {
     expect(() => getInternalSecret()).toThrow('INTERNAL_SECRET environment variable is not set')
   })
 
-  it('accepts the configured internal secret and rejects others', () => {
-    expect(verifyInternalSecret('operator-admin-secret')).toBe(true)
-    expect(verifyInternalSecret('wrong-secret')).toBe(false)
+  it('accepts the configured internal secret and rejects others', async () => {
+    expect(getInternalSecret()).toBe('operator-admin-secret')
+    await expect(verifyInternalSecret('operator-admin-secret')).resolves.toBe(true)
+    await expect(verifyInternalSecret('wrong-secret')).resolves.toBe(false)
   })
 
-  it('requires JWT_SECRET for encryption', () => {
+  it('requires JWT_SECRET for encryption', async () => {
     delete process.env.JWT_SECRET
-    expect(() => encryptSecret('x')).toThrow('JWT_SECRET must be configured')
+    await expect(encryptSecret('x')).rejects.toThrow('JWT_SECRET environment variable is not set')
+    await expect(decryptSecret('v1.a.b.c')).rejects.toThrow('JWT_SECRET environment variable is not set')
   })
 
-  it('rejects malformed encrypted secrets', () => {
-    for (const malformed of ['junk', 'v1', 'v1.abc', 'v1.abc.def']) {
-      expect(() => decryptSecret(malformed)).toThrow('Unsupported encrypted secret format')
+  it('rejects malformed encrypted secrets', async () => {
+    for (const malformed of ['junk', 'v1', 'v1.abc', 'v1.abc.def', 'v2.a.b.c']) {
+      await expect(decryptSecret(malformed)).rejects.toThrow('Unsupported encrypted secret format')
     }
   })
 })

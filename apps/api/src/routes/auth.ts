@@ -9,20 +9,14 @@
  * POST /api/auth/admin-reset-password   — reset password with INTERNAL_SECRET (public)
  */
 
-import { parseConnectionKey } from '@openpos/data'
+import type { StoreRecord } from '@openpos/control-plane'
 import { validatePasswordStrength, validatePin } from '@openpos/domain'
 import bcrypt from 'bcryptjs'
 import { Hono } from 'hono'
-import {
-  connectionErrorStatus,
-  readAssignedConnection,
-  readCurrentConnectionMeta,
-  registerConnection,
-  resolveDataPlane,
-} from '../lib/connection.js'
 import { isValidEmail, verifyInternalSecret } from '../lib/secrets.js'
-import { createDataPlaneClient, execute, query, runWithDataPlane } from '../lib/turso.js'
-import { authMiddleware, type JwtPayload, signToken } from '../middleware/auth.js'
+import { execute, query } from '../lib/turso.js'
+import { authMiddleware, signToken } from '../middleware/auth.js'
+import type { AppEnv } from '../types.js'
 
 const BCRYPT_ROUNDS = 12
 const INVALID_ADMIN_SECRET_ERROR = 'Invalid internal secret'
@@ -62,25 +56,24 @@ function toLoginUser(dbUser: DatabaseUser) {
   }
 }
 
-async function issueLoginResponse(dbUser: DatabaseUser) {
+async function issueLoginResponse(dbUser: DatabaseUser, store: StoreRecord) {
   await query('UPDATE users SET last_login = ? WHERE id = ?', [new Date().toISOString(), dbUser.id])
 
   const user = toLoginUser(dbUser)
-  const connection = await readCurrentConnectionMeta()
-  const token = signToken({
+  const token = await signToken({
     sub: dbUser.id.toString(),
     email: dbUser.email,
     name: dbUser.name,
     role: dbUser.role,
     permissions: user.permissions,
-    ...(connection ? { connectionKey: connection.key } : {}),
+    storeId: store.id,
   })
 
-  return { token, user }
+  return { token, user, store: { id: store.id, name: store.name, slug: store.slug } }
 }
 
 // ---------------------------------------------------------------------------
-export const authRouter = new Hono()
+export const authRouter = new Hono<AppEnv>()
 
 // ---------------------------------------------------------------------------
 // GET /api/auth/users  (public - for login screen user list)
@@ -128,88 +121,57 @@ authRouter.post('/login', async (c) => {
     return c.json({ error: 'email and password are required' }, 400)
   }
 
-  const connectionKey =
-    parseConnectionKey(c.req.header('X-OpenPOS-Connection') || '') || (await readAssignedConnection())?.key || ''
-  if (!connectionKey) {
-    return c.json({ error: 'Store connection required' }, 401)
-  }
+  const store = c.get('store')
 
-  let dataPlane = await resolveDataPlane(connectionKey)
-  if (!dataPlane) {
-    if (isPinLogin) {
-      return c.json({ error: 'Store connection required' }, 401)
+  if (isPinLogin) {
+    const userId = Number.parseInt(String(userIdRaw), 10)
+    if (!Number.isInteger(userId) || userId < 1) {
+      return c.json({ error: INVALID_PIN_ERROR }, 401)
     }
 
-    try {
-      const registered = await registerConnection({
-        key: connectionKey,
-        storeName: 'OpenPOS',
-        adminName: email.split('@')[0] || 'Admin',
-        adminEmail: email,
-        adminPassword: password,
-      })
-      dataPlane = registered.dataPlane
-    } catch (error) {
-      return c.json(
-        { error: error instanceof Error ? error.message : 'Unable to register store' },
-        connectionErrorStatus(error),
-      )
-    }
-  }
-
-  return runWithDataPlane(createDataPlaneClient(dataPlane), async () => {
-    if (isPinLogin) {
-      const userId = Number.parseInt(String(userIdRaw), 10)
-      if (!Number.isInteger(userId) || userId < 1) {
-        return c.json({ error: INVALID_PIN_ERROR }, 401)
-      }
-
-      const users = await query<DatabaseUser>('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1', [
-        userId,
-      ])
-      const dbUser = users[0]
-      if (!dbUser || !userHasPin(dbUser) || !dbUser.pin_hash) {
-        return c.json({ error: INVALID_PIN_ERROR }, 401)
-      }
-
-      const pinValid = await bcrypt.compare(pin, dbUser.pin_hash)
-      if (!pinValid) {
-        return c.json({ error: INVALID_PIN_ERROR }, 401)
-      }
-
-      return c.json(await issueLoginResponse(dbUser))
-    }
-
-    const users = await query<DatabaseUser>('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1', [
-      email.toLowerCase(),
-    ])
-
-    if (users.length === 0) {
-      return c.json({ error: 'Invalid email or password' }, 401)
-    }
-
+    const users = await query<DatabaseUser>('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1', [userId])
     const dbUser = users[0]
-    const isHashed = dbUser.password_hashed === 1
-
-    let passwordValid: boolean
-    if (isHashed) {
-      passwordValid = await bcrypt.compare(password, dbUser.password)
-    } else {
-      // Plain-text fallback (legacy users)
-      passwordValid = dbUser.password === password
-      if (passwordValid) {
-        // Lazy-migrate to bcrypt
-        const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS)
-        await query('UPDATE users SET password = ?, password_hashed = 1 WHERE id = ?', [hashed, dbUser.id])
-      }
+    if (!dbUser || !userHasPin(dbUser) || !dbUser.pin_hash) {
+      return c.json({ error: INVALID_PIN_ERROR }, 401)
     }
 
-    if (!passwordValid) {
-      return c.json({ error: 'Invalid email or password' }, 401)
+    const pinValid = await bcrypt.compare(pin, dbUser.pin_hash)
+    if (!pinValid) {
+      return c.json({ error: INVALID_PIN_ERROR }, 401)
     }
 
-    return c.json(await issueLoginResponse(dbUser))
-  })
+    return c.json(await issueLoginResponse(dbUser, store))
+  }
+
+  const users = await query<DatabaseUser>('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1', [
+    email.toLowerCase(),
+  ])
+
+  if (users.length === 0) {
+    return c.json({ error: 'Invalid email or password' }, 401)
+  }
+
+  const dbUser = users[0]
+  const isHashed = dbUser.password_hashed === 1
+
+  let passwordValid: boolean
+  if (isHashed) {
+    passwordValid = await bcrypt.compare(password, dbUser.password)
+  } else {
+    // Plain-text fallback (legacy users)
+    passwordValid = dbUser.password === password
+    if (passwordValid) {
+      // Lazy-migrate to bcrypt
+      const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS)
+      await query('UPDATE users SET password = ?, password_hashed = 1 WHERE id = ?', [hashed, dbUser.id])
+    }
+  }
+
+  if (!passwordValid) {
+    return c.json({ error: 'Invalid email or password' }, 401)
+  }
+
+  return c.json(await issueLoginResponse(dbUser, store))
 })
 
 // ---------------------------------------------------------------------------
@@ -254,9 +216,7 @@ authRouter.post('/verify', async (c) => {
 // GET /api/auth/me  (protected)
 // ---------------------------------------------------------------------------
 authRouter.get('/me', authMiddleware, (c) => {
-  // biome-ignore lint/suspicious/noExplicitAny: jwtPayload set by authMiddleware
-  const payload = (c as any).get('jwtPayload') as JwtPayload
-  return c.json({ user: payload })
+  return c.json({ user: c.get('jwtPayload') })
 })
 
 // ---------------------------------------------------------------------------
@@ -285,7 +245,7 @@ authRouter.post('/admin-reset-password', async (c) => {
 
   let secretValid = false
   try {
-    secretValid = verifyInternalSecret(internalSecret)
+    secretValid = await verifyInternalSecret(internalSecret)
   } catch (error) {
     console.error('[Auth] INTERNAL_SECRET is not configured:', error)
     return c.json({ error: 'Internal secret is not configured' }, 503)
@@ -329,7 +289,7 @@ authRouter.post('/verify-internal-secret', async (c) => {
 
   let secretValid = false
   try {
-    secretValid = verifyInternalSecret(body.internalSecret)
+    secretValid = await verifyInternalSecret(body.internalSecret)
   } catch (error) {
     console.error('[Auth] INTERNAL_SECRET is not configured:', error)
     return c.json({ error: 'Internal secret is not configured' }, 503)

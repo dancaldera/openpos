@@ -1,0 +1,19 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // Shared multi-tenant API. Stores resolve per request from the control plane.
+  "name": "openpos-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-09-01",
+  // nodejs_compat exposes vars and secrets on process.env and provides AsyncLocalStorage.
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "api.pos.softmelody.dev", "custom_domain": true }],
+  "workers_dev": false,
+  "observability": { "enabled": true },
+  "vars": {
+    "STORE_BASE_DOMAINS": "pos.softmelody.dev",
+    "ALLOWED_ORIGIN": "https://*.pos.softmelody.dev"
+  }
+  // Secrets (wrangler secret put <NAME>):
+  //   CONTROL_PLANE_URL, CONTROL_PLANE_AUTH_TOKEN, CONTROL_PLANE_SECRET,
+  //   JWT_SECRET, INTERNAL_SECRET
+}

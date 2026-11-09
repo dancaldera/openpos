@@ -69,8 +69,8 @@ describe('object storage configuration', () => {
         endpoint: 'https://account.r2.cloudflarestorage.com',
         region: 'auto',
         bucket: 'product-images',
-        access_key_id_encrypted: encryptSecret('access-key'),
-        secret_access_key_encrypted: encryptSecret('secret-key'),
+        access_key_id_encrypted: await encryptSecret('access-key'),
+        secret_access_key_encrypted: await encryptSecret('secret-key'),
         url_ttl_seconds: 1800,
       },
     ])
@@ -140,7 +140,7 @@ describe('object storage configuration', () => {
 })
 
 describe('object storage clients', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     process.env.JWT_SECRET = 'object-storage-test-secret'
     query.mockReset()
     query.mockResolvedValue([
@@ -148,8 +148,8 @@ describe('object storage clients', () => {
         endpoint: 'https://account.r2.cloudflarestorage.com',
         region: 'auto',
         bucket: 'product-images',
-        access_key_id_encrypted: encryptSecret('access-key'),
-        secret_access_key_encrypted: encryptSecret('secret-key'),
+        access_key_id_encrypted: await encryptSecret('access-key'),
+        secret_access_key_encrypted: await encryptSecret('secret-key'),
         url_ttl_seconds: 1800,
       },
     ])
@@ -198,22 +198,22 @@ describe('object storage clients', () => {
   })
 
   it('rebuilds the client when settings change', async () => {
-    const settingsFor = (endpoint: string) => [
+    const settingsFor = async (endpoint: string) => [
       {
         endpoint,
         region: 'auto',
         bucket: 'product-images',
-        access_key_id_encrypted: encryptSecret('access-key'),
-        secret_access_key_encrypted: encryptSecret('secret-key'),
+        access_key_id_encrypted: await encryptSecret('access-key'),
+        secret_access_key_encrypted: await encryptSecret('secret-key'),
         url_ttl_seconds: 1800,
       },
     ]
 
-    query.mockResolvedValue(settingsFor('https://first.example.com'))
+    query.mockResolvedValue(await settingsFor('https://first.example.com'))
     await uploadProductImageObject(new File(['x'], 'a.png', { type: 'image/png' }))
     expect(MockS3Client).toHaveBeenCalledTimes(1)
 
-    query.mockResolvedValue(settingsFor('https://other.example.com'))
+    query.mockResolvedValue(await settingsFor('https://other.example.com'))
     await uploadProductImageObject(new File(['x'], 'a.png', { type: 'image/png' }))
     expect(MockS3Client).toHaveBeenCalledTimes(2)
   })
@@ -233,8 +233,8 @@ describe('object storage clients', () => {
           endpoint: 'https://example.com',
           region: 'auto',
           bucket: 'b',
-          access_key_id_encrypted: encryptSecret('a'),
-          secret_access_key_encrypted: encryptSecret('s'),
+          access_key_id_encrypted: await encryptSecret('a'),
+          secret_access_key_encrypted: await encryptSecret('s'),
           url_ttl_seconds: 900,
           ...overrides,
         },

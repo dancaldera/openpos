@@ -18,8 +18,14 @@ dist-releases
 coverage
 *.local
 *.env
+.dev.vars*
+!.dev.vars.example
+.wrangler
 
-# Local file-backed store databases created by the API connection adapter
+# Local stack data for pnpm run dev (control plane, store databases, secrets)
+.dev-data/
+
+# Legacy file-backed store databases from the old API connection adapter
 apps/api/data/
 
 # Editor directories and files

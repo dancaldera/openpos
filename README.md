@@ -2,16 +2,21 @@
 
 OpenPOS is a pnpm workspace monorepo for a desktop-first point of sale system.
 
-[Live Demo](https://demo.openpos.xyz) · [Releases](https://releases.openpos.xyz)
+[Live Demo](https://demo.pos.softmelody.dev) · [Releases](https://releases.pos.softmelody.dev)
 
-- `apps/desktop`: Electron + Preact POS client
-- `apps/api`: Hono API for sync and auth flows
+- `apps/desktop`: Electron + Preact POS client (also built for the browser)
+- `apps/api`: shared multi-tenant Hono API (Cloudflare Worker)
+- `apps/web`: Worker that serves the web client on every store subdomain
+- `apps/admin`: root admin for stores, Turso databases, connection keys, and domains
+- `apps/releases`: public update feed backed by R2
 - `apps/landing`: Astro marketing site
+- `packages/control-plane`: store registry and Turso provisioning shared by the API and admin
 
+Deployment runs on Cloudflare Workers; see [docs/CLOUDFLARE.md](./docs/CLOUDFLARE.md).
 ## Install on macOS
 
 Official macOS releases are distributed as `.zip` for Apple Silicon. Download the latest
-`openpos-arm64.zip` from the [releases page](https://releases.openpos.xyz) and drag
+`openpos-arm64.zip` from the [releases page](https://releases.pos.softmelody.dev) and drag
 OpenPOS into `/Applications`.
 
 The app is not code-signed with an Apple Developer ID, so the first launch requires right-click → Open
@@ -76,8 +81,7 @@ Example:
 }
 ```
 
-Stores are created or joined from the app with a connection key and seed. The OpenPOS HTTP API is required (`apiUrl`). Store data lives in Turso (or a local file until published). Database URL, auth token, and Turso platform credentials are configured in Settings and stored encrypted in the database. Do not put them in this file. Public GitHub releases must not embed `JWT_SECRET`, `INTERNAL_SECRET`, or other backend secrets. Set `INTERNAL_SECRET` on the API for password recovery and other administration.
-
+A root admin creates each store in the admin app, which provisions its Turso database and shows a connection key. On first launch the app asks only for that key; the API (`apiUrl`, default `https://api.pos.softmelody.dev`) exchanges it for the store's database credentials, which the app keeps in `userData`. Do not put database credentials in this file. Public releases must not embed `JWT_SECRET`, `INTERNAL_SECRET`, or other backend secrets. Set `INTERNAL_SECRET` on the API for password recovery and other administration.
 Receipts are ESC/POS bytes sent with `lp -d POS80 -o raw`. The verified USB printer is `POS80 Printer USB` (`0416:5011`). On Ubuntu, install or repair the raw CUPS queue with:
 
 ```bash
@@ -106,22 +110,38 @@ bash scripts/create-desktop-config.sh --path "$HOME/.config/OpenPOS/config.json"
 
 Prerequisites:
 
-- [Node.js](https://nodejs.org/) 22.13+
+- [Node.js](https://nodejs.org/) 24
 - [pnpm](https://pnpm.io/)
 
 Common commands:
 
 ```bash
 pnpm install
-pnpm run dev
+pnpm run dev          # API + admin + web client in the browser
+pnpm run dev:desktop  # Electron app against the local API
 pnpm run dev:api
+pnpm run dev:admin
 pnpm run dev:landing
 pnpm run check
 pnpm run test
 ```
 
-The desktop renderer runs on `http://localhost:1420` during development.
+`pnpm run dev` needs no accounts or secrets. It keeps a local control plane,
+store databases, and generated secrets in `.dev-data/` (gitignored) and seeds a
+`demo` store on first run:
 
+| URL | What |
+| --- | --- |
+| `http://localhost:5173` | Web client for the `demo` store (key form, then sign in) |
+| `http://<slug>.localhost:5173` | Web client for any other store |
+| `http://localhost:3002` | Admin app |
+| `http://localhost:3001` | API |
+
+The seed prints the demo connection key and these accounts: root admin
+`root@openpos.test` and store owner `admin@openpos.test`, both with password
+`OpenPOS!dev1`. Delete `.dev-data/` to start over. Export `CONTROL_PLANE_URL`
+and the other variables in `apps/api/.env.example` to point the stack at Turso
+instead.
 ## Release Notes
 
 - Releases are built and published from a maintainer machine with `pnpm run release`, not GitHub Actions.

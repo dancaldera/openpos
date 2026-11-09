@@ -50,7 +50,7 @@ describe('resolveBucketConfig', () => {
     expect(() => resolveBucketConfig({ BUCKET: 'b', ACCESS_KEY_ID: 'k' })).toThrow('Missing bucket configuration')
   })
 
-  it('builds a client from Railway variables', () => {
+  it('builds a client from bucket variables', () => {
     const { bucket, client } = resolveBucketConfig({ ...fullEnv })
 
     expect(bucket).toBe('bucket-a')

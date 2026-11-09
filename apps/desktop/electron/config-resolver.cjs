@@ -140,10 +140,6 @@ function normalizeDesktopApiUrl(value) {
   return url.replace(/\/+$/, '')
 }
 
-function desktopFirstRunNeedsApiSetup({ hasConnection, emergencyKitConfirmed, apiConfigured } = {}) {
-  return Boolean(hasConnection && emergencyKitConfirmed && !apiConfigured)
-}
-
 function writeDesktopRuntimeConfig(configPath, updates = {}) {
   const targetPath = normalizeString(configPath)
   if (!targetPath) {
@@ -185,7 +181,6 @@ function resetDesktopRuntimeConfig(configPath) {
 
 module.exports = {
   createPublicConnectionConfig,
-  desktopFirstRunNeedsApiSetup,
   getDesktopRuntimeConfigCandidates,
   normalizeDesktopApiUrl,
   resolveDesktopRuntimeConfigPath,

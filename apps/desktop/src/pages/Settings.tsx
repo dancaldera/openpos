@@ -2,7 +2,6 @@ import { useEffect, useState } from 'preact/hooks'
 import { toast } from 'sonner'
 import { ChangePasswordCard } from '../components/ChangePasswordCard'
 import { DangerZoneCard } from '../components/DangerZoneCard'
-import { DatabaseSettingsCard } from '../components/DatabaseSettingsCard'
 import { ObjectStorageSettingsCard } from '../components/ObjectStorageSettingsCard'
 import { ThemePalettePicker } from '../components/ThemePalettePicker'
 import { Button, Dialog, Form, Input, LanguageSelector, PageLoader, PasswordInput, Select } from '../components/ui'
@@ -14,7 +13,7 @@ import { requireDesktopApi } from '../lib/desktop'
 import { isDesktop } from '../lib/platform'
 import { authService } from '../services/auth-turso'
 import { type CompanySettings, companySettingsService, SUPPORTED_CURRENCIES } from '../services/company-settings-turso'
-import { clearStoredConnectionKey, fetchAssignedConnection, getStoredConnectionKey } from '../services/connections'
+import { clearStoredConnectionKey, fetchCurrentStore, getStoredConnectionKey } from '../services/connections'
 import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 import type { ThemePalette } from '../stores/theme/palettes'
 import {
@@ -34,8 +33,6 @@ export default function Settings() {
   const sectionTitleClass = 'mb-6 text-xl font-semibold text-void '
   const helperTextClass = 'text-sm text-graphite '
 
-  const [greetMsg, setGreetMsg] = useState('')
-  const [name, setName] = useState('')
   const [settings, setSettings] = useState<CompanySettings | null>(null)
   const [localSettings, setLocalSettings] = useState<CompanySettings | null>(null)
   const [hasChanges, setHasChanges] = useState(false)
@@ -49,9 +46,7 @@ export default function Settings() {
   const [apiUrl, setApiUrl] = useState('')
   const [apiUrlError, setApiUrlError] = useState<string | null>(null)
   const [isSavingApiUrl, setIsSavingApiUrl] = useState(false)
-  const [connectionInfo, setConnectionInfo] = useState<{ key: string; storeName?: string; published?: boolean } | null>(
-    null,
-  )
+  const [connectionInfo, setConnectionInfo] = useState<{ key: string; storeName?: string } | null>(null)
 
   const [isAdvancedUnlocked, setIsAdvancedUnlocked] = useState(false)
   const [isUnlockDialogOpen, setIsUnlockDialogOpen] = useState(false)
@@ -94,9 +89,10 @@ export default function Settings() {
         const active = await requireDesktopApi().connection.getActive()
         setConnectionInfo(active)
       } else {
-        const assigned = await fetchAssignedConnection()
-        const key = assigned?.key || getStoredConnectionKey()
-        setConnectionInfo(key ? { key, storeName: assigned?.storeName, published: assigned?.published } : null)
+        // Web stores picked by host have no key on this device; only show keys the user entered.
+        const key = getStoredConnectionKey()
+        const store = key ? await fetchCurrentStore() : null
+        setConnectionInfo(key ? { key, storeName: store?.name } : null)
       }
     } catch (err: unknown) {
       toast.error((err as Error)?.message || t('errors.generic'))
@@ -245,16 +241,6 @@ export default function Settings() {
       toast.error(err instanceof Error ? err.message : t('settings.advancedUnlockFailed'))
     } finally {
       setIsUnlocking(false)
-    }
-  }
-
-  async function greet() {
-    try {
-      const message = await requireDesktopApi().greet(name)
-      setGreetMsg(message)
-      toast.success(t('settings.greetingSuccess'))
-    } catch (err: unknown) {
-      toast.error((err as Error)?.message || t('errors.generic'))
     }
   }
 
@@ -477,28 +463,23 @@ export default function Settings() {
                           <p class={`${helperTextClass} mb-3 break-all`}>
                             {t('connection.key')}: {connectionInfo.key}
                           </p>
-                          <p class={`${helperTextClass} mb-4`}>
-                            {connectionInfo.published ? t('connection.published') : t('connection.notPublished')}
-                          </p>
-                          {isDesktop ? (
-                            <div>
-                              <p class={`${helperTextClass} mb-3`}>{t('connection.leaveStoreDesc')}</p>
-                              <Button
-                                variant="outline"
-                                onClick={async () => {
-                                  try {
-                                    await requireDesktopApi().connection.leave()
-                                    clearStoredConnectionKey()
-                                    window.location.reload()
-                                  } catch (error) {
-                                    toast.error(error instanceof Error ? error.message : t('connection.leaveFailed'))
-                                  }
-                                }}
-                              >
-                                {t('connection.leaveStore')}
-                              </Button>
-                            </div>
-                          ) : null}
+                          <div>
+                            <p class={`${helperTextClass} mb-3`}>{t('connection.leaveStoreDesc')}</p>
+                            <Button
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  if (isDesktop) await requireDesktopApi().connection.leave()
+                                  clearStoredConnectionKey()
+                                  window.location.reload()
+                                } catch (error) {
+                                  toast.error(error instanceof Error ? error.message : t('connection.leaveFailed'))
+                                }
+                              }}
+                            >
+                              {t('connection.leaveStore')}
+                            </Button>
+                          </div>
                         </div>
                       ) : null}
 
@@ -514,7 +495,7 @@ export default function Settings() {
                                 setApiUrl((e.target as HTMLInputElement).value)
                                 setApiUrlError(null)
                               }}
-                              placeholder="https://api.openpos.xyz"
+                              placeholder="https://api.pos.softmelody.dev"
                               disabled={isSavingApiUrl}
                             />
                             {apiUrlError ? (
@@ -530,7 +511,6 @@ export default function Settings() {
                       ) : null}
 
                       <ObjectStorageSettingsCard />
-                      <DatabaseSettingsCard />
 
                       {isDesktop ? (
                         <div>
@@ -544,34 +524,6 @@ export default function Settings() {
                           >
                             {isResettingLocalDb ? t('settings.resettingLocalDb') : t('settings.resetLocalDb')}
                           </Button>
-                        </div>
-                      ) : null}
-
-                      {isDesktop ? (
-                        <div>
-                          <h3 class="mb-1 text-lg font-medium text-void">{t('settings.apiTesting')}</h3>
-                          <form
-                            class="mt-3 flex gap-4"
-                            onSubmit={(e) => {
-                              e.preventDefault()
-                              greet()
-                            }}
-                          >
-                            <Input
-                              placeholder={t('settings.enterName')}
-                              value={name}
-                              onInput={(e) => setName((e.target as HTMLInputElement).value)}
-                              class="flex-1"
-                            />
-                            <Button type="submit" variant="primary">
-                              {t('settings.greet')}
-                            </Button>
-                          </form>
-                          {greetMsg ? (
-                            <p class="mt-4 rounded-cards border border-fog-border bg-chalk p-4 text-center text-lg font-medium text-void">
-                              {greetMsg}
-                            </p>
-                          ) : null}
                         </div>
                       ) : null}
 

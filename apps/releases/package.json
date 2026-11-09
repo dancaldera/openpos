@@ -11,7 +11,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:worker": "wrangler dev",
     "build": "tsc",
+    "deploy": "wrangler deploy",
     "check": "biome check src && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
@@ -28,6 +30,7 @@
     "@vitest/coverage-v8": "4.1.10",
     "tsx": "^4.23.12",
     "typescript": "~5.9.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.158.0"
   }
 }

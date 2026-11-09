@@ -52,7 +52,7 @@ export default function SignIn() {
   })
 
   useEffect(() => {
-    setIsDemoHost(window.location.hostname === 'demo.openpos.xyz')
+    setIsDemoHost(window.location.hostname === 'demo.pos.softmelody.dev')
   }, [])
 
   useEffect(() => {
@@ -420,7 +420,7 @@ export default function SignIn() {
             )}
             <span class="text-xs text-graphite inline-flex items-center gap-1 flex-wrap justify-center">
               <a
-                href="https://releases.openpos.xyz/releases/latest.json"
+                href="https://releases.pos.softmelody.dev/releases/latest.json"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="underline underline-offset-4 hover:text-graphite"

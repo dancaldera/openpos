@@ -1,9 +1,8 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { Server } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Server } from 'node:net'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DesktopModeDependencies, DesktopModeRuntime } from './dev-runner-lib'
 import {
   canConnectToPort,
   delay,
@@ -11,6 +10,7 @@ import {
   getWorkspacePackagePath,
   installSignalHandlers,
   isDevMode,
+  localStackEnv,
   main,
   registerChild,
   resolveWorkspaceBinary,
@@ -22,13 +22,19 @@ import {
   waitForChildExit,
   waitForPort,
 } from './dev-runner'
+import type {
+  DesktopModeDependencies,
+  DesktopModeRuntime,
+  WebStackDependencies,
+  WebStackRuntime,
+} from './dev-runner-lib'
 
 const tempDirs: string[] = []
 
 beforeEach(() => {
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
-  vi.spyOn(process, 'exit').mockImplementation(((() => {}) as unknown) as never)
+  vi.spyOn(process, 'exit').mockImplementation((() => {}) as unknown as never)
 })
 
 afterEach(() => {
@@ -69,7 +75,8 @@ describe('isDevMode', () => {
   it('validates dev mode names', () => {
     expect(isDevMode(undefined)).toBe(false)
     expect(isDevMode('bogus')).toBe(false)
-    for (const mode of ['dev', 'dev:desktop', 'dev:desktop:web', 'dev:api', 'dev:landing']) {
+    expect(isDevMode('dev:desktop:web')).toBe(false)
+    for (const mode of ['dev', 'dev:desktop', 'dev:api', 'dev:admin', 'dev:landing']) {
       expect(isDevMode(mode)).toBe(true)
     }
   })
@@ -192,7 +199,10 @@ describe('ensureElectronBinaryInstalled', () => {
     const electronDir = join(dir, 'ws', 'node_modules', 'electron')
     mkdirSync(electronDir, { recursive: true })
     const marker = join(dir, 'installed.txt')
-    writeFileSync(join(electronDir, 'install.js'), `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'ok')\n`)
+    writeFileSync(
+      join(electronDir, 'install.js'),
+      `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'ok')\n`,
+    )
 
     await ensureElectronBinaryInstalled(join(dir, 'ws'))
 
@@ -206,7 +216,10 @@ describe('ensureElectronBinaryInstalled', () => {
     mkdirSync(electronDir, { recursive: true })
     writeFileSync(join(electronDir, 'path.txt'), '/tmp/electron')
     const marker = join(dir, 'installed.txt')
-    writeFileSync(join(electronDir, 'install.js'), `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'ok')\n`)
+    writeFileSync(
+      join(electronDir, 'install.js'),
+      `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'ok')\n`,
+    )
 
     await ensureElectronBinaryInstalled(join(dir, 'ws'))
 
@@ -379,8 +392,11 @@ describe('runSingleProcessMode', () => {
 describe('main', () => {
   const runners = () => ({
     runDesktop: vi.fn(async (_runtime: DesktopModeRuntime, _deps: DesktopModeDependencies) => {}),
-    runSingle: vi.fn(async (_command: string, _args: string[], _cwd: string) => {}),
+    runWeb: vi.fn(async (_runtime: WebStackRuntime, _deps: WebStackDependencies) => {}),
+    runSingle: vi.fn(async (_command: string, _args: string[], _cwd: string, _env?: NodeJS.ProcessEnv) => {}),
+    run: vi.fn(async (_command: string, _args: string[], _cwd: string, _env?: NodeJS.ProcessEnv) => {}),
     installHandlers: vi.fn(() => {}),
+    stackEnv: vi.fn((base: NodeJS.ProcessEnv) => ({ ...base, CONTROL_PLANE_URL: 'file:test' })),
   })
 
   it('uses the real argv and runners by default', async () => {
@@ -390,6 +406,12 @@ describe('main', () => {
     expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Usage: pnpm run dev:<'))
   })
 
+  it('builds the local stack env under the repository .dev-data directory', () => {
+    const env = localStackEnv({ CONTROL_PLANE_URL: 'file:override' })
+    expect(env.CONTROL_PLANE_URL).toBe('file:override')
+    expect(env.LOCAL_DATABASES_DIR).toMatch(/\.dev-data\/stores$/)
+  })
+
   it('rejects unknown modes', async () => {
     await main(['bogus'], runners())
 
@@ -397,40 +419,84 @@ describe('main', () => {
     expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Usage: pnpm run dev:<'))
   })
 
-  it.each(['dev', 'dev:desktop'] as const)('runs the desktop orchestrator for %s', async (mode) => {
+  it('runs the browser stack for dev', async () => {
     const stubbed = runners()
 
-    await main([mode], stubbed)
+    await main(['dev'], stubbed)
 
     expect(stubbed.installHandlers).toHaveBeenCalledTimes(1)
+    const [runtime, deps] = stubbed.runWeb.mock.calls[0] as unknown as [WebStackRuntime, Record<string, unknown>]
+    expect(runtime.adminDir).toEqual(expect.stringContaining('apps/admin'))
+    expect(runtime.env.CONTROL_PLANE_URL).toBe('file:test')
+    for (const key of ['runCommand', 'spawnLongRunning', 'waitForChildExit', 'waitForPort', 'shutdown']) {
+      expect(typeof deps[key]).toBe('function')
+    }
+    expect(stubbed.runDesktop).not.toHaveBeenCalled()
+  })
+
+  it('runs the desktop orchestrator with the local stack env for dev:desktop', async () => {
+    const stubbed = runners()
+
+    await main(['dev:desktop'], stubbed)
+
     expect(stubbed.runDesktop).toHaveBeenCalledTimes(1)
-    const [runtime, deps] = stubbed.runDesktop.mock.calls[0] as unknown as [
-      Record<string, unknown>,
-      Record<string, unknown>,
-    ]
+    const [runtime, deps] = stubbed.runDesktop.mock.calls[0] as unknown as [DesktopModeRuntime, Record<string, unknown>]
     expect(runtime.desktopDir).toEqual(expect.stringContaining('apps/desktop'))
     expect(runtime.apiDir).toEqual(expect.stringContaining('apps/api'))
-    for (const key of ['runCommand', 'ensureElectronBinaryInstalled', 'spawnLongRunning', 'waitForChildExit', 'waitForPort', 'shutdown', 'resolveWorkspaceBinary']) {
+    expect(runtime.adminDir).toEqual(expect.stringContaining('apps/admin'))
+    expect(runtime.env?.CONTROL_PLANE_URL).toBe('file:test')
+    for (const key of [
+      'runCommand',
+      'ensureElectronBinaryInstalled',
+      'spawnLongRunning',
+      'waitForChildExit',
+      'waitForPort',
+      'shutdown',
+      'resolveWorkspaceBinary',
+    ]) {
       expect(typeof deps[key]).toBe('function')
     }
     expect(stubbed.runSingle).not.toHaveBeenCalled()
   })
 
   it.each([
-    { mode: 'dev:desktop:web', args: ['run', 'dev:web'], dir: 'apps/desktop' },
-    { mode: 'dev:api', args: ['run', 'dev'], dir: 'apps/api' },
-    { mode: 'dev:landing', args: ['run', 'dev'], dir: 'apps/landing' },
-  ])('runs a single process for $mode', async ({ mode, args, dir }) => {
+    { mode: 'dev:api', dir: 'apps/api' },
+    { mode: 'dev:admin', dir: 'apps/admin' },
+  ])('seeds the local stack, then runs $mode', async ({ mode, dir }) => {
     const stubbed = runners()
 
     await main([mode], stubbed)
 
-    expect(stubbed.installHandlers).toHaveBeenCalledTimes(1)
-    expect(stubbed.runSingle).toHaveBeenCalledTimes(1)
-    const [command, actualArgs, cwd] = stubbed.runSingle.mock.calls[0] as unknown as [string, string[], string]
+    const [, seedArgs, seedDir, seedEnv] = stubbed.run.mock.calls[0] as unknown as [
+      string,
+      string[],
+      string,
+      NodeJS.ProcessEnv,
+    ]
+    expect(seedArgs).toEqual(['run', 'seed:dev'])
+    expect(seedDir).toEqual(expect.stringContaining('apps/admin'))
+    expect(seedEnv.CONTROL_PLANE_URL).toBe('file:test')
+    const [command, args, cwd, env] = stubbed.runSingle.mock.calls[0] as unknown as [
+      string,
+      string[],
+      string,
+      NodeJS.ProcessEnv,
+    ]
     expect(command).toBe('pnpm')
-    expect(actualArgs).toEqual(args)
+    expect(args).toEqual(['run', 'dev'])
     expect(cwd).toEqual(expect.stringContaining(dir))
-    expect(stubbed.runDesktop).not.toHaveBeenCalled()
+    expect(env.CONTROL_PLANE_URL).toBe('file:test')
+  })
+
+  it('runs the landing site as a single process', async () => {
+    const stubbed = runners()
+
+    await main(['dev:landing'], stubbed)
+
+    const [command, args, cwd] = stubbed.runSingle.mock.calls[0] as unknown as [string, string[], string]
+    expect(command).toBe('pnpm')
+    expect(args).toEqual(['run', 'dev'])
+    expect(cwd).toEqual(expect.stringContaining('apps/landing'))
+    expect(stubbed.run).not.toHaveBeenCalled()
   })
 })

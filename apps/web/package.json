@@ -1,0 +1,27 @@
+{
+  "name": "@openpos/web",
+  "version": "0.3.11",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "description": "Cloudflare Worker that serves the shared OpenPOS web client for every store subdomain",
+  "scripts": {
+    "build:client": "pnpm -C ../desktop run build:web",
+    "build": "pnpm run build:client && wrangler deploy --dry-run --outdir dist",
+    "dev": "pnpm run build:client && wrangler dev -c wrangler.jsonc -c ../api/wrangler.jsonc --local-upstream demo.localhost:8787",
+    "deploy": "pnpm run build:client && wrangler deploy",
+    "check": "biome check src && tsc -p tsconfig.json",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.9",
+    "@types/node": "^24.13.3",
+    "@vitest/coverage-v8": "4.1.10",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.158.0"
+  }
+}

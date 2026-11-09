@@ -1,17 +1,13 @@
 /**
- * S3-compatible client bound to the OpenPOS releases bucket.
+ * S3-compatible client bound to the OpenPOS releases bucket (R2 S3 API).
  *
- * Credentials come from the Railway bucket's provided variables
- * (BUCKET, ACCESS_KEY_ID, SECRET_ACCESS_KEY, REGION, ENDPOINT).
+ * Credentials: BUCKET, ACCESS_KEY_ID, SECRET_ACCESS_KEY, REGION, ENDPOINT.
  */
 
 import { GetObjectCommand, type GetObjectCommandOutput, S3Client } from '@aws-sdk/client-s3'
+import type { ReleaseObject } from './routes.js'
 
-export interface ReleaseObject {
-  key: string
-  body: unknown
-  contentLength: number | null
-}
+export type { ReleaseObject }
 
 let cachedClient: { client: S3Client; bucket: string } | null = null
 
@@ -27,7 +23,7 @@ export function resolveBucketConfig(env: NodeJS.ProcessEnv = process.env): {
 
   if (!bucket || !accessKeyId || !secretAccessKey) {
     throw new Error(
-      'Missing bucket configuration. Set BUCKET, ACCESS_KEY_ID, and SECRET_ACCESS_KEY (Railway variable references).',
+      'Missing bucket configuration. Set BUCKET, ACCESS_KEY_ID, and SECRET_ACCESS_KEY (R2 S3 API credentials).',
     )
   }
 

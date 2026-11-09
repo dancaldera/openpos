@@ -8,30 +8,31 @@
   },
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
-    "build": "tsc",
-    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "dev:worker": "wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "deploy": "wrangler deploy",
+    "check": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
     "test": "vitest run",
-    "coverage": "vitest run --coverage",
-    "start": "node dist/index.js"
+    "coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1112.0",
     "@aws-sdk/s3-request-presigner": "^3.1112.0",
     "@hono/node-server": "^2.1.1",
     "@libsql/client": "^0.15.15",
+    "@openpos/control-plane": "workspace:*",
     "@openpos/data": "workspace:*",
     "@openpos/domain": "workspace:*",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.44.7",
-    "hono": "^4.13.2",
-    "jsonwebtoken": "^9.0.3"
+    "hono": "^4.13.2"
   },
   "devDependencies": {
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.13.3",
     "@vitest/coverage-v8": "4.1.10",
     "tsx": "^4.23.12",
     "typescript": "~5.9.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.158.0"
   }
 }

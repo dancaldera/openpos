@@ -1,8 +1,9 @@
 /**
  * Request-scoped data-plane client.
  *
- * Callers use query/execute. The active client comes from AsyncLocalStorage
- * (set per request after a connection is resolved), not from process env.
+ * Callers use query/execute. The active client comes from AsyncLocalStorage,
+ * set per request once the store is resolved. Workers provide
+ * node:async_hooks through the nodejs_compat flag.
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks'

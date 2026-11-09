@@ -1,0 +1,21 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // One web client for every store: demo.pos.softmelody.dev, aldo.pos.softmelody.dev, ...
+  // The API picks the store from the forwarded host.
+  "name": "openpos-web",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "../desktop/dist-web",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Static files skip the Worker; only /api runs it.
+    "run_worker_first": ["/api", "/api/*"]
+  },
+  "services": [{ "binding": "API", "service": "openpos-api" }],
+  // Store hostnames are Workers Custom Domains that the admin app attaches
+  // through the Cloudflare API when a store is created. Do not add them here:
+  // a deploy would replace the admin-managed list.
+  "workers_dev": false,
+  "observability": { "enabled": true }
+}

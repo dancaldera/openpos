@@ -4,14 +4,17 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  ADMIN_PORT,
   API_PORT,
   buildDesktopDevEnvironment,
   DEFAULT_DESKTOP_DEV_API_URL,
   electronLaunchArgs,
   PACKAGE_RUNNER,
   runDesktopMode,
+  runWebStack,
   VITE_PORT,
   VITE_URL,
+  WEB_PORT,
 } from './dev-runner-lib'
 
 describe('buildDesktopDevEnvironment', () => {
@@ -246,64 +249,70 @@ describe('runDesktopMode', () => {
     { firstExit: 'vite', exitCode: 0, expectedShutdown: 1 },
     { firstExit: 'api', exitCode: 3, expectedShutdown: 3 },
     { firstExit: 'electron', exitCode: 0, expectedShutdown: 0 },
-  ])('shuts down ($firstExit exits $exitCode) once Electron is running', async ({ firstExit, exitCode, expectedShutdown }) => {
-    const shutdown = vi.fn(async () => {})
-    let spawnCount = 0
+  ])(
+    'shuts down ($firstExit exits $exitCode) once Electron is running',
+    async ({ firstExit, exitCode, expectedShutdown }) => {
+      const shutdown = vi.fn(async () => {})
+      let spawnCount = 0
 
-    await runDesktopMode(
-      {
-        rootDir: '/workspace',
-        desktopDir: '/workspace/apps/desktop',
-        apiDir: '/workspace/apps/api',
-        env: {},
-      },
-      {
-        runCommand: vi.fn(async () => {}),
-        ensureElectronBinaryInstalled: vi.fn(async () => {}),
-        spawnLongRunning: vi.fn(() => {
-          spawnCount += 1
-          return { __name: ['api', 'vite', 'electron'][spawnCount - 1] } as never
-        }),
-        waitForChildExit: vi.fn((child: ChildProcess & { __name?: string }) => {
-          if (child.__name === firstExit) {
-            return Promise.resolve(exitCode)
-          }
-          return new Promise<number>(() => {})
-        }),
-        waitForPort: vi.fn(async () => {}),
-        shutdown,
-        resolveWorkspaceBinary: vi.fn(() => '/tmp/electron'),
-      },
-    )
+      await runDesktopMode(
+        {
+          rootDir: '/workspace',
+          desktopDir: '/workspace/apps/desktop',
+          apiDir: '/workspace/apps/api',
+          env: {},
+        },
+        {
+          runCommand: vi.fn(async () => {}),
+          ensureElectronBinaryInstalled: vi.fn(async () => {}),
+          spawnLongRunning: vi.fn(() => {
+            spawnCount += 1
+            return { __name: ['api', 'vite', 'electron'][spawnCount - 1] } as never
+          }),
+          waitForChildExit: vi.fn((child: ChildProcess & { __name?: string }) => {
+            if (child.__name === firstExit) {
+              return Promise.resolve(exitCode)
+            }
+            return new Promise<number>(() => {})
+          }),
+          waitForPort: vi.fn(async () => {}),
+          shutdown,
+          resolveWorkspaceBinary: vi.fn(() => '/tmp/electron'),
+        },
+      )
 
-    expect(shutdown).toHaveBeenCalledWith(expectedShutdown)
-  })
+      expect(shutdown).toHaveBeenCalledWith(expectedShutdown)
+    },
+  )
 
-  it.each([new Error('port check failed'), 'port check failed'])('shuts down when waiting for a port throws %s', async (failure) => {
-    const shutdown = vi.fn(async () => {})
+  it.each([new Error('port check failed'), 'port check failed'])(
+    'shuts down when waiting for a port throws %s',
+    async (failure) => {
+      const shutdown = vi.fn(async () => {})
 
-    await runDesktopMode(
-      {
-        rootDir: '/workspace',
-        desktopDir: '/workspace/apps/desktop',
-        apiDir: '/workspace/apps/api',
-        env: {},
-      },
-      {
-        runCommand: vi.fn(async () => {}),
-        ensureElectronBinaryInstalled: vi.fn(async () => {}),
-        spawnLongRunning: vi.fn(() => ({ __name: 'api' }) as never),
-        waitForChildExit: vi.fn(() => new Promise<number>(() => {})),
-        waitForPort: vi.fn(async () => {
-          throw failure
-        }),
-        shutdown,
-        resolveWorkspaceBinary: vi.fn(() => '/tmp/electron'),
-      },
-    )
+      await runDesktopMode(
+        {
+          rootDir: '/workspace',
+          desktopDir: '/workspace/apps/desktop',
+          apiDir: '/workspace/apps/api',
+          env: {},
+        },
+        {
+          runCommand: vi.fn(async () => {}),
+          ensureElectronBinaryInstalled: vi.fn(async () => {}),
+          spawnLongRunning: vi.fn(() => ({ __name: 'api' }) as never),
+          waitForChildExit: vi.fn(() => new Promise<number>(() => {})),
+          waitForPort: vi.fn(async () => {
+            throw failure
+          }),
+          shutdown,
+          resolveWorkspaceBinary: vi.fn(() => '/tmp/electron'),
+        },
+      )
 
-    expect(shutdown).toHaveBeenCalledWith(1)
-  })
+      expect(shutdown).toHaveBeenCalledWith(1)
+    },
+  )
 })
 
 describe('electronLaunchArgs', () => {
@@ -314,5 +323,128 @@ describe('electronLaunchArgs', () => {
   it('launches the app path only on other platforms', () => {
     expect(electronLaunchArgs('darwin')).toEqual(['.'])
     expect(electronLaunchArgs('win32')).toEqual(['.'])
+  })
+})
+
+describe('runDesktopMode seeding', () => {
+  it('seeds the local control plane before starting the API when an admin dir is given', async () => {
+    const calls: string[] = []
+    let spawnCount = 0
+    await runDesktopMode(
+      {
+        rootDir: '/workspace',
+        desktopDir: '/workspace/apps/desktop',
+        apiDir: '/workspace/apps/api',
+        adminDir: '/workspace/apps/admin',
+        env: {},
+      },
+      {
+        runCommand: vi.fn(async (_command: string, args: string[], cwd: string) => {
+          calls.push(`run:${args.join(' ')}@${cwd}`)
+        }),
+        ensureElectronBinaryInstalled: vi.fn(async () => {}),
+        spawnLongRunning: vi.fn(() => {
+          spawnCount += 1
+          calls.push(`spawn:${spawnCount}`)
+          return { __name: ['api', 'vite', 'electron'][spawnCount - 1] } as never
+        }),
+        waitForChildExit: vi.fn((child: ChildProcess & { __name?: string }) =>
+          child.__name === 'electron' ? Promise.resolve(0) : new Promise<number>(() => {}),
+        ),
+        waitForPort: vi.fn(async () => {}),
+        shutdown: vi.fn(async () => {}),
+        resolveWorkspaceBinary: vi.fn(() => '/tmp/electron'),
+      },
+    )
+    expect(calls.indexOf('run:run seed:dev@/workspace/apps/admin')).toBeLessThan(calls.indexOf('spawn:1'))
+  })
+})
+
+describe('runWebStack', () => {
+  const runtime = { desktopDir: '/w/apps/desktop', apiDir: '/w/apps/api', adminDir: '/w/apps/admin', env: { A: '1' } }
+
+  function deps(options: { exitFirst?: string; exitCode?: number; failPort?: number; seedFails?: unknown } = {}) {
+    const calls: string[] = []
+    return {
+      calls,
+      deps: {
+        runCommand: vi.fn(async (_command: string, args: string[], cwd: string, env?: NodeJS.ProcessEnv) => {
+          calls.push(`run:${args.join(' ')}@${cwd}:${env?.A}`)
+          if (options.seedFails !== undefined) throw options.seedFails
+        }),
+        spawnLongRunning: vi.fn((_command: string, args: string[], cwd: string, env?: NodeJS.ProcessEnv) => {
+          calls.push(`spawn:${args.join(' ')}@${cwd}:${env?.A}`)
+          return { __cwd: cwd } as never
+        }),
+        waitForChildExit: vi.fn((child: ChildProcess & { __cwd?: string }) =>
+          options.exitFirst && child.__cwd?.endsWith(options.exitFirst)
+            ? Promise.resolve(options.exitCode ?? 0)
+            : new Promise<number>(() => {}),
+        ),
+        waitForPort: vi.fn((port: number) => {
+          calls.push(`wait:${port}`)
+          return port === options.failPort ? new Promise<void>(() => {}) : Promise.resolve()
+        }),
+        shutdown: vi.fn(async (code: number) => {
+          calls.push(`shutdown:${code}`)
+        }),
+      },
+    }
+  }
+
+  it('starts API, admin, and web in order, seeds, then stops when one exits', async () => {
+    const { calls, deps: d } = deps()
+    // The admin exit tracker is created before seeding, so resolve it lazily.
+    let resolveAdmin: (code: number) => void = () => {}
+    d.waitForChildExit.mockImplementation((child: ChildProcess & { __cwd?: string }) =>
+      child.__cwd?.endsWith('admin')
+        ? new Promise<number>((resolve) => (resolveAdmin = resolve))
+        : new Promise<number>(() => {}),
+    )
+    d.runCommand.mockImplementation(async (_command: string, args: string[], cwd: string, env?: NodeJS.ProcessEnv) => {
+      calls.push(`run:${args.join(' ')}@${cwd}:${env?.A}`)
+      queueMicrotask(() => resolveAdmin(0))
+    })
+
+    await runWebStack(runtime, d)
+
+    expect(calls).toEqual([
+      'spawn:run dev@/w/apps/api:1',
+      `wait:${API_PORT}`,
+      'spawn:run dev@/w/apps/admin:1',
+      `wait:${ADMIN_PORT}`,
+      'spawn:run dev:web@/w/apps/desktop:1',
+      `wait:${WEB_PORT}`,
+      'run:run seed:dev@/w/apps/admin:1',
+      'shutdown:1',
+    ])
+  })
+
+  it('stops when a service exits before it listens', async () => {
+    const { calls, deps: d } = deps({ exitFirst: 'admin', exitCode: 2, failPort: ADMIN_PORT })
+    await runWebStack(runtime, d)
+    expect(calls.at(-1)).toBe('shutdown:2')
+    expect(calls.some((call) => call.includes('dev:web'))).toBe(false)
+  })
+
+  it('keeps a non-zero exit code once running', async () => {
+    let resolveApi: (code: number) => void = () => {}
+    const { calls, deps: d } = deps()
+    d.waitForChildExit.mockImplementation((child: ChildProcess & { __cwd?: string }) =>
+      child.__cwd?.endsWith('api')
+        ? new Promise<number>((resolve) => (resolveApi = resolve))
+        : new Promise<number>(() => {}),
+    )
+    d.runCommand.mockImplementation(async () => {
+      queueMicrotask(() => resolveApi(3))
+    })
+    await runWebStack(runtime, d)
+    expect(calls.at(-1)).toBe('shutdown:3')
+  })
+
+  it.each([new Error('seed failed'), 'seed failed'])('shuts down when seeding fails (%s)', async (failure) => {
+    const { calls, deps: d } = deps({ seedFails: failure })
+    await runWebStack(runtime, d)
+    expect(calls.at(-1)).toBe('shutdown:1')
   })
 })

@@ -1,17 +1,17 @@
 import { Hono } from 'hono'
 import {
   deleteProductImageObject,
-  getObjectStorageConfig,
   getSignedProductImageUrl,
   isAllowedImageType,
   ObjectStorageConfigError,
   uploadProductImageObject,
 } from '../lib/object-storage.js'
 import { authMiddleware } from '../middleware/auth.js'
+import type { AppEnv } from '../types.js'
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
 
-export const productImagesRouter = new Hono()
+export const productImagesRouter = new Hono<AppEnv>()
 
 productImagesRouter.use('/*', authMiddleware)
 

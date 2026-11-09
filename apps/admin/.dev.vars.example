@@ -1,0 +1,12 @@
+# Copy to .dev.vars for `pnpm -C apps/admin run dev:worker`. Gitignored.
+# Use the same control plane values as apps/api/.dev.vars.
+CONTROL_PLANE_URL=http://127.0.0.1:8081
+CONTROL_PLANE_SECRET=replace-with-a-long-random-secret
+ADMIN_SESSION_SECRET=replace-with-a-long-random-secret
+ADMIN_SETUP_TOKEN=replace-with-a-setup-token
+STORE_BASE_DOMAINS=localhost
+STORE_WEB_URL_TEMPLATE=http://{slug}.localhost:8787
+PUBLIC_API_URL=http://localhost:8787
+# Optional: create real Turso databases from the local admin.
+# TURSO_API_TOKEN=
+# TURSO_ORG=

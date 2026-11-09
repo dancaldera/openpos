@@ -18,17 +18,16 @@
  *   pnpm run release --local-dir dist-releases  # copy the bucket layout to a local folder
  *
  * Required environment (for upload). `apps/releases/.env` is loaded when present,
- * and Railway bucket names are accepted as aliases:
+ * and the short bucket names from apps/releases/.env are accepted as aliases:
  *   RELEASE_S3_BUCKET / BUCKET
  *   AWS_ACCESS_KEY_ID / ACCESS_KEY_ID
  *   AWS_SECRET_ACCESS_KEY / SECRET_ACCESS_KEY
  *   RELEASE_CDN_BASE_URL       public base URL of the releases service
- *                              (e.g. https://releases.openpos.xyz)
+ *                              (e.g. https://releases.pos.softmelody.dev)
  * Optional environment:
  *   RELEASE_S3_ENDPOINT / ENDPOINT
- *   RELEASE_S3_REGION / REGION (default: auto; Railway uses auto)
- *   RELEASE_S3_PATH_STYLE      set to 1 to force path-style URLs (Railway
- *                              buckets use virtual-host style by default)
+ *   RELEASE_S3_REGION / REGION (default: auto; R2 uses auto)
+ *   RELEASE_S3_PATH_STYLE      set to 1 to force path-style URLs
  *   RELEASE_PREFIX             key prefix inside the bucket (default: releases)
  */
 
@@ -127,7 +126,7 @@ export function applyEnvFile(path: string, env: NodeJS.ProcessEnv = process.env)
   }
 }
 
-/** Loads apps/releases/.env and maps Railway bucket names onto the upload variables. */
+/** Loads apps/releases/.env and maps its short bucket names onto the upload variables. */
 export function loadReleaseCredentials(
   env: NodeJS.ProcessEnv = process.env,
   envFilePath: string = releasesEnvFile,
@@ -431,7 +430,7 @@ if (!process.env.VITEST) {
       writeManifestFile(resolve(repoRoot, 'apps/desktop/dist-electron'), {
         version,
         notes: options.notes,
-        cdnBaseUrl: process.env.RELEASE_CDN_BASE_URL || 'https://releases.openpos.xyz',
+        cdnBaseUrl: process.env.RELEASE_CDN_BASE_URL || 'https://releases.pos.softmelody.dev',
         prefix: process.env.RELEASE_PREFIX || 'releases',
         artifacts: hashed,
       }),
@@ -442,7 +441,7 @@ if (!process.env.VITEST) {
           manifestPath,
           version,
           localDir: options.localDir,
-          cdnBaseUrl: process.env.RELEASE_CDN_BASE_URL || 'https://releases.openpos.xyz',
+          cdnBaseUrl: process.env.RELEASE_CDN_BASE_URL || 'https://releases.pos.softmelody.dev',
           prefix: process.env.RELEASE_PREFIX || 'releases',
         },
         {

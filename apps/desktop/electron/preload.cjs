@@ -15,7 +15,6 @@ contextBridge.exposeInMainWorld('__OPENPOS_DESKTOP__', {
 
 contextBridge.exposeInMainWorld('openposDesktop', {
   getInfo: () => ipcRenderer.invoke('desktop:info'),
-  greet: (name) => ipcRenderer.invoke('desktop:greet', name),
   hashPassword: (password) => ipcRenderer.invoke('desktop:hash-password', password),
   verifyPassword: (password, hash) => ipcRenderer.invoke('desktop:verify-password', password, hash),
   encryptSecret: (value) => ipcRenderer.invoke('desktop:encrypt-secret', value),
@@ -42,14 +41,7 @@ contextBridge.exposeInMainWorld('openposDesktop', {
   },
   connection: {
     getActive: () => ipcRenderer.invoke('desktop:connection-get'),
-    getRegisterPayload: () => ipcRenderer.invoke('desktop:connection-register-payload'),
-    create: (payload) => ipcRenderer.invoke('desktop:connection-create', payload),
-    join: (payload) => ipcRenderer.invoke('desktop:connection-join', payload),
-    importRemote: (payload) => ipcRenderer.invoke('desktop:connection-import', payload),
-    bootstrapOwner: (payload) => ipcRenderer.invoke('desktop:connection-bootstrap-owner', payload),
-    applyRemote: (payload) => ipcRenderer.invoke('desktop:connection-apply-remote', payload),
-    confirmEmergencyKit: () => ipcRenderer.invoke('desktop:connection-confirm-kit'),
-    getEmergencyKit: () => ipcRenderer.invoke('desktop:connection-emergency-kit'),
+    connect: (payload) => ipcRenderer.invoke('desktop:connection-connect', payload),
     leave: () => ipcRenderer.invoke('desktop:connection-leave'),
     factoryReset: () => ipcRenderer.invoke('desktop:connection-factory-reset'),
   },

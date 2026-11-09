@@ -28,165 +28,63 @@ class MemoryStorage {
   }
 }
 
-const { requestApiJson, connection, requestApi } = vi.hoisted(() => ({
-  requestApiJson: vi.fn(async () => ({})),
-  requestApi: vi.fn(async () => new Response('{}', { status: 200 })),
-  connection: {
-    create: vi.fn(async () => ({})),
-    join: vi.fn(async () => ({})),
-    importRemote: vi.fn(async () => ({})),
-    getRegisterPayload: vi.fn(
-      async (): Promise<{ key: string; storeName: string; url?: string; authToken?: string }> => ({
-        key: 'OPK_payload',
-        storeName: 'Payload',
-      }),
-    ),
-    bootstrapOwner: vi.fn(async () => ({})),
-  },
+const { connect, requestApi } = vi.hoisted(() => ({
+  connect: vi.fn(),
+  requestApi: vi.fn(),
 }))
 
 vi.mock('../lib/api-client', () => ({
   requestApi,
-  requestApiJson,
 }))
 
 vi.mock('../lib/desktop', () => ({
-  requireDesktopApi: vi.fn(() => ({ connection })),
+  requireDesktopApi: vi.fn(() => ({ connection: { connect } })),
 }))
 
 vi.mock('../lib/platform', () => ({
   isDesktop: true,
 }))
 
-const {
-  bootstrapStoreOwner,
-  CONNECTION_KEY_STORAGE,
-  createStoreConnection,
-  importStoreConnection,
-  joinStoreConnection,
-  registerStoreConnection,
-} = await import('./connections')
+const { CONNECTION_KEY_STORAGE, connectWithKey } = await import('./connections')
 
-describe('desktop store connections', () => {
+describe('desktop connectWithKey', () => {
   let storage: MemoryStorage
 
   beforeEach(() => {
     storage = new MemoryStorage()
     globalThis.localStorage = storage as unknown as Storage
-    requestApiJson.mockReset()
-    requestApiJson.mockResolvedValue({})
-    connection.create.mockReset()
-    connection.join.mockReset()
-    connection.importRemote.mockReset()
-    connection.getRegisterPayload.mockReset()
-    connection.bootstrapOwner.mockReset()
-    connection.getRegisterPayload.mockResolvedValue({ key: 'OPK_payload', storeName: 'Payload' })
+    connect.mockReset()
+    requestApi.mockReset()
   })
 
-  it('creates a store through desktop IPC and stores the key', async () => {
-    connection.create.mockResolvedValueOnce({ key: 'OPK_new', storeName: 'Tienda', published: true })
+  it('connects through desktop IPC with trimmed input and stores the returned key', async () => {
+    const status = { status: 'syncingInitialData' as const, remoteConfigured: true, activeUserCount: 0 }
+    connect.mockResolvedValueOnce({ key: 'OPK_NORMALIZED', storeName: 'Tienda', status })
 
-    const result = await createStoreConnection({
-      storeName: 'Tienda',
-      adminName: 'Ana',
-      adminEmail: 'ana@example.com',
-      adminPassword: 'secret123',
-    })
+    const result = await connectWithKey({ key: '  opk_raw  ', apiUrl: ' https://api.example.com ' })
 
-    expect(connection.create).toHaveBeenCalledWith({
-      storeName: 'Tienda',
-      adminName: 'Ana',
-      adminEmail: 'ana@example.com',
-      adminPassword: 'secret123',
-    })
-    expect(result.key).toBe('OPK_new')
-    expect(storage.getItem(CONNECTION_KEY_STORAGE)).toBe('OPK_new')
+    expect(connect).toHaveBeenCalledWith({ key: 'opk_raw', apiUrl: 'https://api.example.com' })
+    expect(result).toEqual({ key: 'OPK_NORMALIZED', storeName: 'Tienda', status })
+    expect(storage.getItem(CONNECTION_KEY_STORAGE)).toBe('OPK_NORMALIZED')
+    expect(requestApi).not.toHaveBeenCalled()
   })
 
-  it('joins a store through desktop IPC and stores the key', async () => {
-    connection.join.mockResolvedValueOnce({ key: 'OPK_join', storeName: 'Tienda', published: true })
+  it('sends an empty API URL when none is given', async () => {
+    connect.mockResolvedValue({ key: 'OPK_A', storeName: 'Tienda' })
 
-    const result = await joinStoreConnection({ key: 'OPK_join', seed: 'seed-words' })
+    await connectWithKey({ key: 'OPK_A' })
+    await connectWithKey({ key: 'OPK_A', apiUrl: '   ' })
 
-    expect(connection.join).toHaveBeenCalledWith({ key: 'OPK_join', seed: 'seed-words' })
-    expect(result.key).toBe('OPK_join')
-    expect(storage.getItem(CONNECTION_KEY_STORAGE)).toBe('OPK_join')
+    expect(connect).toHaveBeenNthCalledWith(1, { key: 'OPK_A', apiUrl: '' })
+    expect(connect).toHaveBeenNthCalledWith(2, { key: 'OPK_A', apiUrl: '' })
   })
 
-  it('imports a remote store through desktop IPC and stores the key', async () => {
-    connection.importRemote.mockResolvedValueOnce({ key: 'OPK_imp', storeName: 'Remote', published: true })
+  it('does not store a key when the desktop connect fails', async () => {
+    connect.mockRejectedValueOnce(new Error('invalid_connection_key'))
 
-    const result = await importStoreConnection({ url: 'libsql://remote', authToken: 'token' })
-
-    expect(connection.importRemote).toHaveBeenCalledWith({ url: 'libsql://remote', authToken: 'token' })
-    expect(result.key).toBe('OPK_imp')
-    expect(storage.getItem(CONNECTION_KEY_STORAGE)).toBe('OPK_imp')
-  })
-
-  it('registers with the desktop payload including url and auth token', async () => {
-    connection.getRegisterPayload.mockResolvedValueOnce({
-      key: 'OPK_payload',
-      storeName: 'Payload',
-      url: 'libsql://remote',
-      authToken: 'token',
-    })
-    requestApiJson.mockResolvedValueOnce({ key: 'OPK_payload', storeName: 'Payload', published: true })
-
-    const result = await registerStoreConnection({ storeName: 'Override', adminName: 'Ana' })
-
-    expect(requestApiJson).toHaveBeenCalledWith(
-      '/api/connections/register',
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.objectContaining({
-          key: 'OPK_payload',
-          url: 'libsql://remote',
-          authToken: 'token',
-          storeName: 'Override',
-          adminName: 'Ana',
-        }),
-      }),
+    await expect(connectWithKey({ key: 'bad', apiUrl: 'https://api.example.com' })).rejects.toThrow(
+      'invalid_connection_key',
     )
-    expect(result.key).toBe('OPK_payload')
-  })
-
-  it('falls back to the payload store name when registering', async () => {
-    requestApiJson.mockResolvedValueOnce({ key: 'OPK_payload', storeName: 'Payload', published: true })
-
-    await registerStoreConnection({})
-
-    expect(requestApiJson).toHaveBeenCalledWith(
-      '/api/connections/register',
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.objectContaining({ key: 'OPK_payload', storeName: 'Payload' }),
-      }),
-    )
-  })
-
-  it('requires a payload key to register', async () => {
-    connection.getRegisterPayload.mockResolvedValueOnce({ key: '', storeName: '' })
-
-    await expect(registerStoreConnection({})).rejects.toThrow('Store connection required')
-    expect(requestApiJson).not.toHaveBeenCalled()
-  })
-
-  it('bootstraps the owner through desktop IPC', async () => {
-    connection.bootstrapOwner.mockResolvedValueOnce({ status: 'readyForSignIn' })
-
-    const result = await bootstrapStoreOwner({
-      storeName: 'Tienda',
-      adminName: 'Ana',
-      adminEmail: 'ana@example.com',
-      adminPassword: 'secret123',
-    })
-
-    expect(connection.bootstrapOwner).toHaveBeenCalledWith({
-      storeName: 'Tienda',
-      adminName: 'Ana',
-      adminEmail: 'ana@example.com',
-      adminPassword: 'secret123',
-    })
-    expect(result).toEqual({ status: 'readyForSignIn' })
+    expect(storage.getItem(CONNECTION_KEY_STORAGE)).toBeNull()
   })
 })

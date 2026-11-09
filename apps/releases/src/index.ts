@@ -1,5 +1,5 @@
 /**
- * Standalone Node.js server for the releases service (Railway, local dev).
+ * Standalone Node.js server for the releases service (local dev). Production runs src/worker.ts.
  */
 
 import { serve } from '@hono/node-server'

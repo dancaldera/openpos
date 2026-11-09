@@ -44,8 +44,9 @@ export async function getDesktopApiConfig(): Promise<DesktopRuntimeConfigSummary
           }
         : buildFallbackDesktopConfig()
     } else {
-      // Fallback to build-time env var (development or web builds)
-      cachedApiConfig = buildFallbackDesktopConfig()
+      // Web builds call the API on their own origin: the web Worker (or the
+      // Vite dev proxy) forwards /api and the page host selects the store.
+      cachedApiConfig = { ...buildFallbackDesktopConfig(), apiUrl: '' }
     }
   }
 

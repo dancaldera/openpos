@@ -1,0 +1,8 @@
+# Copy to .dev.vars for `wrangler dev` (pnpm run dev:workers). Gitignored.
+# workerd cannot open file: URLs, so the control plane must be a libSQL
+# server, for example `turso dev --port 8081`.
+CONTROL_PLANE_URL=http://127.0.0.1:8081
+CONTROL_PLANE_SECRET=replace-with-a-long-random-secret
+JWT_SECRET=replace-with-a-long-random-secret
+INTERNAL_SECRET=replace-with-a-long-random-secret
+STORE_BASE_DOMAINS=localhost

@@ -5,10 +5,11 @@ import type { ComponentChildren } from 'preact'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const authState = { isAuthenticated: false, isLoading: false }
+const STORE = { id: 'store-1', name: 'Harbor', slug: 'harbor' }
 const mocks = vi.hoisted(() => ({
   initializeTheme: vi.fn(async () => {}),
   initializeLanguage: vi.fn(async () => {}),
-  bindWebAssignedConnection: vi.fn(async () => null),
+  resolveWebStore: vi.fn(async (): Promise<{ id: string; name: string; slug: string } | null> => STORE),
   startDbStatusMonitor: vi.fn(),
   stopDbStatusMonitor: vi.fn(),
   updateStart: vi.fn(),
@@ -27,7 +28,7 @@ vi.mock('./lib/db-status', () => ({
 }))
 
 vi.mock('./services/connections', () => ({
-  bindWebAssignedConnection: mocks.bindWebAssignedConnection,
+  resolveWebStore: mocks.resolveWebStore,
 }))
 
 vi.mock('./services/update-service', () => ({
@@ -99,7 +100,15 @@ vi.mock('./pages/Members', () => ({ default: () => <div data-testid="page-Member
 vi.mock('./pages/Analytics', () => ({ default: () => <div data-testid="page-Analytics" /> }))
 vi.mock('./pages/Settings', () => ({ default: () => <div data-testid="page-Settings" /> }))
 vi.mock('./pages/SignIn', () => ({ default: () => <div data-testid="page-SignIn" /> }))
-vi.mock('./pages/ConnectionSetup', () => ({ default: () => <div data-testid="page-ConnectionSetup" /> }))
+vi.mock('./pages/ConnectionSetup', () => ({
+  default: ({ status, onResolved }: { status: unknown; onResolved: () => Promise<void> }) => (
+    <div data-testid="page-ConnectionSetup" data-status={JSON.stringify(status)}>
+      <button type="button" onClick={() => void onResolved()}>
+        connection-resolved
+      </button>
+    </div>
+  ),
+}))
 vi.mock('./pages/FirstRunSync', () => ({ default: () => <div data-testid="page-FirstRunSync" /> }))
 
 const { default: App } = await import('./App')
@@ -120,7 +129,7 @@ function resetAll() {
   Object.values(mocks).forEach((mock) => {
     mock.mockClear()
   })
-  mocks.bindWebAssignedConnection.mockResolvedValue(null)
+  mocks.resolveWebStore.mockResolvedValue(STORE)
   mocks.initializeAppSettings.mockResolvedValue(undefined)
   mocks.initializeAuth.mockResolvedValue(undefined)
   mocks.initializeLanguage.mockResolvedValue(undefined)
@@ -142,7 +151,7 @@ describe('App web startup', () => {
     expect(await screen.findByTestId('page-SignIn')).toBeTruthy()
     expect(mocks.initializeTheme).toHaveBeenCalledTimes(1)
     expect(mocks.initializeLanguage).toHaveBeenCalledTimes(1)
-    expect(mocks.bindWebAssignedConnection).toHaveBeenCalledTimes(1)
+    expect(mocks.resolveWebStore).toHaveBeenCalledTimes(1)
     expect(mocks.startDbStatusMonitor).toHaveBeenCalledTimes(1)
     expect(mocks.initializeAppSettings).toHaveBeenCalledWith(true)
     expect(mocks.initializeAuth).toHaveBeenCalledTimes(1)
@@ -158,14 +167,33 @@ describe('App web startup', () => {
     authState.isLoading = false
   })
 
-  it('continues when binding the assigned connection fails', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    mocks.bindWebAssignedConnection.mockRejectedValueOnce(new Error('no store'))
+  it('asks for a connection key when no store resolves, then signs in once connected', async () => {
+    mocks.resolveWebStore.mockResolvedValueOnce(null)
 
     render(<App />)
 
+    expect(await screen.findByTestId('page-ConnectionSetup')).toBeTruthy()
+    expect(screen.getByTestId('page-ConnectionSetup').dataset.status).toBe('null')
+    expect(mocks.startDbStatusMonitor).toHaveBeenCalledTimes(1)
+    expect(mocks.initializeAppSettings).not.toHaveBeenCalled()
+    expect(mocks.initializeAuth).not.toHaveBeenCalled()
+    expect(mocks.updateStart).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByText('connection-resolved'))
+
     expect(await screen.findByTestId('page-SignIn')).toBeTruthy()
-    expect(warnSpy).toHaveBeenCalled()
+    expect(mocks.initializeAppSettings).toHaveBeenCalledWith(true)
+    expect(mocks.initializeAuth).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a startup error when resolving the store fails', async () => {
+    mocks.resolveWebStore.mockRejectedValueOnce(new Error('Server error'))
+
+    render(<App />)
+
+    expect(await screen.findByText('OpenPOS failed to start')).toBeTruthy()
+    expect(screen.getByText('Server error')).toBeTruthy()
+    expect(mocks.initializeAuth).not.toHaveBeenCalled()
   })
 
   it('shows a startup error when initialization fails', async () => {
@@ -210,8 +238,8 @@ describe('App web startup', () => {
   })
 
   it('ignores late startup results after unmount', async () => {
-    let release: ((value: null) => void) | undefined
-    mocks.bindWebAssignedConnection.mockReturnValueOnce(
+    let release: ((value: typeof STORE | null) => void) | undefined
+    mocks.resolveWebStore.mockReturnValueOnce(
       new Promise((resolve) => {
         release = resolve
       }),
@@ -220,8 +248,8 @@ describe('App web startup', () => {
     const { unmount } = render(<App />)
     unmount()
     await waitFor(() => expect(mocks.updateStop).toHaveBeenCalled())
-    if (!release) throw new Error('bind was not called')
-    release(null)
+    if (!release) throw new Error('resolveWebStore was not called')
+    release(STORE)
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(mocks.initializeAppSettings).not.toHaveBeenCalled()

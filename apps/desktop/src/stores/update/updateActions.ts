@@ -26,7 +26,7 @@ import {
  */
 const RELEASE_MANIFEST_URL: string =
   (import.meta.env?.VITE_RELEASES_MANIFEST_URL as string | undefined) ||
-  'https://releases.openpos.xyz/releases/latest.json'
+  'https://releases.pos.softmelody.dev/releases/latest.json'
 
 export interface ReleaseManifestAsset {
   name?: string

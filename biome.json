@@ -14,7 +14,11 @@
       "apps/desktop/src/**/*.ts",
       "apps/desktop/src/**/*.tsx",
       "apps/api/src/**/*.ts",
-      "apps/releases/src/**/*.ts"
+      "apps/releases/src/**/*.ts",
+      "apps/admin/src/**/*.ts",
+      "apps/admin/src/**/*.tsx",
+      "apps/web/src/**/*.ts",
+      "packages/control-plane/src/**/*.ts"
     ]
   },
   "formatter": {

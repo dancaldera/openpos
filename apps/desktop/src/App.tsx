@@ -16,7 +16,7 @@ import Orders from './pages/Orders'
 import Products from './pages/Products'
 import Settings from './pages/Settings'
 import SignIn from './pages/SignIn'
-import { bindWebAssignedConnection } from './services/connections'
+import { resolveWebStore } from './services/connections'
 import { updateService } from './services/update-service'
 import { appSettingsStore } from './stores/appSettings/appSettingsStore'
 import { authActions } from './stores/auth/authActions'
@@ -27,65 +27,59 @@ import './App.css'
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [startupStatus, setStartupStatus] = useState<DesktopFirstRunStatus | null>(null)
+  const [needsWebConnection, setNeedsWebConnection] = useState(false)
   const [isStartupLoading, setIsStartupLoading] = useState(true)
   const [isRetryingStartup, setIsRetryingStartup] = useState(false)
   const [startupError, setStartupError] = useState<string | null>(null)
   const { isAuthenticated, isLoading } = useAuth()
 
-  // Initialize auth, language, and app settings on app start
+  const enterSignIn = async () => {
+    // Language comes from company settings, so on the web it waits for a store.
+    if (!isDesktop) await languageActions.initializeLanguage()
+    await appSettingsStore.initialize(true)
+    await authActions.initializeAuth()
+  }
+
   useEffect(() => {
     let isCancelled = false
 
     const initializeApp = async () => {
       try {
         await initializeTheme()
-        await languageActions.initializeLanguage()
 
         if (!isDesktop) {
-          // Web: the API's env (TURSO_DATABASE_URL / TURSO_AUTH_TOKEN) is the
-          // source of truth. Never show the desktop onboarding flow in the
-          // browser – just bind the assigned connection best-effort and
-          // continue to SignIn. A missing assigned store is a server
-          // configuration issue, not a client setup task.
-          try {
-            await bindWebAssignedConnection()
-          } catch (error) {
-            console.warn('[init] Failed to bind assigned web connection', error)
-          }
+          // Web: the page host (demo.pos.softmelody.dev) picks the store. Ask for a
+          // connection key only when neither the host nor a saved key does.
+          const store = await resolveWebStore()
           if (isCancelled) return
-
           startDbStatusMonitor()
-          await appSettingsStore.initialize(true)
-          await authActions.initializeAuth()
-          if (!isCancelled) {
-            setIsStartupLoading(false)
+          if (!store) {
+            setNeedsWebConnection(true)
+            return
           }
+          await enterSignIn()
           return
         }
+
+        await languageActions.initializeLanguage()
 
         await appSettingsStore.initialize()
 
         updateService.start()
         startDbStatusMonitor()
         const startupApi = requireDesktopApi().startup
-        const status = await startupApi.getStatus()
-
+        let status = await startupApi.getStatus()
         if (isCancelled) return
-
         setStartupStatus(status)
 
-        let resolvedStatus = status
-        if (status.status !== 'readyForSignIn') {
-          resolvedStatus = await startupApi.initialize()
-
+        if (status.status !== 'readyForSignIn' && status.status !== 'needsConnection') {
+          status = await startupApi.initialize()
           if (isCancelled) return
-
-          setStartupStatus(resolvedStatus)
+          setStartupStatus(status)
         }
 
-        if (resolvedStatus.status === 'readyForSignIn') {
-          await appSettingsStore.initialize(true)
-          await authActions.initializeAuth()
+        if (status.status === 'readyForSignIn') {
+          await enterSignIn()
         }
       } catch (error) {
         if (!isCancelled) {
@@ -121,22 +115,14 @@ function App() {
     setIsRetryingStartup(true)
     setStartupError(null)
     setStartupStatus((currentStatus) =>
-      currentStatus
-        ? {
-            ...currentStatus,
-            status: 'syncingInitialData',
-            lastError: null,
-          }
-        : currentStatus,
+      currentStatus ? { ...currentStatus, status: 'syncingInitialData', lastError: null } : currentStatus,
     )
 
     try {
       const status = await requireDesktopApi().startup.retry()
       setStartupStatus(status)
-
       if (status.status === 'readyForSignIn') {
-        await appSettingsStore.initialize(true)
-        await authActions.initializeAuth()
+        await enterSignIn()
       }
     } catch (error) {
       setStartupError(error instanceof Error ? error.message : String(error))
@@ -147,32 +133,15 @@ function App() {
 
   const handleConnectionResolved = async (status?: DesktopFirstRunStatus) => {
     if (!isDesktop) {
-      // Web never shows ConnectionSetup, so this path should not be reached.
-      // Keep a best-effort bind for completeness if it is ever invoked.
-      await bindWebAssignedConnection().catch(() => null)
-      startDbStatusMonitor()
-      await appSettingsStore.initialize(true)
-      await authActions.initializeAuth()
+      setNeedsWebConnection(false)
+      await enterSignIn()
       return
     }
 
-    let nextStatus = status || (await requireDesktopApi().startup.getStatus())
+    const nextStatus = status || (await requireDesktopApi().startup.getStatus())
     setStartupStatus(nextStatus)
-
-    if (
-      nextStatus.status !== 'readyForSignIn' &&
-      nextStatus.status !== 'needsConnection' &&
-      nextStatus.status !== 'needsEmergencyKit' &&
-      nextStatus.status !== 'needsOwner' &&
-      nextStatus.status !== 'needsApi'
-    ) {
-      nextStatus = await requireDesktopApi().startup.initialize()
-      setStartupStatus(nextStatus)
-    }
-
     if (nextStatus.status === 'readyForSignIn') {
-      await appSettingsStore.initialize(true)
-      await authActions.initializeAuth()
+      await enterSignIn()
     }
   }
 
@@ -181,13 +150,7 @@ function App() {
   }
 
   const needsConnectionSetup =
-    isDesktop &&
-    !isAuthenticated &&
-    Boolean(startupStatus) &&
-    (startupStatus?.status === 'needsConnection' ||
-      startupStatus?.status === 'needsEmergencyKit' ||
-      startupStatus?.status === 'needsOwner' ||
-      startupStatus?.status === 'needsApi')
+    !isAuthenticated && (isDesktop ? startupStatus?.status === 'needsConnection' : needsWebConnection)
 
   // Show loading spinner while checking authentication
   if (isStartupLoading || isLoading) {

@@ -32,14 +32,7 @@ export interface DesktopConnectivitySnapshot extends DesktopSyncStatusSnapshot {
 }
 
 export interface DesktopFirstRunStatus {
-  status:
-    | 'needsConnection'
-    | 'needsEmergencyKit'
-    | 'needsApi'
-    | 'needsOwner'
-    | 'syncingInitialData'
-    | 'initialSyncFailed'
-    | 'readyForSignIn'
+  status: 'needsConnection' | 'syncingInitialData' | 'initialSyncFailed' | 'readyForSignIn'
   remoteConfigured: boolean
   apiConfigured?: boolean
   apiUrl?: string | null
@@ -77,7 +70,6 @@ export interface DesktopApi {
     arch: string
     updateFormat: UpdateFormat
   }>
-  greet(name: string): Promise<string>
   hashPassword(password: string): Promise<string>
   verifyPassword(password: string, hash: string): Promise<boolean>
   encryptSecret(value: string): Promise<string>
@@ -103,66 +95,12 @@ export interface DesktopApi {
     retry(): Promise<DesktopFirstRunStatus>
   }
   connection: {
-    getActive(): Promise<{
+    getActive(): Promise<{ key: string; storeName: string } | null>
+    connect(payload: { key: string; apiUrl: string }): Promise<{
       key: string
       storeName: string
-      published: boolean
-      emergencyKitConfirmed: boolean
-      hasWrappedSeed: boolean
-    } | null>
-    getRegisterPayload(): Promise<{
-      key: string
-      storeName: string
-      url?: string
-      authToken?: string
-    }>
-    create(payload: { storeName: string; adminName: string; adminEmail: string; adminPassword: string }): Promise<{
-      key: string
-      seed?: string
-      storeName: string
-      published: boolean
       status: DesktopFirstRunStatus
     }>
-    join(payload: { key: string; seed: string }): Promise<{
-      key: string
-      storeName: string
-      published: boolean
-      status: DesktopFirstRunStatus
-    }>
-    importRemote(payload: {
-      url: string
-      authToken: string
-      storeName?: string
-      adminName?: string
-      adminEmail?: string
-      adminPassword?: string
-    }): Promise<{
-      key: string
-      seed?: string
-      storeName: string
-      published: boolean
-      status: DesktopFirstRunStatus
-    }>
-    bootstrapOwner(payload: {
-      storeName: string
-      adminName: string
-      adminEmail: string
-      adminPassword: string
-    }): Promise<DesktopFirstRunStatus>
-    applyRemote(payload: {
-      key?: string
-      storeName?: string
-      published?: boolean
-      dataPlane: { url: string; authToken?: string }
-    }): Promise<{
-      key: string
-      storeName: string
-      published: boolean
-      emergencyKitConfirmed: boolean
-      hasWrappedSeed: boolean
-    } | null>
-    confirmEmergencyKit(): Promise<DesktopFirstRunStatus>
-    getEmergencyKit(): Promise<{ key: string; seed: string | null; storeName: string }>
     leave(): Promise<DesktopFirstRunStatus>
     factoryReset(): Promise<DesktopFirstRunStatus>
   }

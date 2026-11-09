@@ -1,0 +1,11 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // Public update feed: /releases/latest.json and /v/<version>/<file> from R2.
+  "name": "openpos-releases",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-09-01",
+  "routes": [{ "pattern": "releases.pos.softmelody.dev", "custom_domain": true }],
+  "workers_dev": false,
+  "observability": { "enabled": true },
+  "r2_buckets": [{ "binding": "RELEASES_BUCKET", "bucket_name": "openpos-releases" }]
+}

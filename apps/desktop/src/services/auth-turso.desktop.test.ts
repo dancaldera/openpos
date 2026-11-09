@@ -29,35 +29,23 @@ class MemoryStorage {
   }
 }
 
-const {
-  requestApiJson,
-  execute,
-  query,
-  verifyPassword,
-  hashPassword,
-  getDesktopApiConfig,
-  getRegisterPayload,
-  trigger,
-  warn,
-} = vi.hoisted(() => ({
-  requestApiJson: vi.fn(async (): Promise<Record<string, unknown>> => ({ token: 'jwt-token' })),
-  execute: vi.fn(async (_sql: string, _params: unknown[] = []) => ({ lastInsertId: 0, rowsAffected: 1 })),
-  query: vi.fn(async (): Promise<Array<Record<string, unknown>>> => []),
-  verifyPassword: vi.fn(async () => true),
-  hashPassword: vi.fn(async () => 'hashed-password'),
-  getDesktopApiConfig: vi.fn(async () => ({
-    apiUrl: 'https://api.example.com',
-    configPath: '/home/ana/.config/OpenPOS/config.json',
-    configSource: 'userData' as const,
-    userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
-  })),
-  getRegisterPayload: vi.fn(async () => ({
-    key: 'OPK_ABCD-EFGH-JKMN-PQRS',
-    storeName: 'Corner Shop',
-  })),
-  trigger: vi.fn(async () => {}),
-  warn: vi.fn(() => {}),
-}))
+const { requestApiJson, execute, query, verifyPassword, hashPassword, getDesktopApiConfig, trigger, warn } = vi.hoisted(
+  () => ({
+    requestApiJson: vi.fn(async (): Promise<Record<string, unknown>> => ({ token: 'jwt-token' })),
+    execute: vi.fn(async (_sql: string, _params: unknown[] = []) => ({ lastInsertId: 0, rowsAffected: 1 })),
+    query: vi.fn(async (): Promise<Array<Record<string, unknown>>> => []),
+    verifyPassword: vi.fn(async () => true),
+    hashPassword: vi.fn(async () => 'hashed-password'),
+    getDesktopApiConfig: vi.fn(async () => ({
+      apiUrl: 'https://api.example.com',
+      configPath: '/home/ana/.config/OpenPOS/config.json',
+      configSource: 'userData' as const,
+      userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
+    })),
+    trigger: vi.fn(async () => {}),
+    warn: vi.fn(() => {}),
+  }),
+)
 
 vi.mock('../lib/api-client', () => ({
   requestApiJson,
@@ -76,9 +64,6 @@ vi.mock('../lib/desktop', () => ({
   requireDesktopApi: vi.fn(() => ({
     verifyPassword,
     hashPassword,
-    connection: {
-      getRegisterPayload,
-    },
     sync: {
       trigger,
     },
@@ -118,10 +103,6 @@ describe('AuthService.signIn desktop API token sync', () => {
       configPath: '/home/ana/.config/OpenPOS/config.json',
       configSource: 'userData',
       userDataConfigPath: '/home/ana/.config/OpenPOS/config.json',
-    })
-    getRegisterPayload.mockResolvedValue({
-      key: 'OPK_ABCD-EFGH-JKMN-PQRS',
-      storeName: 'Corner Shop',
     })
   })
 
@@ -164,7 +145,7 @@ describe('AuthService.signIn desktop API token sync', () => {
     )
   })
 
-  it('registers the desktop store with the API when login returns connection_not_found', async () => {
+  it('surfaces connection_not_found without registering the store', async () => {
     query.mockResolvedValueOnce([
       {
         id: 1,
@@ -177,39 +158,22 @@ describe('AuthService.signIn desktop API token sync', () => {
         password_hashed: 1,
       },
     ])
-    requestApiJson
-      .mockRejectedValueOnce(new Error('connection_not_found'))
-      .mockResolvedValueOnce({ key: 'OPK_ABCD-EFGH-JKMN-PQRS', storeName: 'Corner Shop' })
-      .mockResolvedValueOnce({ token: 'fresh-token' })
+    requestApiJson.mockRejectedValueOnce(new Error('connection_not_found'))
 
     const result = await service.signIn('ana@example.com', 'secret')
 
     expect(result).toMatchObject({
       success: true,
       user: { email: 'ana@example.com' },
+      warning: 'connection_not_found',
     })
-    expect(result.warning).toBeUndefined()
-    expect(requestApiJson).toHaveBeenNthCalledWith(1, '/api/auth/login', {
+    expect(requestApiJson).toHaveBeenCalledTimes(1)
+    expect(requestApiJson).toHaveBeenCalledWith('/api/auth/login', {
       method: 'POST',
       body: { email: 'ana@example.com', password: 'secret' },
     })
-    expect(requestApiJson).toHaveBeenNthCalledWith(2, '/api/connections/register', {
-      method: 'POST',
-      body: {
-        key: 'OPK_ABCD-EFGH-JKMN-PQRS',
-        url: undefined,
-        authToken: undefined,
-        storeName: 'Corner Shop',
-        adminName: 'Ana',
-        adminEmail: 'ana@example.com',
-        adminPassword: 'secret',
-      },
-    })
-    expect(requestApiJson).toHaveBeenNthCalledWith(3, '/api/auth/login', {
-      method: 'POST',
-      body: { email: 'ana@example.com', password: 'secret' },
-    })
-    expect(storage.getItem('auth_token')).toBe('fresh-token')
+    expect(requestApiJson).not.toHaveBeenCalledWith('/api/connections/register', expect.anything())
+    expect(storage.getItem('auth_token')).toBeNull()
   })
 
   it('keeps desktop sign-in successful when API token refresh fails', async () => {
@@ -666,20 +630,6 @@ describe('AuthService.signIn desktop password flows', () => {
 
     expect(result.success).toBe(true)
     expect(result.warning).toBe('Remote API sign-in did not return a token.')
-  })
-
-  it('surfaces registration failures as warnings', async () => {
-    query.mockResolvedValueOnce([dbUser])
-    requestApiJson.mockReset()
-    requestApiJson
-      .mockRejectedValueOnce(new Error('connection_not_found'))
-      .mockRejectedValueOnce(new Error('register down'))
-    warn.mockClear()
-
-    const result = await service.signIn('ana@example.com', 'secret')
-
-    expect(result.success).toBe(true)
-    expect(result.warning).toBe('register down')
   })
 
   it('wraps non-error API failures', async () => {
@@ -1481,7 +1431,6 @@ describe('AuthService.createUser desktop', () => {
     const desktopApi = {
       verifyPassword,
       hashPassword,
-      connection: { getRegisterPayload },
       sync: { trigger },
     } as unknown as DesktopApi
     vi.mocked(requireDesktopApi)

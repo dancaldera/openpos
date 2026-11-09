@@ -20,6 +20,7 @@
     "drizzle:studio": "drizzle-kit studio --config drizzle.config.js",
     "migrate:remote": "tsx scripts/migrate-remote.ts",
     "build:bootstrap": "tsx scripts/build-bootstrap.ts",
+    "generate:migrations": "tsx scripts/generate-migrations-module.ts",
     "test": "vitest run",
     "coverage": "vitest run --coverage"
   },

@@ -2,7 +2,8 @@
  * CORS middleware for the OpenPOS API.
  *
  * Allows requests from:
- *   - Deployed web clients (ALLOWED_ORIGIN, comma-separated)
+ *   - Deployed web clients (ALLOWED_ORIGIN, comma-separated; `https://*.pos.softmelody.dev`
+ *     matches any single subdomain)
  *   - localhost:5173, localhost:4173, and localhost:1420 for local web development
  *
  * Electron development also uses the localhost origins when calling the API.
@@ -23,6 +24,15 @@ function getAllowedOrigins(): string[] {
   return [...extra, ...DEV_ORIGINS]
 }
 
+function originMatches(origin: string, allowed: string): boolean {
+  if (origin === allowed) return true
+  const wildcard = allowed.match(/^(https?:\/\/)\*\.(.+)$/)
+  if (!wildcard || !origin.startsWith(wildcard[1])) return false
+  const host = origin.slice(wildcard[1].length)
+  const suffix = `.${wildcard[2]}`
+  return host.endsWith(suffix) && !host.slice(0, -suffix.length).includes('.') && host.length > suffix.length
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-OpenPOS-Connection',
@@ -33,7 +43,7 @@ const CORS_HEADERS = {
 export const corsMiddleware: MiddlewareHandler = async (c, next) => {
   const origin = c.req.header('Origin') ?? ''
   const allowedOrigins = getAllowedOrigins()
-  const isAllowed = allowedOrigins.some((o) => origin === o) || origin === ''
+  const isAllowed = allowedOrigins.some((allowed) => originMatches(origin, allowed)) || origin === ''
   const allowOrigin = isAllowed ? origin || '*' : null
 
   if (c.req.method === 'OPTIONS') {

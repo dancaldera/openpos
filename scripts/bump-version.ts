@@ -42,6 +42,18 @@ export const FILES_TO_UPDATE: FileToUpdate[] = [
     replacement: (version: string) => `"version": "${version}"`,
   },
   {
+    name: 'Admin app',
+    path: resolve(repoRoot, 'apps/admin/package.json'),
+    pattern: /"version":\s*"[\d.]+"/,
+    replacement: (version: string) => `"version": "${version}"`,
+  },
+  {
+    name: 'Web worker',
+    path: resolve(repoRoot, 'apps/web/package.json'),
+    pattern: /"version":\s*"[\d.]+"/,
+    replacement: (version: string) => `"version": "${version}"`,
+  },
+  {
     name: 'Releases service',
     path: resolve(repoRoot, 'apps/releases/package.json'),
     pattern: /"version":\s*"[\d.]+"/,

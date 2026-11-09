@@ -54,7 +54,7 @@ describe('getUpdateBadgeViewModel', () => {
     expect(viewModel.installedVersionLabel).toBe('…')
     expect(viewModel.lastCheckedLabel).toBeNull()
     expect(viewModel.releaseNotesPreview).toBeNull()
-    expect(viewModel.releaseUrl).toBe('https://releases.openpos.xyz')
+    expect(viewModel.releaseUrl).toBe('https://releases.pos.softmelody.dev')
     expect(viewModel.checkingLabel).toBe('Check for updates')
     expect(viewModel.canAutoInstall).toBe(false)
   })
@@ -73,9 +73,9 @@ describe('getUpdateBadgeViewModel', () => {
       latestVersion: '0.3.2',
       readyToInstall: false,
       releaseNotes: longNotes,
-      releaseUrl: 'https://releases.openpos.xyz/releases/v0.3.2',
+      releaseUrl: 'https://releases.pos.softmelody.dev/releases/v0.3.2',
       updateAssetName: 'openpos-0.3.2-x86_64.AppImage',
-      updateAssetUrl: 'https://releases.openpos.xyz/releases/v0.3.2/openpos-x86_64.AppImage',
+      updateAssetUrl: 'https://releases.pos.softmelody.dev/releases/v0.3.2/openpos-x86_64.AppImage',
       labels,
     })
 
@@ -85,7 +85,7 @@ describe('getUpdateBadgeViewModel', () => {
     expect(viewModel.latestVersionLabel).toBe('0.3.2')
     expect(viewModel.lastCheckedLabel).toBeTruthy()
     expect(viewModel.releaseNotesPreview).toBe(longNotes.slice(0, 200))
-    expect(viewModel.releaseUrl).toBe('https://releases.openpos.xyz/releases/v0.3.2')
+    expect(viewModel.releaseUrl).toBe('https://releases.pos.softmelody.dev/releases/v0.3.2')
     expect(viewModel.canAutoInstall).toBe(true)
     expect(viewModel.actionLabel).toBe('Download update')
   })

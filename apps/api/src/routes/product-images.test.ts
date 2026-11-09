@@ -135,7 +135,11 @@ describe('productImagesRouter', () => {
 
   it('maps resolve failures to 500', async () => {
     const app = createApp()
-    const payload = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keys: ['a.png'] }) }
+    const payload = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys: ['a.png'] }),
+    }
 
     getSignedProductImageUrl.mockRejectedValue(new ObjectStorageConfigError('bucket not configured'))
     const configFailure = await app.request('/api/product-images/resolve', payload)
@@ -177,7 +181,11 @@ describe('productImagesRouter', () => {
 
   it('maps delete failures to 500', async () => {
     const app = createApp()
-    const payload = { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'a.png' }) }
+    const payload = {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'a.png' }),
+    }
 
     deleteProductImageObject.mockRejectedValue(new ObjectStorageConfigError('bucket not configured'))
     const configFailure = await app.request('/api/product-images', payload)

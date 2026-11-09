@@ -271,7 +271,7 @@ describe('updateActions.checkForUpdate', () => {
         assets: [
           {
             name: 'openpos-0.3.2-x86_64.AppImage',
-            url: 'https://releases.openpos.xyz/releases/v0.3.2/openpos-x86_64.AppImage',
+            url: 'https://releases.pos.softmelody.dev/releases/v0.3.2/openpos-x86_64.AppImage',
             sha256: 'abc123',
           },
         ],
@@ -287,7 +287,7 @@ describe('updateActions.checkForUpdate', () => {
     expect(updateReleaseNotes.value).toBe('Release notes for 0.3.2')
     expect(updateAssetFormat.value).toBe('appimage')
     expect(updateAssetName.value).toBe('openpos-0.3.2-x86_64.AppImage')
-    expect(updateAssetUrl.value).toBe('https://releases.openpos.xyz/releases/v0.3.2/openpos-x86_64.AppImage')
+    expect(updateAssetUrl.value).toBe('https://releases.pos.softmelody.dev/releases/v0.3.2/openpos-x86_64.AppImage')
     expect(updateAssetSha256.value).toBe('abc123')
     expect(lastCheckTime.value).toBeGreaterThan(0)
     expect(downloadError.value).toBeNull()
@@ -327,12 +327,12 @@ describe('updateActions.checkForUpdate', () => {
         assets: [
           {
             name: 'openpos-0.3.2-x86_64.AppImage',
-            url: 'https://releases.openpos.xyz/releases/v0.3.2/openpos-x86_64.AppImage',
+            url: 'https://releases.pos.softmelody.dev/releases/v0.3.2/openpos-x86_64.AppImage',
             sha256: 'abc123',
           },
           {
             name: 'openpos-0.3.2-amd64.deb',
-            url: 'https://releases.openpos.xyz/releases/v0.3.2/openpos_amd64.deb',
+            url: 'https://releases.pos.softmelody.dev/releases/v0.3.2/openpos_amd64.deb',
             sha256: 'def456',
           },
         ],
@@ -344,7 +344,7 @@ describe('updateActions.checkForUpdate', () => {
     expect(result).toBe(true)
     expect(updateAssetFormat.value).toBe('deb')
     expect(updateAssetName.value).toBe('openpos-0.3.2-amd64.deb')
-    expect(updateAssetUrl.value).toBe('https://releases.openpos.xyz/releases/v0.3.2/openpos_amd64.deb')
+    expect(updateAssetUrl.value).toBe('https://releases.pos.softmelody.dev/releases/v0.3.2/openpos_amd64.deb')
     expect(updateAssetSha256.value).toBe('def456')
   })
 
@@ -363,12 +363,12 @@ describe('updateActions.checkForUpdate', () => {
         assets: [
           {
             name: 'openpos-arm64.dmg',
-            url: 'https://releases.openpos.xyz/releases/v0.3.2/openpos-arm64.dmg',
+            url: 'https://releases.pos.softmelody.dev/releases/v0.3.2/openpos-arm64.dmg',
             sha256: 'aaa111',
           },
           {
             name: 'openpos-arm64.zip',
-            url: 'https://releases.openpos.xyz/releases/v0.3.2/openpos-arm64.zip',
+            url: 'https://releases.pos.softmelody.dev/releases/v0.3.2/openpos-arm64.zip',
             sha256: 'bbb222',
           },
         ],
@@ -380,7 +380,7 @@ describe('updateActions.checkForUpdate', () => {
     expect(result).toBe(true)
     expect(updateAssetFormat.value).toBe('mac-zip')
     expect(updateAssetName.value).toBe('openpos-arm64.zip')
-    expect(updateAssetUrl.value).toBe('https://releases.openpos.xyz/releases/v0.3.2/openpos-arm64.zip')
+    expect(updateAssetUrl.value).toBe('https://releases.pos.softmelody.dev/releases/v0.3.2/openpos-arm64.zip')
   })
 
   it('disables auto-install when the update format is unsupported', async () => {
@@ -398,7 +398,7 @@ describe('updateActions.checkForUpdate', () => {
         assets: [
           {
             name: 'openpos-arm64.zip',
-            url: 'https://releases.openpos.xyz/releases/v0.3.2/openpos-arm64.zip',
+            url: 'https://releases.pos.softmelody.dev/releases/v0.3.2/openpos-arm64.zip',
             sha256: 'bbb222',
           },
         ],
@@ -429,7 +429,7 @@ describe('updateActions.checkForUpdate', () => {
         assets: [
           {
             name: 'openpos-0.3.2-x86_64.AppImage',
-            url: 'https://releases.openpos.xyz/releases/v0.3.2/openpos-x86_64.AppImage',
+            url: 'https://releases.pos.softmelody.dev/releases/v0.3.2/openpos-x86_64.AppImage',
             sha256: 'abc123',
           },
         ],
@@ -448,7 +448,7 @@ describe('updateActions.checkForUpdate', () => {
   it('clears stale release metadata when the installed version is current', async () => {
     updateAvailable.value = true
     updateVersion.value = '0.3.9'
-    updateReleaseUrl.value = 'https://releases.openpos.xyz/releases/latest.json'
+    updateReleaseUrl.value = 'https://releases.pos.softmelody.dev/releases/latest.json'
     updateReleaseNotes.value = 'Old notes'
     updateAssetFormat.value = 'appimage'
     updateAssetName.value = 'old.AppImage'
@@ -478,7 +478,7 @@ describe('updateActions.checkForUpdate', () => {
   it('surfaces manifest errors and clears stale release metadata', async () => {
     updateAvailable.value = true
     updateVersion.value = '0.3.9'
-    updateReleaseUrl.value = 'https://releases.openpos.xyz/releases/latest.json'
+    updateReleaseUrl.value = 'https://releases.pos.softmelody.dev/releases/latest.json'
     updateReleaseNotes.value = 'Old notes'
     updateAssetFormat.value = 'appimage'
 

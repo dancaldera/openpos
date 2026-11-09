@@ -108,13 +108,15 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     const config = getRemoteConfig()
     status.remoteConfigured = Boolean(config.configured)
 
-    if (!config.configured || !config.url || !config.authToken) {
+    // Local file databases (development) need no token; remote ones do.
+    const isLocalFile = typeof config.url === 'string' && config.url.startsWith('file:')
+    if (!config.configured || !config.url || (!config.authToken && !isLocalFile)) {
       invalidateCachedClient()
       logSync('remote client unavailable because config is incomplete')
       return null
     }
 
-    const configKey = `${config.url}:${config.authToken}`
+    const configKey = `${config.url}:${config.authToken || ''}`
 
     if (cachedClient && cachedConfigKey === configKey) {
       return cachedClient
@@ -140,7 +142,7 @@ function createSyncManager({ getDatabase, getRemoteConfig, onFlushOrderQueue, ge
     logSync('creating Turso client')
     cachedClient = cachedConnectModule({
       url: config.url,
-      authToken: config.authToken,
+      ...(config.authToken ? { authToken: config.authToken } : {}),
     })
     cachedConfigKey = configKey
     return cachedClient

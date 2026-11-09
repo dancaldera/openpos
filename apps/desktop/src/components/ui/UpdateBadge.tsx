@@ -31,7 +31,7 @@ const currentAppInfo = signal<{
   arch: string
 } | null>(null)
 
-const FALLBACK_RELEASE_URL = 'https://releases.openpos.xyz'
+const FALLBACK_RELEASE_URL = 'https://releases.pos.softmelody.dev'
 
 if (isDesktop) {
   getDesktopApi()

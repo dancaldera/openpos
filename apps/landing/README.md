@@ -1,6 +1,6 @@
 # OpenPOS Landing Page
 
-Landing page for [openpos.xyz](https://openpos.xyz) - redirects to [demo.openpos.xyz](https://demo.openpos.xyz).
+Landing page for [pos.softmelody.dev](https://pos.softmelody.dev) - links to [demo.pos.softmelody.dev](https://demo.pos.softmelody.dev).
 
 Static marketing site built with Astro and Tailwind CSS. No environment variables are required.
 
@@ -15,4 +15,9 @@ Static marketing site built with Astro and Tailwind CSS. No environment variable
 
 ## Deployment
 
-Built for Vercel as a fully static site. Connect the repo and deploy; `vercel.json` points the build at `pnpm run build` with `dist/` as the output directory.
+Deployed as static assets on the `openpos-landing` Cloudflare Worker
+(`wrangler.jsonc`, Custom Domain `pos.softmelody.dev`):
+
+```bash
+pnpm run deploy   # astro build && wrangler deploy
+```

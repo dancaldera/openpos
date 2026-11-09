@@ -36,6 +36,19 @@ describe('corsMiddleware', () => {
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://admin.example.com')
   })
 
+  it('matches single-level wildcard subdomains', async () => {
+    process.env.ALLOWED_ORIGIN = 'https://*.openpos.xyz'
+    const app = createApp()
+    const allowOrigin = async (origin: string) =>
+      (await app.request('/ping', { headers: { Origin: origin } })).headers.get('Access-Control-Allow-Origin')
+
+    expect(await allowOrigin('https://demo.openpos.xyz')).toBe('https://demo.openpos.xyz')
+    expect(await allowOrigin('https://a.b.openpos.xyz')).toBeNull()
+    expect(await allowOrigin('https://.openpos.xyz')).toBeNull()
+    expect(await allowOrigin('http://demo.openpos.xyz')).toBeNull()
+    expect(await allowOrigin('https://demo.example.com')).toBeNull()
+  })
+
   it('omits the origin header for disallowed origins', async () => {
     delete process.env.ALLOWED_ORIGIN
     const app = createApp()

@@ -51,6 +51,7 @@ function ensureDeviceSecret(userDataPath) {
   return secret
 }
 
+/** Encrypt a value with this device's secret (used for locally stored settings). */
 function wrapSecret(userDataPath, plaintext) {
   const key = ensureDeviceSecret(userDataPath)
   const iv = randomBytes(12)
@@ -87,11 +88,7 @@ function writeJson(filePath, value) {
 function readActiveConnection(userDataPath) {
   const parsed = readJson(getActiveConnectionPath(userDataPath))
   const key = parseConnectionKey(parsed?.key || '')
-  if (!key) return null
-  return {
-    key,
-    emergencyKitConfirmed: Boolean(parsed.emergencyKitConfirmed),
-  }
+  return key ? { key } : null
 }
 
 function writeActiveConnection(userDataPath, input) {
@@ -100,10 +97,7 @@ function writeActiveConnection(userDataPath, input) {
     throw new Error('Invalid connection key')
   }
 
-  writeJson(getActiveConnectionPath(userDataPath), {
-    key,
-    emergencyKitConfirmed: Boolean(input.emergencyKitConfirmed),
-  })
+  writeJson(getActiveConnectionPath(userDataPath), { key })
 }
 
 function readEnvelope(userDataPath, key) {
@@ -116,8 +110,6 @@ function readEnvelope(userDataPath, key) {
     storeName: String(parsed.storeName || 'OpenPOS'),
     url: String(parsed.url),
     authToken: typeof parsed.authToken === 'string' ? parsed.authToken : undefined,
-    seedWrapped: typeof parsed.seedWrapped === 'string' ? parsed.seedWrapped : undefined,
-    published: Boolean(parsed.published),
   }
 }
 
@@ -126,30 +118,16 @@ function writeEnvelope(userDataPath, input) {
   if (!key) {
     throw new Error('Invalid connection key')
   }
-
-  const existing = readEnvelope(userDataPath, key)
-  const seedWrapped = input.seed
-    ? wrapSecret(userDataPath, input.seed)
-    : typeof input.seedWrapped === 'string'
-      ? input.seedWrapped
-      : existing?.seedWrapped
+  if (!input.url) {
+    throw new Error('Store database URL is required')
+  }
 
   writeJson(getEnvelopePath(userDataPath, key), {
     key,
-    storeName: input.storeName ?? existing?.storeName ?? 'OpenPOS',
-    url: input.url ?? existing?.url,
-    ...(input.authToken || existing?.authToken
-      ? { authToken: input.authToken ?? existing?.authToken }
-      : {}),
-    ...(seedWrapped ? { seedWrapped } : {}),
-    published: input.published === undefined ? Boolean(existing?.published) : Boolean(input.published),
+    storeName: input.storeName || 'OpenPOS',
+    url: input.url,
+    ...(input.authToken ? { authToken: input.authToken } : {}),
   })
-}
-
-function revealSeed(userDataPath, key) {
-  const envelope = readEnvelope(userDataPath, key)
-  if (!envelope?.seedWrapped) return null
-  return unwrapSecret(userDataPath, envelope.seedWrapped)
 }
 
 function clearActiveConnection(userDataPath) {
@@ -159,7 +137,7 @@ function clearActiveConnection(userDataPath) {
   }
 }
 
-/** Wipe local connection files, wrapped seeds, and the device secret. Does not touch Turso. */
+/** Wipe local connection files and the device secret. Does not touch the store database. */
 function resetLocalDevice(userDataPath, extraPaths = []) {
   clearActiveConnection(userDataPath)
 
@@ -187,51 +165,19 @@ function resetLocalDevice(userDataPath, extraPaths = []) {
   }
 }
 
-function adoptLegacyLocalDatabase(userDataPath, key) {
-  const legacyPath = getLegacyDbPath(userDataPath)
-  const nextPath = getConnectionDbPath(userDataPath, key)
-  if (!fs.existsSync(legacyPath) || fs.existsSync(nextPath)) {
-    return false
-  }
-
-  fs.mkdirSync(path.dirname(nextPath), { recursive: true })
-  fs.renameSync(legacyPath, nextPath)
-  return true
-}
-
-function publicEnvelope(envelope, active) {
+function publicEnvelope(envelope) {
   if (!envelope) return null
-  return {
-    key: envelope.key,
-    storeName: envelope.storeName,
-    published: envelope.published,
-    emergencyKitConfirmed: Boolean(active?.emergencyKitConfirmed),
-    hasWrappedSeed: Boolean(envelope.seedWrapped),
-  }
-}
-
-function registerPayloadFromEnvelope(envelope) {
-  if (!envelope) return null
-  const url = String(envelope.url || '')
-  const isRemote = url.startsWith('libsql://') || url.startsWith('https://')
-  return {
-    key: envelope.key,
-    storeName: envelope.storeName,
-    ...(isRemote ? { url, authToken: envelope.authToken || '' } : {}),
-  }
+  return { key: envelope.key, storeName: envelope.storeName }
 }
 
 module.exports = {
-  adoptLegacyLocalDatabase,
   clearActiveConnection,
   getConnectionDbPath,
   getLegacyDbPath,
   publicEnvelope,
   readActiveConnection,
   readEnvelope,
-  registerPayloadFromEnvelope,
   resetLocalDevice,
-  revealSeed,
   unwrapSecret,
   wrapSecret,
   writeActiveConnection,

@@ -11,7 +11,7 @@ beforeEach(() => {
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
-  vi.spyOn(process, 'exit').mockImplementation(((() => {}) as unknown) as never)
+  vi.spyOn(process, 'exit').mockImplementation((() => {}) as unknown as never)
 })
 
 afterEach(() => {
@@ -39,13 +39,15 @@ function packageFile(dir: string, name: string, version: string): FileToUpdate {
 }
 
 describe('FILES_TO_UPDATE', () => {
-  it('covers the five workspace packages', () => {
+  it('covers every versioned workspace app', () => {
     const repoRoot = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 
     expect(FILES_TO_UPDATE.map((file) => file.name)).toEqual([
       'Root workspace',
       'Desktop app',
       'API',
+      'Admin app',
+      'Web worker',
       'Releases service',
       'Landing page',
     ])

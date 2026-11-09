@@ -5,7 +5,6 @@ import { clearPersistedAuth, isAuthExpiredError } from '../lib/auth-session'
 import { execute, query } from '../lib/db-adapter'
 import { requireDesktopApi } from '../lib/desktop'
 import { isDesktop } from '../lib/platform'
-import { registerStoreConnection } from './connections'
 
 // ---------------------------------------------------------------------------
 // Password hashing helpers
@@ -127,9 +126,7 @@ export async function getDesktopRemoteSessionState(): Promise<DesktopRemoteSessi
   }
 }
 
-type DesktopLoginCredentials =
-  | { email: string; password: string; owner?: { name: string } }
-  | { userId: string; pin: string }
+type DesktopLoginCredentials = { email: string; password: string } | { userId: string; pin: string }
 
 function isPinLoginCredentials(credentials: DesktopLoginCredentials): credentials is { userId: string; pin: string } {
   return 'pin' in credentials
@@ -159,22 +156,7 @@ async function getDesktopApiToken(credentials: DesktopLoginCredentials): Promise
     })
 
   try {
-    let data: { token: string }
-    try {
-      data = await login()
-    } catch (error) {
-      const message = error instanceof Error ? error.message : ''
-      if (message !== 'connection_not_found' || isPinLoginCredentials(credentials)) {
-        throw error
-      }
-
-      await registerStoreConnection({
-        adminName: credentials.owner?.name,
-        adminEmail: credentials.email,
-        adminPassword: credentials.password,
-      })
-      data = await login()
-    }
+    const data = await login()
 
     const token = typeof data.token === 'string' ? data.token.trim() : ''
     if (!token) {
@@ -352,7 +334,6 @@ export class AuthService {
       const remoteAuthResult = await getDesktopApiToken({
         email: normalizedEmail,
         password,
-        owner: { name: user.name },
       })
       persistDesktopRemoteAuthStatus({
         apiConfigured: remoteAuthResult.apiConfigured,

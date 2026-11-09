@@ -185,6 +185,20 @@ describe('remote client resolution', () => {
     expect(snapshot.status).toBe('offline')
   })
 
+  it('syncs local file databases without an auth token', async () => {
+    const { localDb, remoteDb } = setupDbs()
+    const getRemoteClient = vi.fn(async () => createRemoteClient(remoteDb))
+    const manager = createSyncManager({
+      getDatabase: () => localDb,
+      getRemoteConfig: () => ({ configured: true, url: 'file:/tmp/openpos-store.sqlite', authToken: '' }),
+      getRemoteClient,
+    })
+
+    await manager.triggerSync()
+
+    expect(getRemoteClient).toHaveBeenCalledWith(expect.objectContaining({ url: 'file:/tmp/openpos-store.sqlite' }))
+  })
+
   it('caches the override client per config key', async () => {
     const { localDb, remoteDb } = setupDbs()
     let authToken = 'token-one'

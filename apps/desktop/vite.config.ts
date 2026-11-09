@@ -14,10 +14,18 @@ export default defineConfig(({ mode }) => {
     },
     server: isWeb
       ? {
+          port: 5173,
+          strictPort: true,
           proxy: {
             '/api': {
-              target: 'http://localhost:3001',
+              target: process.env.VITE_DEV_API_PROXY || 'http://localhost:3001',
               changeOrigin: true,
+              // The API picks the store from the browser host (demo.localhost), like the web Worker in production.
+              configure: (proxy) => {
+                proxy.on('proxyReq', (proxyReq, req) => {
+                  if (req.headers.host) proxyReq.setHeader('X-Forwarded-Host', req.headers.host)
+                })
+              },
             },
           },
         }

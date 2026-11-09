@@ -6,17 +6,16 @@
  * GET /api/settings/object-storage          — get safe object storage configuration status
  * PUT /api/settings/object-storage          — save object storage configuration (admin)
  * DELETE /api/settings/object-storage       — clear object storage configuration (admin)
- * GET /api/settings/database                — get safe database configuration status
- * PUT /api/settings/database                — save database URL/token and Turso platform credentials (admin)
- * DELETE /api/settings/database             — clear database configuration (admin)
+ *
+ * Store databases are assigned in the admin app, not from store settings.
  */
 
 import { Hono } from 'hono'
-import { applyRemoteToConnection, parsePlatformConfig } from '../lib/connection.js'
 import { DEFAULT_SIGNED_URL_TTL_SECONDS } from '../lib/object-storage.js'
-import { decryptSecret, encryptSecret } from '../lib/secrets.js'
+import { encryptSecret } from '../lib/secrets.js'
 import { execute, query } from '../lib/turso.js'
-import { authMiddleware, type JwtPayload } from '../middleware/auth.js'
+import { authMiddleware } from '../middleware/auth.js'
+import type { AppEnv, JwtPayload } from '../types.js'
 
 interface DatabaseCompanySettings {
   id: number
@@ -51,20 +50,13 @@ interface DatabaseObjectStorageSettings {
   updated_at: string
 }
 
-interface DatabaseConnectionSettings {
-  id: number
-  database_url: string | null
-  auth_token_encrypted: string | null
-  api_token_encrypted: string | null
-  org: string | null
-  group_name: string | null
-  created_at: string
-  updated_at: string
-}
-
 const MAX_SIGNED_URL_TTL_SECONDS = 7 * 24 * 60 * 60
 
-export const settingsRouter = new Hono()
+export const settingsRouter = new Hono<AppEnv>()
+
+function isStoreAdmin(caller: JwtPayload): boolean {
+  return caller.role === 'admin' || caller.permissions.includes('*')
+}
 
 // ---------------------------------------------------------------------------
 // GET /api/settings/public  (public - for pre-login UI initialization)
@@ -94,9 +86,7 @@ settingsRouter.use('/*', authMiddleware)
 
 // GET /api/settings/object-storage (admin only — never returns credentials)
 settingsRouter.get('/object-storage', async (c) => {
-  // biome-ignore lint/suspicious/noExplicitAny: jwtPayload set by authMiddleware
-  const caller = (c as any).get('jwtPayload') as JwtPayload
-  if (caller.role !== 'admin' && !caller.permissions.includes('*')) {
+  if (!isStoreAdmin(c.get('jwtPayload'))) {
     return c.json({ error: 'Insufficient permissions' }, 403)
   }
 
@@ -108,9 +98,7 @@ settingsRouter.get('/object-storage', async (c) => {
 
 // PUT /api/settings/object-storage (admin only)
 settingsRouter.put('/object-storage', async (c) => {
-  // biome-ignore lint/suspicious/noExplicitAny: jwtPayload set by authMiddleware
-  const caller = (c as any).get('jwtPayload') as JwtPayload
-  if (caller.role !== 'admin' && !caller.permissions.includes('*')) {
+  if (!isStoreAdmin(c.get('jwtPayload'))) {
     return c.json({ error: 'Insufficient permissions' }, 403)
   }
 
@@ -154,9 +142,11 @@ settingsRouter.put('/object-storage', async (c) => {
   const bucket = body.bucket === undefined ? existing?.bucket?.trim() || '' : trimSetting(body.bucket)
   const accessKeyId = trimSetting(body.accessKeyId)
   const secretAccessKey = trimSetting(body.secretAccessKey)
-  const encryptedAccessKeyId = accessKeyId ? encryptSecret(accessKeyId) : existing?.access_key_id_encrypted || null
+  const encryptedAccessKeyId = accessKeyId
+    ? await encryptSecret(accessKeyId)
+    : existing?.access_key_id_encrypted || null
   const encryptedSecretAccessKey = secretAccessKey
-    ? encryptSecret(secretAccessKey)
+    ? await encryptSecret(secretAccessKey)
     : existing?.secret_access_key_encrypted || null
   const urlTtlSeconds =
     body.urlTtlSeconds === undefined
@@ -215,134 +205,11 @@ settingsRouter.put('/object-storage', async (c) => {
 
 // DELETE /api/settings/object-storage (admin only)
 settingsRouter.delete('/object-storage', async (c) => {
-  // biome-ignore lint/suspicious/noExplicitAny: jwtPayload set by authMiddleware
-  const caller = (c as any).get('jwtPayload') as JwtPayload
-  if (caller.role !== 'admin' && !caller.permissions.includes('*')) {
+  if (!isStoreAdmin(c.get('jwtPayload'))) {
     return c.json({ error: 'Insufficient permissions' }, 403)
   }
 
   await execute('DELETE FROM object_storage_settings WHERE id = 1')
-  return c.json({ success: true })
-})
-
-settingsRouter.get('/database', async (c) => {
-  // biome-ignore lint/suspicious/noExplicitAny: jwtPayload set by authMiddleware
-  const caller = (c as any).get('jwtPayload') as JwtPayload
-  if (caller.role !== 'admin' && !caller.permissions.includes('*')) {
-    return c.json({ error: 'Insufficient permissions' }, 403)
-  }
-
-  const rows = await query<DatabaseConnectionSettings>(
-    'SELECT id, database_url, auth_token_encrypted, api_token_encrypted, org, group_name, created_at, updated_at FROM database_settings WHERE id = 1 LIMIT 1',
-  )
-  return c.json({ settings: toDatabaseSettings(rows[0]) })
-})
-
-settingsRouter.put('/database', async (c) => {
-  // biome-ignore lint/suspicious/noExplicitAny: jwtPayload set by authMiddleware
-  const caller = (c as any).get('jwtPayload') as JwtPayload
-  if (caller.role !== 'admin' && !caller.permissions.includes('*')) {
-    return c.json({ error: 'Insufficient permissions' }, 403)
-  }
-
-  let body: {
-    databaseUrl?: unknown
-    authToken?: unknown
-    apiToken?: unknown
-    org?: unknown
-    group?: unknown
-    publish?: unknown
-  }
-  try {
-    const parsedBody: unknown = await c.req.json()
-    if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
-      return c.json({ error: 'Invalid JSON body' }, 400)
-    }
-    body = parsedBody as typeof body
-  } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400)
-  }
-
-  for (const [field, value] of Object.entries(body)) {
-    if (value !== undefined && typeof value !== 'string' && field !== 'publish') {
-      return c.json({ error: `${field} must be a string` }, 400)
-    }
-  }
-  if (body.publish !== undefined && typeof body.publish !== 'boolean') {
-    return c.json({ error: 'publish must be a boolean' }, 400)
-  }
-
-  const existingRows = await query<DatabaseConnectionSettings>('SELECT * FROM database_settings WHERE id = 1 LIMIT 1')
-  const existing = existingRows[0]
-  const databaseUrl =
-    body.databaseUrl === undefined ? existing?.database_url?.trim() || '' : trimSetting(body.databaseUrl)
-  const authToken = trimSetting(body.authToken)
-  const apiToken = trimSetting(body.apiToken)
-  const org = body.org === undefined ? existing?.org?.trim() || '' : trimSetting(body.org)
-  const group = body.group === undefined ? existing?.group_name?.trim() || '' : trimSetting(body.group)
-  const encryptedAuthToken = authToken ? encryptSecret(authToken) : existing?.auth_token_encrypted || null
-  const encryptedApiToken = apiToken ? encryptSecret(apiToken) : existing?.api_token_encrypted || null
-  const now = new Date().toISOString()
-
-  if (org || group || apiToken || encryptedApiToken) {
-    if (!org || !group || !encryptedApiToken) {
-      return c.json({ error: 'Turso API token, org, and group are all required' }, 400)
-    }
-  }
-
-  if (existing) {
-    await execute(
-      `UPDATE database_settings
-       SET database_url = ?, auth_token_encrypted = ?, api_token_encrypted = ?, org = ?, group_name = ?, updated_at = ?
-       WHERE id = 1`,
-      [databaseUrl || null, encryptedAuthToken, encryptedApiToken, org || null, group || null, now],
-    )
-  } else {
-    await execute(
-      `INSERT INTO database_settings
-       (id, database_url, auth_token_encrypted, api_token_encrypted, org, group_name, created_at, updated_at)
-       VALUES (1, ?, ?, ?, ?, ?, ?, ?)`,
-      [databaseUrl || null, encryptedAuthToken, encryptedApiToken, org || null, group || null, now, now],
-    )
-  }
-
-  const rows = await query<DatabaseConnectionSettings>('SELECT * FROM database_settings WHERE id = 1 LIMIT 1')
-  const settings = toDatabaseSettings(rows[0])
-  const connectionKey = caller.connectionKey
-  const shouldBind = Boolean(databaseUrl) || body.publish === true
-  if (!shouldBind || !connectionKey) {
-    return c.json({ settings })
-  }
-
-  try {
-    const resolvedAuthToken =
-      authToken || (existing?.auth_token_encrypted ? decryptSecret(existing.auth_token_encrypted) : '')
-    const resolvedApiToken =
-      apiToken || (existing?.api_token_encrypted ? decryptSecret(existing.api_token_encrypted) : '')
-    const platform = parsePlatformConfig({
-      apiToken: resolvedApiToken,
-      org,
-      group,
-    })
-    const connection = await applyRemoteToConnection(connectionKey, {
-      url: databaseUrl || undefined,
-      authToken: resolvedAuthToken || undefined,
-      platform: body.publish === true ? platform : undefined,
-    })
-    return c.json({ settings: { ...settings, configured: connection.published || settings.configured }, connection })
-  } catch (error) {
-    return c.json({ error: error instanceof Error ? error.message : 'Unable to apply database settings' }, 400)
-  }
-})
-
-settingsRouter.delete('/database', async (c) => {
-  // biome-ignore lint/suspicious/noExplicitAny: jwtPayload set by authMiddleware
-  const caller = (c as any).get('jwtPayload') as JwtPayload
-  if (caller.role !== 'admin' && !caller.permissions.includes('*')) {
-    return c.json({ error: 'Insufficient permissions' }, 403)
-  }
-
-  await execute('DELETE FROM database_settings WHERE id = 1')
   return c.json({ success: true })
 })
 
@@ -427,17 +294,6 @@ function toObjectStorageSettings(s?: DatabaseObjectStorageSettings) {
     region: s?.region ?? 'auto',
     bucket: s?.bucket ?? null,
     urlTtlSeconds: s?.url_ttl_seconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
-    updatedAt: s?.updated_at ?? null,
-  }
-}
-
-function toDatabaseSettings(s?: DatabaseConnectionSettings) {
-  return {
-    configured: Boolean(s?.database_url && s?.auth_token_encrypted),
-    hostedProvisioning: Boolean(s?.api_token_encrypted && s?.org && s?.group_name),
-    databaseUrl: s?.database_url ?? null,
-    org: s?.org ?? null,
-    group: s?.group_name ?? null,
     updatedAt: s?.updated_at ?? null,
   }
 }

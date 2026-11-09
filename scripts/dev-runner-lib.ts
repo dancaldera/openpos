@@ -1,8 +1,9 @@
 import type { ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
+import { ADMIN_PORT, API_PORT, WEB_PORT } from './dev-stack'
 
-export const API_PORT = 3001
+export { ADMIN_PORT, API_PORT, WEB_PORT }
 export const VITE_PORT = 1420
 export const VITE_URL = `http://localhost:${VITE_PORT}`
 export const PORT_WAIT_TIMEOUT_MS = 30_000
@@ -13,7 +14,16 @@ export interface DesktopModeRuntime {
   rootDir: string
   desktopDir: string
   apiDir: string
+  /** When set, the local control plane is seeded before the API starts. */
+  adminDir?: string
   env?: NodeJS.ProcessEnv
+}
+
+export interface WebStackRuntime {
+  desktopDir: string
+  apiDir: string
+  adminDir: string
+  env: NodeJS.ProcessEnv
 }
 
 export interface DesktopModeDependencies {
@@ -26,7 +36,7 @@ export interface DesktopModeDependencies {
   resolveWorkspaceBinary(workspaceDir: string, binaryName: string): string
 }
 
-type RuntimeName = 'api' | 'vite' | 'electron'
+type RuntimeName = 'api' | 'admin' | 'web' | 'vite' | 'electron'
 
 function createExitTracker(
   name: RuntimeName,
@@ -104,6 +114,9 @@ export async function runDesktopMode(
 
   await dependencies.runCommand(PACKAGE_RUNNER, ['run', 'prepare:native'], runtime.desktopDir)
   await dependencies.ensureElectronBinaryInstalled(runtime.desktopDir)
+  if (runtime.adminDir) {
+    await dependencies.runCommand(PACKAGE_RUNNER, ['run', 'seed:dev'], runtime.adminDir, desktopEnv)
+  }
 
   const apiProcess = dependencies.spawnLongRunning(PACKAGE_RUNNER, ['run', 'dev'], runtime.apiDir, desktopEnv)
   const apiExit = createExitTracker('api', apiProcess, dependencies.waitForChildExit)
@@ -137,4 +150,41 @@ export async function runDesktopMode(
   }
 
   await dependencies.shutdown(firstExit.exitCode)
+}
+
+export type WebStackDependencies = Pick<
+  DesktopModeDependencies,
+  'runCommand' | 'spawnLongRunning' | 'waitForChildExit' | 'waitForPort' | 'shutdown'
+>
+
+/** Browser-first local stack: API, admin, and the web client, all on localhost. */
+export async function runWebStack(runtime: WebStackRuntime, dependencies: WebStackDependencies): Promise<void> {
+  const services: Array<{ name: RuntimeName; dir: string; script: string; port: number }> = [
+    { name: 'api', dir: runtime.apiDir, script: 'dev', port: API_PORT },
+    { name: 'admin', dir: runtime.adminDir, script: 'dev', port: ADMIN_PORT },
+    { name: 'web', dir: runtime.desktopDir, script: 'dev:web', port: WEB_PORT },
+  ]
+
+  const exits: Array<Promise<{ name: RuntimeName; exitCode: number }>> = []
+  for (const service of services) {
+    const child = dependencies.spawnLongRunning(PACKAGE_RUNNER, ['run', service.script], service.dir, runtime.env)
+    const exit = createExitTracker(service.name, child, dependencies.waitForChildExit)
+    exits.push(exit)
+    if (!(await waitUntilListening(service.name, service.port, exit, dependencies))) {
+      return
+    }
+  }
+
+  // Seed once everything listens so the summary (URLs, logins, key) prints last.
+  try {
+    await dependencies.runCommand(PACKAGE_RUNNER, ['run', 'seed:dev'], runtime.adminDir, runtime.env)
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error))
+    await dependencies.shutdown(1)
+    return
+  }
+
+  const firstExit = await Promise.race(exits)
+  console.error(`${firstExit.name} exited (code ${firstExit.exitCode}); stopping the local stack`)
+  await dependencies.shutdown(firstExit.exitCode || 1)
 }

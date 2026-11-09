@@ -1,6 +1,6 @@
 /**
  * Loads `apps/releases/.env` into `process.env` when present.
- * Existing variables (Railway, the shell) are not overwritten.
+ * Existing variables (from the shell) are not overwritten.
  */
 
 import { existsSync, readFileSync } from 'node:fs'

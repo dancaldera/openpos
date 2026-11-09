@@ -1,4 +1,13 @@
-const { createHash, randomInt } = require('node:crypto')
+// WebCrypto keeps key generation portable to Workers; node:crypto is only
+// loaded for the legacy seed hash used by older desktop installs.
+function randomInt(max) {
+  const limit = Math.floor(0x100000000 / max) * max
+  const buffer = new Uint32Array(1)
+  for (;;) {
+    globalThis.crypto.getRandomValues(buffer)
+    if (buffer[0] < limit) return buffer[0] % max
+  }
+}
 
 const KEY_PREFIX = 'OPK'
 const SEED_PREFIX = 'OPS'
@@ -63,7 +72,7 @@ function hashConnectionSeed(seed) {
     throw new Error('Invalid connection seed')
   }
 
-  return createHash('sha256').update(normalizeConnectionSecret(parsed)).digest('hex')
+  return require('node:crypto').createHash('sha256').update(normalizeConnectionSecret(parsed)).digest('hex')
 }
 
 function connectionFileStem(key) {

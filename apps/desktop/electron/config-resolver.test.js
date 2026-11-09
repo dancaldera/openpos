@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const {
   createPublicConnectionConfig,
-  desktopFirstRunNeedsApiSetup,
   getDesktopRuntimeConfigCandidates,
   normalizeDesktopApiUrl,
   resetDesktopRuntimeConfig,
@@ -347,43 +346,6 @@ describe('normalizeDesktopApiUrl', () => {
   })
 })
 
-describe('desktopFirstRunNeedsApiSetup', () => {
-  it('requires the API after a store is connected and the emergency kit is confirmed', () => {
-    expect(
-      desktopFirstRunNeedsApiSetup({
-        hasConnection: true,
-        emergencyKitConfirmed: true,
-        apiConfigured: false,
-      }),
-    ).toBe(true)
-  })
-
-  it('skips the API step before the store or kit is ready, or when the URL is already set', () => {
-    expect(
-      desktopFirstRunNeedsApiSetup({
-        hasConnection: false,
-        emergencyKitConfirmed: true,
-        apiConfigured: false,
-      }),
-    ).toBe(false)
-    expect(
-      desktopFirstRunNeedsApiSetup({
-        hasConnection: true,
-        emergencyKitConfirmed: false,
-        apiConfigured: false,
-      }),
-    ).toBe(false)
-    expect(
-      desktopFirstRunNeedsApiSetup({
-        hasConnection: true,
-        emergencyKitConfirmed: true,
-        apiConfigured: true,
-      }),
-    ).toBe(false)
-    expect(desktopFirstRunNeedsApiSetup()).toBe(false)
-  })
-})
-
 describe('writeDesktopRuntimeConfig', () => {
   const tempDirs = []
 
@@ -399,11 +361,11 @@ describe('writeDesktopRuntimeConfig', () => {
     const configPath = join(dir, 'config.json')
     writeFileSync(configPath, `${JSON.stringify({ thermalPrinterName: 'POS-80' }, null, 2)}\n`)
 
-    const written = writeDesktopRuntimeConfig(configPath, { apiUrl: 'https://api.openpos.xyz' })
+    const written = writeDesktopRuntimeConfig(configPath, { apiUrl: 'https://api.pos.softmelody.dev' })
 
     expect(written).toEqual({
       thermalPrinterName: 'POS-80',
-      apiUrl: 'https://api.openpos.xyz',
+      apiUrl: 'https://api.pos.softmelody.dev',
     })
     expect(JSON.parse(readFileSync(configPath, 'utf8'))).toEqual(written)
   })

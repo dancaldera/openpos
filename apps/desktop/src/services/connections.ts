@@ -1,33 +1,19 @@
-import { requestApi, requestApiJson } from '../lib/api-client'
+import { requestApi } from '../lib/api-client'
 import { type DesktopFirstRunStatus, requireDesktopApi } from '../lib/desktop'
 import { isDesktop } from '../lib/platform'
 
 export const CONNECTION_KEY_STORAGE = 'openpos_connection_key'
 
-export interface ConnectionCreateInput {
-  storeName: string
-  adminName: string
-  adminEmail: string
-  adminPassword: string
+export interface StoreSummary {
+  id: string
+  name: string
+  slug: string
 }
 
-export interface ConnectionJoinInput {
+export interface ConnectResult {
   key: string
-  seed: string
-}
-
-export interface ConnectionResult {
-  key: string
-  seed?: string
   storeName: string
-  published: boolean
   status?: DesktopFirstRunStatus
-}
-
-export interface AssignedConnection {
-  key: string
-  storeName: string
-  published: boolean
 }
 
 export function getStoredConnectionKey(): string {
@@ -53,135 +39,59 @@ export function clearLocalClientState(): void {
   localStorage.removeItem('desktop_remote_auth_status')
 }
 
-export async function fetchAssignedConnection(): Promise<AssignedConnection | null> {
-  const response = await requestApi('/api/connections/assigned')
-  if (response.status === 404) return null
+async function errorMessage(response: Response, fallback: string): Promise<string> {
+  const text = (await response.text().catch(() => '')).trim()
+  try {
+    const payload = JSON.parse(text) as { error?: unknown }
+    if (typeof payload.error === 'string' && payload.error) return payload.error
+  } catch {
+    // Keep the raw body.
+  }
+  return text || fallback
+}
+
+/**
+ * Store the API serves for this client: picked by the page host on the web
+ * (demo.pos.softmelody.dev) or by the stored connection key. Null when neither
+ * matches a store.
+ */
+export async function fetchCurrentStore(): Promise<StoreSummary | null> {
+  const response = await requestApi('/api/connections/current')
+  if (response.status === 401 || response.status === 404) return null
   if (!response.ok) {
-    const text = (await response.text()).trim()
-    let message = text
-    try {
-      const payload = JSON.parse(text) as { error?: unknown }
-      if (typeof payload.error === 'string' && payload.error) {
-        message = payload.error
-      }
-    } catch {
-      // Keep the raw body.
-    }
-    throw new Error(message || 'Unable to load the assigned store')
+    throw new Error(await errorMessage(response, 'Unable to load the store'))
   }
-  return (await response.json()) as AssignedConnection
+  return ((await response.json()) as { store: StoreSummary }).store
 }
 
-export async function bindWebAssignedConnection(): Promise<AssignedConnection | null> {
-  const assigned = await fetchAssignedConnection()
-  if (assigned) {
-    storeConnectionKey(assigned.key)
-    return assigned
+/** Web startup: find the store for this page, forgetting a key that no longer works. */
+export async function resolveWebStore(): Promise<StoreSummary | null> {
+  const store = await fetchCurrentStore()
+  if (!store && getStoredConnectionKey()) {
+    clearStoredConnectionKey()
+    return fetchCurrentStore()
   }
-  clearStoredConnectionKey()
-  return null
+  return store
 }
 
-export async function createStoreConnection(input: ConnectionCreateInput): Promise<ConnectionResult> {
+/** Connect this client to the store that owns `key` (created in the admin app). */
+export async function connectWithKey(input: { key: string; apiUrl?: string }): Promise<ConnectResult> {
+  const key = input.key.trim()
   if (isDesktop) {
-    const result = await requireDesktopApi().connection.create(input)
+    const result = await requireDesktopApi().connection.connect({ key, apiUrl: input.apiUrl?.trim() || '' })
     storeConnectionKey(result.key)
     return result
   }
 
-  const result = await requestApiJson<ConnectionResult>('/api/connections', {
-    method: 'POST',
-    body: input,
-  })
-  storeConnectionKey(result.key)
-  return result
-}
-
-export async function joinStoreConnection(input: ConnectionJoinInput): Promise<ConnectionResult> {
-  if (isDesktop) {
-    const result = await requireDesktopApi().connection.join(input)
-    storeConnectionKey(result.key)
-    return result
+  const previous = getStoredConnectionKey()
+  storeConnectionKey(key)
+  try {
+    const store = await fetchCurrentStore()
+    if (!store) throw new Error('connection_not_found')
+    return { key, storeName: store.name }
+  } catch (error) {
+    if (previous) storeConnectionKey(previous)
+    else clearStoredConnectionKey()
+    throw error
   }
-
-  const result = await requestApiJson<ConnectionResult>('/api/connections/join', {
-    method: 'POST',
-    body: input,
-  })
-  storeConnectionKey(result.key)
-  return result
-}
-
-export interface ConnectionImportInput {
-  url: string
-  authToken: string
-  storeName?: string
-  adminName?: string
-  adminEmail?: string
-  adminPassword?: string
-}
-
-export interface ConnectionOwnerInput {
-  storeName: string
-  adminName: string
-  adminEmail: string
-  adminPassword: string
-}
-
-export async function importStoreConnection(input: ConnectionImportInput): Promise<ConnectionResult> {
-  if (isDesktop) {
-    const result = await requireDesktopApi().connection.importRemote(input)
-    storeConnectionKey(result.key)
-    return result
-  }
-
-  const result = await requestApiJson<ConnectionResult>('/api/connections/import', {
-    method: 'POST',
-    body: input,
-  })
-  storeConnectionKey(result.key)
-  return result
-}
-
-export async function registerStoreConnection(input: {
-  storeName?: string
-  adminName?: string
-  adminEmail?: string
-  adminPassword?: string
-}): Promise<ConnectionResult> {
-  const payload: { key: string; storeName?: string; url?: string; authToken?: string } = isDesktop
-    ? await requireDesktopApi().connection.getRegisterPayload()
-    : { key: getStoredConnectionKey(), storeName: input.storeName || '' }
-
-  if (!payload.key) {
-    throw new Error('Store connection required')
-  }
-
-  return requestApiJson<ConnectionResult>('/api/connections/register', {
-    method: 'POST',
-    body: {
-      key: payload.key,
-      url: payload.url,
-      authToken: payload.authToken,
-      storeName: input.storeName || payload.storeName,
-      adminName: input.adminName,
-      adminEmail: input.adminEmail,
-      adminPassword: input.adminPassword,
-    },
-  })
-}
-
-export async function bootstrapStoreOwner(
-  input: ConnectionOwnerInput,
-): Promise<DesktopFirstRunStatus | ConnectionResult> {
-  if (isDesktop) {
-    return requireDesktopApi().connection.bootstrapOwner(input)
-  }
-
-  const key = getStoredConnectionKey()
-  const result = await requestApiJson<ConnectionResult>('/api/connections/owner', {
-    method: 'POST',
-    body: { key, ...input },
-  })
-  return result
 }

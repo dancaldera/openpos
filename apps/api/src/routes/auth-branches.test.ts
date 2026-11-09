@@ -1,50 +1,28 @@
+import type { StoreRecord } from '@openpos/control-plane'
 import { Hono } from 'hono'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AppEnv } from '../types.js'
 
-const {
-  bcryptCompare,
-  bcryptHash,
-  connectionErrorStatus,
-  execute,
-  query,
-  readAssignedConnection,
-  readCurrentConnectionMeta,
-  registerConnection,
-  resolveDataPlane,
-  signToken,
-} = vi.hoisted(() => ({
+const { bcryptCompare, bcryptHash, execute, query, signToken } = vi.hoisted(() => ({
   bcryptCompare: vi.fn(async (value: string, hash: string) => hash === `hashed:${value}`),
   bcryptHash: vi.fn(async (value: string) => `hashed:${value}`),
-  connectionErrorStatus: vi.fn(() => 503),
-  execute: vi.fn(async (_sql: string, _params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }> => ({
-    lastInsertId: 1,
-    rowsAffected: 1,
-  })),
+  execute: vi.fn(
+    async (_sql: string, _params?: unknown[]): Promise<{ lastInsertId: number; rowsAffected: number }> => ({
+      lastInsertId: 1,
+      rowsAffected: 1,
+    }),
+  ),
   query: vi.fn(async (_sql: string, _params?: unknown[]): Promise<Record<string, unknown>[]> => []),
-  readAssignedConnection: vi.fn(async (): Promise<{ key: string } | null> => ({ key: 'OPK_assigned' })),
-  readCurrentConnectionMeta: vi.fn(async (): Promise<{ key: string } | null> => ({ key: 'OPK_meta' })),
-  registerConnection: vi.fn(async () => ({ dataPlane: { fake: 'plane2' } })),
-  resolveDataPlane: vi.fn(async (): Promise<Record<string, unknown> | null> => ({ fake: 'plane' })),
-  signToken: vi.fn(() => 'test-token'),
+  signToken: vi.fn(async (_payload: Record<string, unknown>) => 'test-token'),
 }))
 
 vi.mock('bcryptjs', () => ({
   default: { compare: bcryptCompare, hash: bcryptHash },
 }))
 
-vi.mock('../lib/connection.js', () => ({
-  connectionErrorStatus,
-  readAssignedConnection,
-  readCurrentConnectionMeta,
-  registerConnection,
-  resolveDataPlane,
-}))
-
 vi.mock('../lib/turso.js', () => ({
-  createDataPlaneClient: (plane: unknown) => ({ plane }),
   execute,
   query,
-  runWithDataPlane: (_client: unknown, fn: () => unknown) => fn(),
 }))
 
 vi.mock('../middleware/auth.js', () => ({
@@ -57,8 +35,26 @@ vi.mock('../middleware/auth.js', () => ({
 
 const { authRouter } = await import('./auth.js')
 
+const store: StoreRecord = {
+  id: 'store-1',
+  slug: 'shop',
+  name: 'Shop',
+  connectionKey: 'OPK_AAAA_AAAA_AAAA_AAAA',
+  databaseName: 'openpos-shop',
+  databaseUrl: 'libsql://shop',
+  status: 'active',
+  domains: [],
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+}
+
+// The data-plane middleware sets the request store before auth routes run.
 function createApp() {
-  const app = new Hono()
+  const app = new Hono<AppEnv>()
+  app.use('/*', async (c, next) => {
+    c.set('store', store)
+    await next()
+  })
   app.route('/api/auth', authRouter)
   return app
 }
@@ -85,29 +81,13 @@ const jsonHeaders = { 'Content-Type': 'application/json' }
 
 describe('authRouter branches', () => {
   beforeEach(() => {
-    for (const fn of [
-      bcryptCompare,
-      bcryptHash,
-      connectionErrorStatus,
-      execute,
-      query,
-      readAssignedConnection,
-      readCurrentConnectionMeta,
-      registerConnection,
-      resolveDataPlane,
-      signToken,
-    ]) {
+    for (const fn of [bcryptCompare, bcryptHash, execute, query, signToken]) {
       fn.mockReset()
     }
     bcryptCompare.mockImplementation(async (value: string, hash: string) => hash === `hashed:${value}`)
     bcryptHash.mockImplementation(async (value: string) => `hashed:${value}`)
-    connectionErrorStatus.mockReturnValue(503)
     query.mockResolvedValue([])
-    readAssignedConnection.mockResolvedValue({ key: 'OPK_assigned' })
-    readCurrentConnectionMeta.mockResolvedValue({ key: 'OPK_meta' })
-    registerConnection.mockResolvedValue({ dataPlane: { fake: 'plane2' } })
-    resolveDataPlane.mockResolvedValue({ fake: 'plane' })
-    signToken.mockReturnValue('test-token')
+    signToken.mockResolvedValue('test-token')
   })
 
   it('rejects invalid JSON on login', async () => {
@@ -137,55 +117,6 @@ describe('authRouter branches', () => {
     expect(missing.status).toBe(400)
   })
 
-  it('requires a store connection', async () => {
-    readAssignedConnection.mockResolvedValueOnce(null)
-    const res = await createApp().request('/api/auth/login', {
-      method: 'POST',
-      headers: jsonHeaders,
-      body: JSON.stringify({ email: 'ada@example.com', password: 'x' }),
-    })
-    expect(res.status).toBe(401)
-    expect(await res.json()).toEqual({ error: 'Store connection required' })
-  })
-
-  it('registers unknown stores with an admin-name fallback', async () => {
-    resolveDataPlane.mockResolvedValueOnce(null)
-    query.mockResolvedValueOnce([dbUser()])
-    const res = await createApp().request('/api/auth/login', {
-      method: 'POST',
-      headers: jsonHeaders,
-      body: JSON.stringify({ email: '@example.com', password: 'Admin123!' }),
-    })
-
-    expect(res.status).toBe(200)
-    expect(registerConnection).toHaveBeenCalledWith(
-      expect.objectContaining({ key: 'OPK_assigned', adminName: 'Admin' }),
-    )
-  })
-
-  it('maps store registration failures', async () => {
-    const app = createApp()
-    resolveDataPlane.mockResolvedValue(null)
-
-    registerConnection.mockRejectedValueOnce(new Error('nope'))
-    const failed = await app.request('/api/auth/login', {
-      method: 'POST',
-      headers: jsonHeaders,
-      body: JSON.stringify({ email: 'ada@example.com', password: 'x' }),
-    })
-    expect(failed.status).toBe(503)
-    expect(await failed.json()).toEqual({ error: 'nope' })
-
-    registerConnection.mockRejectedValueOnce('boom')
-    const nonError = await app.request('/api/auth/login', {
-      method: 'POST',
-      headers: jsonHeaders,
-      body: JSON.stringify({ email: 'ada@example.com', password: 'x' }),
-    })
-    expect(nonError.status).toBe(503)
-    expect(await nonError.json()).toEqual({ error: 'Unable to register store' })
-  })
-
   it('rejects non-numeric PIN user ids', async () => {
     const res = await createApp().request('/api/auth/login', {
       method: 'POST',
@@ -195,7 +126,7 @@ describe('authRouter branches', () => {
     expect(res.status).toBe(401)
   })
 
-  it('signs in with a PIN and binds the connection key', async () => {
+  it('signs in with a PIN and binds the token to the request store', async () => {
     query.mockResolvedValueOnce([dbUser({ pin_enabled: 1, pin_hash: 'hashed:123456' })])
     const res = await createApp().request('/api/auth/login', {
       method: 'POST',
@@ -204,23 +135,51 @@ describe('authRouter branches', () => {
     })
 
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { token: string; user: { pinEnabled: boolean } }
+    const body = (await res.json()) as { token: string; user: { pinEnabled: boolean }; store: unknown }
     expect(body.token).toBe('test-token')
     expect(body.user.pinEnabled).toBe(true)
-    expect(signToken).toHaveBeenCalledWith(expect.objectContaining({ connectionKey: 'OPK_meta' }))
+    expect(body.store).toEqual({ id: 'store-1', name: 'Shop', slug: 'shop' })
+    expect(signToken).toHaveBeenCalledWith(expect.objectContaining({ sub: '1', storeId: 'store-1' }))
+    expect(signToken).toHaveBeenCalledWith(expect.not.objectContaining({ connectionKey: expect.anything() }))
+    expect(query.mock.calls.some(([sql]) => String(sql).includes('UPDATE users SET last_login'))).toBe(true)
   })
 
-  it('omits the connection key when no connection is assigned', async () => {
-    readCurrentConnectionMeta.mockResolvedValueOnce(null)
+  it('rejects unknown, disabled, and wrong PINs', async () => {
+    const app = createApp()
+    const pinLogin = () =>
+      app.request('/api/auth/login', {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({ userId: 1, pin: '123456' }),
+      })
+
+    query.mockResolvedValueOnce([])
+    expect((await pinLogin()).status).toBe(401)
+
+    query.mockResolvedValueOnce([dbUser({ pin_enabled: 0, pin_hash: 'hashed:123456' })])
+    expect((await pinLogin()).status).toBe(401)
+
+    query.mockResolvedValueOnce([dbUser({ pin_enabled: 1, pin_hash: 'hashed:654321' })])
+    const wrong = await pinLogin()
+    expect(wrong.status).toBe(401)
+    expect(await wrong.json()).toEqual({ error: 'Invalid PIN' })
+    expect(signToken).not.toHaveBeenCalled()
+  })
+
+  it('signs in with email and password and returns the store', async () => {
     query.mockResolvedValueOnce([dbUser()])
     const res = await createApp().request('/api/auth/login', {
       method: 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({ email: 'ada@example.com', password: 'Admin123!' }),
+      body: JSON.stringify({ email: ' Ada@Example.com ', password: 'Admin123!' }),
     })
 
     expect(res.status).toBe(200)
-    expect(signToken).toHaveBeenCalledWith(expect.not.objectContaining({ connectionKey: expect.anything() }))
+    expect(query.mock.calls[0]?.[1]).toEqual(['ada@example.com'])
+    const body = (await res.json()) as { token: string; store: unknown; user: { permissions: string[] } }
+    expect(body).toMatchObject({ token: 'test-token', store: { id: 'store-1', name: 'Shop', slug: 'shop' } })
+    expect(body.user.permissions).toEqual(['*'])
+    expect(signToken).toHaveBeenCalledWith(expect.objectContaining({ storeId: 'store-1', permissions: ['*'] }))
   })
 
   it('rejects unknown emails and wrong passwords', async () => {

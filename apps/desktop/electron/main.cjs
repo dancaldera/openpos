@@ -7,7 +7,6 @@ const crypto = require('node:crypto')
 const { spawn } = require('node:child_process')
 const {
   createPublicConnectionConfig,
-  desktopFirstRunNeedsApiSetup,
   normalizeDesktopApiUrl,
   resetDesktopRuntimeConfig,
   resolveDesktopConnectionConfig,
@@ -18,27 +17,18 @@ const { formatPrinterCommandError, resolvePrinterConfig } = require('./printer-c
 const { isLegacyLocalImageKey } = require('./product-image-keys.cjs')
 const { createSyncManager, ensureLocalSyncSchema, resetLocalDatabase } = require('@openpos/sync')
 const {
-  adoptLegacyLocalDatabase,
   clearActiveConnection,
   getConnectionDbPath,
   publicEnvelope,
   readActiveConnection,
   readEnvelope,
-  registerPayloadFromEnvelope,
   resetLocalDevice,
-  revealSeed,
   unwrapSecret,
   wrapSecret,
   writeActiveConnection,
   writeEnvelope,
 } = require('./connection-store.cjs')
-const {
-  attachRemoteStore,
-  bootstrapLocalOwner,
-  createLocalStore,
-  joinLocalStore,
-  seedBoundLocalStore,
-} = require('./connection-local.cjs')
+const { connectWithKey } = require('./connection-connect.cjs')
 const {
   assertUpdateFilePath,
   buildDebInstallCommands,
@@ -110,7 +100,6 @@ let db = null
 let syncManager = null
 let initialSyncPromise = null
 let initialSyncError = null
-let ownerBootstrapNeeded = false
 let cachedRemoteClient = null
 let cachedRemoteConfigKey = null
 let cachedRemoteConnectModule = null
@@ -234,6 +223,8 @@ function setAppIcon() {
 // (API URL, database, printer settings). Only the operator holding this
 // key can trigger it — change it here if it ever needs to rotate.
 const SETTINGS_RESET_KEY = 'OpenPOS-Local-Reset-2026'
+const DEFAULT_API_URL = 'https://api.pos.softmelody.dev'
+const NO_USERS_ERROR = 'This store has no users yet. Ask your administrator to add an owner.'
 
 function getUserDataConfigPath() {
   return path.join(app.getPath('userData'), 'config.json')
@@ -829,7 +820,7 @@ function resolveConnectionConfig() {
     configPath: runtimeConfig.configPath,
     processEnv: process.env,
     envConfig: getDotEnvConfig(),
-    defaultApiUrl: isDev() ? 'http://localhost:3001' : undefined,
+    defaultApiUrl: isDev() ? 'http://localhost:3001' : DEFAULT_API_URL,
     requireApiSetup: process.env.OPENPOS_REQUIRE_API_SETUP === '1',
     connectionRemote: envelope
       ? {
@@ -934,181 +925,71 @@ function startSyncIfPossible() {
   }
 }
 
-function bindConnection(result, options = {}) {
+function bindConnection(result) {
   const userDataPath = app.getPath('userData')
   closeDatabase()
+  initialSyncPromise = null
+  initialSyncError = null
   writeEnvelope(userDataPath, {
     key: result.key,
     storeName: result.storeName,
     url: result.dataPlane.url,
     authToken: result.dataPlane.authToken,
-    seed: result.seed,
-    published: result.published,
   })
-  writeActiveConnection(userDataPath, {
-    key: result.key,
-    emergencyKitConfirmed: Boolean(options.emergencyKitConfirmed),
-  })
-  if (options.adoptLegacy) {
-    adoptLegacyLocalDatabase(userDataPath, result.key)
-  }
+  writeActiveConnection(userDataPath, { key: result.key })
   ensureDatabase()
-  if (!options.adoptLegacy) {
-    resetLocalDatabase(db)
-  }
+  // Start from a clean replica so the first sync pulls the whole store.
+  resetLocalDatabase(db)
   startSyncIfPossible()
 }
 
 function getFirstRunStatus(database = db) {
-  const { active, envelope } = getActiveEnvelope()
-  const remoteConfig = getDbConnectionConfig()
+  const { envelope } = getActiveEnvelope()
   const apiConfig = getApiConnectionConfig()
-  const syncSnapshot = syncManager && database ? syncManager.getStatusSnapshot(database) : null
-  const activeUserCount = database ? getActiveUserCount(database) : 0
-  const apiFields = {
+  const base = {
     apiUrl: apiConfig.url || '',
     apiConfigured: Boolean(apiConfig.configured),
+    remoteConfigured: Boolean(envelope),
+    connectionKey: envelope?.key ?? null,
+    storeName: envelope?.storeName ?? null,
   }
 
   const finish = (status) => {
-    const nextStatus = { ...apiFields, ...status }
+    const nextStatus = { ...base, ...status }
     logStartup('first-run status resolved', nextStatus)
     return nextStatus
   }
 
   if (!envelope) {
-    return finish({
-      status: 'needsConnection',
-      remoteConfigured: Boolean(remoteConfig.configured),
-      activeUserCount: 0,
-      lastError: null,
-      lastCheckedAt: syncSnapshot?.lastCheckedAt ?? null,
-      lastSyncedAt: syncSnapshot?.lastSyncedAt ?? null,
-    })
+    return finish({ status: 'needsConnection', activeUserCount: 0, lastError: null })
   }
 
   const readyDatabase = database || ensureDatabase()
-  const users = getActiveUserCount(readyDatabase)
-  const readySnapshot = syncManager ? syncManager.getStatusSnapshot(readyDatabase) : syncSnapshot
-
-  if (!active?.emergencyKitConfirmed) {
-    return finish({
-      status: 'needsEmergencyKit',
-      remoteConfigured: true,
-      activeUserCount: users,
-      connectionKey: envelope.key,
-      storeName: envelope.storeName,
-      lastError: null,
-      lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
-      lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
-    })
+  const activeUserCount = getActiveUserCount(readyDatabase)
+  const snapshot = syncManager ? syncManager.getStatusSnapshot(readyDatabase) : null
+  const timestamps = {
+    lastCheckedAt: snapshot?.lastCheckedAt ?? null,
+    lastSyncedAt: snapshot?.lastSyncedAt ?? null,
   }
 
-  if (
-    desktopFirstRunNeedsApiSetup({
-      hasConnection: true,
-      emergencyKitConfirmed: true,
-      apiConfigured: Boolean(apiConfig.configured),
-    })
-  ) {
-    return finish({
-      status: 'needsApi',
-      remoteConfigured: true,
-      activeUserCount: users,
-      connectionKey: envelope.key,
-      storeName: envelope.storeName,
-      lastError: null,
-      lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
-      lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
-    })
-  }
-
-  if (users > 0) {
+  if (activeUserCount > 0) {
     initialSyncError = null
-    ownerBootstrapNeeded = false
-    return finish({
-      status: 'readyForSignIn',
-      remoteConfigured: true,
-      activeUserCount: users,
-      connectionKey: envelope.key,
-      storeName: envelope.storeName,
-      lastError: null,
-      lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
-      lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
-    })
+    return finish({ status: 'readyForSignIn', activeUserCount, lastError: null, ...timestamps })
   }
 
-  if (initialSyncPromise || readySnapshot?.status === 'syncing') {
-    return finish({
-      status: 'syncingInitialData',
-      remoteConfigured: true,
-      activeUserCount: users,
-      connectionKey: envelope.key,
-      storeName: envelope.storeName,
-      lastError: null,
-      lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
-      lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
-    })
+  if (!initialSyncPromise && snapshot?.status !== 'syncing' && initialSyncError) {
+    return finish({ status: 'initialSyncFailed', activeUserCount, lastError: initialSyncError, ...timestamps })
   }
 
-  if (ownerBootstrapNeeded) {
-    return finish({
-      status: 'needsOwner',
-      remoteConfigured: true,
-      activeUserCount: users,
-      connectionKey: envelope.key,
-      storeName: envelope.storeName,
-      lastError: null,
-      lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
-      lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
-    })
-  }
-
-  if (initialSyncError) {
-    return finish({
-      status: 'initialSyncFailed',
-      remoteConfigured: true,
-      activeUserCount: users,
-      connectionKey: envelope.key,
-      storeName: envelope.storeName,
-      lastError: initialSyncError,
-      lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
-      lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
-    })
-  }
-
-  return finish({
-    status: 'syncingInitialData',
-    remoteConfigured: true,
-    activeUserCount: users,
-    connectionKey: envelope.key,
-    storeName: envelope.storeName,
-    lastError: null,
-    lastCheckedAt: readySnapshot?.lastCheckedAt ?? null,
-    lastSyncedAt: readySnapshot?.lastSyncedAt ?? null,
-  })
+  return finish({ status: 'syncingInitialData', activeUserCount, lastError: null, ...timestamps })
 }
 
+/** Pull the store into the local replica until it has users to sign in with. */
 async function initializeFirstRun() {
   const status = getFirstRunStatus()
-  logStartup('initialize first run requested', {
-    status: status.status,
-    activeUserCount: status.activeUserCount,
-    remoteConfigured: status.remoteConfigured,
-  })
+  logStartup('initialize first run requested', { status: status.status, activeUserCount: status.activeUserCount })
 
-  // An imported remote store may already have its owner in Turso. Run the
-  // initial sync before deciding an owner is needed, so locally-empty
-  // databases get populated from the remote instead of blocking onboarding.
-  const remoteConfiguredForOwnerSync = Boolean(getDbConnectionConfig().configured)
-
-  if (
-    status.status === 'readyForSignIn' ||
-    status.status === 'needsEmergencyKit' ||
-    status.status === 'needsConnection' ||
-    (status.status === 'needsOwner' && !remoteConfiguredForOwnerSync) ||
-    status.status === 'needsApi'
-  ) {
+  if (status.status === 'readyForSignIn' || status.status === 'needsConnection') {
     return status
   }
 
@@ -1118,42 +999,32 @@ async function initializeFirstRun() {
   }
 
   initialSyncError = null
-
   initialSyncPromise = (async () => {
-    let resolvedStatus = null
-
     try {
-      logStartup('starting initial sync', {
-        dbPath: getDbPath(),
-        remoteConfigured: getDbConnectionConfig().configured,
-        activeUserCountBefore: getActiveUserCount(),
-      })
-      const syncSnapshot = await syncManager.triggerSync({ foreground: true, force: true })
-      logStartup('initial sync finished', syncSnapshot)
-
-      if (getActiveUserCount() > 0) {
-        initialSyncError = null
-        ownerBootstrapNeeded = false
-        logStartup('initial sync populated local users', { activeUserCount: getActiveUserCount() })
-        resolvedStatus = getFirstRunStatus()
-      } else {
-        initialSyncError = null
-        ownerBootstrapNeeded = true
-        logStartup('initial sync completed without local users', {
-          activeUserCount: getActiveUserCount(),
-        })
+      logStartup('starting initial sync', { dbPath: getDbPath() })
+      // The remote pull can land a cycle after the first one, so retry briefly
+      // before deciding the store is empty.
+      let snapshot = null
+      for (let attempt = 0; attempt < 5 && getActiveUserCount() === 0; attempt += 1) {
+        if (attempt > 0) await delay(1500)
+        snapshot = await syncManager.triggerSync({ foreground: true, force: true })
+        logStartup('initial sync pass finished', { attempt, status: snapshot?.status, lastError: snapshot?.lastError })
+        if (snapshot?.status === 'error' || snapshot?.status === 'offline') break
+      }
+      if (getActiveUserCount() === 0) {
+        initialSyncError =
+          snapshot?.status === 'error' || snapshot?.status === 'offline'
+            ? snapshot.lastError || 'Could not reach the store database. Check the connection and retry.'
+            : NO_USERS_ERROR
       }
     } catch (error) {
       initialSyncError = error instanceof Error ? error.message : String(error)
-      logStartup('initial sync threw error', {
-        error: initialSyncError,
-      })
+      logStartup('initial sync threw error', { error: initialSyncError })
     } finally {
-      logStartup('initial sync promise cleared')
       initialSyncPromise = null
     }
 
-    return resolvedStatus ?? getFirstRunStatus()
+    return getFirstRunStatus()
   })()
 
   return initialSyncPromise
@@ -1166,13 +1037,14 @@ function ensureLegacyCompatibility(database) {
 async function getRemoteDbClient() {
   const config = getDbConnectionConfig()
 
-  if (!config.configured || !config.url || !config.authToken) {
+  const isLocalFile = Boolean(config.url?.startsWith('file:'))
+  if (!config.configured || !config.url || (!config.authToken && !isLocalFile)) {
     cachedRemoteClient = null
     cachedRemoteConfigKey = null
     return null
   }
 
-  const configKey = `${config.url}:${config.authToken}`
+  const configKey = `${config.url}:${config.authToken || ''}`
 
   if (cachedRemoteClient && cachedRemoteConfigKey === configKey) {
     return cachedRemoteClient
@@ -1184,7 +1056,7 @@ async function getRemoteDbClient() {
 
   cachedRemoteClient = cachedRemoteConnectModule({
     url: config.url,
-    authToken: config.authToken,
+    ...(config.authToken ? { authToken: config.authToken } : {}),
   })
   cachedRemoteConfigKey = configKey
   return cachedRemoteClient
@@ -1914,7 +1786,6 @@ function registerIpcHandlers() {
     }
   })
 
-  ipcMain.handle('desktop:greet', (_event, name) => `Hello, ${name}!!`)
   ipcMain.handle('desktop:hash-password', (_event, password) => bcrypt.hash(password, 12))
   ipcMain.handle('desktop:verify-password', (_event, password, hash) => bcrypt.compare(password, hash))
   ipcMain.handle('desktop:encrypt-secret', (_event, value) => {
@@ -1948,131 +1819,14 @@ function registerIpcHandlers() {
   ipcMain.handle('desktop:startup-status', () => getFirstRunStatus())
   ipcMain.handle('desktop:startup-initialize', () => initializeFirstRun())
   ipcMain.handle('desktop:startup-retry', () => initializeFirstRun())
-  ipcMain.handle('desktop:connection-get', () => {
-    const { active, envelope } = getActiveEnvelope()
-    return publicEnvelope(envelope, active)
-  })
-  ipcMain.handle('desktop:connection-register-payload', () => {
-    const { envelope } = getActiveEnvelope()
-    const payload = registerPayloadFromEnvelope(envelope)
-    if (!payload) {
-      throw new Error('Store connection required')
-    }
-    return payload
-  })
-  ipcMain.handle('desktop:connection-create', async (_event, payload) => {
-    const result = await createLocalStore({
-      userDataPath: app.getPath('userData'),
-      owner: payload,
-    })
-    bindConnection(result, { emergencyKitConfirmed: false })
-    await seedBoundLocalStore(ensureDatabase(), result)
+  ipcMain.handle('desktop:connection-get', () => publicEnvelope(getActiveEnvelope().envelope))
+  ipcMain.handle('desktop:connection-connect', async (_event, payload) => {
+    const apiUrl = normalizeDesktopApiUrl(payload?.apiUrl || getApiConnectionConfig().url)
+    const result = await connectWithKey({ apiUrl, key: payload?.key })
+    writeDesktopRuntimeConfig(getUserDataConfigPath(), { apiUrl })
+    bindConnection(result)
     const status = await initializeFirstRun()
-    return {
-      key: result.key,
-      seed: result.seed,
-      storeName: result.storeName,
-      published: result.published,
-      status,
-    }
-  })
-  ipcMain.handle('desktop:connection-join', async (_event, payload) => {
-    const result = await joinLocalStore({
-      userDataPath: app.getPath('userData'),
-      key: payload.key,
-      seed: payload.seed,
-    })
-    bindConnection(result, { emergencyKitConfirmed: true, adoptLegacy: true })
-    const status = await initializeFirstRun()
-    return {
-      key: result.key,
-      storeName: result.storeName,
-      published: result.published,
-      status,
-    }
-  })
-  ipcMain.handle('desktop:connection-import', async (_event, payload) => {
-    const result = await attachRemoteStore(payload)
-    bindConnection(result, { emergencyKitConfirmed: !result.seed })
-
-    // The initial sync can settle slightly after the bind: the remote pull is
-    // skipped while the sentinel is unchanged, then a later cycle pulls the
-    // replicated rows (including users). Recompute before surfacing needsOwner
-    // so an imported database with an existing owner lands on sign-in.
-    let status = await initializeFirstRun()
-    for (let attempt = 0; status.status === 'needsOwner' && attempt < 10; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-      status = await initializeFirstRun()
-    }
-
-    return {
-      key: result.key,
-      seed: result.seed,
-      storeName: result.storeName,
-      published: result.published,
-      status,
-    }
-  })
-  ipcMain.handle('desktop:connection-apply-remote', async (_event, payload) => {
-    const { envelope, active } = getActiveEnvelope()
-    if (!envelope) {
-      throw new Error('Store connection required')
-    }
-    writeEnvelope(app.getPath('userData'), {
-      key: payload.key || envelope.key,
-      storeName: payload.storeName || envelope.storeName,
-      url: payload.dataPlane.url,
-      authToken: payload.dataPlane.authToken,
-      published: payload.published,
-    })
-    if (payload.key && payload.key !== envelope.key) {
-      writeActiveConnection(app.getPath('userData'), {
-        key: payload.key,
-        emergencyKitConfirmed: Boolean(active?.emergencyKitConfirmed),
-      })
-    }
-    closeDatabase()
-    ensureDatabase()
-    startSyncIfPossible()
-    return publicEnvelope(readEnvelope(app.getPath('userData'), payload.key || envelope.key), readActiveConnection(app.getPath('userData')))
-  })
-  ipcMain.handle('desktop:connection-bootstrap-owner', async (_event, payload) => {
-    const { envelope } = getActiveEnvelope()
-    if (!envelope) {
-      throw new Error('Store connection required')
-    }
-
-    await bootstrapLocalOwner(ensureDatabase(), {
-      storeName: payload?.storeName,
-      adminName: payload?.adminName,
-      adminEmail: payload?.adminEmail,
-      adminPassword: payload?.adminPassword,
-    })
-    ownerBootstrapNeeded = false
-    initialSyncError = null
-    return initializeFirstRun()
-  })
-  ipcMain.handle('desktop:connection-confirm-kit', () => {
-    const { active } = getActiveEnvelope()
-    if (!active?.key) {
-      throw new Error('Store connection required')
-    }
-    writeActiveConnection(app.getPath('userData'), {
-      key: active.key,
-      emergencyKitConfirmed: true,
-    })
-    return getFirstRunStatus()
-  })
-  ipcMain.handle('desktop:connection-emergency-kit', () => {
-    const { active, envelope } = getActiveEnvelope()
-    if (!active?.key || !envelope) {
-      throw new Error('Store connection required')
-    }
-    return {
-      key: envelope.key,
-      seed: revealSeed(app.getPath('userData'), envelope.key),
-      storeName: envelope.storeName,
-    }
+    return { key: result.key, storeName: result.storeName, status }
   })
   ipcMain.handle('desktop:connection-leave', async () => {
     const snapshot = syncManager && db ? syncManager.getStatusSnapshot(db) : null
@@ -2087,7 +1841,6 @@ function registerIpcHandlers() {
     closeDatabase()
     initialSyncPromise = null
     initialSyncError = null
-    ownerBootstrapNeeded = false
     resetLocalDevice(app.getPath('userData'), [getProductImagesDir()])
     return getFirstRunStatus()
   })
@@ -2120,7 +1873,6 @@ function registerIpcHandlers() {
     closeDatabase()
     initialSyncPromise = null
     initialSyncError = null
-    ownerBootstrapNeeded = false
     resetLocalDevice(app.getPath('userData'), [getProductImagesDir()])
     resetDesktopRuntimeConfig(getUserDataConfigPath())
     return getFirstRunStatus()

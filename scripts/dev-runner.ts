@@ -3,16 +3,12 @@ import { existsSync } from 'node:fs'
 import { Socket } from 'node:net'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-  PACKAGE_RUNNER,
-  PORT_WAIT_TIMEOUT_MS,
-  runDesktopMode as runDesktopModeWithApi,
-  VITE_PORT,
-} from './dev-runner-lib'
+import { PACKAGE_RUNNER, runDesktopMode as runDesktopModeWithApi, runWebStack } from './dev-runner-lib'
+import { buildStackEnv } from './dev-stack'
 
-type DevMode = 'dev' | 'dev:desktop' | 'dev:desktop:web' | 'dev:api' | 'dev:landing'
+type DevMode = 'dev' | 'dev:desktop' | 'dev:api' | 'dev:admin' | 'dev:landing'
 
-const DEV_MODES: DevMode[] = ['dev', 'dev:desktop', 'dev:desktop:web', 'dev:api', 'dev:landing']
+const DEV_MODES: DevMode[] = ['dev', 'dev:desktop', 'dev:api', 'dev:admin', 'dev:landing']
 const SHUTDOWN_TIMEOUT_MS = 5_000
 const LOOPBACK_HOSTS = ['127.0.0.1', '::1', 'localhost']
 
@@ -20,6 +16,7 @@ const scriptDir = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(scriptDir, '..')
 const desktopDir = join(rootDir, 'apps/desktop')
 const apiDir = join(rootDir, 'apps/api')
+const adminDir = join(rootDir, 'apps/admin')
 const landingDir = join(rootDir, 'apps/landing')
 
 const children = new Set<ChildProcess>()
@@ -209,27 +206,45 @@ export function installSignalHandlers(): void {
   }
 }
 
-export async function runSingleProcessMode(command: string, args: string[], cwd: string): Promise<void> {
-  const child = spawnLongRunning(command, args, cwd)
+export async function runSingleProcessMode(
+  command: string,
+  args: string[],
+  cwd: string,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<void> {
+  const child = spawnLongRunning(command, args, cwd, env)
   const exitCode = await waitForChildExit(child)
   await shutdown(exitCode)
 }
 
 export type { DevMode }
 
+export function localStackEnv(baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return buildStackEnv(rootDir, baseEnv)
+}
+
 export interface DevRunners {
   runDesktop: typeof runDesktopModeWithApi
+  runWeb: typeof runWebStack
   runSingle: typeof runSingleProcessMode
+  run: typeof runCommand
   installHandlers: typeof installSignalHandlers
+  stackEnv: (baseEnv: NodeJS.ProcessEnv) => NodeJS.ProcessEnv
 }
 
 const defaultRunners: DevRunners = {
   runDesktop: runDesktopModeWithApi,
+  runWeb: runWebStack,
   runSingle: runSingleProcessMode,
+  run: runCommand,
   installHandlers: installSignalHandlers,
+  stackEnv: localStackEnv,
 }
 
-export async function main(argv: string[] = process.argv.slice(2), runners: DevRunners = defaultRunners): Promise<void> {
+export async function main(
+  argv: string[] = process.argv.slice(2),
+  runners: DevRunners = defaultRunners,
+): Promise<void> {
   const mode = argv[0]
   if (!isDevMode(mode)) {
     console.error(`Usage: pnpm run dev:<${DEV_MODES.join('|')}>`)
@@ -241,13 +256,19 @@ export async function main(argv: string[] = process.argv.slice(2), runners: DevR
 
   switch (mode) {
     case 'dev':
+      await runners.runWeb(
+        { desktopDir, apiDir, adminDir, env: runners.stackEnv(process.env) },
+        { runCommand, spawnLongRunning, waitForChildExit, waitForPort, shutdown },
+      )
+      return
     case 'dev:desktop':
       await runners.runDesktop(
         {
           rootDir,
           desktopDir,
           apiDir,
-          env: process.env,
+          adminDir,
+          env: runners.stackEnv(process.env),
         },
         {
           runCommand,
@@ -260,12 +281,13 @@ export async function main(argv: string[] = process.argv.slice(2), runners: DevR
         },
       )
       return
-    case 'dev:desktop:web':
-      await runners.runSingle(PACKAGE_RUNNER, ['run', 'dev:web'], desktopDir)
-      return
     case 'dev:api':
-      await runners.runSingle(PACKAGE_RUNNER, ['run', 'dev'], apiDir)
+    case 'dev:admin': {
+      const env = runners.stackEnv(process.env)
+      await runners.run(PACKAGE_RUNNER, ['run', 'seed:dev'], adminDir, env)
+      await runners.runSingle(PACKAGE_RUNNER, ['run', 'dev'], mode === 'dev:api' ? apiDir : adminDir, env)
       return
+    }
     case 'dev:landing':
       await runners.runSingle(PACKAGE_RUNNER, ['run', 'dev'], landingDir)
       return

@@ -158,11 +158,11 @@ describe('bucket keys and urls', () => {
   })
 
   it('joins the cdn base url with keys without double slashes', () => {
-    expect(assetUrl('https://releases.openpos.xyz/', 'releases', '1.2.3', 'openpos-arm64.zip')).toBe(
-      'https://releases.openpos.xyz/v/1.2.3/openpos-arm64.zip',
+    expect(assetUrl('https://releases.pos.softmelody.dev/', 'releases', '1.2.3', 'openpos-arm64.zip')).toBe(
+      'https://releases.pos.softmelody.dev/v/1.2.3/openpos-arm64.zip',
     )
-    expect(manifestUrl('https://releases.openpos.xyz', 'releases')).toBe(
-      'https://releases.openpos.xyz/releases/latest.json',
+    expect(manifestUrl('https://releases.pos.softmelody.dev', 'releases')).toBe(
+      'https://releases.pos.softmelody.dev/releases/latest.json',
     )
   })
 })
@@ -173,7 +173,7 @@ describe('buildManifest', () => {
       version: '1.2.3',
       notes: 'Fixes printing',
       publishedAt: new Date('2025-08-22T12:00:00Z'),
-      cdnBaseUrl: 'https://releases.openpos.xyz',
+      cdnBaseUrl: 'https://releases.pos.softmelody.dev',
       prefix: 'releases',
       artifacts: [
         { name: 'openpos-x86_64.AppImage', sha256: 'abc123', size: 1024 },
@@ -189,13 +189,13 @@ describe('buildManifest', () => {
       assets: [
         {
           name: 'openpos-x86_64.AppImage',
-          url: 'https://releases.openpos.xyz/v/1.2.3/openpos-x86_64.AppImage',
+          url: 'https://releases.pos.softmelody.dev/v/1.2.3/openpos-x86_64.AppImage',
           sha256: 'abc123',
           size: 1024,
         },
         {
           name: 'openpos_amd64.deb',
-          url: 'https://releases.openpos.xyz/v/1.2.3/openpos_amd64.deb',
+          url: 'https://releases.pos.softmelody.dev/v/1.2.3/openpos_amd64.deb',
           sha256: 'def456',
           size: 2048,
         },

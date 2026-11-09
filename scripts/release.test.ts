@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   applyEnvFile,
   buildCommands,
+  type CliOptions,
   checkVersions,
   collectHashedArtifacts,
   contentTypeFor,
@@ -21,7 +22,6 @@ import {
   runValidationSteps,
   uploadFile,
   writeManifestFile,
-  type CliOptions,
 } from './release.js'
 
 const repoRoot = resolve(import.meta.dirname, '..')
@@ -32,7 +32,7 @@ beforeEach(() => {
   vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
-  vi.spyOn(process, 'exit').mockImplementation(((() => {}) as unknown) as never)
+  vi.spyOn(process, 'exit').mockImplementation((() => {}) as unknown as never)
 })
 
 afterEach(() => {
@@ -161,7 +161,7 @@ describe('applyEnvFile', () => {
 })
 
 describe('loadReleaseCredentials', () => {
-  it('maps Railway bucket names onto upload variables', () => {
+  it('maps short bucket names onto upload variables', () => {
     const dir = tempDir()
     const envPath = join(dir, '.env')
     writeFileSync(envPath, 'BUCKET=file-bucket\n')
@@ -206,9 +206,11 @@ describe('run', () => {
   })
 
   it('merges custom env over the process environment', () => {
-    expect(() => run('node', ['-e', 'process.exit(process.env.RELEASE_TEST_FLAG === "1" ? 0 : 2)'], {
-      RELEASE_TEST_FLAG: '1',
-    })).not.toThrow()
+    expect(() =>
+      run('node', ['-e', 'process.exit(process.env.RELEASE_TEST_FLAG === "1" ? 0 : 2)'], {
+        RELEASE_TEST_FLAG: '1',
+      }),
+    ).not.toThrow()
 
     expect(() => run('node', ['-e', 'process.exit(process.env.RELEASE_TEST_FLAG === "1" ? 0 : 2)'])).toThrow(
       'failed with exit code 2',
@@ -232,7 +234,9 @@ describe('buildCommands', () => {
 describe('requireEnv', () => {
   it('returns set variables and throws for missing ones', () => {
     expect(requireEnv('RELEASE_TEST_KEY', { RELEASE_TEST_KEY: 'value' })).toBe('value')
-    expect(() => requireEnv('RELEASE_TEST_MISSING', {})).toThrow('Missing required environment variable: RELEASE_TEST_MISSING')
+    expect(() => requireEnv('RELEASE_TEST_MISSING', {})).toThrow(
+      'Missing required environment variable: RELEASE_TEST_MISSING',
+    )
   })
 
   it('defaults to the process environment', () => {
@@ -367,7 +371,7 @@ describe('writeManifestFile', () => {
     const manifestPath = await writeManifestFile(dir, {
       version: '1.0.0',
       notes: 'hello',
-      cdnBaseUrl: 'https://releases.openpos.xyz/',
+      cdnBaseUrl: 'https://releases.pos.softmelody.dev/',
       prefix: 'releases',
       artifacts: [{ name: 'app.zip', filePath: join(dir, 'app.zip'), sha256: 'abc', size: 3 }],
     })
@@ -378,7 +382,7 @@ describe('writeManifestFile', () => {
     expect(manifest.version).toBe('1.0.0')
     expect(manifest.notes).toBe('hello')
     expect(manifest.assets).toHaveLength(1)
-    expect(manifest.assets[0].url).toBe('https://releases.openpos.xyz/v/1.0.0/app.zip')
+    expect(manifest.assets[0].url).toBe('https://releases.pos.softmelody.dev/v/1.0.0/app.zip')
   })
 })
 
@@ -401,7 +405,7 @@ describe('publishRelease', () => {
         manifestPath,
         version: '1.0.0',
         localDir: relative(repoRoot, outDir),
-        cdnBaseUrl: 'https://releases.openpos.xyz',
+        cdnBaseUrl: 'https://releases.pos.softmelody.dev',
         prefix: 'releases',
       },
       { env: {} },
@@ -426,7 +430,7 @@ describe('publishRelease', () => {
         manifestPath,
         version: '1.0.0',
         localDir: null,
-        cdnBaseUrl: 'https://releases.openpos.xyz',
+        cdnBaseUrl: 'https://releases.pos.softmelody.dev',
         prefix: 'releases',
       },
       {
@@ -457,7 +461,7 @@ describe('publishRelease', () => {
         manifestPath: join(dir, 'latest.json'),
         version: '1.0.0',
         localDir: null,
-        cdnBaseUrl: 'https://releases.openpos.xyz',
+        cdnBaseUrl: 'https://releases.pos.softmelody.dev',
         prefix: 'releases',
       },
       {
@@ -492,7 +496,7 @@ describe('publishRelease', () => {
         manifestPath: filePath,
         version: '1.0.0',
         localDir: null,
-        cdnBaseUrl: 'https://releases.openpos.xyz',
+        cdnBaseUrl: 'https://releases.pos.softmelody.dev',
         prefix: 'releases',
       },
       {
@@ -509,7 +513,14 @@ describe('publishRelease', () => {
   it('throws when there is nowhere to publish', async () => {
     await expect(
       publishRelease(
-        { artifacts: [], manifestPath: 'latest.json', version: '1.0.0', localDir: null, cdnBaseUrl: 'https://x', prefix: 'r' },
+        {
+          artifacts: [],
+          manifestPath: 'latest.json',
+          version: '1.0.0',
+          localDir: null,
+          cdnBaseUrl: 'https://x',
+          prefix: 'r',
+        },
         { env: {} },
       ),
     ).rejects.toThrow('Missing RELEASE_S3_BUCKET')
@@ -518,7 +529,14 @@ describe('publishRelease', () => {
   it('requires AWS credentials for bucket uploads', async () => {
     await expect(
       publishRelease(
-        { artifacts: [], manifestPath: 'latest.json', version: '1.0.0', localDir: null, cdnBaseUrl: 'https://x', prefix: 'r' },
+        {
+          artifacts: [],
+          manifestPath: 'latest.json',
+          version: '1.0.0',
+          localDir: null,
+          cdnBaseUrl: 'https://x',
+          prefix: 'r',
+        },
         { env: { RELEASE_S3_BUCKET: 'bucket' }, createClient: async () => ({ send: async () => {} }) },
       ),
     ).rejects.toThrow('Missing required environment variable: AWS_ACCESS_KEY_ID')
@@ -527,7 +545,14 @@ describe('publishRelease', () => {
   it('requires an S3 client factory for bucket uploads', async () => {
     await expect(
       publishRelease(
-        { artifacts: [], manifestPath: 'latest.json', version: '1.0.0', localDir: null, cdnBaseUrl: 'https://x', prefix: 'r' },
+        {
+          artifacts: [],
+          manifestPath: 'latest.json',
+          version: '1.0.0',
+          localDir: null,
+          cdnBaseUrl: 'https://x',
+          prefix: 'r',
+        },
         { env: { RELEASE_S3_BUCKET: 'bucket', AWS_ACCESS_KEY_ID: 'k', AWS_SECRET_ACCESS_KEY: 's' } },
       ),
     ).rejects.toThrow('Missing S3 client factory')
@@ -538,14 +563,28 @@ describe('publishRelease', () => {
 
     await expect(
       publishRelease(
-        { artifacts: [], manifestPath: 'latest.json', version: '1.0.0', localDir: null, cdnBaseUrl: 'https://x', prefix: 'r' },
+        {
+          artifacts: [],
+          manifestPath: 'latest.json',
+          version: '1.0.0',
+          localDir: null,
+          cdnBaseUrl: 'https://x',
+          prefix: 'r',
+        },
         {},
       ),
     ).rejects.toThrow('Missing RELEASE_S3_BUCKET')
 
     delete process.env.RELEASE_S3_BUCKET
     await expect(
-      publishRelease({ artifacts: [], manifestPath: 'latest.json', version: '1.0.0', localDir: null, cdnBaseUrl: 'https://x', prefix: 'r' }),
+      publishRelease({
+        artifacts: [],
+        manifestPath: 'latest.json',
+        version: '1.0.0',
+        localDir: null,
+        cdnBaseUrl: 'https://x',
+        prefix: 'r',
+      }),
     ).rejects.toThrow('Missing RELEASE_S3_BUCKET')
   })
 })

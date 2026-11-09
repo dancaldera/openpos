@@ -63,9 +63,9 @@ export async function getObjectStorageConfig(): Promise<ObjectStorageConfig> {
   }
 
   try {
-    const accessKeyId = stored.access_key_id_encrypted ? decryptSecret(stored.access_key_id_encrypted) : undefined
+    const accessKeyId = stored.access_key_id_encrypted ? await decryptSecret(stored.access_key_id_encrypted) : undefined
     const secretAccessKey = stored.secret_access_key_encrypted
-      ? decryptSecret(stored.secret_access_key_encrypted)
+      ? await decryptSecret(stored.secret_access_key_encrypted)
       : undefined
     const endpoint = stored.endpoint || undefined
     const bucket = stored.bucket || undefined
