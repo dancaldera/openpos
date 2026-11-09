@@ -32,6 +32,14 @@ rsync -a --delete \
   --exclude apps/api/data \
   /host/ /project/
 
+# pnpm 11 aborts on exit after downloading packages when Node runs under x86-64
+# emulation on Apple Silicon (libuv `uv__io_poll: Assertion errno == EEXIST`),
+# which kills the install and the build. pnpm 10 reads the same v9 lockfile
+# and does not hit it, so the disposable /project copy is pinned to it.
+PNPM_VERSION="${OPENPOS_LINUX_PNPM_VERSION:-10.30.0}"
+sed -i -E "s/\"packageManager\": \"pnpm@[^\"]+\"/\"packageManager\": \"pnpm@${PNPM_VERSION}\"/" \
+  /project/package.json /project/apps/*/package.json /project/packages/*/package.json
+
 rm -rf /project/apps/desktop/.cache
 mkdir -p /project/apps/desktop
 ln -sfn /cache/desktop /project/apps/desktop/.cache
@@ -43,10 +51,15 @@ export PATH="$PNPM_HOME:$PATH"
 # electron-builder on overlayfs cannot hard-link Electron's unpacked files.
 export USE_HARD_LINKS=false
 export APPIMAGE_EXTRACT_AND_RUN=1
+# Go tools in the build (esbuild, electron-builder's app-builder) crash in their
+# garbage collector under x86-64 emulation on Apple Silicon. Their runs are
+# short, so skip GC and keep them on one thread.
+export GOGC="${GOGC:-off}"
+export GOMAXPROCS="${GOMAXPROCS:-1}"
 
 cd /project
 corepack enable
-corepack prepare pnpm@11.18.0 --activate
+corepack prepare "pnpm@${PNPM_VERSION}" --activate
 
 echo "Building $SCRIPT on $(uname -m) ($(uname -s))"
 pnpm install --frozen-lockfile --ignore-scripts --store-dir /cache/pnpm-store --filter openpos-desktop... --filter @openpos/data

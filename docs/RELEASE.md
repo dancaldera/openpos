@@ -119,6 +119,12 @@ Podman or Docker (`scripts/build-linux-in-container.sh`), targeting
 The first container run downloads Node, Electron, and qemu user-mode
 emulation and can take a while.
 
+With Colima, start the VM with Rosetta (`colima start --vm-type vz --vz-rosetta`).
+x86-64 emulation still trips pnpm 11 and Go tools, so the container entrypoint
+installs with pnpm 10 (same v9 lockfile) and runs Go tools with `GOGC=off
+GOMAXPROCS=1`. After changing `scripts/linux-builder-entrypoint.sh`, remove the
+cached image (`docker rmi openpos-linux-builder:24`) so the next run rebuilds it.
+
 The script fails fast if package versions do not match, checks/tests fail, or
 an expected artifact is missing. Publishing is safe to repeat — re-running
 overwrites the same keys and refreshes `latest.json`. Still bump the version
