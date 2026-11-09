@@ -13,7 +13,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { normalizeBarcode } from '@openpos/domain'
 import { ScanBarcode } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { ConfirmAction } from '../../components/page/ConfirmAction'
 import { Page } from '../../components/page/Page'
 import { useTranslation } from '../../hooks/useTranslation'
@@ -56,12 +56,11 @@ export default function VariantFormPage({ productId, variantId }: VariantFormPag
   const [isConfirmingDiscard, setIsConfirmingDiscard] = useState(false)
   const isEditing = Boolean(variantId)
   const variant = variantId ? product?.variants?.find((entry) => entry.id === variantId) : undefined
-  const loadedVariantId = useRef<string | null>(null)
+  const [loadedVariantId, setLoadedVariantId] = useState<string | null>(null)
 
-  // Fill the form once per variant; later reloads (e.g. after setting the default) keep the edits.
-  useEffect(() => {
-    if (!variant || loadedVariantId.current === variant.id) return
-    loadedVariantId.current = variant.id
+  // Fill the form once per variant, during render so the first paint already
+  // shows its values. Later reloads (e.g. after setting the default) keep the edits.
+  if (variant && loadedVariantId !== variant.id) {
     const next: VariantDraft = {
       sku: variant.sku || '',
       barcode: variant.barcode || '',
@@ -71,9 +70,10 @@ export default function VariantFormPage({ productId, variantId }: VariantFormPag
       attributes: { ...variant.attributes },
       isActive: variant.isActive,
     }
+    setLoadedVariantId(variant.id)
     setDraft(next)
     setSavedSnapshot(JSON.stringify(next))
-  }, [variant])
+  }
 
   /** Values stored on the variant under keys that no current attribute covers; kept as they are. */
   const extraAttributes = Object.entries(draft.attributes).filter(
