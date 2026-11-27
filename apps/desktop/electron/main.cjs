@@ -1560,7 +1560,8 @@ function createWindow({ attempt = 0 } = {}) {
     minHeight: 720,
     fullscreen: false,
     show: false,
-    backgroundColor: '#ffffff',
+    // Painted before the renderer: match the theme so reloads do not flash white.
+    backgroundColor: windowBackgroundColor(),
     icon: getIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -2084,6 +2085,16 @@ function buildAppMenu() {
   return Menu.buildFromTemplate(template)
 }
 
+/** Neutral theme canvas for the current mode, painted until the renderer draws. */
+function windowBackgroundColor() {
+  return nativeTheme.shouldUseDarkColors ? '#1b1b1b' : '#f1f1f1'
+}
+
+function syncWindowBackground() {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  mainWindow.setBackgroundColor(windowBackgroundColor())
+}
+
 function registerThemeHandlers() {
   ipcMain.handle('desktop:theme', () =>
     nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
@@ -2093,10 +2104,12 @@ function registerThemeHandlers() {
       throw new Error('Invalid theme preference')
     }
     nativeTheme.themeSource = theme
+    syncWindowBackground()
   })
 
   nativeTheme.on('updated', () => {
     const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+    syncWindowBackground()
     mainWindow?.webContents.send('desktop:theme-changed', theme)
   })
 }

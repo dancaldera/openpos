@@ -1,12 +1,14 @@
 import { signal } from '@preact/signals-react'
 import { getDesktopApi } from '../../lib/desktop'
-import { buildPaletteCss, normalizeThemePalette, type ThemePalette } from './palettes'
+import { buildPaletteCss, normalizeThemePalette, THEME_PALETTES, type ThemePalette } from './palettes'
 
 export type ThemePreference = 'system' | 'light' | 'dark'
 export type ResolvedTheme = 'light' | 'dark'
 
 const THEME_STORAGE_KEY = 'openpos-theme'
 const PALETTE_STORAGE_KEY = 'openpos-palette'
+/** Read by the inline script in index.html to paint the first frame in the saved theme. */
+const BOOT_COLORS_STORAGE_KEY = 'openpos-boot-colors'
 
 function readStoredTheme(): ThemePreference {
   if (typeof window === 'undefined') return 'system'
@@ -63,6 +65,21 @@ function applyTheme(preference: ThemePreference) {
   }
 
   resolvedTheme.value = resolved
+  rememberBootColors(themePalette.value)
+}
+
+function rememberBootColors(palette: ThemePalette): void {
+  const definition = THEME_PALETTES.find((item) => item.id === palette)
+  if (!definition || typeof window === 'undefined') return
+  const pick = ({ canvas, accent }: { canvas: string; accent: string }) => ({ canvas, accent })
+  try {
+    window.localStorage.setItem(
+      BOOT_COLORS_STORAGE_KEY,
+      JSON.stringify({ light: pick(definition.preview.light), dark: pick(definition.preview.dark) }),
+    )
+  } catch {
+    // Without storage the next launch simply boots with the system colors.
+  }
 }
 
 if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {

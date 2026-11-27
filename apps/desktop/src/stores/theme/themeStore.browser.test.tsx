@@ -1,5 +1,8 @@
 // @vitest-environment happy-dom
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { THEME_PALETTES } from './palettes'
 
 type ThemeModule = typeof import('./themeStore')
 
@@ -114,6 +117,61 @@ describe('themeStore in a browser', () => {
 
     theme.ensurePaletteStyles()
     expect(document.querySelectorAll('style#openpos-palettes')).toHaveLength(1)
+  })
+
+  it('remembers the palette colors for the next boot', async () => {
+    const { theme } = await loadTheme({ storedTheme: 'dark', storedPalette: 'ocean' })
+    const ocean = THEME_PALETTES.find((palette) => palette.id === 'ocean')
+
+    expect(JSON.parse(window.localStorage.getItem('openpos-boot-colors') ?? 'null')).toEqual({
+      light: { canvas: ocean?.preview.light.canvas, accent: ocean?.preview.light.accent },
+      dark: { canvas: ocean?.preview.dark.canvas, accent: ocean?.preview.dark.accent },
+    })
+
+    theme.setThemePalette('berry')
+    expect(window.localStorage.getItem('openpos-boot-colors')).toContain('"canvas":"#f9e8f0"')
+  })
+
+  it('paints the saved theme before the app loads (index.html boot script)', async () => {
+    const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8')
+    const bootScript = html.match(/<script>\s*\/\/ Paint the saved theme[\s\S]*?<\/script>/)?.[0] ?? ''
+    const run = () => new Function(bootScript.replace(/<\/?script>/g, ''))()
+    expect(bootScript).not.toBe('')
+    const root = document.documentElement
+
+    installMatchMedia(false)
+    window.localStorage.clear()
+    window.localStorage.setItem('openpos-theme', 'dark')
+    window.localStorage.setItem('openpos-palette', 'coffee')
+    window.localStorage.setItem(
+      'openpos-boot-colors',
+      JSON.stringify({
+        light: { canvas: '#f1e9dd', accent: '#8a5a2e' },
+        dark: { canvas: '#171210', accent: '#d9a874' },
+      }),
+    )
+    run()
+    expect(root.dataset.mode).toBe('dark')
+    expect(root.dataset.palette).toBe('coffee')
+    expect(root.style.getPropertyValue('--boot-canvas')).toBe('#171210')
+
+    // First visit: nothing saved, so the system mode decides.
+    window.localStorage.clear()
+    root.style.removeProperty('--boot-canvas')
+    installMatchMedia(true)
+    run()
+    expect(root.dataset.mode).toBe('dark')
+    expect(root.dataset.palette).toBe('classic')
+    expect(root.style.getPropertyValue('--boot-canvas')).toBe('')
+
+    // Tampered colors are ignored rather than injected.
+    window.localStorage.setItem(
+      'openpos-boot-colors',
+      JSON.stringify({ light: { canvas: 'red;}', accent: '#000000' } }),
+    )
+    window.localStorage.setItem('openpos-theme', 'light')
+    run()
+    expect(root.style.getPropertyValue('--boot-canvas')).toBe('')
   })
 
   it('falls back to the system theme for unknown stored values', async () => {
