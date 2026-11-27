@@ -59,8 +59,20 @@ replace the admin-managed list.
 
 ## Secrets
 
-Set secrets with `pnpm -C apps/<app> exec wrangler secret put <NAME>`. Never
-commit them.
+The source of truth is the ID vault Environment `pos/openpos` → `prod`
+(https://id.softmelody.dev). Change a value there, then push it to the Workers
+without it touching disk or the terminal:
+
+```bash
+idv run --project pos/openpos --environment prod -- pnpm run secrets:push --dry-run
+idv run --project pos/openpos --environment prod -- pnpm run secrets:push
+idv run --project pos/openpos --environment prod -- pnpm run secrets:push --worker admin --only ADMIN_SESSION_SECRET
+```
+
+`scripts/push-worker-secrets.ts` lists which secrets each Worker reads and
+skips any that are not in the Environment. One-off secrets such as
+`ADMIN_SETUP_TOKEN` can still be set with
+`pnpm -C apps/<app> exec wrangler secret put <NAME>`. Never commit secrets.
 
 | Secret | API | Admin | Notes |
 | --- | --- | --- | --- |

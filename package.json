@@ -43,6 +43,7 @@
     "config:desktop": "bash scripts/create-desktop-config.sh",
     "version:bump": "tsx scripts/bump-version.ts",
     "release": "tsx scripts/release.ts",
+    "secrets:push": "tsx scripts/push-worker-secrets.ts",
     "check": "tsc -p scripts/tsconfig.json && pnpm -C apps/desktop run check && pnpm -C apps/api run check && pnpm -C apps/admin run check && pnpm -C packages/control-plane run check && pnpm -C apps/web run check && pnpm -C apps/releases run check",
     "test": "pnpm run test:scripts && pnpm run test:data && pnpm run test:sync && pnpm run test:domain && pnpm run test:control-plane && pnpm run test:desktop && pnpm run test:api && pnpm run test:admin && pnpm run test:web && pnpm run test:releases",
     "test:scripts": "vitest run",
