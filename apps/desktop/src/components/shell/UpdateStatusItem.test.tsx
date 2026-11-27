@@ -204,7 +204,7 @@ describe('UpdateStatusItem', () => {
   it('renders nothing without an update', () => {
     renderItem()
     expect(screen.queryByText('update.updateAvailable')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'update.appUpdate' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^update\./ })).toBeNull()
   })
 
   it('renders nothing on the web', () => {
@@ -223,18 +223,18 @@ describe('UpdateStatusItem', () => {
     expect(screen.getByText('update.updateAvailable')).toBeTruthy()
     expect(screen.getByText('v1.1.0')).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: 'update.appUpdate' }))
+    fireEvent.click(screen.getByRole('button', { name: /^update\.updateAvailable/ }))
     expect(screen.getByText('Faster checkout')).toBeTruthy()
     expect(screen.getByText('update.latestLabel')).toBeTruthy()
     expect(document.body.textContent).not.toMatch(/\p{Extended_Pictographic}/u)
     fireEvent.click(screen.getByRole('menuitem', { name: /update\.downloadUpdate/ }))
     await waitFor(() => expect(mocks.downloadUpdate).toHaveBeenCalled())
 
-    fireEvent.click(screen.getByRole('button', { name: 'update.appUpdate' }))
+    fireEvent.click(screen.getByRole('button', { name: /^update\.updateAvailable/ }))
     fireEvent.click(screen.getByRole('menuitem', { name: /update\.viewRelease/ }))
     await waitFor(() => expect(mocks.openReleasePage).toHaveBeenCalledWith('https://releases.pos.softmelody.dev'))
 
-    fireEvent.click(screen.getByRole('button', { name: 'update.appUpdate' }))
+    fireEvent.click(screen.getByRole('button', { name: /^update\.updateAvailable/ }))
     fireEvent.click(screen.getByRole('menuitem', { name: /update\.checkForUpdates/ }))
     await waitFor(() => expect(mocks.checkForUpdate).toHaveBeenCalled())
   })
@@ -246,7 +246,7 @@ describe('UpdateStatusItem', () => {
     renderItem()
 
     expect(screen.getByText('update.restartToUpdate')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'update.appUpdate' }))
+    fireEvent.click(screen.getByRole('button', { name: /^update\.restartToUpdate/ }))
     expect(screen.getByText('boom')).toBeTruthy()
     expect(screen.getByText('openpos.AppImage')).toBeTruthy()
     fireEvent.click(screen.getByRole('menuitem', { name: /update\.installAndRestart/ }))

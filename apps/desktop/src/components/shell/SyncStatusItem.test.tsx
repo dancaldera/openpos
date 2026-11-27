@@ -144,7 +144,8 @@ describe('SyncStatusItem', () => {
     expect(screen.getAllByText('sync.status.online').length).toBeGreaterThan(0)
     expect(document.querySelector('.astryx-status-dot[aria-label="sync.status.online"]')).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: 'sync.details' }))
+    // The whole row opens the details menu.
+    fireEvent.click(screen.getByRole('button', { name: /^sync\.status\.online/ }))
 
     expect(screen.getByText('sync.mirrorTitle')).toBeTruthy()
     expect(screen.getByText('sync.lastSync')).toBeTruthy()

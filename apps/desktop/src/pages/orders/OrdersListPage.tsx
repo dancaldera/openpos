@@ -21,6 +21,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { ClickableRows, ROW_PRIMARY_CLASS } from '../../components/page/ClickableRows'
 import { Page } from '../../components/page/Page'
 import { StatTile } from '../../components/page/StatTile'
 import { useTranslation } from '../../hooks/useTranslation'
@@ -156,7 +157,7 @@ export default function OrdersListPage() {
       header: t('orders.orderHeader'),
       width: pixel(120),
       renderCell: (row) => (
-        <Link href={hrefFor(`orders/${row.id}`)}>
+        <Link className={ROW_PRIMARY_CLASS} href={hrefFor(`orders/${row.id}`)}>
           <Text type="inherit" weight="medium" hasTabularNumbers>
             #{shortId(row.id)}
           </Text>
@@ -303,14 +304,16 @@ export default function OrdersListPage() {
               />
             </VStack>
           ) : (
-            <Table<OrderRow>
-              data={pageRows}
-              columns={columns}
-              idKey="id"
-              density="balanced"
-              hasHover
-              plugins={{ sort: sortPlugin }}
-            />
+            <ClickableRows>
+              <Table<OrderRow>
+                data={pageRows}
+                columns={columns}
+                idKey="id"
+                density="balanced"
+                hasHover
+                plugins={{ sort: sortPlugin }}
+              />
+            </ClickableRows>
           )}
 
           {sortedData.length > PAGE_SIZE && (

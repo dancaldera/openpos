@@ -1,6 +1,4 @@
 import type { DropdownMenuItemData } from '@astryxdesign/core/DropdownMenu'
-import { MoreMenu } from '@astryxdesign/core/MoreMenu'
-import { SideNavItem } from '@astryxdesign/core/SideNav'
 import { StatusDot } from '@astryxdesign/core/StatusDot'
 import { Timestamp } from '@astryxdesign/core/Timestamp'
 import { Cloud, CloudOff, RefreshCw, TriangleAlert } from 'lucide-react'
@@ -23,6 +21,7 @@ import {
   remoteConfigured,
 } from '../../lib/db'
 import { isDesktop } from '../../lib/platform'
+import { SideNavMenuItem } from './SideNavMenuItem'
 
 type Translate = (key: string, params?: Record<string, string | number>) => string
 type DotVariant = 'success' | 'warning' | 'error' | 'accent' | 'neutral'
@@ -153,22 +152,15 @@ export function SyncStatusItem() {
   if (vm.apiError) writes.push({ id: 'api-error', label: t('sync.apiError'), description: vm.apiError })
 
   return (
-    <SideNavItem
+    <SideNavMenuItem
       label={vm.label}
       icon={vm.icon}
       endContent={<StatusDot variant={vm.dotVariant} label={vm.statusLabel} isPulsing={vm.isPulsing} />}
-      actions={
-        <MoreMenu
-          size="sm"
-          label={t('sync.details')}
-          placement="above"
-          items={[
-            { type: 'section', id: 'connection', title: vm.title, items: details },
-            { type: 'divider' },
-            { type: 'section', id: 'writes', title: t('sync.writesTitle'), items: writes },
-          ]}
-        />
-      }
+      items={[
+        { type: 'section', id: 'connection', title: vm.title, items: details },
+        { type: 'divider' },
+        { type: 'section', id: 'writes', title: t('sync.writesTitle'), items: writes },
+      ]}
     />
   )
 }

@@ -12,6 +12,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { Token } from '@astryxdesign/core/Token'
 import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { ClickableRows, ROW_PRIMARY_CLASS } from '../../components/page/ClickableRows'
 import { Page } from '../../components/page/Page'
 import { useTranslation } from '../../hooks/useTranslation'
 import { formatDate, formatTime } from '../../lib/format'
@@ -105,7 +106,7 @@ export default function MembersListPage() {
           <Avatar name={member.name} size="md" tooltip={false} />
           <VStack gap={0.5}>
             <HStack gap={2} vAlign="center">
-              <Link href={hrefFor(`members/${member.id}`)}>
+              <Link className={ROW_PRIMARY_CLASS} href={hrefFor(`members/${member.id}`)}>
                 <Text type="inherit" weight="medium" maxLines={1}>
                   {member.name}
                 </Text>
@@ -189,7 +190,9 @@ export default function MembersListPage() {
               />
             </VStack>
           ) : (
-            <Table<MemberRow> data={rows} columns={columns} idKey="id" density="balanced" hasHover />
+            <ClickableRows>
+              <Table<MemberRow> data={rows} columns={columns} idKey="id" density="balanced" hasHover />
+            </ClickableRows>
           )}
 
           {total > 0 && (

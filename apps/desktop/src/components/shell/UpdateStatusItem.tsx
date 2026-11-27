@@ -1,6 +1,4 @@
 import type { DropdownMenuItemData } from '@astryxdesign/core/DropdownMenu'
-import { MoreMenu } from '@astryxdesign/core/MoreMenu'
-import { SideNavItem } from '@astryxdesign/core/SideNav'
 import { StatusDot } from '@astryxdesign/core/StatusDot'
 import { Text } from '@astryxdesign/core/Text'
 import { signal } from '@preact/signals-react'
@@ -24,6 +22,7 @@ import {
   updateReleaseUrl,
   updateVersion,
 } from '../../stores/update/updateStore'
+import { SideNavMenuItem } from './SideNavMenuItem'
 
 const FALLBACK_RELEASE_URL = 'https://releases.pos.softmelody.dev'
 
@@ -251,7 +250,7 @@ export function UpdateStatusItem() {
       : t('update.updateAvailable')
 
   return (
-    <SideNavItem
+    <SideNavMenuItem
       label={itemLabel}
       icon={CircleArrowUp}
       endContent={
@@ -263,18 +262,11 @@ export function UpdateStatusItem() {
           <StatusDot variant="accent" label={viewModel.headline} isPulsing={viewModel.isBusy} />
         )
       }
-      actions={
-        <MoreMenu
-          size="sm"
-          label={t('update.appUpdate')}
-          placement="above"
-          items={[
-            { type: 'section', id: 'details', title: viewModel.headline, items: details },
-            { type: 'divider' },
-            { type: 'section', id: 'actions', items: actions },
-          ]}
-        />
-      }
+      items={[
+        { type: 'section', id: 'details', title: viewModel.headline, items: details },
+        { type: 'divider' },
+        { type: 'section', id: 'actions', items: actions },
+      ]}
     />
   )
 }

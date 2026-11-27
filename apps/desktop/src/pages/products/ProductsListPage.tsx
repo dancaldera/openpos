@@ -23,6 +23,7 @@ import { TextInput } from '@astryxdesign/core/TextInput'
 import { Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { ProductThumb } from '../../components/ProductThumb'
+import { ClickableRows, ROW_PRIMARY_CLASS } from '../../components/page/ClickableRows'
 import { Page } from '../../components/page/Page'
 import { StatTile } from '../../components/page/StatTile'
 import { useTranslation } from '../../hooks/useTranslation'
@@ -157,7 +158,7 @@ export default function ProductsListPage({ permissions }: { permissions: Product
         <HStack gap={3} vAlign="center">
           <ProductThumb name={product.name} imageUrl={product.image ? imageUrls[product.image] : undefined} size="sm" />
           <VStack gap={0.5}>
-            <Link href={hrefFor(`products/${product.id}`)}>
+            <Link className={ROW_PRIMARY_CLASS} href={hrefFor(`products/${product.id}`)}>
               <Text type="inherit" weight="medium" maxLines={1}>
                 {product.name}
               </Text>
@@ -340,14 +341,16 @@ export default function ProductsListPage({ permissions }: { permissions: Product
               />
             </VStack>
           ) : (
-            <Table<ProductRow>
-              data={pageRows}
-              columns={columns}
-              idKey="id"
-              density="balanced"
-              hasHover
-              plugins={{ sort: sortPlugin }}
-            />
+            <ClickableRows>
+              <Table<ProductRow>
+                data={pageRows}
+                columns={columns}
+                idKey="id"
+                density="balanced"
+                hasHover
+                plugins={{ sort: sortPlugin }}
+              />
+            </ClickableRows>
           )}
 
           {sortedData.length > PAGE_SIZE && (

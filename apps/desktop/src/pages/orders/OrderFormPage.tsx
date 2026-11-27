@@ -17,6 +17,7 @@ import { TextInput } from '@astryxdesign/core/TextInput'
 import { Minus, Plus, ScanBarcode, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { ProductThumb } from '../../components/ProductThumb'
+import { ClickableRows, ROW_PRIMARY_CLASS } from '../../components/page/ClickableRows'
 import { Page } from '../../components/page/Page'
 import { useTranslation } from '../../hooks/useTranslation'
 import { formatMoney, shortId } from '../../lib/format'
@@ -327,6 +328,7 @@ export default function OrderFormPage({ orderId }: OrderFormPageProps) {
         const needsVariant = product.variantType === 'configurable' && !variantId
         return (
           <IconButton
+            className={ROW_PRIMARY_CLASS}
             label={t('orders.addToOrder', { product: product.name })}
             icon={<Plus size={16} />}
             size="sm"
@@ -462,7 +464,9 @@ export default function OrderFormPage({ orderId }: OrderFormPageProps) {
                 />
               </VStack>
             ) : (
-              <Table<CatalogRow> data={catalogRows} columns={catalogColumns} idKey="id" density="compact" hasHover />
+              <ClickableRows>
+                <Table<CatalogRow> data={catalogRows} columns={catalogColumns} idKey="id" density="compact" hasHover />
+              </ClickableRows>
             )}
           </Card>
         </VStack>

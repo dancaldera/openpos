@@ -152,3 +152,12 @@ html[data-mode='dark'] {
     transform: translate3d(-50%, 0, 0);
   }
 }
+
+/* Tables whose rows act as one target (components/page/ClickableRows.tsx). */
+.clickable-rows tr:has(.row-primary) {
+  cursor: pointer;
+}
+
+.clickable-rows tr:has(.row-primary:is(:disabled, [aria-disabled='true'])) {
+  cursor: default;
+}

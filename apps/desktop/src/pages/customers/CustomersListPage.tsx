@@ -21,6 +21,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { ClickableRows, ROW_PRIMARY_CLASS } from '../../components/page/ClickableRows'
 import { Page } from '../../components/page/Page'
 import { useTranslation } from '../../hooks/useTranslation'
 import { formatMoney } from '../../lib/format'
@@ -121,7 +122,7 @@ export default function CustomersListPage() {
           .join(' · ')
         return (
           <VStack gap={0.5}>
-            <Link href={hrefFor(`customers/${customer.id}`)}>
+            <Link className={ROW_PRIMARY_CLASS} href={hrefFor(`customers/${customer.id}`)}>
               <Text type="inherit" weight="medium" maxLines={1}>
                 {name}
               </Text>
@@ -289,14 +290,16 @@ export default function CustomersListPage() {
               />
             </VStack>
           ) : (
-            <Table<CustomerRow>
-              data={pageRows}
-              columns={columns}
-              idKey="id"
-              density="balanced"
-              hasHover
-              plugins={{ sort: sortPlugin }}
-            />
+            <ClickableRows>
+              <Table<CustomerRow>
+                data={pageRows}
+                columns={columns}
+                idKey="id"
+                density="balanced"
+                hasHover
+                plugins={{ sort: sortPlugin }}
+              />
+            </ClickableRows>
           )}
 
           {sortedData.length > 0 && (

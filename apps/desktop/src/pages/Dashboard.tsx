@@ -14,6 +14,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { ProductThumb } from '../components/ProductThumb'
+import { ClickableRows, ROW_PRIMARY_CLASS } from '../components/page/ClickableRows'
 import { Page } from '../components/page/Page'
 import { useTranslation } from '../hooks/useTranslation'
 import { formatDate, formatMoney, formatTime, shortId } from '../lib/format'
@@ -155,7 +156,7 @@ export default function Dashboard() {
       header: t('orders.orderHeader'),
       width: pixel(120),
       renderCell: (row) => (
-        <Link href={hrefFor(`orders/${row.id}`)}>
+        <Link className={ROW_PRIMARY_CLASS} href={hrefFor(`orders/${row.id}`)}>
           <Text type="inherit" weight="medium" hasTabularNumbers>
             #{shortId(row.id)}
           </Text>
@@ -284,7 +285,9 @@ export default function Dashboard() {
           </Card>
         ) : (
           <Card padding={0}>
-            <Table<RecentOrderRow> data={recentRows} columns={recentColumns} idKey="id" density="balanced" hasHover />
+            <ClickableRows>
+              <Table<RecentOrderRow> data={recentRows} columns={recentColumns} idKey="id" density="balanced" hasHover />
+            </ClickableRows>
           </Card>
         )}
       </InsightSection>

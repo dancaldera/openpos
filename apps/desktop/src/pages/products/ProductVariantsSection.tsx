@@ -12,6 +12,7 @@ import { pixel, proportional, Table, type TableColumn } from '@astryxdesign/core
 import { Text } from '@astryxdesign/core/Text'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
+import { ClickableRows, ROW_PRIMARY_CLASS } from '../../components/page/ClickableRows'
 import { ConfirmAction } from '../../components/page/ConfirmAction'
 import { useTranslation } from '../../hooks/useTranslation'
 import { formatMoney } from '../../lib/format'
@@ -107,7 +108,7 @@ export function ProductVariantsSection({ product, currencySymbol, canEdit, onCha
           <VStack gap={0.5}>
             <HStack gap={2} vAlign="center">
               {canEdit ? (
-                <Link href={hrefFor(`${base}/${variant.id}`)}>
+                <Link className={ROW_PRIMARY_CLASS} href={hrefFor(`${base}/${variant.id}`)}>
                   <Text type="inherit" weight="medium" maxLines={1}>
                     {label}
                   </Text>
@@ -249,7 +250,9 @@ export function ProductVariantsSection({ product, currencySymbol, canEdit, onCha
             />
           </VStack>
         ) : (
-          <Table<VariantRow> data={rows} columns={columns} idKey="id" density="balanced" hasHover />
+          <ClickableRows>
+            <Table<VariantRow> data={rows} columns={columns} idKey="id" density="balanced" hasHover />
+          </ClickableRows>
         )}
       </Card>
 

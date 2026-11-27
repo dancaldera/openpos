@@ -1,8 +1,17 @@
 import { AppShell } from '@astryxdesign/core/AppShell'
-import { MoreMenu } from '@astryxdesign/core/MoreMenu'
 import { NavIcon } from '@astryxdesign/core/NavIcon'
 import { SideNav, SideNavHeading, SideNavItem, SideNavSection } from '@astryxdesign/core/SideNav'
-import { ChartColumn, CircleUser, LayoutDashboard, Package, ReceiptText, Settings, UserCog, Users } from 'lucide-react'
+import {
+  ChartColumn,
+  ChevronsUpDown,
+  CircleUser,
+  LayoutDashboard,
+  Package,
+  ReceiptText,
+  Settings,
+  UserCog,
+  Users,
+} from 'lucide-react'
 import { type ReactNode, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePlatform } from '../../hooks/usePlatform'
@@ -12,6 +21,7 @@ import { isDesktop } from '../../lib/platform'
 import { hrefFor, navigate } from '../../lib/router'
 import { appSettingsStore } from '../../stores/appSettings/appSettingsStore'
 import { setSidebarCollapsed, sidebarCollapsed } from '../../stores/ui/sidebarStore'
+import { SideNavMenuItem } from './SideNavMenuItem'
 import { SyncStatusItem } from './SyncStatusItem'
 import { UpdateStatusItem } from './UpdateStatusItem'
 
@@ -78,21 +88,17 @@ export function AppFrame({ section, children }: AppFrameProps) {
             <SideNavSection title={t('navigation.account')} isHeaderHidden>
               {isDesktop && <UpdateStatusItem />}
               <SyncStatusItem />
-              <SideNavItem
+              <SideNavMenuItem
                 label={user?.name || t('navigation.account')}
                 icon={CircleUser}
-                actions={
-                  <MoreMenu
-                    size="sm"
-                    label={t('navigation.accountMenu')}
-                    placement="above"
-                    items={[
-                      { label: t('navigation.settings'), onClick: () => navigate('settings') },
-                      { type: 'divider' },
-                      { label: t('navigation.signOut'), variant: 'destructive', onClick: () => signOut() },
-                    ]}
-                  />
+                endContent={
+                  <ChevronsUpDown size={14} aria-hidden="true" className="text-[var(--color-text-secondary)]" />
                 }
+                items={[
+                  { label: t('navigation.settings'), onClick: () => navigate('settings') },
+                  { type: 'divider' },
+                  { label: t('navigation.signOut'), variant: 'destructive', onClick: () => signOut() },
+                ]}
               />
             </SideNavSection>
           }
