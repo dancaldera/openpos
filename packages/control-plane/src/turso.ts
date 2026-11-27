@@ -109,6 +109,11 @@ export class TursoPlatform {
     await this.request(`/databases/${encodeURIComponent(name)}`, { method: 'DELETE' })
   }
 
+  /** Invalidate every auth token issued for the database (Turso rotates its signing keys). */
+  async rotateTokens(name: string): Promise<void> {
+    await this.request(`/databases/${encodeURIComponent(name)}/auth/rotate`, { method: 'POST' })
+  }
+
   async createToken(name: string, options: { expiration?: string; authorization?: 'full-access' | 'read-only' } = {}) {
     const query = new URLSearchParams({
       expiration: options.expiration ?? 'never',

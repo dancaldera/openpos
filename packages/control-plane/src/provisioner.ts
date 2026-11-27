@@ -18,6 +18,12 @@ export interface DatabaseProvisioner {
   deleteDatabase(name: string): Promise<void>
   /** Mint credentials the API and POS devices use to reach the database. */
   connect(name: string): Promise<DataPlaneConfig>
+  /**
+   * Invalidate every credential issued for the database so devices holding an
+   * old token lose access. Returns false when the database is not managed by
+   * this provisioner. Absent when credentials cannot be revoked (local files).
+   */
+  revokeAccess?(name: string): Promise<boolean>
 }
 
 export function tursoProvisioner(config: TursoPlatformConfig | TursoPlatform): DatabaseProvisioner {
@@ -42,6 +48,11 @@ export function tursoProvisioner(config: TursoPlatformConfig | TursoPlatform): D
       const database = await platform.getDatabase(name)
       if (!database) throw new Error(`Turso database "${name}" was not found`)
       return { url: `libsql://${database.hostname}`, authToken: await platform.createToken(name) }
+    },
+    async revokeAccess(name) {
+      if (!(await platform.getDatabase(name))) return false
+      await platform.rotateTokens(name)
+      return true
     },
   }
 }

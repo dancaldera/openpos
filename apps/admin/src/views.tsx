@@ -398,7 +398,11 @@ export const StoreDetailPage: FC<{
 
     <section>
       <h2>Connect devices</h2>
-      <p class="muted">Enter this key in the OpenPOS app to connect a device to this store.</p>
+      <p class="muted">
+        Enter this key in the OpenPOS app to connect a device to this store. For Turso databases created or attached
+        here, rotating it also revokes database access for every connected device: use it when a device is lost or
+        someone should no longer have access.
+      </p>
       <div class="key">{store.connectionKey}</div>
       <div class="row" style="margin-top: 12px; justify-content: space-between">
         <span class="muted">

@@ -461,9 +461,13 @@ export function createAdminApp(overrides: Partial<AdminServices> = {}) {
   app.post('/stores/:id/rotate-key', async (c) => {
     const id = c.req.param('id')
     return act(c, `/stores/${id}`, async () => {
-      const { store } = await c.var.plane.rotateConnectionKey(id)
-      await audit(c, 'store.rotate_key', store.slug)
-      return 'New connection key issued. Devices using the old key must reconnect.'
+      const { store, accessRevoked } = await c.var.plane.rotateConnectionKey(id, {
+        provisioner: services.provisioner(c.env),
+      })
+      await audit(c, accessRevoked ? 'store.rotate_key_and_tokens' : 'store.rotate_key', store.slug)
+      return accessRevoked
+        ? 'New connection key issued and database access revoked. Every device must reconnect with the new key.'
+        : 'New connection key issued. Devices using the old key must reconnect.'
     })
   })
 

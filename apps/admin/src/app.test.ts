@@ -233,7 +233,7 @@ describe('admin stores', () => {
     expect((await plane.getStore(store.id)).status).toBe('disabled')
     expect(location(await http.post(detailPath, { name: '', slug: 'demo' }))).toContain('error=Store name is required')
 
-    await http.post(`${detailPath}/rotate-key`)
+    expect(location(await http.post(`${detailPath}/rotate-key`))).toContain('Devices using the old key must reconnect')
     expect((await plane.getStore(store.id)).connectionKey).not.toBe(store.connectionKey)
     expect(location(await http.post(`${detailPath}/migrate`))).toContain('already up to date')
 

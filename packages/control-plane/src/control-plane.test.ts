@@ -179,6 +179,59 @@ describe('ControlPlane stores', () => {
     expect(await provisioner.listDatabases()).toEqual([])
   })
 
+  it('revokes database access and stores a fresh token when rotating the key', async () => {
+    const { cp, provisioner } = setup()
+    const revoked: string[] = []
+    let minted = 0
+    const revoking = {
+      ...provisioner,
+      async connect(name: string) {
+        minted += 1
+        return { ...(await provisioner.connect(name)), authToken: `token-${minted}` }
+      },
+      async revokeAccess(name: string) {
+        revoked.push(name)
+        return true
+      },
+    }
+    const { store, connectionKey } = await cp.createStore(revoking, { name: 'Shop', slug: 'shop', owner: OWNER })
+    expect((await cp.dataPlaneFor(store.id)).authToken).toBe('token-1')
+
+    const rotated = await cp.rotateConnectionKey(store.id, { provisioner: revoking })
+    expect(rotated.accessRevoked).toBe(true)
+    expect(rotated.connectionKey).not.toBe(connectionKey)
+    expect(revoked).toEqual(['openpos-shop'])
+    expect((await cp.dataPlaneFor(store.id)).authToken).toBe('token-2')
+
+    const client = createClient(await cp.dataPlaneFor(store.id))
+    const meta = await client.execute('SELECT connection_key FROM connection_meta')
+    expect(meta.rows[0].connection_key).toBe(rotated.connectionKey)
+    client.close()
+
+    // Local files have no tokens to revoke; the key still rotates.
+    const local = await cp.rotateConnectionKey(store.id, { provisioner })
+    expect(local.accessRevoked).toBe(false)
+    expect(revoked).toHaveLength(1)
+  })
+
+  it('removes a half-created database so the same address can be retried', async () => {
+    const { cp, provisioner } = setup()
+    const failing = {
+      ...provisioner,
+      async connect(): Promise<DataPlaneConfig> {
+        throw new Error('token service unavailable')
+      },
+    }
+    await expect(cp.createStore(failing, { name: 'Shop', slug: 'shop', owner: OWNER })).rejects.toThrow(
+      'token service unavailable',
+    )
+    expect(await provisioner.listDatabases()).toEqual([])
+    expect(await cp.listStores()).toEqual([])
+
+    const { store } = await cp.createStore(provisioner, { name: 'Shop', slug: 'shop', owner: OWNER })
+    expect(store.databaseName).toBe('openpos-shop')
+  })
+
   it('manages root users and the audit log', async () => {
     const { cp } = setup()
     expect(await cp.rootUserCount()).toBe(0)
@@ -237,5 +290,14 @@ describe('TursoPlatform', () => {
     expect(calls.find((call) => call.url.includes('/auth/tokens'))?.url).toContain(
       'expiration=never&authorization=full-access',
     )
+
+    expect(await provisioner.revokeAccess?.('openpos-a')).toBe(true)
+    expect(calls.at(-1)).toEqual({
+      url: 'https://api.turso.tech/v1/organizations/acme/databases/openpos-a/auth/rotate',
+      method: 'POST',
+    })
+    const before = calls.length
+    expect(await provisioner.revokeAccess?.('missing')).toBe(false)
+    expect(calls.slice(before).some((call) => call.url.endsWith('/auth/rotate'))).toBe(false)
   })
 })

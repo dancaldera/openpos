@@ -12,7 +12,7 @@ import { validatePasswordStrength } from '@openpos/domain'
 import bcrypt from 'bcryptjs'
 import { decryptSecret, encryptSecret } from './crypto.ts'
 import { ControlPlaneError } from './errors.ts'
-import { assertDatabaseName, type DatabaseProvisioner } from './provisioner.ts'
+import { assertDatabaseName, DATABASE_NAME_PATTERN, type DatabaseProvisioner } from './provisioner.ts'
 import { ensureControlPlaneSchema } from './schema.ts'
 import { all, type DataPlaneConfig, first, querier, run, runner, type SqlClient } from './sql.ts'
 
@@ -342,22 +342,37 @@ export class ControlPlane {
     await this.assertDatabaseFree(databaseName)
 
     await provisioner.createDatabase(databaseName)
-    const dataPlane = await provisioner.connect(databaseName)
-    const key = generateConnectionKey()
+    try {
+      const dataPlane = await provisioner.connect(databaseName)
+      const key = generateConnectionKey()
 
-    await this.withStoreDb(dataPlane, async (client) => {
-      await applyStoreMigrations(client)
-      await this.seedOwner(client, name, owner)
-      await writeConnectionMeta(runner(client), {
-        connectionKey: key,
-        seedVerifier: MANAGED_SEED_VERIFIER,
-        storeName: name,
-        now: this.now(),
+      await this.withStoreDb(dataPlane, async (client) => {
+        await applyStoreMigrations(client)
+        await this.seedOwner(client, name, owner)
+        await writeConnectionMeta(runner(client), {
+          connectionKey: key,
+          seedVerifier: MANAGED_SEED_VERIFIER,
+          storeName: name,
+          now: this.now(),
+        })
       })
-    })
 
-    const store = await this.insertStore({ slug, name, key, databaseName, dataPlane })
-    return { store, connectionKey: key }
+      const store = await this.insertStore({ slug, name, key, databaseName, dataPlane })
+      return { store, connectionKey: key }
+    } catch (error) {
+      // Undo the half-created store so the same address can be retried.
+      await this.discardNewDatabase(provisioner, databaseName)
+      throw error
+    }
+  }
+
+  private async discardNewDatabase(provisioner: DatabaseProvisioner, databaseName: string): Promise<void> {
+    await run(this.db, 'DELETE FROM stores WHERE database_name = ?', [databaseName]).catch((error) => {
+      console.error('[control-plane] Could not remove the store row for', databaseName, error)
+    })
+    await provisioner.deleteDatabase(databaseName).catch((error) => {
+      console.error('[control-plane] Could not delete the database', databaseName, error)
+    })
   }
 
   /**
@@ -444,10 +459,19 @@ export class ControlPlane {
     return this.getStore(id)
   }
 
-  /** Issue a new connection key. Devices connected with the old key must reconnect. */
-  async rotateConnectionKey(id: string): Promise<{ store: StoreRecord; connectionKey: string }> {
+  /**
+   * Issue a new connection key. With a provisioner that can revoke credentials,
+   * every database token handed out before is invalidated and a fresh one is
+   * stored, so devices that joined with the old key lose access until they
+   * reconnect with the new one.
+   */
+  async rotateConnectionKey(
+    id: string,
+    options: { provisioner?: DatabaseProvisioner | null } = {},
+  ): Promise<{ store: StoreRecord; connectionKey: string; accessRevoked: boolean }> {
     const store = await this.getStore(id)
     const key = generateConnectionKey()
+    const accessRevoked = await this.rotateDatabaseCredentials(store, options.provisioner ?? null)
     await this.withStoreDb(await this.dataPlaneFor(id), async (client) => {
       const meta = await readConnectionMeta(querier(client))
       await writeConnectionMeta(runner(client), {
@@ -458,7 +482,28 @@ export class ControlPlane {
       })
     })
     await run(this.db, 'UPDATE stores SET connection_key = ?, updated_at = ? WHERE id = ?', [key, this.now(), id])
-    return { store: await this.getStore(id), connectionKey: key }
+    return { store: await this.getStore(id), connectionKey: key, accessRevoked }
+  }
+
+  /**
+   * Revoke the database's tokens and save a freshly minted one. The new token
+   * is stored before anything else changes, so a later failure leaves the
+   * store reachable and the rotation can simply be retried.
+   */
+  private async rotateDatabaseCredentials(
+    store: StoreRecord,
+    provisioner: DatabaseProvisioner | null,
+  ): Promise<boolean> {
+    if (!provisioner?.revokeAccess || !DATABASE_NAME_PATTERN.test(store.databaseName)) return false
+    if (!(await provisioner.revokeAccess(store.databaseName))) return false
+    const dataPlane = await provisioner.connect(store.databaseName)
+    const token = dataPlane.authToken ? await encryptSecret(dataPlane.authToken, this.options.secretsKey) : null
+    await run(
+      this.db,
+      'UPDATE stores SET database_url = ?, database_token_encrypted = ?, updated_at = ? WHERE id = ?',
+      [dataPlane.url, token, this.now(), store.id],
+    )
+    return true
   }
 
   /** Remove a store from the registry, optionally deleting its database. */
