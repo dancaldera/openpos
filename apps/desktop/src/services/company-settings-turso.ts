@@ -275,7 +275,7 @@ export class CompanySettingsService {
          phone = ?, email = ?, website = ?, theme_mode = ?, theme_palette = ?, updated_at = ?
          WHERE id = ?`,
         [
-          'Titanic POS',
+          'My Store',
           'OpenPOS',
           'Modern Point of Sale System',
           1,

@@ -30,7 +30,7 @@ class AppSettingsStore {
     } catch (error) {
       console.error('Failed to initialize app settings:', error)
       this.appName.value = 'OpenPOS'
-      this.companyName.value = 'Titanic POS'
+      this.companyName.value = ''
       this.isInitialized.value = true
     } finally {
       this.isLoading.value = false

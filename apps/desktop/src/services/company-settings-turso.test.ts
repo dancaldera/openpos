@@ -224,7 +224,7 @@ describe('CompanySettingsService.resetToDefaults', () => {
     expect(result.success).toBe(true)
     const [sql, params] = execute.mock.calls[0]
     expect(sql).toContain('UPDATE company_settings SET')
-    expect(params).toContain('Titanic POS')
+    expect(params).toContain('My Store')
     expect(trigger).toHaveBeenCalledTimes(1)
   })
 

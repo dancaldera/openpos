@@ -30,16 +30,12 @@ interface AccessScreenProps {
 export function AccessScreen({ title, description, children, footer = [], hasSyncStatus = false }: AccessScreenProps) {
   const items = footer.filter(Boolean)
   return (
-    <div className="drag-region min-h-screen">
+    <div className="drag-region relative isolate min-h-screen">
+      <AccessBackdrop />
       <Center axis="both" padding={6} minHeight="100vh">
-        <div className="no-drag w-full max-w-[420px]">
+        <div className="no-drag relative z-[1] w-full max-w-[420px]">
           <VStack gap={6} hAlign="stretch">
-            <VStack gap={2} hAlign="center">
-              <img src="/icon.png" alt="" className="h-12 w-12" />
-              <Text weight="semibold" size="lg">
-                {appSettingsStore.appName.value}
-              </Text>
-            </VStack>
+            <AccessBrand />
 
             {isDesktop && <AccessUpdateNotice />}
 
@@ -78,6 +74,43 @@ export function AccessScreen({ title, description, children, footer = [], hasSyn
           </VStack>
         </div>
       </Center>
+    </div>
+  )
+}
+
+/** App icon with the store name (from company settings), and the app name when it differs. */
+function AccessBrand() {
+  const appName = appSettingsStore.appName.value
+  const storeName = appSettingsStore.companyName.value.trim()
+  return (
+    <VStack gap={2} hAlign="center">
+      <img src="/icon.png" alt="" className="access-brand-icon h-12 w-12" />
+      <VStack gap={0} hAlign="center">
+        <Text weight="semibold" size="lg" justify="center">
+          {storeName || appName}
+        </Text>
+        {storeName && storeName !== appName ? (
+          <Text type="supporting" justify="center">
+            {appName}
+          </Text>
+        ) : null}
+      </VStack>
+    </VStack>
+  )
+}
+
+/**
+ * Decorative background for the screens before the app shell: slow-moving
+ * glows tinted by the store palette over a fading dot grid. Styles live in
+ * App.css (`.access-backdrop`); motion stops with prefers-reduced-motion.
+ */
+function AccessBackdrop() {
+  return (
+    <div className="access-backdrop" aria-hidden="true" data-testid="access-backdrop">
+      <div className="access-backdrop__glow access-backdrop__glow--primary" />
+      <div className="access-backdrop__glow access-backdrop__glow--secondary" />
+      <div className="access-backdrop__glow access-backdrop__glow--sheen" />
+      <div className="access-backdrop__grid" />
     </div>
   )
 }

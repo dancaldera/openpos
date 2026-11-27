@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { appSettingsStore } from '../stores/appSettings/appSettingsStore'
 
 const mocks = vi.hoisted(() => ({
   platform: { isDesktop: false },
@@ -107,6 +108,27 @@ describe('SignIn with email', () => {
 
     await waitFor(() => expect(mocks.signIn).toHaveBeenCalledWith('ana@shop.test', 'Secret123!'))
     await waitFor(() => expect(mocks.toastWarning).toHaveBeenCalledWith('Offline mode'))
+  })
+
+  it('renders the decorative backdrop hidden from assistive technology', async () => {
+    render(<SignIn />)
+    await screen.findByPlaceholderText('email@example.com')
+
+    const backdrop = screen.getByTestId('access-backdrop')
+    expect(backdrop.getAttribute('aria-hidden')).toBe('true')
+    expect(backdrop.textContent).toBe('')
+  })
+
+  it('shows the store name with the app name below it', async () => {
+    appSettingsStore.companyName.value = 'Triple Pecado'
+    try {
+      render(<SignIn />)
+      await screen.findByPlaceholderText('email@example.com')
+      expect(screen.getByText('Triple Pecado')).toBeTruthy()
+      expect(screen.getByText('OpenPOS')).toBeTruthy()
+    } finally {
+      appSettingsStore.companyName.value = ''
+    }
   })
 
   it('shows sign-in failures inline', async () => {

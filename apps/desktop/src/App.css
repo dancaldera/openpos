@@ -17,7 +17,7 @@ body,
 }
 
 body {
-  background: var(--color-background-body);
+  background: var(--color-background-body, light-dark(#f1f1f1, #1b1b1b));
   color: var(--color-text-primary);
 }
 
@@ -30,55 +30,125 @@ body {
   -webkit-app-region: no-drag;
 }
 
-/* Store palettes tint the theme accent. Unlayered so they win over the theme's
-   own token layer; `classic` keeps the neutral theme untouched. The hexes mirror
-   `stores/theme/palettes.ts`. */
-html[data-palette='coffee'],
-html[data-palette='coffee'] [data-astryx-theme] {
-  --color-accent: light-dark(#8a5a2e, #d9a874);
+/* Store palettes (page, cards, text, borders and accent) are generated from
+   `stores/theme/palettes.ts` and injected by the theme store, so the settings
+   preview and the app always match. Light/dark follows the chosen mode on the
+   page itself too, not only inside the theme root. */
+html[data-mode='light'] {
+  color-scheme: light;
 }
 
-html[data-palette='ocean'],
-html[data-palette='ocean'] [data-astryx-theme] {
-  --color-accent: light-dark(#1f5f8b, #82b8dd);
+html[data-mode='dark'] {
+  color-scheme: dark;
 }
 
-html[data-palette='forest'],
-html[data-palette='forest'] [data-astryx-theme] {
-  --color-accent: light-dark(#2f6b46, #7fc79b);
+/* App icon on the access screens: a soft shadow tinted by the store accent. */
+.access-brand-icon {
+  filter: drop-shadow(0 6px 16px color-mix(in oklab, var(--color-accent) 30%, transparent));
 }
 
-html[data-palette='sunset'],
-html[data-palette='sunset'] [data-astryx-theme] {
-  --color-accent: light-dark(#c2551e, #f2a06b);
+/* Background of the screens before the app shell (sign-in, connection setup,
+   first sync): see AccessBackdrop in components/access/AccessScreen.tsx.
+   Glows follow the store palette through --color-accent; only transforms
+   animate, so it stays light on low-end POS hardware. */
+.access-backdrop {
+  --access-glow-primary: color-mix(in oklab, var(--color-accent) 26%, transparent);
+  --access-glow-secondary: color-mix(in oklab, var(--color-accent) 16%, transparent);
+  --access-glow-sheen: color-mix(in oklab, var(--color-background-surface) 75%, transparent);
+  --access-grid-dot: color-mix(in oklab, var(--color-text-primary) 10%, transparent);
+
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(
+    160deg,
+    var(--color-background-body) 0%,
+    color-mix(in oklab, var(--color-accent) 5%, var(--color-background-body)) 100%
+  );
 }
 
-html[data-palette='berry'],
-html[data-palette='berry'] [data-astryx-theme] {
-  --color-accent: light-dark(#b02a63, #e87fae);
+.access-backdrop__glow {
+  position: absolute;
+  border-radius: 9999px;
+  will-change: transform;
+  animation-duration: 26s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
 }
 
-html[data-palette='lavender'],
-html[data-palette='lavender'] [data-astryx-theme] {
-  --color-accent: light-dark(#6d4fae, #b39ae8);
+.access-backdrop__glow--primary {
+  top: -22vmax;
+  left: -18vmax;
+  width: 64vmax;
+  height: 64vmax;
+  background: radial-gradient(circle at center, var(--access-glow-primary) 0%, transparent 68%);
+  animation-name: access-drift-primary;
 }
 
-html[data-palette='slate'],
-html[data-palette='slate'] [data-astryx-theme] {
-  --color-accent: light-dark(#33566e, #8fb4cc);
+.access-backdrop__glow--secondary {
+  right: -22vmax;
+  bottom: -26vmax;
+  width: 70vmax;
+  height: 70vmax;
+  background: radial-gradient(circle at center, var(--access-glow-secondary) 0%, transparent 66%);
+  animation-name: access-drift-secondary;
+  animation-duration: 32s;
 }
 
-html[data-palette='oxblood'],
-html[data-palette='oxblood'] [data-astryx-theme] {
-  --color-accent: light-dark(#7c2d2d, #d99a9a);
+.access-backdrop__glow--sheen {
+  top: 18%;
+  left: 50%;
+  width: 46vmax;
+  height: 46vmax;
+  background: radial-gradient(circle at center, var(--access-glow-sheen) 0%, transparent 62%);
+  animation-name: access-drift-sheen;
+  animation-duration: 22s;
 }
 
-html[data-palette='iron'],
-html[data-palette='iron'] [data-astryx-theme] {
-  --color-accent: light-dark(#3e4a52, #9fb2bd);
+.access-backdrop__grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--access-grid-dot) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, black 0%, transparent 75%);
 }
 
-html[data-palette='grain'],
-html[data-palette='grain'] [data-astryx-theme] {
-  --color-accent: light-dark(#7f611c, #cfa84e);
+@keyframes access-drift-primary {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(10vmax, 8vmax, 0) scale(1.12);
+  }
+}
+
+@keyframes access-drift-secondary {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.08);
+  }
+  to {
+    transform: translate3d(-9vmax, -7vmax, 0) scale(0.96);
+  }
+}
+
+@keyframes access-drift-sheen {
+  from {
+    transform: translate3d(-50%, 0, 0) scale(0.9);
+  }
+  to {
+    transform: translate3d(-38%, 6vmax, 0) scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .access-backdrop__glow {
+    animation: none;
+  }
+
+  .access-backdrop__glow--sheen {
+    transform: translate3d(-50%, 0, 0);
+  }
 }

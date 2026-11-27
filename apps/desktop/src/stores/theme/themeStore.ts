@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals-react'
 import { getDesktopApi } from '../../lib/desktop'
-import { normalizeThemePalette, type ThemePalette } from './palettes'
+import { buildPaletteCss, normalizeThemePalette, type ThemePalette } from './palettes'
 
 export type ThemePreference = 'system' | 'light' | 'dark'
 export type ResolvedTheme = 'light' | 'dark'
@@ -43,6 +43,17 @@ export const resolvedTheme = signal<ResolvedTheme>(
   themePreference.value === 'system' ? getSystemTheme() : themePreference.value,
 )
 
+const PALETTE_STYLE_ID = 'openpos-palettes'
+
+/** Install the palette variables once. They are generated from `palettes.ts`, the single source of truth. */
+export function ensurePaletteStyles(): void {
+  if (typeof document === 'undefined' || document.getElementById(PALETTE_STYLE_ID)) return
+  const style = document.createElement('style')
+  style.id = PALETTE_STYLE_ID
+  style.textContent = buildPaletteCss()
+  document.head.appendChild(style)
+}
+
 function applyTheme(preference: ThemePreference) {
   const resolved = preference === 'system' ? getSystemTheme() : preference
 
@@ -64,6 +75,7 @@ if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
   mediaQuery.addEventListener('change', handleSystemThemeChange)
 }
 
+ensurePaletteStyles()
 applyTheme(themePreference.value)
 
 function persistThemeValue(key: string, value: string): void {

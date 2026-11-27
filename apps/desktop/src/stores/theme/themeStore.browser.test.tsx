@@ -104,6 +104,18 @@ describe('themeStore in a browser', () => {
     expect(document.documentElement.dataset.palette).toBe('coffee')
   })
 
+  it('installs the generated palette styles once', async () => {
+    document.getElementById('openpos-palettes')?.remove()
+    const { theme } = await loadTheme()
+
+    const styles = document.querySelectorAll('style#openpos-palettes')
+    expect(styles).toHaveLength(1)
+    expect(styles[0]?.textContent).toContain("html[data-palette='coffee'] [data-astryx-theme]")
+
+    theme.ensurePaletteStyles()
+    expect(document.querySelectorAll('style#openpos-palettes')).toHaveLength(1)
+  })
+
   it('falls back to the system theme for unknown stored values', async () => {
     const { theme } = await loadTheme({ storedTheme: 'neon', darkMode: true })
 

@@ -78,7 +78,7 @@ describe('appSettingsStore', () => {
     await appSettingsStore.initialize()
 
     expect(appSettingsStore.appName.value).toBe('OpenPOS')
-    expect(appSettingsStore.companyName.value).toBe('Titanic POS')
+    expect(appSettingsStore.companyName.value).toBe('')
     expect(appSettingsStore.isInitialized.value).toBe(true)
     expect(appSettingsStore.isLoading.value).toBe(false)
     expect(errorSpy).toHaveBeenCalled()
