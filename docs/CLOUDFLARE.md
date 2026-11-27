@@ -83,7 +83,7 @@ skips any that are not in the Environment. One-off secrets such as
 | `INTERNAL_SECRET` | yes | | Operator password recovery |
 | `ADMIN_SESSION_SECRET` | | yes | Signs root admin sessions |
 | `ADMIN_SETUP_TOKEN` | | optional | Creates the first root user at `/setup`; setup closes once a root exists |
-| `TURSO_API_TOKEN` | | yes | Turso Platform API (`turso auth api-tokens mint openpos-admin`) |
+| `TURSO_API_TOKEN` | | yes | Turso Platform API, limited to the `openpos` group (`turso auth api-tokens mint openpos-admin-prod --org dancaldera --group openpos --scope read --scope db:create --scope db:delete --scope db:mint-token --scope db:rotate-creds`). Store databases must live in that group. |
 | `CLOUDFLARE_API_TOKEN` | | yes | Publishes store web addresses (*Workers Scripts: Edit* on the account) |
 
 Non-secret settings live in `vars` in each `wrangler.jsonc`
@@ -111,7 +111,8 @@ pnpm run deploy:landing
    turso db create openpos-control-plane --group openpos
    turso db show openpos-control-plane --url
    turso db tokens create openpos-control-plane
-   turso auth api-tokens mint openpos-admin   # TURSO_API_TOKEN
+   turso auth api-tokens mint openpos-admin-prod --org dancaldera --group openpos \
+     --scope read --scope db:create --scope db:delete --scope db:mint-token --scope db:rotate-creds   # TURSO_API_TOKEN
    ```
 
 2. Create the R2 bucket: `pnpm -C apps/releases exec wrangler r2 bucket create openpos-releases`.
