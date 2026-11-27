@@ -1,13 +1,15 @@
 /**
  * Push Worker secrets from the environment to Cloudflare.
  *
- * The ID vault Environment `pos/openpos` → `prod` is the source of truth.
+ * Each Worker has its own ID vault project, the source of truth for its
+ * secrets: `pos/openpos-api` and `pos/openpos-admin`, environment `prod`.
  * Run this through `idv run` so values go straight from the vault into
  * `wrangler secret put` (on stdin) and never touch disk or the terminal:
  *
- *   idv run --project pos/openpos --environment prod -- pnpm run secrets:push
- *   idv run --project pos/openpos --environment prod -- pnpm run secrets:push --worker admin --only ADMIN_SESSION_SECRET
- *   pnpm run secrets:push --dry-run      # show the plan without pushing
+ *   pnpm run secrets:push:api
+ *   pnpm run secrets:push:admin
+ *   pnpm run secrets:push:admin --only ADMIN_SESSION_SECRET
+ *   pnpm run secrets:push:api --dry-run   # show the plan without pushing
  *
  * Keys missing from the environment are skipped and reported.
  */

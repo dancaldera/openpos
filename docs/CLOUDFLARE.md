@@ -59,16 +59,20 @@ replace the admin-managed list.
 
 ## Secrets
 
-The source of truth is the ID vault Environment `pos/openpos` → `prod`
-(https://id.softmelody.dev). Change a value there, then push it to the Workers
-without it touching disk or the terminal:
+Each Worker has its own project in the ID vault (https://id.softmelody.dev,
+organization `pos`), environment `prod`: `pos/openpos-api` and
+`pos/openpos-admin`. They are the source of truth. Change a value there, then
+push it to its Worker without it touching disk or the terminal:
 
 ```bash
-idv run --project pos/openpos --environment prod -- pnpm run secrets:push --dry-run
-idv run --project pos/openpos --environment prod -- pnpm run secrets:push
-idv run --project pos/openpos --environment prod -- pnpm run secrets:push --worker admin --only ADMIN_SESSION_SECRET
+pnpm run secrets:push:api --dry-run
+pnpm run secrets:push:api
+pnpm run secrets:push:admin
+pnpm run secrets:push:admin --only ADMIN_SESSION_SECRET
 ```
 
+`CONTROL_PLANE_URL`, `CONTROL_PLANE_AUTH_TOKEN` and `CONTROL_PLANE_SECRET` live
+in both projects and must stay identical: change them in both, then push both.
 `scripts/push-worker-secrets.ts` lists which secrets each Worker reads and
 skips any that are not in the Environment. One-off secrets such as
 `ADMIN_SETUP_TOKEN` can still be set with
